@@ -1,33 +1,51 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { Mail, Lock, User, ArrowRight, Check } from "lucide-react";
+import { Mail, Lock, User, ArrowRight, Check, Globe, AtSign } from "lucide-react";
 import { Button, Input, Checkbox, Divider, Alert } from "@/components/ui";
 import { SocialButtons } from "@/components/auth/SocialButtons";
+import { useAuth } from "@/hooks";
 
 /**
- * Register Page - Following Design Guidelines
+ * Register Page - Premium SMS Activation Platform
  * 
- * Spacing:
+ * SPACING (Design Guidelines 6.3.1):
  * - Header margin-bottom: 32px
- * - Form gap: 20px between groups
- * - Section dividers: 24px margin
+ * - Social buttons margin-bottom: 24px
+ * - Divider margin: 24px vertical
+ * - Form fields gap: 20px
+ * - Submit margin-top: 24px
  * - Footer margin-top: 32px
  */
 export default function RegisterPage() {
-  const router = useRouter();
-  const [isLoading, setIsLoading] = useState(false);
+  const {
+    register,
+    loginWithGoogle,
+    loginWithGithub,
+    isLoading,
+    error: authError,
+    clearError,
+  } = useAuth();
+
   const [error, setError] = useState<string | null>(null);
   const [formData, setFormData] = useState({
-    name: "",
+    firstName: "",
+    lastName: "",
+    username: "",
     email: "",
+    country: "",
     password: "",
     confirmPassword: "",
     agreeToTerms: false,
     subscribeNewsletter: false,
   });
+
+  useEffect(() => {
+    if (authError) {
+      setError(authError);
+    }
+  }, [authError]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value, type, checked } = e.target;
@@ -36,17 +54,16 @@ export default function RegisterPage() {
       [name]: type === "checkbox" ? checked : value,
     }));
     setError(null);
+    clearError();
   };
 
   const validatePassword = (password: string) => {
-    const requirements = [
+    return [
       { met: password.length >= 8, text: "At least 8 characters" },
       { met: /[A-Z]/.test(password), text: "One uppercase letter" },
       { met: /[a-z]/.test(password), text: "One lowercase letter" },
       { met: /[0-9]/.test(password), text: "One number" },
-      { met: /[^A-Za-z0-9]/.test(password), text: "One special character" },
     ];
-    return requirements;
   };
 
   const passwordRequirements = validatePassword(formData.password);
@@ -54,232 +71,308 @@ export default function RegisterPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsLoading(true);
     setError(null);
 
     if (!formData.agreeToTerms) {
       setError("You must agree to the Terms of Service and Privacy Policy");
-      setIsLoading(false);
       return;
     }
 
     if (formData.password !== formData.confirmPassword) {
       setError("Passwords do not match");
-      setIsLoading(false);
       return;
     }
 
     if (!isPasswordValid) {
       setError("Password does not meet the requirements");
-      setIsLoading(false);
       return;
     }
 
-    try {
-      await new Promise((resolve) => setTimeout(resolve, 1500));
-      router.push("/verify-email?email=" + encodeURIComponent(formData.email));
-    } catch {
-      setError("Registration failed. Please try again.");
-    } finally {
-      setIsLoading(false);
+    const result = await register({
+      firstName: formData.firstName,
+      lastName: formData.lastName,
+      username: formData.username,
+      email: formData.email,
+      country: formData.country,
+      password: formData.password,
+    });
+
+    if (!result.success) {
+      setError(result.error || "Registration failed. Please try again.");
     }
   };
 
-  const handleSocialLogin = async (provider: "google" | "github") => {
-    setIsLoading(true);
-    try {
-      console.log(`Register with ${provider}`);
-    } catch {
-      setError(`Failed to register with ${provider}`);
-    } finally {
-      setIsLoading(false);
-    }
+  const handleDismissError = () => {
+    setError(null);
+    clearError();
   };
 
   return (
     <div className="animate-slide-up">
-      {/* Header - 32px margin bottom */}
-      <div className="text-center lg:text-left mb-8">
-        <h1 className="text-3xl font-bold text-text-primary mb-3">
+      {/* Header - mb: 32px */}
+      <div style={{ marginBottom: '32px' }}>
+        <h1 style={{ 
+          fontSize: '28px', 
+          fontWeight: 700, 
+          color: 'var(--text-primary)', 
+          lineHeight: 1.2, 
+          marginBottom: '12px' 
+        }} className="sm:!text-[32px]">
           Create your account
         </h1>
-        <p className="text-text-secondary text-base">
+        <p style={{ fontSize: '16px', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
           Start your journey with premium SMS services
         </p>
       </div>
 
-      {/* Error Alert - 24px margin bottom */}
+      {/* Error Alert */}
       {error && (
-        <Alert variant="error" className="mb-6" dismissible onDismiss={() => setError(null)}>
-          {error}
-        </Alert>
+        <div style={{ marginBottom: '24px' }}>
+          <Alert variant="error" dismissible onDismiss={handleDismissError}>
+            {error}
+          </Alert>
+        </div>
       )}
 
-      {/* Social Login */}
-      <SocialButtons
-        onGoogleClick={() => handleSocialLogin("google")}
-        onGithubClick={() => handleSocialLogin("github")}
-        isLoading={isLoading}
-      />
-
-      {/* Divider - 24px margin */}
-      <Divider>or register with email</Divider>
-
-      {/* Registration Form - 20px gap between form groups */}
-      <form onSubmit={handleSubmit} className="flex flex-col gap-5">
-        <Input
-          label="Full name"
-          type="text"
-          name="name"
-          placeholder="Enter your full name"
-          value={formData.name}
-          onChange={handleChange}
-          leftIcon={<User className="w-5 h-5" />}
-          required
-          autoComplete="name"
+      {/* Social Buttons - mb: 24px */}
+      <div style={{ marginBottom: '24px' }}>
+        <SocialButtons
+          onGoogleClick={loginWithGoogle}
+          onGithubClick={loginWithGithub}
+          isLoading={isLoading}
         />
+      </div>
 
-        <Input
-          label="Email address"
-          type="email"
-          name="email"
-          placeholder="Enter your email"
-          value={formData.email}
-          onChange={handleChange}
-          leftIcon={<Mail className="w-5 h-5" />}
-          required
-          autoComplete="email"
-        />
+      {/* Divider - my: 24px */}
+      <div style={{ margin: '24px 0' }}>
+        <Divider>or register with email</Divider>
+      </div>
 
-        {/* Password with requirements */}
-        <div className="space-y-3">
+      {/* Form - gap: 20px */}
+      <form onSubmit={handleSubmit}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+          {/* Name Row - 2 columns on sm+ */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+            <Input
+              label="First name"
+              type="text"
+              name="firstName"
+              placeholder="John"
+              value={formData.firstName}
+              onChange={handleChange}
+              leftIcon={<User style={{ width: '20px', height: '20px' }} />}
+              required
+              autoComplete="given-name"
+              disabled={isLoading}
+            />
+            <Input
+              label="Last name"
+              type="text"
+              name="lastName"
+              placeholder="Doe"
+              value={formData.lastName}
+              onChange={handleChange}
+              required
+              autoComplete="family-name"
+              disabled={isLoading}
+            />
+          </div>
+
+          {/* Username */}
           <Input
-            label="Password"
-            type="password"
-            name="password"
-            placeholder="Create a strong password"
-            value={formData.password}
+            label="Username"
+            type="text"
+            name="username"
+            placeholder="johndoe123"
+            value={formData.username}
             onChange={handleChange}
-            leftIcon={<Lock className="w-5 h-5" />}
+            leftIcon={<AtSign style={{ width: '20px', height: '20px' }} />}
+            required
+            autoComplete="username"
+            disabled={isLoading}
+            hint="Letters, numbers, and underscores only"
+          />
+
+          {/* Email */}
+          <Input
+            label="Email address"
+            type="email"
+            name="email"
+            placeholder="Enter your email"
+            value={formData.email}
+            onChange={handleChange}
+            leftIcon={<Mail style={{ width: '20px', height: '20px' }} />}
+            required
+            autoComplete="email"
+            disabled={isLoading}
+          />
+
+          {/* Country */}
+          <Input
+            label="Country"
+            type="text"
+            name="country"
+            placeholder="United States"
+            value={formData.country}
+            onChange={handleChange}
+            leftIcon={<Globe style={{ width: '20px', height: '20px' }} />}
+            required
+            autoComplete="country-name"
+            disabled={isLoading}
+          />
+
+          {/* Password */}
+          <div>
+            <Input
+              label="Password"
+              type="password"
+              name="password"
+              placeholder="Create a strong password"
+              value={formData.password}
+              onChange={handleChange}
+              leftIcon={<Lock style={{ width: '20px', height: '20px' }} />}
+              required
+              autoComplete="new-password"
+              disabled={isLoading}
+            />
+            
+            {/* Password Requirements */}
+            {formData.password && (
+              <div style={{ 
+                marginTop: '12px', 
+                display: 'grid', 
+                gridTemplateColumns: '1fr 1fr', 
+                gap: '8px', 
+                padding: '16px', 
+                backgroundColor: 'var(--bg-secondary)', 
+                borderRadius: '12px', 
+                border: '1px solid var(--border-default)' 
+              }}>
+                {passwordRequirements.map((req, index) => (
+                  <div
+                    key={index}
+                    style={{ 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      gap: '8px', 
+                      fontSize: '12px', 
+                      color: req.met ? 'var(--success)' : 'var(--text-muted)' 
+                    }}
+                  >
+                    <div
+                      style={{ 
+                        width: '16px', 
+                        height: '16px', 
+                        borderRadius: '50%', 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        justifyContent: 'center', 
+                        flexShrink: 0,
+                        backgroundColor: req.met ? 'rgba(34, 197, 94, 0.2)' : 'var(--border-default)' 
+                      }}
+                    >
+                      {req.met && <Check style={{ width: '10px', height: '10px' }} />}
+                    </div>
+                    <span>{req.text}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Confirm Password */}
+          <Input
+            label="Confirm password"
+            type="password"
+            name="confirmPassword"
+            placeholder="Confirm your password"
+            value={formData.confirmPassword}
+            onChange={handleChange}
+            leftIcon={<Lock style={{ width: '20px', height: '20px' }} />}
             required
             autoComplete="new-password"
-          />
-          
-          {/* Password Requirements - 12px margin top */}
-          {formData.password && (
-            <div className="grid grid-cols-2 gap-2 p-4 bg-bg-secondary rounded-xl border border-border-default">
-              {passwordRequirements.map((req, index) => (
-                <div
-                  key={index}
-                  className={`flex items-center gap-2 text-xs ${
-                    req.met ? "text-success" : "text-text-muted"
-                  }`}
-                >
-                  <div
-                    className={`w-4 h-4 rounded-full flex items-center justify-center flex-shrink-0 ${
-                      req.met ? "bg-success/20" : "bg-border-default"
-                    }`}
-                  >
-                    {req.met && <Check className="w-2.5 h-2.5" />}
-                  </div>
-                  <span>{req.text}</span>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-
-        <Input
-          label="Confirm password"
-          type="password"
-          name="confirmPassword"
-          placeholder="Confirm your password"
-          value={formData.confirmPassword}
-          onChange={handleChange}
-          leftIcon={<Lock className="w-5 h-5" />}
-          required
-          autoComplete="new-password"
-          error={
-            formData.confirmPassword &&
-            formData.password !== formData.confirmPassword
-              ? "Passwords do not match"
-              : undefined
-          }
-          success={
-            formData.confirmPassword &&
-            formData.password === formData.confirmPassword
-              ? "Passwords match"
-              : undefined
-          }
-        />
-
-        {/* Checkboxes - 16px margin top */}
-        <div className="space-y-4 mt-1">
-          <Checkbox
-            name="agreeToTerms"
-            checked={formData.agreeToTerms}
-            onChange={handleChange}
-            label={
-              <span>
-                I agree to the{" "}
-                <Link href="/terms" className="text-accent-gold hover:text-accent-gold-bright transition-colors">
-                  Terms of Service
-                </Link>{" "}
-                and{" "}
-                <Link href="/privacy" className="text-accent-gold hover:text-accent-gold-bright transition-colors">
-                  Privacy Policy
-                </Link>
-              </span>
+            disabled={isLoading}
+            error={
+              formData.confirmPassword && formData.password !== formData.confirmPassword
+                ? "Passwords do not match"
+                : undefined
+            }
+            success={
+              formData.confirmPassword && formData.password === formData.confirmPassword
+                ? "Passwords match"
+                : undefined
             }
           />
 
-          <Checkbox
-            name="subscribeNewsletter"
-            checked={formData.subscribeNewsletter}
-            onChange={handleChange}
-            label="Send me product updates and promotions"
-          />
-        </div>
+          {/* Checkboxes */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            <Checkbox
+              name="agreeToTerms"
+              checked={formData.agreeToTerms}
+              onChange={handleChange}
+              disabled={isLoading}
+              label={
+                <span>
+                  I agree to the{" "}
+                  <Link href="/terms" style={{ color: 'var(--accent-gold)' }}>
+                    Terms of Service
+                  </Link>{" "}
+                  and{" "}
+                  <Link href="/privacy" style={{ color: 'var(--accent-gold)' }}>
+                    Privacy Policy
+                  </Link>
+                </span>
+              }
+            />
+            <Checkbox
+              name="subscribeNewsletter"
+              checked={formData.subscribeNewsletter}
+              onChange={handleChange}
+              disabled={isLoading}
+              label="Send me product updates and promotions"
+            />
+          </div>
 
-        {/* Submit button - 8px extra margin top */}
-        <div className="mt-2">
-          <Button
-            type="submit"
-            fullWidth
-            size="lg"
-            isLoading={isLoading}
-            rightIcon={<ArrowRight className="w-5 h-5" />}
-          >
-            Create account
-          </Button>
+          {/* Submit - mt: 24px (extra 4px from gap) */}
+          <div style={{ marginTop: '4px' }}>
+            <Button
+              type="submit"
+              fullWidth
+              size="lg"
+              isLoading={isLoading}
+              rightIcon={<ArrowRight style={{ width: '20px', height: '20px' }} />}
+            >
+              Create account
+            </Button>
+          </div>
         </div>
       </form>
 
-      {/* Footer - 32px margin top */}
-      <p className="mt-8 text-center text-sm text-text-secondary">
+      {/* Footer - mt: 32px */}
+      <p style={{ marginTop: '32px', textAlign: 'center', fontSize: '14px', color: 'var(--text-secondary)' }}>
         Already have an account?{" "}
         <Link
           href="/login"
-          className="font-semibold text-accent-gold hover:text-accent-gold-bright transition-colors duration-150"
+          style={{ fontWeight: 600, color: 'var(--accent-gold)', textDecoration: 'none' }}
         >
           Sign in
         </Link>
       </p>
 
-      {/* Benefits - 32px margin top, 24px padding top */}
-      <div className="mt-8 pt-6 border-t border-border-default">
-        <div className="grid grid-cols-3 gap-6 text-center">
+      {/* Benefits - mt: 32px, pt: 24px */}
+      <div style={{ marginTop: '32px', paddingTop: '24px', borderTop: '1px solid var(--border-default)' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', textAlign: 'center' }}>
           <div>
-            <div className="text-xl font-bold text-gold-gradient">$5</div>
-            <div className="text-xs text-text-muted mt-1">Free credits</div>
+            <div style={{ fontSize: '20px', fontWeight: 700, color: 'var(--accent-gold)' }}>$5</div>
+            <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '4px' }}>Free credits</div>
           </div>
           <div>
-            <div className="text-xl font-bold text-gold-gradient">24/7</div>
-            <div className="text-xs text-text-muted mt-1">Support</div>
+            <div style={{ fontSize: '20px', fontWeight: 700, color: 'var(--accent-gold)' }}>24/7</div>
+            <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '4px' }}>Support</div>
           </div>
           <div>
-            <div className="text-xl font-bold text-gold-gradient">0%</div>
-            <div className="text-xs text-text-muted mt-1">Hidden fees</div>
+            <div style={{ fontSize: '20px', fontWeight: 700, color: 'var(--accent-gold)' }}>0%</div>
+            <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '4px' }}>Hidden fees</div>
           </div>
         </div>
       </div>

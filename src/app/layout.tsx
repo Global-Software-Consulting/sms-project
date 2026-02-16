@@ -1,5 +1,8 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import { SessionProvider } from "@/components/providers/SessionProvider";
+import { StoreProvider } from "@/components/providers/StoreProvider";
+import { AuthInitializer } from "@/components/providers/AuthInitializer";
 
 export const metadata: Metadata = {
   title: "SMS Activation Platform - Premium Virtual Numbers",
@@ -28,7 +31,13 @@ export default function RootLayout({
         />
       </head>
       <body className="antialiased">
-        {children}
+        <StoreProvider>
+          <AuthInitializer>
+            <SessionProvider>
+              {children}
+            </SessionProvider>
+          </AuthInitializer>
+        </StoreProvider>
       </body>
     </html>
   );

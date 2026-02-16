@@ -1,8 +1,6 @@
 "use client";
 
-import { useSession, signOut } from "next-auth/react";
-import { useRouter } from "next/navigation";
-import { useEffect } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { 
   MessageSquare, 
@@ -17,346 +15,443 @@ import {
   Plus,
   History,
   Settings,
-  HelpCircle
+  HelpCircle,
+  Shield,
+  Menu,
+  X,
+  Smartphone,
+  CreditCard,
+  BarChart3,
+  Package
 } from "lucide-react";
-import { Button, Card, CardContent, Badge } from "@/components/ui";
+import { Button, Badge } from "@/components/ui";
+import { useAuth } from "@/hooks";
 
 /**
- * Dashboard Page - Following Design Guidelines
+ * Dashboard Page - Premium SMS Activation Platform
  * 
- * Layout specs:
- * - Sidebar: 240px fixed width, 24px padding
- * - Header: 64px height, 24px horizontal padding
- * - Main content padding: 24px
- * - Stats row: 4 cards with 16px gap
- * - Section spacing: 24px
- * - Sidebar item: 44px height, 12px 16px padding
+ * FIXED LAYOUT:
+ * - Sidebar: 240px fixed on left
+ * - Main content: margin-left 240px on desktop
+ * - Header: 64px sticky
+ * - Content padding: 24px
  */
 export default function DashboardPage() {
-  const { data: session, status } = useSession();
-  const router = useRouter();
+  const { user, isAdmin, logout } = useAuth();
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
-  useEffect(() => {
-    if (status === "unauthenticated") {
-      router.push("/login");
-    }
-  }, [status, router]);
-
-  if (status === "loading") {
-    return (
-      <div className="min-h-screen bg-bg-primary flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-12 h-12 mx-auto mb-4 rounded-full border-4 border-accent-gold border-t-transparent animate-spin" />
-          <p className="text-text-muted">Loading...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (!session) {
-    return null;
-  }
+  if (!user) return null;
 
   return (
-    <div className="min-h-screen bg-bg-primary flex">
-      {/* Sidebar - 240px width, 16px padding as per guidelines */}
-      <aside className="hidden lg:flex flex-col w-60 bg-bg-card border-r border-border-default fixed h-screen">
-        {/* Logo - 24px padding */}
-        <div className="p-6 border-b border-border-default">
-          <Link href="/dashboard" className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gold-gradient flex items-center justify-center shadow-gold">
-              <MessageSquare className="w-5 h-5 text-bg-primary" />
+    <div style={{ minHeight: '100vh', backgroundColor: 'var(--bg-primary)' }}>
+      {/* Mobile Overlay */}
+      {isMobileMenuOpen && (
+        <div 
+          style={{
+            position: 'fixed',
+            inset: 0,
+            backgroundColor: 'rgba(0,0,0,0.6)',
+            backdropFilter: 'blur(4px)',
+            zIndex: 40
+          }}
+          className="lg:hidden"
+          onClick={() => setIsMobileMenuOpen(false)}
+        />
+      )}
+
+      {/* SIDEBAR - 240px fixed */}
+      <aside 
+        style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          bottom: 0,
+          width: '240px',
+          backgroundColor: 'var(--bg-card)',
+          borderRight: '1px solid var(--border-default)',
+          display: 'flex',
+          flexDirection: 'column',
+          zIndex: 50,
+          transform: isMobileMenuOpen ? 'translateX(0)' : 'translateX(-100%)',
+          transition: 'transform 300ms ease-out'
+        }}
+        className="lg:!transform-none"
+      >
+        {/* Logo */}
+        <div style={{ height: '64px', padding: '0 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid var(--border-default)' }}>
+          <Link href="/dashboard" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <div style={{ width: '36px', height: '36px', borderRadius: '12px', background: 'linear-gradient(135deg, #C6A75E 0%, #D4AF37 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <MessageSquare style={{ width: '18px', height: '18px', color: 'var(--bg-primary)' }} />
             </div>
-            <span className="text-xl font-bold text-text-primary">
-              SMS<span className="text-gold-gradient">Pro</span>
+            <span style={{ fontSize: '18px', fontWeight: 700, color: 'var(--text-primary)' }}>
+              SMS<span style={{ color: 'var(--accent-gold)' }}>Pro</span>
             </span>
           </Link>
+          <button 
+            className="lg:hidden"
+            style={{ padding: '6px', borderRadius: '8px' }}
+            onClick={() => setIsMobileMenuOpen(false)}
+          >
+            <X style={{ width: '20px', height: '20px', color: 'var(--text-muted)' }} />
+          </button>
         </div>
 
-        {/* Navigation - 16px padding, 24px section gap */}
-        <nav className="flex-1 px-4 py-6 space-y-6 overflow-y-auto">
-          {/* Main Section */}
-          <div>
-            <p className="px-4 mb-3 text-xs font-semibold text-text-muted uppercase tracking-wider">
+        {/* Navigation */}
+        <nav style={{ flex: 1, padding: '20px 12px', overflowY: 'auto' }}>
+          {/* Main */}
+          <div style={{ marginBottom: '24px' }}>
+            <p style={{ padding: '0 12px', marginBottom: '8px', fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
               Main
             </p>
-            <div className="space-y-1">
-              <SidebarItem icon={<Activity />} label="Dashboard" active />
-              <SidebarItem icon={<MessageSquare />} label="SMS Activation" />
-              <SidebarItem icon={<History />} label="Number Rental" badge="New" />
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+              <NavItem href="/dashboard" icon={<BarChart3 style={{ width: '18px', height: '18px' }} />} label="Dashboard" active />
+              <NavItem href="/sms-activation" icon={<Smartphone style={{ width: '18px', height: '18px' }} />} label="SMS Activation" />
+              <NavItem href="/number-rental" icon={<History style={{ width: '18px', height: '18px' }} />} label="Number Rental" badge="New" />
             </div>
           </div>
 
-          {/* Account Section */}
-          <div>
-            <p className="px-4 mb-3 text-xs font-semibold text-text-muted uppercase tracking-wider">
+          {/* Account */}
+          <div style={{ marginBottom: '24px' }}>
+            <p style={{ padding: '0 12px', marginBottom: '8px', fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
               Account
             </p>
-            <div className="space-y-1">
-              <SidebarItem icon={<Wallet />} label="Wallet" />
-              <SidebarItem icon={<TrendingUp />} label="Orders" />
-              <SidebarItem icon={<Users />} label="Referrals" />
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+              <NavItem href="/wallet" icon={<Wallet style={{ width: '18px', height: '18px' }} />} label="Wallet" />
+              <NavItem href="/orders" icon={<Package style={{ width: '18px', height: '18px' }} />} label="Orders" />
+              <NavItem href="/referrals" icon={<Users style={{ width: '18px', height: '18px' }} />} label="Referrals" />
             </div>
           </div>
 
-          {/* Support Section */}
-          <div>
-            <p className="px-4 mb-3 text-xs font-semibold text-text-muted uppercase tracking-wider">
+          {/* Support */}
+          <div style={{ marginBottom: '24px' }}>
+            <p style={{ padding: '0 12px', marginBottom: '8px', fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
               Support
             </p>
-            <div className="space-y-1">
-              <SidebarItem icon={<HelpCircle />} label="Help Center" />
-              <SidebarItem icon={<Settings />} label="Settings" />
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+              <NavItem href="/help" icon={<HelpCircle style={{ width: '18px', height: '18px' }} />} label="Help Center" />
+              <NavItem href="/settings" icon={<Settings style={{ width: '18px', height: '18px' }} />} label="Settings" />
             </div>
           </div>
+
+          {/* Admin */}
+          {isAdmin && (
+            <div style={{ marginBottom: '24px' }}>
+              <p style={{ padding: '0 12px', marginBottom: '8px', fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                Admin
+              </p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                <NavItem href="/admin" icon={<Shield style={{ width: '18px', height: '18px' }} />} label="Admin Panel" />
+              </div>
+            </div>
+          )}
         </nav>
 
-        {/* User Section - 16px padding */}
-        <div className="p-4 border-t border-border-default">
-          <div className="flex items-center gap-3 p-3 rounded-xl bg-bg-hover">
-            <div className="w-10 h-10 rounded-full bg-accent-gold/20 flex items-center justify-center text-accent-gold font-semibold flex-shrink-0">
-              {session.user?.name?.charAt(0) || "U"}
+        {/* User Profile */}
+        <div style={{ padding: '12px', borderTop: '1px solid var(--border-default)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px', borderRadius: '12px', backgroundColor: 'var(--bg-hover)' }}>
+            <div style={{ width: '36px', height: '36px', borderRadius: '50%', backgroundColor: 'rgba(198, 167, 94, 0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--accent-gold)', fontWeight: 600, fontSize: '14px' }}>
+              {user.name?.charAt(0) || user.email.charAt(0).toUpperCase()}
             </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-text-primary truncate">
-                {session.user?.name || "User"}
-              </p>
-              <p className="text-xs text-text-muted truncate">
-                {session.user?.email}
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <p style={{ fontSize: '14px', fontWeight: 500, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {user.name || "User"}
+                </p>
+                {isAdmin && (
+                  <span style={{ padding: '2px 6px', backgroundColor: 'rgba(198, 167, 94, 0.2)', color: 'var(--accent-gold)', fontSize: '10px', fontWeight: 600, borderRadius: '4px' }}>
+                    ADMIN
+                  </span>
+                )}
+              </div>
+              <p style={{ fontSize: '12px', color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {user.email}
               </p>
             </div>
           </div>
         </div>
       </aside>
 
-      {/* Main Content */}
-      <div className="flex-1 lg:ml-60">
-        {/* Header - 64px height, 24px padding as per guidelines */}
-        <header className="h-16 bg-bg-card border-b border-border-default sticky top-0 z-10">
-          <div className="h-full px-6 flex items-center justify-between gap-4">
-            {/* Search */}
-            <div className="relative hidden sm:block flex-1 max-w-md">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-text-muted" />
-              <input
-                type="text"
-                placeholder="Search services, countries..."
-                className="w-full h-10 pl-12 pr-4 bg-bg-secondary border border-border-default rounded-xl text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-border-focus transition-colors duration-200"
-              />
-            </div>
+      {/* MAIN CONTENT - margin-left: 240px on desktop */}
+      <div 
+        style={{ marginLeft: '0', minHeight: '100vh', display: 'flex', flexDirection: 'column' }}
+        className="lg:!ml-[240px]"
+      >
+        {/* Header - 64px */}
+        <header style={{ height: '64px', backgroundColor: 'var(--bg-card)', borderBottom: '1px solid var(--border-default)', position: 'sticky', top: 0, zIndex: 30 }}>
+          <div style={{ height: '100%', padding: '0 16px', display: 'flex', alignItems: 'center', gap: '16px' }}>
+            {/* Mobile Menu */}
+            <button 
+              className="lg:hidden"
+              style={{ padding: '8px', marginLeft: '-8px', borderRadius: '8px' }}
+              onClick={() => setIsMobileMenuOpen(true)}
+            >
+              <Menu style={{ width: '20px', height: '20px', color: 'var(--text-secondary)' }} />
+            </button>
 
             {/* Mobile Logo */}
-            <div className="lg:hidden flex items-center gap-2">
-              <div className="w-8 h-8 rounded-lg bg-gold-gradient flex items-center justify-center">
-                <MessageSquare className="w-4 h-4 text-bg-primary" />
+            <Link href="/dashboard" className="lg:hidden" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: 'linear-gradient(135deg, #C6A75E 0%, #D4AF37 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <MessageSquare style={{ width: '16px', height: '16px', color: 'var(--bg-primary)' }} />
               </div>
-              <span className="font-bold text-text-primary">SMSPro</span>
+              <span style={{ fontWeight: 700, color: 'var(--text-primary)' }}>SMSPro</span>
+            </Link>
+
+            {/* Search */}
+            <div className="hidden md:flex" style={{ flex: 1, maxWidth: '400px' }}>
+              <div style={{ position: 'relative', width: '100%' }}>
+                <Search style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', width: '16px', height: '16px', color: 'var(--text-muted)' }} />
+                <input
+                  type="text"
+                  placeholder="Search services, countries..."
+                  style={{ width: '100%', height: '40px', paddingLeft: '40px', paddingRight: '16px', backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-default)', borderRadius: '12px', fontSize: '14px', color: 'var(--text-primary)', outline: 'none' }}
+                />
+              </div>
             </div>
 
-            {/* Actions - 12px gap */}
-            <div className="flex items-center gap-3">
-              <button className="relative p-2.5 rounded-xl hover:bg-bg-hover transition-colors duration-150">
-                <Bell className="w-5 h-5 text-text-secondary" />
-                <span className="absolute top-2 right-2 w-2 h-2 bg-danger rounded-full" />
+            <div style={{ flex: 1 }} />
+
+            {/* Actions */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <button className="md:hidden" style={{ padding: '8px', borderRadius: '8px' }}>
+                <Search style={{ width: '20px', height: '20px', color: 'var(--text-secondary)' }} />
               </button>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => signOut({ callbackUrl: "/login" })}
-                leftIcon={<LogOut className="w-4 h-4" />}
-              >
-                <span className="hidden sm:inline">Sign out</span>
+              <button style={{ position: 'relative', padding: '8px', borderRadius: '8px' }}>
+                <Bell style={{ width: '20px', height: '20px', color: 'var(--text-secondary)' }} />
+                <span style={{ position: 'absolute', top: '6px', right: '6px', width: '8px', height: '8px', backgroundColor: 'var(--danger)', borderRadius: '50%' }} />
+              </button>
+              <Button variant="ghost" size="sm" onClick={logout} className="hidden sm:flex" style={{ gap: '8px' }}>
+                <LogOut style={{ width: '16px', height: '16px' }} />
+                <span>Sign out</span>
               </Button>
+              <button className="sm:hidden" style={{ padding: '8px', borderRadius: '8px' }} onClick={logout}>
+                <LogOut style={{ width: '20px', height: '20px', color: 'var(--text-secondary)' }} />
+              </button>
             </div>
           </div>
         </header>
 
-        {/* Main Content - 24px padding as per guidelines */}
-        <main className="p-6">
-          {/* Welcome Section - 24px margin bottom */}
-          <div className="mb-6">
-            <h1 className="text-2xl font-bold text-text-primary mb-2">
-              Welcome back, {session.user?.name?.split(" ")[0] || "User"}! 👋
+        {/* Content - 24px padding */}
+        <main style={{ flex: 1, padding: '24px' }}>
+          {/* Welcome */}
+          <div style={{ marginBottom: '24px' }}>
+            <h1 style={{ fontSize: '28px', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '8px' }}>
+              Welcome back, {user.name?.split(" ")[0] || "User"}! 👋
             </h1>
-            <p className="text-text-secondary">
+            <p style={{ color: 'var(--text-secondary)' }}>
               Here&apos;s an overview of your SMS activation account.
             </p>
           </div>
 
-          {/* Stats Grid - 4 cards with 16px gap, 24px margin bottom */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+          {/* Stats Grid - 4 columns */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px', marginBottom: '24px' }} className="lg:!grid-cols-4">
             <StatCard
-              icon={<Wallet className="w-6 h-6" />}
+              icon={<Wallet style={{ width: '20px', height: '20px' }} />}
               label="Wallet Balance"
               value="$0.00"
               trend="+$5.00 bonus"
               trendUp
             />
             <StatCard
-              icon={<Activity className="w-6 h-6" />}
+              icon={<Activity style={{ width: '20px', height: '20px' }} />}
               label="Active Numbers"
               value="0"
               trend="No active orders"
             />
             <StatCard
-              icon={<TrendingUp className="w-6 h-6" />}
+              icon={<TrendingUp style={{ width: '20px', height: '20px' }} />}
               label="Success Rate"
               value="--"
               trend="No data yet"
             />
             <StatCard
-              icon={<Users className="w-6 h-6" />}
+              icon={<Package style={{ width: '20px', height: '20px' }} />}
               label="Total Orders"
               value="0"
               trend="Start ordering"
             />
           </div>
 
-          {/* Quick Actions - 24px margin bottom */}
-          <Card className="mb-6">
-            <CardContent>
-              <h2 className="text-lg font-semibold text-text-primary mb-4">Quick Actions</h2>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <QuickActionCard
-                  emoji="📱"
-                  title="Get Number"
-                  description="Activate a new number"
-                  variant="primary"
-                />
-                <QuickActionCard
-                  emoji="💰"
-                  title="Add Funds"
-                  description="Top up your wallet"
-                  variant="gold"
-                />
-                <QuickActionCard
-                  emoji="📊"
-                  title="View History"
-                  description="Check past orders"
-                  variant="success"
-                />
-              </div>
-            </CardContent>
-          </Card>
+          {/* Quick Actions */}
+          <div style={{ marginBottom: '24px' }}>
+            <h2 style={{ fontSize: '18px', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '16px' }}>Quick Actions</h2>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '16px' }} className="sm:!grid-cols-3">
+              <ActionCard
+                icon={<Smartphone style={{ width: '24px', height: '24px' }} />}
+                title="Get Number"
+                description="Activate a new number"
+                href="/sms-activation"
+                color="gold"
+              />
+              <ActionCard
+                icon={<CreditCard style={{ width: '24px', height: '24px' }} />}
+                title="Add Funds"
+                description="Top up your wallet"
+                href="/wallet"
+                color="amber"
+              />
+              <ActionCard
+                icon={<BarChart3 style={{ width: '24px', height: '24px' }} />}
+                title="View History"
+                description="Check past orders"
+                href="/orders"
+                color="default"
+              />
+            </div>
+          </div>
 
           {/* Empty State */}
-          <Card className="border-dashed">
-            <CardContent className="py-16 text-center">
-              <div className="w-16 h-16 mx-auto mb-6 rounded-full bg-accent-gold/10 flex items-center justify-center">
-                <MessageSquare className="w-8 h-8 text-accent-gold" />
+          <div>
+            <h2 style={{ fontSize: '18px', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '16px' }}>Recent Activity</h2>
+            <div style={{ border: '1px dashed var(--border-default)', borderRadius: '16px', backgroundColor: 'var(--bg-card)' }}>
+              <div style={{ padding: '64px 24px', textAlign: 'center' }}>
+                <div style={{ width: '64px', height: '64px', margin: '0 auto 16px', borderRadius: '16px', backgroundColor: 'rgba(198, 167, 94, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <MessageSquare style={{ width: '32px', height: '32px', color: 'var(--accent-gold)' }} />
+                </div>
+                <h3 style={{ fontSize: '20px', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '8px' }}>
+                  No Recent Activity
+                </h3>
+                <p style={{ fontSize: '14px', color: 'var(--text-muted)', marginBottom: '24px', maxWidth: '320px', margin: '0 auto 24px' }}>
+                  You haven&apos;t made any orders yet. Start by getting your first virtual number!
+                </p>
+                <Button size="lg">
+                  <Plus style={{ width: '16px', height: '16px', marginRight: '8px' }} />
+                  Get Your First Number
+                </Button>
               </div>
-              <h3 className="text-xl font-semibold text-text-primary mb-3">No Recent Activity</h3>
-              <p className="text-text-secondary mb-8 max-w-md mx-auto">
-                You haven&apos;t made any orders yet. Start by getting your first virtual number!
-              </p>
-              <Button size="lg" rightIcon={<Plus className="w-5 h-5" />}>
-                Get Your First Number
-              </Button>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         </main>
       </div>
     </div>
   );
 }
 
-/**
- * Sidebar Item - 44px height, 12px 16px padding, 10px border radius
- */
-function SidebarItem({ 
+/* ==================== COMPONENTS ==================== */
+
+function NavItem({ 
+  href, 
   icon, 
   label, 
-  active = false,
-  badge
+  active = false, 
+  badge 
 }: { 
+  href: string; 
   icon: React.ReactNode; 
   label: string; 
-  active?: boolean;
+  active?: boolean; 
   badge?: string;
 }) {
   return (
-    <button
-      className={`
-        w-full h-11 flex items-center gap-3 px-4 rounded-xl text-sm font-medium
-        transition-all duration-150
-        ${active 
-          ? "bg-accent-gold/10 text-accent-gold" 
-          : "text-text-secondary hover:bg-bg-hover hover:text-text-primary"
-        }
-      `}
+    <Link
+      href={href}
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: '12px',
+        height: '44px',
+        padding: '0 12px',
+        borderRadius: '12px',
+        fontSize: '14px',
+        fontWeight: 500,
+        color: active ? 'var(--accent-gold)' : 'var(--text-secondary)',
+        backgroundColor: active ? 'rgba(198, 167, 94, 0.1)' : 'transparent',
+        transition: 'all 150ms ease'
+      }}
     >
-      <span className="w-5 h-5 flex items-center justify-center flex-shrink-0">{icon}</span>
-      <span className="flex-1 text-left">{label}</span>
-      {badge && <Badge variant="v2">{badge}</Badge>}
-      {active && <ChevronRight className="w-4 h-4 flex-shrink-0" />}
-    </button>
+      <span style={{ flexShrink: 0 }}>{icon}</span>
+      <span style={{ flex: 1 }}>{label}</span>
+      {badge && <Badge variant="v2" style={{ fontSize: '10px', padding: '2px 6px' }}>{badge}</Badge>}
+      {active && <ChevronRight style={{ width: '16px', height: '16px', opacity: 0.6 }} />}
+    </Link>
   );
 }
 
-/**
- * Stat Card - 24px padding, 16px internal gap
- */
-function StatCard({
-  icon,
-  label,
-  value,
-  trend,
-  trendUp,
-}: {
-  icon: React.ReactNode;
-  label: string;
-  value: string;
-  trend: string;
+function StatCard({ 
+  icon, 
+  label, 
+  value, 
+  trend, 
+  trendUp 
+}: { 
+  icon: React.ReactNode; 
+  label: string; 
+  value: string; 
+  trend: string; 
   trendUp?: boolean;
 }) {
   return (
-    <Card hover>
-      <CardContent>
-        <div className="flex items-center justify-between mb-4">
-          <div className="w-12 h-12 rounded-xl bg-accent-gold/10 flex items-center justify-center text-accent-gold">
-            {icon}
-          </div>
-        </div>
-        <p className="text-sm text-text-muted mb-1">{label}</p>
-        <p className="text-2xl font-bold text-text-primary mb-2">{value}</p>
-        <p className={`text-xs ${trendUp ? "text-success" : "text-text-muted"}`}>
-          {trend}
-        </p>
-      </CardContent>
-    </Card>
+    <div style={{ 
+      backgroundColor: 'var(--bg-card)', 
+      border: '1px solid var(--border-default)', 
+      borderRadius: '16px', 
+      padding: '20px',
+      transition: 'all 200ms ease'
+    }}>
+      <div style={{ 
+        width: '40px', 
+        height: '40px', 
+        borderRadius: '12px', 
+        backgroundColor: 'rgba(198, 167, 94, 0.1)', 
+        display: 'flex', 
+        alignItems: 'center', 
+        justifyContent: 'center', 
+        color: 'var(--accent-gold)',
+        marginBottom: '12px'
+      }}>
+        {icon}
+      </div>
+      <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '4px' }}>{label}</p>
+      <p style={{ fontSize: '24px', fontWeight: 700, color: 'var(--text-primary)' }}>{value}</p>
+      <p style={{ fontSize: '12px', color: trendUp ? 'var(--success)' : 'var(--text-muted)', marginTop: '4px' }}>{trend}</p>
+    </div>
   );
 }
 
-/**
- * Quick Action Card - 16px padding
- */
-function QuickActionCard({
-  emoji,
-  title,
-  description,
-  variant,
-}: {
-  emoji: string;
-  title: string;
-  description: string;
-  variant: "primary" | "gold" | "success";
+function ActionCard({ 
+  icon, 
+  title, 
+  description, 
+  href, 
+  color 
+}: { 
+  icon: React.ReactNode; 
+  title: string; 
+  description: string; 
+  href: string; 
+  color: "gold" | "amber" | "default";
 }) {
-  const variants = {
-    primary: "bg-accent-gold/5 border-accent-gold/20 hover:bg-accent-gold/10",
-    gold: "bg-accent-gold-bright/5 border-accent-gold-bright/20 hover:bg-accent-gold-bright/10",
-    success: "bg-success/5 border-success/20 hover:bg-success/10",
+  const colors = {
+    gold: { bg: 'rgba(198, 167, 94, 0.05)', border: 'rgba(198, 167, 94, 0.2)', iconBg: 'rgba(198, 167, 94, 0.1)', iconColor: 'var(--accent-gold)' },
+    amber: { bg: 'rgba(245, 158, 11, 0.05)', border: 'rgba(245, 158, 11, 0.2)', iconBg: 'rgba(245, 158, 11, 0.1)', iconColor: 'var(--warning)' },
+    default: { bg: 'var(--bg-card)', border: 'var(--border-default)', iconBg: 'var(--bg-secondary)', iconColor: 'var(--text-secondary)' }
   };
 
+  const c = colors[color];
+
   return (
-    <button
-      className={`
-        p-4 rounded-2xl border text-left
-        transition-all duration-200
-        ${variants[variant]}
-      `}
-    >
-      <div className="text-2xl mb-3">{emoji}</div>
-      <h3 className="font-semibold text-text-primary mb-1">{title}</h3>
-      <p className="text-sm text-text-muted">{description}</p>
-    </button>
+    <Link href={href} style={{ 
+      display: 'block', 
+      padding: '20px', 
+      borderRadius: '16px', 
+      backgroundColor: c.bg, 
+      border: `1px solid ${c.border}`,
+      transition: 'all 200ms ease'
+    }}>
+      <div style={{ 
+        width: '48px', 
+        height: '48px', 
+        borderRadius: '12px', 
+        backgroundColor: c.iconBg, 
+        display: 'flex', 
+        alignItems: 'center', 
+        justifyContent: 'center', 
+        color: c.iconColor,
+        marginBottom: '12px'
+      }}>
+        {icon}
+      </div>
+      <h3 style={{ fontWeight: 600, color: 'var(--text-primary)', marginBottom: '4px' }}>{title}</h3>
+      <p style={{ fontSize: '14px', color: 'var(--text-muted)' }}>{description}</p>
+    </Link>
   );
 }

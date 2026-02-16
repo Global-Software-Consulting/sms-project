@@ -7,11 +7,6 @@ import { Button, Input, Alert, Card, CardContent } from "@/components/ui";
 
 /**
  * Forgot Password Page - Following Design Guidelines
- * 
- * Spacing:
- * - Header margin-bottom: 32px
- * - Form gap: 20px between groups
- * - Section margins: 32px
  */
 export default function ForgotPasswordPage() {
   const [isLoading, setIsLoading] = useState(false);
@@ -42,10 +37,10 @@ export default function ForgotPasswordPage() {
           <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-success/10 flex items-center justify-center">
             <CheckCircle2 className="w-10 h-10 text-success" />
           </div>
-          <h1 className="text-3xl font-bold text-text-primary mb-3">
+          <h1 className="text-[32px] font-bold text-text-primary leading-tight mb-3">
             Check your email
           </h1>
-          <p className="text-text-secondary">
+          <p className="text-base text-text-secondary leading-relaxed">
             We&apos;ve sent a password reset link to
           </p>
           <p className="font-semibold text-text-primary mt-2">{email}</p>
@@ -79,7 +74,7 @@ export default function ForgotPasswordPage() {
           </Link>
         </div>
 
-        {/* Resend - 32px margin top */}
+        {/* Resend */}
         <div className="mt-8 pt-6 border-t border-border-default">
           <p className="text-sm text-text-muted">
             Didn&apos;t receive the email?{" "}
@@ -97,21 +92,23 @@ export default function ForgotPasswordPage() {
 
   return (
     <div className="animate-slide-up">
-      {/* Header - 32px margin bottom */}
-      <div className="text-center lg:text-left mb-8">
-        <h1 className="text-3xl font-bold text-text-primary mb-3">
+      {/* Header Section - 32px margin bottom */}
+      <div className="mb-8">
+        <h1 className="text-[32px] font-bold text-text-primary leading-tight mb-3">
           Forgot password?
         </h1>
-        <p className="text-text-secondary text-base">
+        <p className="text-base text-text-secondary leading-relaxed">
           No worries, we&apos;ll send you reset instructions
         </p>
       </div>
 
-      {/* Error Alert - 24px margin bottom */}
+      {/* Error Alert */}
       {error && (
-        <Alert variant="error" className="mb-6" dismissible onDismiss={() => setError(null)}>
-          {error}
-        </Alert>
+        <div className="mb-6">
+          <Alert variant="error" dismissible onDismiss={() => setError(null)}>
+            {error}
+          </Alert>
+        </div>
       )}
 
       {/* Form - 20px gap */}
@@ -133,7 +130,7 @@ export default function ForgotPasswordPage() {
           autoFocus
         />
 
-        <div className="mt-2">
+        <div className="mt-1">
           <Button
             type="submit"
             fullWidth
@@ -155,7 +152,7 @@ export default function ForgotPasswordPage() {
         </Link>
       </div>
 
-      {/* Help Section - 32px margin top */}
+      {/* Help Section */}
       <div className="mt-8 pt-6 border-t border-border-default">
         <div className="text-center">
           <p className="text-sm text-text-muted mb-2">

@@ -15,12 +15,15 @@ interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
 /**
  * Input Component - Following Design Guidelines
  * 
- * Specs:
- * - Height: 44px
+ * Specs from design-guidelines.md:
+ * - Height: 48px (increased for better touch target)
  * - Padding: 12px 16px
+ * - Left icon: 16px from edge, 20px size, 12px gap to text
+ * - Right icon: 16px from edge, 20px size, 12px gap to text
+ * - Total left padding with icon: 48px (16px + 20px + 12px)
+ * - Total right padding with icon: 48px (16px + 20px + 12px)
  * - Font size: 16px
  * - Border radius: 12px
- * - Icon spacing: 16px from edge, 12px gap to text
  * - Label to input gap: 8px
  */
 export const Input = React.forwardRef<HTMLInputElement, InputProps>(
@@ -66,9 +69,15 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
           </label>
         )}
         <div className="relative">
+          {/* Left Icon - 16px from edge, centered vertically */}
           {leftIcon && (
-            <div className="absolute left-4 top-1/2 -translate-y-1/2 text-text-muted pointer-events-none flex items-center justify-center w-5 h-5">
-              {leftIcon}
+            <div 
+              className="absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none"
+              style={{ width: '20px', height: '20px' }}
+            >
+              <div className="w-5 h-5 text-text-muted flex items-center justify-center">
+                {leftIcon}
+              </div>
             </div>
           )}
           <input
@@ -76,10 +85,7 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
             id={inputId}
             type={inputType}
             className={`
-              w-full h-11 
-              py-3
-              ${leftIcon ? "pl-12" : "pl-4"}
-              ${rightIcon || isPassword ? "pr-12" : "pr-4"}
+              w-full h-12
               text-base text-text-primary
               bg-bg-secondary
               border ${getStateStyles()}
@@ -90,13 +96,20 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
               disabled:opacity-50 disabled:cursor-not-allowed
               ${className}
             `}
+            style={{
+              paddingTop: '12px',
+              paddingBottom: '12px',
+              paddingLeft: leftIcon ? '48px' : '16px',      // 16px + 20px icon + 12px gap = 48px
+              paddingRight: (rightIcon || isPassword) ? '48px' : '16px',
+            }}
             {...props}
           />
+          {/* Password Toggle Icon */}
           {isPassword && (
             <button
               type="button"
               onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-4 top-1/2 -translate-y-1/2 text-text-muted hover:text-text-primary transition-colors duration-150 flex items-center justify-center w-5 h-5"
+              className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-text-muted hover:text-text-primary transition-colors duration-150 flex items-center justify-center"
               tabIndex={-1}
             >
               {showPassword ? (
@@ -106,15 +119,22 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
               )}
             </button>
           )}
+          {/* Right Icon (non-password) - 16px from edge */}
           {rightIcon && !isPassword && (
-            <div className="absolute right-4 top-1/2 -translate-y-1/2 text-text-muted pointer-events-none flex items-center justify-center w-5 h-5">
-              {rightIcon}
+            <div 
+              className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none"
+              style={{ width: '20px', height: '20px' }}
+            >
+              <div className="w-5 h-5 text-text-muted flex items-center justify-center">
+                {rightIcon}
+              </div>
             </div>
           )}
         </div>
+        {/* Helper text - error, success, or hint */}
         {(error || success || hint) && (
           <p
-            className={`text-xs mt-1 ${
+            className={`text-xs ${
               error
                 ? "text-danger"
                 : success

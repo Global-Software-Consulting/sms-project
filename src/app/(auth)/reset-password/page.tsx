@@ -80,10 +80,10 @@ function ResetPasswordContent() {
           <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-warning/10 flex items-center justify-center">
             <AlertTriangle className="w-10 h-10 text-warning" />
           </div>
-          <h1 className="text-3xl font-bold text-text-primary mb-3">
+          <h1 className="text-[32px] font-bold text-text-primary leading-tight mb-3">
             Invalid reset link
           </h1>
-          <p className="text-text-secondary">
+          <p className="text-base text-text-secondary leading-relaxed">
             This password reset link is invalid or has expired
           </p>
         </div>
@@ -122,10 +122,10 @@ function ResetPasswordContent() {
           <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-success/10 flex items-center justify-center">
             <CheckCircle2 className="w-10 h-10 text-success" />
           </div>
-          <h1 className="text-3xl font-bold text-text-primary mb-3">
+          <h1 className="text-[32px] font-bold text-text-primary leading-tight mb-3">
             Password reset successful
           </h1>
-          <p className="text-text-secondary">
+          <p className="text-base text-text-secondary leading-relaxed">
             Your password has been successfully updated
           </p>
         </div>
@@ -153,21 +153,23 @@ function ResetPasswordContent() {
 
   return (
     <div className="animate-slide-up">
-      {/* Header - 32px margin bottom */}
-      <div className="text-center lg:text-left mb-8">
-        <h1 className="text-3xl font-bold text-text-primary mb-3">
+      {/* Header Section - 32px margin bottom */}
+      <div className="mb-8">
+        <h1 className="text-[32px] font-bold text-text-primary leading-tight mb-3">
           Reset your password
         </h1>
-        <p className="text-text-secondary text-base">
+        <p className="text-base text-text-secondary leading-relaxed">
           Enter your new password below
         </p>
       </div>
 
       {/* Error Alert */}
       {error && (
-        <Alert variant="error" className="mb-6" dismissible onDismiss={() => setError(null)}>
-          {error}
-        </Alert>
+        <div className="mb-6">
+          <Alert variant="error" dismissible onDismiss={() => setError(null)}>
+            {error}
+          </Alert>
+        </div>
       )}
 
       {/* Form - 20px gap */}
@@ -234,7 +236,7 @@ function ResetPasswordContent() {
           }
         />
 
-        <div className="mt-2">
+        <div className="mt-1">
           <Button
             type="submit"
             fullWidth
@@ -247,7 +249,7 @@ function ResetPasswordContent() {
         </div>
       </form>
 
-      {/* Security Note - 32px margin top */}
+      {/* Security Note */}
       <div className="mt-8 pt-6 border-t border-border-default">
         <Card variant="default" padding="compact">
           <CardContent className="flex items-start gap-4">

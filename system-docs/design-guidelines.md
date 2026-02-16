@@ -544,6 +544,66 @@ li + li {
 }
 ```
 
+#### Input Fields with Icons
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                                                             │
+│  ┌──────┐                                        ┌──────┐   │
+│  │ ICON │  ←── 12px ──→  Placeholder text        │ ICON │   │
+│  │ 20px │                                        │ 20px │   │
+│  └──────┘                                        └──────┘   │
+│                                                             │
+│  ↑                                                      ↑   │
+│  16px padding                                    16px padding│
+│                                                             │
+└─────────────────────────────────────────────────────────────┘
+
+Height: 48px (increased for better touch target)
+```
+
+```css
+/* Input with Left Icon */
+.input-with-icon {
+  height: 48px;
+  padding: 12px 16px;
+  padding-left: 48px;           /* 16px + 20px icon + 12px gap */
+  font-size: 16px;
+  border-radius: 12px;
+}
+
+.input-icon-left {
+  position: absolute;
+  left: 16px;                   /* 16px from edge */
+  top: 50%;
+  transform: translateY(-50%);
+  width: 20px;
+  height: 20px;
+  color: var(--text-muted);
+  pointer-events: none;
+}
+
+/* Input with Right Icon (e.g., password toggle) */
+.input-with-right-icon {
+  padding-right: 48px;          /* 16px + 20px icon + 12px gap */
+}
+
+.input-icon-right {
+  position: absolute;
+  right: 16px;                  /* 16px from edge */
+  top: 50%;
+  transform: translateY(-50%);
+  width: 20px;
+  height: 20px;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.input-icon-right:hover {
+  color: var(--text-secondary);
+}
+```
+
 #### Form Layout Spacing
 
 ```css
@@ -569,6 +629,153 @@ li + li {
   margin-top: 8px; /* Extra space before submit */
   display: flex;
   gap: 12px;
+}
+```
+
+### 6.3.1 Authentication Page Layout
+
+The authentication pages (login, register, forgot password, etc.) follow a specific spacing system for optimal readability and visual hierarchy.
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                                                             │
+│                    AUTH FORM CONTAINER                      │
+│                    max-width: 420px                         │
+│                    padding: 0 (handled by parent)           │
+│                                                             │
+│  ┌───────────────────────────────────────────────────────┐  │
+│  │ HEADER SECTION                                        │  │
+│  │                                                       │  │
+│  │ Title (h1)         ← font-size: 32px, font-weight: 700│  │
+│  │                    ↕ 12px gap                         │  │
+│  │ Subtitle (p)       ← font-size: 16px, text-secondary  │  │
+│  │                                                       │  │
+│  └───────────────────────────────────────────────────────┘  │
+│                         ↕ 32px margin-bottom                │
+│  ┌───────────────────────────────────────────────────────┐  │
+│  │ SOCIAL BUTTONS                                        │  │
+│  │ ┌─────────────┐  12px gap  ┌─────────────┐            │  │
+│  │ │   Google    │            │   GitHub    │            │  │
+│  │ │   h: 48px   │            │   h: 48px   │            │  │
+│  │ └─────────────┘            └─────────────┘            │  │
+│  └───────────────────────────────────────────────────────┘  │
+│                         ↕ 24px margin-bottom                │
+│  ┌───────────────────────────────────────────────────────┐  │
+│  │ DIVIDER                                               │  │
+│  │ ────────────── OR CONTINUE WITH EMAIL ──────────────  │  │
+│  └───────────────────────────────────────────────────────┘  │
+│                         ↕ 24px margin-bottom                │
+│  ┌───────────────────────────────────────────────────────┐  │
+│  │ FORM SECTION                                          │  │
+│  │                                                       │  │
+│  │ ┌─────────────────────────────────────────────────┐   │  │
+│  │ │ Label            ← font-size: 14px, font-weight: 500│  │
+│  │ │                  ↕ 8px gap                       │   │  │
+│  │ │ ┌─────────────────────────────────────────────┐ │   │  │
+│  │ │ │ Input Field (h: 48px)                       │ │   │  │
+│  │ │ └─────────────────────────────────────────────┘ │   │  │
+│  │ └─────────────────────────────────────────────────┘   │  │
+│  │                     ↕ 20px gap                        │  │
+│  │ ┌─────────────────────────────────────────────────┐   │  │
+│  │ │ Next Form Group...                              │   │  │
+│  │ └─────────────────────────────────────────────────┘   │  │
+│  │                     ↕ 24px gap                        │  │
+│  │ ┌─────────────────────────────────────────────────┐   │  │
+│  │ │ Submit Button (h: 48px)                         │   │  │
+│  │ └─────────────────────────────────────────────────┘   │  │
+│  └───────────────────────────────────────────────────────┘  │
+│                         ↕ 32px margin-top                   │
+│  ┌───────────────────────────────────────────────────────┐  │
+│  │ FOOTER SECTION                                        │  │
+│  │ "Don't have an account? Create account"               │  │
+│  └───────────────────────────────────────────────────────┘  │
+│                         ↕ 32px margin-top                   │
+│  ┌───────────────────────────────────────────────────────┐  │
+│  │ TRUST INDICATORS (optional)                           │  │
+│  │ border-top: 1px solid border-default                  │  │
+│  │ padding-top: 24px                                     │  │
+│  └───────────────────────────────────────────────────────┘  │
+│                                                             │
+└─────────────────────────────────────────────────────────────┘
+```
+
+```css
+/* Auth Page Container */
+.auth-container {
+  max-width: 420px;
+  width: 100%;
+}
+
+/* Header Section */
+.auth-header {
+  margin-bottom: 32px;
+}
+
+.auth-title {
+  font-size: 32px;
+  font-weight: 700;
+  line-height: 1.2;
+  color: var(--text-primary);
+  margin-bottom: 12px;
+}
+
+.auth-subtitle {
+  font-size: 16px;
+  line-height: 1.5;
+  color: var(--text-secondary);
+}
+
+/* Social Buttons Section */
+.auth-social {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.auth-social-button {
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;                    /* Icon to text gap */
+  font-size: 14px;
+  font-weight: 500;
+}
+
+/* Divider */
+.auth-divider {
+  margin: 24px 0;
+}
+
+/* Form Section */
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;                    /* Between form groups */
+}
+
+.auth-form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;                     /* Label to input gap */
+}
+
+.auth-form-submit {
+  margin-top: 4px;              /* Extra 4px before submit = 24px total */
+}
+
+/* Footer Section */
+.auth-footer {
+  margin-top: 32px;
+  text-align: center;
+}
+
+/* Trust Indicators */
+.auth-trust {
+  margin-top: 32px;
+  padding-top: 24px;
+  border-top: 1px solid var(--border-default);
 }
 ```
 

@@ -11,13 +11,13 @@ interface SocialButtonsProps {
 /**
  * Social Login Buttons - Following Design Guidelines
  * 
- * Specs:
- * - Button height: 44px
+ * Specs from design-guidelines.md:
+ * - Button height: 48px
  * - Border radius: 12px
  * - Icon size: 20px
  * - Icon to text gap: 12px
- * - Button gap: 12px
- * - Section margin-bottom: 24px
+ * - Grid gap between buttons: 12px
+ * - Section margin-bottom: 24px (handled by parent)
  */
 export const SocialButtons: React.FC<SocialButtonsProps> = ({
   onGoogleClick,
@@ -25,14 +25,14 @@ export const SocialButtons: React.FC<SocialButtonsProps> = ({
   isLoading = false,
 }) => {
   return (
-    <div className="grid grid-cols-2 gap-3 mb-6">
+    <div className="grid grid-cols-2 gap-3">
       {/* Google Button */}
       <button
         type="button"
         onClick={onGoogleClick}
         disabled={isLoading}
         className="
-          h-11 flex items-center justify-center gap-3
+          h-12 flex items-center justify-center gap-3
           bg-bg-secondary border border-border-default rounded-xl
           text-sm font-medium text-text-primary
           hover:bg-bg-hover hover:border-border-hover
@@ -68,7 +68,7 @@ export const SocialButtons: React.FC<SocialButtonsProps> = ({
         onClick={onGithubClick}
         disabled={isLoading}
         className="
-          h-11 flex items-center justify-center gap-3
+          h-12 flex items-center justify-center gap-3
           bg-bg-secondary border border-border-default rounded-xl
           text-sm font-medium text-text-primary
           hover:bg-bg-hover hover:border-border-hover

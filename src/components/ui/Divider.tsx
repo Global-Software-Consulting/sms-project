@@ -10,11 +10,11 @@ interface DividerProps {
 /**
  * Divider Component - Following Design Guidelines
  * 
- * Specs:
- * - Vertical margin: 24px (my-6)
+ * Specs from design-guidelines.md:
+ * - Vertical margin: 24px top and bottom (my-6)
  * - Text padding: 16px horizontal
  * - Line color: border-default
- * - Text: 12px, uppercase, text-muted
+ * - Text: 12px, uppercase, text-muted, letter-spacing
  */
 export const Divider: React.FC<DividerProps> = ({ children, className = "" }) => {
   if (children) {
@@ -24,7 +24,7 @@ export const Divider: React.FC<DividerProps> = ({ children, className = "" }) =>
           <div className="w-full border-t border-border-default" />
         </div>
         <div className="relative flex justify-center">
-          <span className="px-4 text-xs font-medium text-text-muted uppercase tracking-wide bg-bg-primary">
+          <span className="px-4 text-xs font-medium text-text-muted uppercase tracking-wider bg-bg-primary">
             {children}
           </span>
         </div>

@@ -120,10 +120,10 @@ function VerifyEmailContent() {
           <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-success/10 flex items-center justify-center">
             <CheckCircle2 className="w-10 h-10 text-success" />
           </div>
-          <h1 className="text-3xl font-bold text-text-primary mb-3">
+          <h1 className="text-[32px] font-bold text-text-primary leading-tight mb-3">
             Email verified!
           </h1>
-          <p className="text-text-secondary">
+          <p className="text-base text-text-secondary leading-relaxed">
             Your email has been successfully verified
           </p>
         </div>
@@ -154,7 +154,7 @@ function VerifyEmailContent() {
           </Link>
         </div>
 
-        {/* Welcome Benefits - 32px margin top */}
+        {/* Welcome Benefits */}
         <div className="mt-8 pt-6 border-t border-border-default">
           <p className="text-sm text-text-muted mb-4">Your welcome benefits:</p>
           <div className="grid grid-cols-2 gap-4">
@@ -174,15 +174,15 @@ function VerifyEmailContent() {
 
   return (
     <div className="animate-slide-up">
-      {/* Header - 32px margin bottom */}
+      {/* Header Section - 32px margin bottom */}
       <div className="text-center mb-10">
         <div className="w-16 h-16 mx-auto mb-6 rounded-full bg-accent-gold/10 flex items-center justify-center">
           <Mail className="w-8 h-8 text-accent-gold" />
         </div>
-        <h1 className="text-3xl font-bold text-text-primary mb-3">
+        <h1 className="text-[32px] font-bold text-text-primary leading-tight mb-3">
           Verify your email
         </h1>
-        <p className="text-text-secondary">
+        <p className="text-base text-text-secondary leading-relaxed">
           We sent a verification code to
         </p>
         <p className="font-semibold text-text-primary mt-2">{email}</p>
@@ -190,12 +190,14 @@ function VerifyEmailContent() {
 
       {/* Error Alert */}
       {error && (
-        <Alert variant="error" className="mb-6" dismissible onDismiss={() => setError(null)}>
-          {error}
-        </Alert>
+        <div className="mb-6">
+          <Alert variant="error" dismissible onDismiss={() => setError(null)}>
+            {error}
+          </Alert>
+        </div>
       )}
 
-      {/* OTP Input - 24px margin bottom */}
+      {/* OTP Input */}
       <div className="mb-6">
         <label className="block text-sm font-medium text-text-primary mb-4 text-center">
           Enter verification code
@@ -238,7 +240,7 @@ function VerifyEmailContent() {
         Verify email
       </Button>
 
-      {/* Resend Code - 24px margin top */}
+      {/* Resend Code */}
       <div className="mt-6 text-center">
         <p className="text-sm text-text-muted mb-2">
           Didn&apos;t receive the code?
@@ -257,7 +259,7 @@ function VerifyEmailContent() {
         </button>
       </div>
 
-      {/* Help - 32px margin top */}
+      {/* Help */}
       <div className="mt-8 pt-6 border-t border-border-default">
         <Card variant="default" padding="compact">
           <CardContent>
@@ -271,7 +273,7 @@ function VerifyEmailContent() {
         </Card>
       </div>
 
-      {/* Change Email - 24px margin top */}
+      {/* Change Email */}
       <div className="mt-6 text-center">
         <Link
           href="/register"
