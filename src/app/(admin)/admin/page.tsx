@@ -1,312 +1,416 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { useState } from 'react';
-import { useAuth } from '@/hooks';
-import { Button } from '@/components/ui';
 import { 
   Users, 
-  Settings, 
-  Shield, 
+  Wallet, 
+  DollarSign, 
+  Crown,
+  Key,
   Activity,
-  LogOut,
-  ArrowLeft,
-  MessageSquare,
-  DollarSign,
   TrendingUp,
-  Database,
-  FileText,
-  Lock,
-  BarChart3,
-  Wallet,
-  CreditCard,
-  Menu,
-  X
+  TrendingDown,
+  AlertTriangle,
+  CheckCircle,
+  Clock,
+  ArrowRight,
+  RefreshCw,
+  Server,
+  Shield,
+  FileText
 } from 'lucide-react';
+import { Button, Alert } from '@/components/ui';
+import { 
+  getDashboardOverview,
+  getRecentAuditLogs,
+  getRecentSystemLogs,
+  formatCurrency,
+  formatNumber,
+  getGrowthIndicator,
+  getSystemHealthColor,
+  getLogLevelColor,
+  type DashboardOverview,
+  type AuditLog,
+  type SystemLog
+} from '@/lib/api';
 
 /**
- * Admin Dashboard Page - Only accessible by SUPER_ADMIN
- * 
- * LAYOUT (Design Guidelines 7.4):
- * - Sidebar: 260px fixed
- * - Header: 64px sticky
- * - Content: 32px padding
- * - Stats grid: 4 columns, 24px gap
- * - Cards: 24px padding
+ * Admin Dashboard - Main analytics overview
  */
 export default function AdminDashboardPage() {
-  const { user, logout } = useAuth();
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [dashboard, setDashboard] = useState<DashboardOverview | null>(null);
+  const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
+  const [systemLogs, setSystemLogs] = useState<SystemLog[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      const [dashboardData, auditData, systemData] = await Promise.all([
+        getDashboardOverview(),
+        getRecentAuditLogs(5),
+        getRecentSystemLogs(5),
+      ]);
+      
+      setDashboard(dashboardData);
+      setAuditLogs(auditData);
+      setSystemLogs(systemData);
+    } catch (err: unknown) {
+      const error = err as { response?: { data?: { message?: string } } };
+      setError(error.response?.data?.message || 'Failed to load dashboard');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  if (loading) {
+    return (
+      <div style={{ minHeight: '100vh', backgroundColor: 'var(--bg-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ textAlign: 'center' }}>
+          <div style={{ width: '48px', height: '48px', margin: '0 auto 16px', borderRadius: '50%', border: '4px solid var(--accent-gold)', borderTopColor: 'transparent', animation: 'spin 1s linear infinite' }} />
+          <p style={{ color: 'var(--text-muted)' }}>Loading dashboard...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div style={{ minHeight: '100vh', backgroundColor: 'var(--bg-primary)' }}>
-      {/* Mobile Overlay */}
-      {isMobileMenuOpen && (
-        <div 
-          style={{
-            position: 'fixed',
-            inset: 0,
-            backgroundColor: 'rgba(0,0,0,0.6)',
-            backdropFilter: 'blur(4px)',
-            zIndex: 40
-          }}
-          className="lg:hidden"
-          onClick={() => setIsMobileMenuOpen(false)}
-        />
-      )}
-
-      {/* SIDEBAR - 260px fixed */}
-      <aside 
-        style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          bottom: 0,
-          width: '260px',
-          backgroundColor: 'var(--bg-card)',
-          borderRight: '1px solid var(--border-default)',
-          display: 'flex',
-          flexDirection: 'column',
-          zIndex: 50,
-          transform: isMobileMenuOpen ? 'translateX(0)' : 'translateX(-100%)',
-          transition: 'transform 300ms ease-out'
-        }}
-        className="lg:!transform-none"
-      >
-        {/* Logo - 64px */}
-        <div style={{ height: '64px', padding: '0 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid var(--border-default)' }}>
-          <Link href="/admin" style={{ display: 'flex', alignItems: 'center', gap: '12px', textDecoration: 'none' }}>
-            <div style={{ width: '36px', height: '36px', borderRadius: '12px', backgroundColor: 'rgba(198, 167, 94, 0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <Shield style={{ width: '20px', height: '20px', color: 'var(--accent-gold)' }} />
+      {/* Header */}
+      <div style={{ 
+        backgroundColor: 'var(--bg-card)', 
+        borderBottom: '1px solid var(--border-default)',
+        padding: '24px'
+      }}>
+        <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px' }}>
+            <div>
+              <h1 style={{ fontSize: '28px', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '4px' }}>
+                Admin Dashboard
+              </h1>
+              <p style={{ color: 'var(--text-muted)', fontSize: '14px' }}>
+                Overview of your SMS Sort platform
+              </p>
             </div>
-            <span style={{ fontSize: '18px', fontWeight: 700, color: 'var(--text-primary)' }}>
-              Admin<span style={{ color: 'var(--accent-gold)' }}>Panel</span>
-            </span>
-          </Link>
-          <button 
-            className="lg:hidden"
-            style={{ padding: '6px', borderRadius: '8px', background: 'none', border: 'none', cursor: 'pointer' }}
-            onClick={() => setIsMobileMenuOpen(false)}
-          >
-            <X style={{ width: '20px', height: '20px', color: 'var(--text-muted)' }} />
-          </button>
-        </div>
-
-        {/* Navigation */}
-        <nav style={{ flex: 1, padding: '20px 12px', overflowY: 'auto' }}>
-          {/* Main */}
-          <div style={{ marginBottom: '24px' }}>
-            <p style={{ padding: '0 12px', marginBottom: '8px', fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-              Main
-            </p>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-              <AdminNavItem href="/admin" icon={<BarChart3 style={{ width: '18px', height: '18px' }} />} label="Dashboard" active />
-              <AdminNavItem href="/admin/analytics" icon={<TrendingUp style={{ width: '18px', height: '18px' }} />} label="Analytics" />
-            </div>
-          </div>
-
-          {/* Users */}
-          <div style={{ marginBottom: '24px' }}>
-            <p style={{ padding: '0 12px', marginBottom: '8px', fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-              Users
-            </p>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-              <AdminNavItem href="/admin/users" icon={<Users style={{ width: '18px', height: '18px' }} />} label="Manage Users" />
-              <AdminNavItem href="/admin/roles" icon={<Lock style={{ width: '18px', height: '18px' }} />} label="Roles & Permissions" />
-            </div>
-          </div>
-
-          {/* Services */}
-          <div style={{ marginBottom: '24px' }}>
-            <p style={{ padding: '0 12px', marginBottom: '8px', fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-              Services
-            </p>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-              <AdminNavItem href="/admin/providers" icon={<Database style={{ width: '18px', height: '18px' }} />} label="Providers" />
-              <AdminNavItem href="/admin/services" icon={<MessageSquare style={{ width: '18px', height: '18px' }} />} label="SMS Services" />
-            </div>
-          </div>
-
-          {/* Finance */}
-          <div style={{ marginBottom: '24px' }}>
-            <p style={{ padding: '0 12px', marginBottom: '8px', fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-              Finance
-            </p>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-              <AdminNavItem href="/admin/transactions" icon={<Wallet style={{ width: '18px', height: '18px' }} />} label="Transactions" />
-              <AdminNavItem href="/admin/payments" icon={<CreditCard style={{ width: '18px', height: '18px' }} />} label="Payment Gateways" />
-            </div>
-          </div>
-
-          {/* System */}
-          <div style={{ marginBottom: '24px' }}>
-            <p style={{ padding: '0 12px', marginBottom: '8px', fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-              System
-            </p>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-              <AdminNavItem href="/admin/settings" icon={<Settings style={{ width: '18px', height: '18px' }} />} label="Settings" />
-              <AdminNavItem href="/admin/logs" icon={<FileText style={{ width: '18px', height: '18px' }} />} label="System Logs" />
-            </div>
-          </div>
-        </nav>
-
-        {/* Back to Dashboard */}
-        <div style={{ padding: '12px', borderTop: '1px solid var(--border-default)' }}>
-          <Link 
-            href="/dashboard"
-            style={{ 
-              display: 'flex', 
-              alignItems: 'center', 
-              gap: '12px', 
-              height: '44px', 
-              padding: '0 12px', 
-              borderRadius: '12px', 
-              fontSize: '14px', 
-              fontWeight: 500, 
-              color: 'var(--text-secondary)', 
-              textDecoration: 'none',
-              transition: 'all 150ms ease'
-            }}
-          >
-            <ArrowLeft style={{ width: '18px', height: '18px' }} />
-            <span>Back to Dashboard</span>
-          </Link>
-        </div>
-      </aside>
-
-      {/* MAIN CONTENT - margin-left: 260px on desktop */}
-      <div 
-        style={{ marginLeft: '0', minHeight: '100vh', display: 'flex', flexDirection: 'column' }}
-        className="lg:!ml-[260px]"
-      >
-        {/* Header - 64px */}
-        <header style={{ height: '64px', backgroundColor: 'var(--bg-card)', borderBottom: '1px solid var(--border-default)', position: 'sticky', top: 0, zIndex: 30 }}>
-          <div style={{ height: '100%', padding: '0 16px', display: 'flex', alignItems: 'center', gap: '16px' }} className="lg:!px-8">
-            {/* Mobile Menu */}
-            <button 
-              className="lg:hidden"
-              style={{ padding: '8px', marginLeft: '-8px', borderRadius: '8px', background: 'none', border: 'none', cursor: 'pointer' }}
-              onClick={() => setIsMobileMenuOpen(true)}
-            >
-              <Menu style={{ width: '20px', height: '20px', color: 'var(--text-secondary)' }} />
-            </button>
-
-            {/* Mobile Title */}
-            <div className="lg:hidden" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <Shield style={{ width: '24px', height: '24px', color: 'var(--accent-gold)' }} />
-              <span style={{ fontWeight: 700, color: 'var(--text-primary)' }}>Admin</span>
-            </div>
-
-            {/* Desktop Breadcrumb */}
-            <div className="hidden lg:flex" style={{ alignItems: 'center', gap: '8px', fontSize: '14px' }}>
-              <span style={{ color: 'var(--text-muted)' }}>Admin</span>
-              <span style={{ color: 'var(--text-muted)' }}>/</span>
-              <span style={{ color: 'var(--text-primary)', fontWeight: 500 }}>Dashboard</span>
-            </div>
-
-            <div style={{ flex: 1 }} />
-
-            {/* User Info */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <span className="hidden md:block" style={{ fontSize: '14px', color: 'var(--text-secondary)', maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                {user?.email}
-              </span>
-              <span style={{ padding: '4px 8px', backgroundColor: 'rgba(198, 167, 94, 0.2)', color: 'var(--accent-gold)', fontSize: '12px', fontWeight: 600, borderRadius: '4px' }}>
-                SUPER_ADMIN
-              </span>
-              <Button variant="ghost" size="sm" onClick={logout}>
-                <LogOut style={{ width: '16px', height: '16px' }} />
+            <div style={{ display: 'flex', gap: '12px' }}>
+              <Button variant="outline" onClick={fetchData}>
+                <RefreshCw style={{ width: '16px', height: '16px', marginRight: '8px' }} />
+                Refresh
               </Button>
             </div>
           </div>
-        </header>
+        </div>
+      </div>
 
-        {/* Content - 32px padding */}
-        <main style={{ flex: 1, padding: '16px' }} className="lg:!p-8">
-          {/* Welcome */}
-          <div style={{ marginBottom: '32px' }}>
-            <h1 style={{ fontSize: '24px', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '8px' }} className="lg:!text-[30px]">
-              Admin Dashboard
-            </h1>
-            <p style={{ color: 'var(--text-secondary)' }}>
-              Overview of your platform&apos;s performance and management tools.
-            </p>
+      {/* Content */}
+      <div style={{ maxWidth: '1400px', margin: '0 auto', padding: '24px' }}>
+        {/* Error */}
+        {error && (
+          <div style={{ marginBottom: '24px' }}>
+            <Alert variant="error" dismissible onDismiss={() => setError(null)}>
+              {error}
+            </Alert>
           </div>
+        )}
 
-          {/* Stats Grid - 4 columns, 24px gap */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px', marginBottom: '32px' }} className="lg:!grid-cols-4 lg:!gap-6">
-            <AdminStatCard 
-              icon={<Users style={{ width: '24px', height: '24px' }} />} 
-              label="Total Users" 
-              value="--" 
-              trend="+0 this week" 
-              iconBg="rgba(198, 167, 94, 0.1)"
-              iconColor="var(--accent-gold)"
-            />
-            <AdminStatCard 
-              icon={<Activity style={{ width: '24px', height: '24px' }} />} 
-              label="Active Sessions" 
-              value="--" 
-              trend="Real-time" 
-              iconBg="rgba(34, 197, 94, 0.1)"
-              iconColor="var(--success)"
-            />
-            <AdminStatCard 
-              icon={<MessageSquare style={{ width: '24px', height: '24px' }} />} 
-              label="Total Orders" 
-              value="--" 
-              trend="+0 today" 
-              iconBg="rgba(59, 130, 246, 0.1)"
-              iconColor="var(--info)"
-            />
-            <AdminStatCard 
-              icon={<DollarSign style={{ width: '24px', height: '24px' }} />} 
-              label="Revenue" 
-              value="$--" 
-              trend="+$0 this month" 
-              iconBg="rgba(168, 85, 247, 0.1)"
-              iconColor="#a855f7"
-            />
-          </div>
+        {/* Quick Stats */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px', marginBottom: '24px' }} className="lg:!grid-cols-4">
+          <QuickStatCard 
+            icon={Users}
+            label="Total Users"
+            value={formatNumber(dashboard?.users.totalUsers || 0)}
+            change={dashboard?.users.userGrowthPercent || 0}
+            href="/admin/users"
+          />
+          <QuickStatCard 
+            icon={DollarSign}
+            label="Total Revenue"
+            value={formatCurrency(dashboard?.revenue.totalRevenue || '0')}
+            change={dashboard?.revenue.revenueGrowthPercent || 0}
+            href="/admin/wallets"
+          />
+          <QuickStatCard 
+            icon={Crown}
+            label="Active Memberships"
+            value={formatNumber(dashboard?.memberships.totalActive || 0)}
+            subtext={`${dashboard?.memberships.newToday || 0} new today`}
+            href="/admin/memberships"
+          />
+          <QuickStatCard 
+            icon={Key}
+            label="Active API Keys"
+            value={formatNumber(dashboard?.api.activeKeys || 0)}
+            subtext={`${formatNumber(dashboard?.api.requestsToday || 0)} requests today`}
+            href="/admin/api-keys"
+          />
+        </div>
 
-          {/* Quick Actions */}
-          <div style={{ marginBottom: '32px' }}>
-            <h2 style={{ fontSize: '18px', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '16px' }}>Quick Actions</h2>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '16px' }} className="sm:!grid-cols-2 lg:!grid-cols-3 lg:!gap-6">
-              <AdminActionCard 
-                icon={<Users style={{ width: '24px', height: '24px' }} />} 
-                title="User Management" 
-                description="View, edit, and manage user accounts" 
-                href="/admin/users" 
-              />
-              <AdminActionCard 
-                icon={<Settings style={{ width: '24px', height: '24px' }} />} 
-                title="System Settings" 
-                description="Configure application settings" 
-                href="/admin/settings" 
-              />
-              <AdminActionCard 
-                icon={<TrendingUp style={{ width: '24px', height: '24px' }} />} 
-                title="Analytics" 
-                description="View system analytics and reports" 
-                href="/admin/analytics" 
-              />
-            </div>
-          </div>
-
-          {/* Recent Activity */}
-          <div>
-            <h2 style={{ fontSize: '18px', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '16px' }}>Recent Activity</h2>
-            <div style={{ border: '1px dashed var(--border-default)', borderRadius: '16px', backgroundColor: 'var(--bg-card)' }}>
-              <div style={{ padding: '48px 24px', textAlign: 'center' }}>
-                <div style={{ width: '48px', height: '48px', margin: '0 auto 16px', borderRadius: '12px', backgroundColor: 'var(--bg-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <Activity style={{ width: '24px', height: '24px', color: 'var(--text-muted)' }} />
+        {/* Main Grid */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '24px', marginBottom: '24px' }} className="lg:!grid-cols-3">
+          {/* Revenue Overview */}
+          <div style={{ gridColumn: 'span 1' }} className="lg:!col-span-2">
+            <div style={{ 
+              backgroundColor: 'var(--bg-card)', 
+              border: '1px solid var(--border-default)', 
+              borderRadius: '16px',
+              padding: '24px',
+              height: '100%'
+            }}>
+              <h3 style={{ fontSize: '16px', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '20px' }}>
+                Revenue Overview
+              </h3>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px' }} className="sm:!grid-cols-4">
+                <RevenueBox label="Today" value={formatCurrency(dashboard?.revenue.revenueToday || '0')} />
+                <RevenueBox label="This Week" value={formatCurrency(dashboard?.revenue.revenueThisWeek || '0')} />
+                <RevenueBox label="This Month" value={formatCurrency(dashboard?.revenue.revenueThisMonth || '0')} />
+                <RevenueBox label="Avg Transaction" value={formatCurrency(dashboard?.revenue.avgTransactionValue || '0')} />
+              </div>
+              
+              {/* Placeholder for chart */}
+              <div style={{ 
+                marginTop: '24px', 
+                height: '200px', 
+                backgroundColor: 'var(--bg-secondary)', 
+                borderRadius: '12px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}>
+                <div style={{ textAlign: 'center' }}>
+                  <Activity style={{ width: '32px', height: '32px', color: 'var(--text-muted)', margin: '0 auto 8px' }} />
+                  <p style={{ color: 'var(--text-muted)', fontSize: '14px' }}>Revenue chart coming soon</p>
                 </div>
-                <p style={{ color: 'var(--text-muted)' }}>No recent activity to display</p>
               </div>
             </div>
           </div>
-        </main>
+
+          {/* System Health */}
+          <div style={{ gridColumn: 'span 1' }}>
+            <div style={{ 
+              backgroundColor: 'var(--bg-card)', 
+              border: '1px solid var(--border-default)', 
+              borderRadius: '16px',
+              padding: '24px',
+              height: '100%'
+            }}>
+              <h3 style={{ fontSize: '16px', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '20px' }}>
+                System Health
+              </h3>
+              
+              {/* Status */}
+              <div style={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                gap: '12px',
+                padding: '16px',
+                backgroundColor: 'var(--bg-secondary)',
+                borderRadius: '12px',
+                marginBottom: '16px'
+              }}>
+                <div style={{ 
+                  width: '48px', 
+                  height: '48px', 
+                  borderRadius: '50%', 
+                  backgroundColor: `${getSystemHealthColor(dashboard?.systemHealth.status || 'healthy')}20`,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}>
+                  <Server style={{ width: '24px', height: '24px', color: getSystemHealthColor(dashboard?.systemHealth.status || 'healthy') }} />
+                </div>
+                <div>
+                  <p style={{ fontWeight: 600, color: getSystemHealthColor(dashboard?.systemHealth.status || 'healthy'), textTransform: 'capitalize' }}>
+                    {dashboard?.systemHealth.status || 'Unknown'}
+                  </p>
+                  <p style={{ fontSize: '13px', color: 'var(--text-muted)' }}>
+                    {((dashboard?.systemHealth.uptime || 0) / 3600).toFixed(1)}h uptime
+                  </p>
+                </div>
+              </div>
+
+              {/* Metrics */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                <HealthMetric 
+                  icon={AlertTriangle} 
+                  label="Errors Today" 
+                  value={dashboard?.systemHealth.errorsToday || 0}
+                  color={dashboard?.systemHealth.errorsToday ? 'var(--danger)' : 'var(--success)'}
+                />
+                <HealthMetric 
+                  icon={AlertTriangle} 
+                  label="Warnings Today" 
+                  value={dashboard?.systemHealth.warningsToday || 0}
+                  color={dashboard?.systemHealth.warningsToday ? 'var(--warning)' : 'var(--success)'}
+                />
+                <HealthMetric 
+                  icon={Activity} 
+                  label="API Error Rate" 
+                  value={`${((dashboard?.api.errorRate || 0) * 100).toFixed(2)}%`}
+                  color={(dashboard?.api.errorRate || 0) > 0.05 ? 'var(--danger)' : 'var(--success)'}
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* User & Wallet Stats */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '24px', marginBottom: '24px' }} className="lg:!grid-cols-2">
+          {/* User Stats */}
+          <div style={{ 
+            backgroundColor: 'var(--bg-card)', 
+            border: '1px solid var(--border-default)', 
+            borderRadius: '16px',
+            padding: '24px'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
+              <h3 style={{ fontSize: '16px', fontWeight: 600, color: 'var(--text-primary)' }}>
+                User Statistics
+              </h3>
+              <Link href="/admin/users" style={{ fontSize: '14px', color: 'var(--accent-gold)', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                View All <ArrowRight style={{ width: '14px', height: '14px' }} />
+              </Link>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px' }} className="sm:!grid-cols-4">
+              <StatBox icon={Users} label="Total" value={dashboard?.users.totalUsers || 0} />
+              <StatBox icon={CheckCircle} label="Today" value={dashboard?.users.newUsersToday || 0} color="green" />
+              <StatBox icon={Clock} label="This Week" value={dashboard?.users.newUsersThisWeek || 0} color="blue" />
+              <StatBox icon={Activity} label="Active Today" value={dashboard?.users.activeUsersToday || 0} color="gold" />
+            </div>
+          </div>
+
+          {/* Wallet Stats */}
+          <div style={{ 
+            backgroundColor: 'var(--bg-card)', 
+            border: '1px solid var(--border-default)', 
+            borderRadius: '16px',
+            padding: '24px'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
+              <h3 style={{ fontSize: '16px', fontWeight: 600, color: 'var(--text-primary)' }}>
+                Wallet Statistics
+              </h3>
+              <Link href="/admin/wallets" style={{ fontSize: '14px', color: 'var(--accent-gold)', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                View All <ArrowRight style={{ width: '14px', height: '14px' }} />
+              </Link>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px' }} className="sm:!grid-cols-4">
+              <StatBox icon={Wallet} label="Total Balance" value={formatCurrency(dashboard?.wallet.totalBalance || '0')} isString />
+              <StatBox icon={TrendingUp} label="Deposited" value={formatCurrency(dashboard?.wallet.totalDeposited || '0')} color="green" isString />
+              <StatBox icon={TrendingDown} label="Spent" value={formatCurrency(dashboard?.wallet.totalSpent || '0')} color="red" isString />
+              <StatBox icon={Shield} label="Locked" value={dashboard?.wallet.lockedWallets || 0} color="red" />
+            </div>
+          </div>
+        </div>
+
+        {/* Logs */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '24px' }} className="lg:!grid-cols-2">
+          {/* Audit Logs */}
+          <div style={{ 
+            backgroundColor: 'var(--bg-card)', 
+            border: '1px solid var(--border-default)', 
+            borderRadius: '16px',
+            overflow: 'hidden'
+          }}>
+            <div style={{ padding: '20px', borderBottom: '1px solid var(--border-default)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <h3 style={{ fontSize: '16px', fontWeight: 600, color: 'var(--text-primary)' }}>
+                Recent Activity
+              </h3>
+              <FileText style={{ width: '18px', height: '18px', color: 'var(--text-muted)' }} />
+            </div>
+            {auditLogs.length === 0 ? (
+              <div style={{ padding: '32px', textAlign: 'center' }}>
+                <p style={{ color: 'var(--text-muted)' }}>No recent activity</p>
+              </div>
+            ) : (
+              <div>
+                {auditLogs.map((log) => (
+                  <div key={log.id} style={{ padding: '12px 20px', borderBottom: '1px solid var(--border-default)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
+                      <span style={{ fontSize: '14px', fontWeight: 500, color: 'var(--text-primary)' }}>
+                        {log.action.replace(/_/g, ' ')}
+                      </span>
+                      <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+                        {new Date(log.createdAt).toLocaleTimeString()}
+                      </span>
+                    </div>
+                    <p style={{ fontSize: '13px', color: 'var(--text-muted)' }}>
+                      {log.user?.email || 'System'} • {log.entityType}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* System Logs */}
+          <div style={{ 
+            backgroundColor: 'var(--bg-card)', 
+            border: '1px solid var(--border-default)', 
+            borderRadius: '16px',
+            overflow: 'hidden'
+          }}>
+            <div style={{ padding: '20px', borderBottom: '1px solid var(--border-default)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <h3 style={{ fontSize: '16px', fontWeight: 600, color: 'var(--text-primary)' }}>
+                System Logs
+              </h3>
+              <Server style={{ width: '18px', height: '18px', color: 'var(--text-muted)' }} />
+            </div>
+            {systemLogs.length === 0 ? (
+              <div style={{ padding: '32px', textAlign: 'center' }}>
+                <p style={{ color: 'var(--text-muted)' }}>No system logs</p>
+              </div>
+            ) : (
+              <div>
+                {systemLogs.map((log) => {
+                  const levelColor = getLogLevelColor(log.level);
+                  return (
+                    <div key={log.id} style={{ padding: '12px 20px', borderBottom: '1px solid var(--border-default)' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                        <span style={{ 
+                          padding: '2px 6px', 
+                          borderRadius: '4px', 
+                          fontSize: '10px', 
+                          fontWeight: 600,
+                          backgroundColor: levelColor.bg,
+                          color: levelColor.text
+                        }}>
+                          {log.level}
+                        </span>
+                        <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+                          {new Date(log.createdAt).toLocaleTimeString()}
+                        </span>
+                      </div>
+                      <p style={{ fontSize: '13px', color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {log.message}
+                      </p>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Quick Links */}
+        <div style={{ 
+          marginTop: '24px',
+          display: 'grid', 
+          gridTemplateColumns: 'repeat(2, 1fr)', 
+          gap: '16px' 
+        }} className="sm:!grid-cols-4">
+          <QuickLink href="/admin/users" icon={Users} label="Manage Users" />
+          <QuickLink href="/admin/wallets" icon={Wallet} label="Manage Wallets" />
+          <QuickLink href="/admin/memberships" icon={Crown} label="Memberships" />
+          <QuickLink href="/admin/api-keys" icon={Key} label="API Keys" />
+        </div>
       </div>
     </div>
   );
@@ -314,123 +418,156 @@ export default function AdminDashboardPage() {
 
 /* ==================== COMPONENTS ==================== */
 
-function AdminNavItem({ 
-  href, 
-  icon, 
-  label, 
-  active = false 
-}: { 
-  href: string; 
-  icon: React.ReactNode; 
-  label: string; 
-  active?: boolean;
-}) {
+interface QuickStatCardProps {
+  icon: React.ComponentType<{ style?: React.CSSProperties }>;
+  label: string;
+  value: string;
+  change?: number;
+  subtext?: string;
+  href: string;
+}
+
+function QuickStatCard({ icon: Icon, label, value, change, subtext, href }: QuickStatCardProps) {
+  const growth = change !== undefined ? getGrowthIndicator(change) : null;
+
   return (
-    <Link
-      href={href}
-      style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: '12px',
-        height: '44px',
-        padding: '0 12px',
-        borderRadius: '12px',
-        fontSize: '14px',
-        fontWeight: 500,
-        color: active ? 'var(--accent-gold)' : 'var(--text-secondary)',
-        backgroundColor: active ? 'rgba(198, 167, 94, 0.1)' : 'transparent',
-        textDecoration: 'none',
-        transition: 'all 150ms ease'
-      }}
-    >
-      <span style={{ flexShrink: 0 }}>{icon}</span>
-      <span>{label}</span>
+    <Link href={href} style={{ textDecoration: 'none' }}>
+      <div style={{ 
+        backgroundColor: 'var(--bg-card)', 
+        border: '1px solid var(--border-default)', 
+        borderRadius: '16px', 
+        padding: '20px',
+        transition: 'border-color 0.2s',
+        cursor: 'pointer'
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+          <div style={{ 
+            width: '40px', 
+            height: '40px', 
+            borderRadius: '10px', 
+            backgroundColor: 'rgba(198, 167, 94, 0.1)', 
+            display: 'flex', 
+            alignItems: 'center', 
+            justifyContent: 'center'
+          }}>
+            <Icon style={{ width: '20px', height: '20px', color: 'var(--accent-gold)' }} />
+          </div>
+          {growth && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+              {growth.icon === 'up' ? (
+                <TrendingUp style={{ width: '14px', height: '14px', color: growth.color }} />
+              ) : growth.icon === 'down' ? (
+                <TrendingDown style={{ width: '14px', height: '14px', color: growth.color }} />
+              ) : null}
+              <span style={{ fontSize: '12px', fontWeight: 600, color: growth.color }}>
+                {change > 0 ? '+' : ''}{change?.toFixed(1)}%
+              </span>
+            </div>
+          )}
+        </div>
+        <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '4px' }}>{label}</p>
+        <p style={{ fontSize: '24px', fontWeight: 700, color: 'var(--text-primary)' }}>{value}</p>
+        {subtext && (
+          <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '4px' }}>{subtext}</p>
+        )}
+      </div>
     </Link>
   );
 }
 
-function AdminStatCard({ 
-  icon, 
-  label, 
-  value, 
-  trend,
-  iconBg,
-  iconColor
-}: { 
-  icon: React.ReactNode; 
-  label: string; 
-  value: string; 
-  trend: string;
-  iconBg: string;
-  iconColor: string;
-}) {
+interface RevenueBoxProps {
+  label: string;
+  value: string;
+}
+
+function RevenueBox({ label, value }: RevenueBoxProps) {
   return (
     <div style={{ 
-      backgroundColor: 'var(--bg-card)', 
-      border: '1px solid var(--border-default)', 
-      borderRadius: '16px', 
-      padding: '20px',
-      transition: 'all 200ms ease'
+      padding: '16px', 
+      backgroundColor: 'var(--bg-secondary)', 
+      borderRadius: '12px',
+      textAlign: 'center'
     }}>
-      <div style={{ 
-        width: '48px', 
-        height: '48px', 
-        borderRadius: '12px', 
-        backgroundColor: iconBg, 
-        display: 'flex', 
-        alignItems: 'center', 
-        justifyContent: 'center', 
-        color: iconColor,
-        marginBottom: '12px'
-      }}>
-        {icon}
-      </div>
       <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '4px' }}>{label}</p>
-      <p style={{ fontSize: '24px', fontWeight: 700, color: 'var(--text-primary)' }}>{value}</p>
-      <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '4px' }}>{trend}</p>
+      <p style={{ fontSize: '18px', fontWeight: 600, color: 'var(--text-primary)' }}>{value}</p>
     </div>
   );
 }
 
-function AdminActionCard({ 
-  icon, 
-  title, 
-  description, 
-  href 
-}: { 
-  icon: React.ReactNode; 
-  title: string; 
-  description: string; 
-  href: string;
-}) {
+interface HealthMetricProps {
+  icon: React.ComponentType<{ style?: React.CSSProperties }>;
+  label: string;
+  value: number | string;
+  color: string;
+}
+
+function HealthMetric({ icon: Icon, label, value, color }: HealthMetricProps) {
   return (
-    <Link 
-      href={href} 
-      style={{ 
-        display: 'block', 
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px', backgroundColor: 'var(--bg-secondary)', borderRadius: '8px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+        <Icon style={{ width: '16px', height: '16px', color: 'var(--text-muted)' }} />
+        <span style={{ fontSize: '14px', color: 'var(--text-secondary)' }}>{label}</span>
+      </div>
+      <span style={{ fontWeight: 600, color }}>{value}</span>
+    </div>
+  );
+}
+
+interface StatBoxProps {
+  icon: React.ComponentType<{ style?: React.CSSProperties }>;
+  label: string;
+  value: number | string;
+  color?: 'gold' | 'green' | 'red' | 'blue';
+  isString?: boolean;
+}
+
+function StatBox({ icon: Icon, label, value, color, isString }: StatBoxProps) {
+  const colors = {
+    gold: 'var(--accent-gold)',
+    green: 'var(--success)',
+    red: 'var(--danger)',
+    blue: 'var(--info)',
+  };
+
+  return (
+    <div style={{ 
+      padding: '16px', 
+      backgroundColor: 'var(--bg-secondary)', 
+      borderRadius: '12px',
+      textAlign: 'center'
+    }}>
+      <Icon style={{ width: '18px', height: '18px', color: color ? colors[color] : 'var(--accent-gold)', margin: '0 auto 8px' }} />
+      <p style={{ fontSize: '18px', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '4px' }}>
+        {isString ? value : formatNumber(value as number)}
+      </p>
+      <p style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{label}</p>
+    </div>
+  );
+}
+
+interface QuickLinkProps {
+  href: string;
+  icon: React.ComponentType<{ style?: React.CSSProperties }>;
+  label: string;
+}
+
+function QuickLink({ href, icon: Icon, label }: QuickLinkProps) {
+  return (
+    <Link href={href} style={{ textDecoration: 'none' }}>
+      <div style={{ 
         backgroundColor: 'var(--bg-card)', 
         border: '1px solid var(--border-default)', 
-        borderRadius: '16px', 
-        padding: '24px',
-        textDecoration: 'none',
-        transition: 'all 200ms ease'
-      }}
-    >
-      <div style={{ 
-        width: '48px', 
-        height: '48px', 
         borderRadius: '12px', 
-        backgroundColor: 'rgba(198, 167, 94, 0.1)', 
-        display: 'flex', 
-        alignItems: 'center', 
-        justifyContent: 'center', 
-        color: 'var(--accent-gold)',
-        marginBottom: '16px'
+        padding: '16px',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '12px',
+        transition: 'border-color 0.2s'
       }}>
-        {icon}
+        <Icon style={{ width: '20px', height: '20px', color: 'var(--accent-gold)' }} />
+        <span style={{ fontSize: '14px', fontWeight: 500, color: 'var(--text-primary)' }}>{label}</span>
+        <ArrowRight style={{ width: '16px', height: '16px', color: 'var(--text-muted)', marginLeft: 'auto' }} />
       </div>
-      <h3 style={{ fontSize: '16px', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '4px' }}>{title}</h3>
-      <p style={{ fontSize: '14px', color: 'var(--text-muted)' }}>{description}</p>
     </Link>
   );
 }
