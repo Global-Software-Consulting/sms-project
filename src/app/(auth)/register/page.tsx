@@ -59,7 +59,7 @@ export default function RegisterPage() {
 
   const validatePassword = (password: string) => {
     return [
-      { met: password.length >= 8, text: "At least 8 characters" },
+      { met: password.length >= 10, text: "At least 10 characters" },
       { met: /[A-Z]/.test(password), text: "One uppercase letter" },
       { met: /[a-z]/.test(password), text: "One lowercase letter" },
       { met: /[0-9]/.test(password), text: "One number" },
@@ -91,7 +91,7 @@ export default function RegisterPage() {
     const result = await register({
       firstName: formData.firstName,
       lastName: formData.lastName,
-      username: formData.username,
+      username: formData.username.trim() || undefined,
       email: formData.email,
       country: formData.country,
       password: formData.password,
@@ -178,19 +178,18 @@ export default function RegisterPage() {
             />
           </div>
 
-          {/* Username */}
+          {/* Username (Optional) */}
           <Input
-            label="Username"
+            label="Username (optional)"
             type="text"
             name="username"
             placeholder="johndoe123"
             value={formData.username}
             onChange={handleChange}
             leftIcon={<AtSign style={{ width: '20px', height: '20px' }} />}
-            required
             autoComplete="username"
             disabled={isLoading}
-            hint="Letters, numbers, and underscores only"
+            hint="3-24 chars, letters, numbers, dots, and underscores only"
           />
 
           {/* Email */}

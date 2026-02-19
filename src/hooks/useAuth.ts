@@ -22,7 +22,7 @@ import {
   selectIsUser,
 } from '@/lib/store/slices/authSlice';
 import type { LoginRequest, RegisterRequest } from '@/lib/api';
-import { getGoogleOAuthUrl, getFacebookOAuthUrl, getGithubOAuthUrl } from '@/lib/api';
+import { getGoogleOAuthUrl, getGithubOAuthUrl } from '@/lib/api';
 
 export const useAuth = () => {
   const dispatch = useAppDispatch();
@@ -105,13 +105,9 @@ export const useAuth = () => {
     dispatch(clearError());
   }, [dispatch]);
 
-  // OAuth handlers
+  // OAuth handlers (Facebook removed per client decision)
   const loginWithGoogle = useCallback(() => {
     window.location.href = getGoogleOAuthUrl();
-  }, []);
-
-  const loginWithFacebook = useCallback(() => {
-    window.location.href = getFacebookOAuthUrl();
   }, []);
 
   const loginWithGithub = useCallback(() => {
@@ -140,9 +136,8 @@ export const useAuth = () => {
     verifyEmail: handleVerifyEmail,
     clearError: handleClearError,
 
-    // OAuth
+    // OAuth (Facebook removed per client decision)
     loginWithGoogle,
-    loginWithFacebook,
     loginWithGithub,
   };
 };

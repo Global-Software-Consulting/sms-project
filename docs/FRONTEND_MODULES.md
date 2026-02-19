@@ -1,6 +1,8 @@
-# 📱 SMS Sort - Frontend Modules Documentation
+# SMS Sort - Frontend Modules Documentation
 
-> This document tracks all frontend modules, their implementation status, and client questions.
+> This document tracks all frontend modules and their implementation status.
+> All client questions have been answered — see `sms-api/docs/CLIENT_DECISIONS.md` for decisions.
+> For page roadmap, see `PAGES_ROADMAP.md`. For architecture, see `ARCHITECTURE.md`.
 
 ---
 

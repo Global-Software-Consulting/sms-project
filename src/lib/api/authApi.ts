@@ -54,7 +54,7 @@ export interface RegisterRequest {
   firstName: string;
   lastName: string;
   email: string;
-  username: string;
+  username?: string;  // Optional - 3-24 chars, letters/numbers/._ only
   country: string;
   password: string;
 }
@@ -154,10 +154,6 @@ export const verifyEmail = async (code: string): Promise<MessageResponse> => {
 
 export const getGoogleOAuthUrl = (): string => {
   return `${apiClient.defaults.baseURL}/auth/google`;
-};
-
-export const getFacebookOAuthUrl = (): string => {
-  return `${apiClient.defaults.baseURL}/auth/facebook`;
 };
 
 export const getGithubOAuthUrl = (): string => {
