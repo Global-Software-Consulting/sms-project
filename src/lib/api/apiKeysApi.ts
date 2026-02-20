@@ -5,14 +5,33 @@ import { apiClient } from './config';
 // ============================================
 
 /**
+ * API Key Scopes (per CLIENT_DECISIONS.md)
+ * - read: countries/services/prices
+ * - order: buy number
+ * - manage: set status
+ * - wallet: balance operations
+ */
+export interface ApiKeyPermissions {
+  canRead: boolean;
+  canOrder: boolean;
+  canManage: boolean;
+  canWallet: boolean;
+}
+
+/**
  * API Key (without full key - only shown at creation)
+ * Key format: bshq_live_<random> or bshq_test_<random>
  */
 export interface ApiKey {
   id: string;
   userId: string;
   name: string;
-  keyPrefix: string;        // First 12 chars (e.g., "sk_live_abc1...")
+  keyPrefix: string;        // First 12 chars (e.g., "bshq_live_abc...")
   isActive: boolean;
+  isTestMode: boolean;      // true = bshq_test_, false = bshq_live_
+  permissions: ApiKeyPermissions;
+  ipWhitelist: string[];    // Optional IP/CIDR whitelist
+  expiresAt?: string;       // Optional expiration date
   lastUsedAt?: string;
   usageCount: number;
   revokedAt?: string;
@@ -56,6 +75,10 @@ export interface ApiKeyUsage {
 
 export interface CreateApiKeyRequest {
   name: string;             // User-defined label
+  isTestMode?: boolean;     // Default: false (live key)
+  permissions?: Partial<ApiKeyPermissions>;  // Default: all true
+  ipWhitelist?: string[];   // Optional IP/CIDR whitelist
+  expiresAt?: string;       // Optional expiration date (ISO string)
 }
 
 export interface UpdateApiKeyRequest {
@@ -129,10 +152,22 @@ export const getApiKeyUsage = async (id: string): Promise<ApiKeyUsage> => {
 };
 
 // ============================================
-// Constants
+// Constants (per CLIENT_DECISIONS.md)
 // ============================================
 
-export const MAX_API_KEYS = 5;
+/**
+ * Maximum API keys per user
+ * Default: 3 (admin can increase/decrease per user)
+ */
+export const MAX_API_KEYS = 3;
+
+/**
+ * API Key prefixes
+ * Live: bshq_live_<random>
+ * Test: bshq_test_<random>
+ */
+export const API_KEY_PREFIX_LIVE = 'bshq_live_';
+export const API_KEY_PREFIX_TEST = 'bshq_test_';
 
 // ============================================
 // Helper Functions

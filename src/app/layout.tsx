@@ -3,6 +3,8 @@ import "./globals.css";
 import { SessionProvider } from "@/components/providers/SessionProvider";
 import { StoreProvider } from "@/components/providers/StoreProvider";
 import { AuthInitializer } from "@/components/providers/AuthInitializer";
+import { ToastProvider } from "@/contexts/ToastContext";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 export const metadata: Metadata = {
   title: "SMS Activation Platform - Premium Virtual Numbers",
@@ -30,13 +32,19 @@ export default function RootLayout({
           rel="stylesheet"
         />
       </head>
-      <body className="antialiased">
+      {/* suppressHydrationWarning prevents hydration mismatch errors caused by browser extensions 
+          (e.g., Grammarly) that modify the DOM before React hydrates */}
+      <body className="antialiased" suppressHydrationWarning>
         <StoreProvider>
-          <AuthInitializer>
-            <SessionProvider>
-              {children}
-            </SessionProvider>
-          </AuthInitializer>
+          <ToastProvider position="top-right">
+            <ErrorBoundary>
+              <AuthInitializer>
+                <SessionProvider>
+                  {children}
+                </SessionProvider>
+              </AuthInitializer>
+            </ErrorBoundary>
+          </ToastProvider>
         </StoreProvider>
       </body>
     </html>

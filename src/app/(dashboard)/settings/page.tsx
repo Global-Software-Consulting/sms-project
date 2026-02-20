@@ -32,6 +32,8 @@ import {
   type ChangePasswordRequest
 } from '@/lib/api';
 import { useAuth } from '@/hooks';
+import { getErrorMessage, logError } from '@/lib/errors';
+import { useToast } from '@/contexts/ToastContext';
 
 /**
  * Settings Page - User Profile Management
@@ -43,6 +45,7 @@ import { useAuth } from '@/hooks';
  */
 export default function SettingsPage() {
   const { user: authUser, isAdmin } = useAuth();
+  const toast = useToast();
   
   // Profile state
   const [profile, setProfile] = useState<UserProfile | null>(null);
@@ -95,8 +98,10 @@ export default function SettingsPage() {
         avatar: data.avatar || '',
       });
     } catch (err: unknown) {
-      const error = err as { response?: { data?: { message?: string } } };
-      setProfileError(error.response?.data?.message || 'Failed to load profile');
+      logError(err, 'fetchProfile');
+      const errorMessage = getErrorMessage(err, 'users');
+      setProfileError(errorMessage);
+      toast.error(errorMessage, 'Failed to Load Profile');
     } finally {
       setProfileLoading(false);
     }
@@ -114,7 +119,9 @@ export default function SettingsPage() {
     
     // Validate phone if provided
     if (profileForm.phone && !isValidPhone(profileForm.phone)) {
-      setProfileError('Invalid phone number format. Use format: +1234567890');
+      const errorMsg = 'Invalid phone number format. Use format: +1234567890';
+      setProfileError(errorMsg);
+      toast.warning(errorMsg, 'Validation Error');
       return;
     }
 
@@ -134,10 +141,12 @@ export default function SettingsPage() {
       const updated = await updateUserProfile(updateData);
       setProfile(prev => prev ? { ...prev, ...updated } : null);
       setProfileSuccess('Profile updated successfully!');
+      toast.success('Your profile has been updated successfully!');
     } catch (err: unknown) {
-      const error = err as { response?: { data?: { message?: string | string[] } } };
-      const message = error.response?.data?.message;
-      setProfileError(Array.isArray(message) ? message[0] : message || 'Failed to update profile');
+      logError(err, 'updateProfile');
+      const errorMessage = getErrorMessage(err, 'users');
+      setProfileError(errorMessage);
+      toast.error(errorMessage, 'Failed to Update Profile');
     } finally {
       setProfileSaving(false);
     }
@@ -156,13 +165,17 @@ export default function SettingsPage() {
     // Validate new password
     const validation = validatePassword(passwordForm.newPassword);
     if (!validation.isValid) {
-      setPasswordError('Password must be at least 8 characters with uppercase, lowercase, and number');
+      const errorMsg = 'Password must be at least 8 characters with uppercase, lowercase, and number';
+      setPasswordError(errorMsg);
+      toast.warning(errorMsg, 'Validation Error');
       return;
     }
     
     // Check passwords match
     if (passwordForm.newPassword !== passwordForm.confirmPassword) {
-      setPasswordError('New passwords do not match');
+      const errorMsg = 'New passwords do not match';
+      setPasswordError(errorMsg);
+      toast.warning(errorMsg, 'Validation Error');
       return;
     }
 
@@ -177,10 +190,13 @@ export default function SettingsPage() {
       });
       
       setPasswordSuccess('Password changed successfully!');
+      toast.success('Your password has been changed successfully!');
       setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
     } catch (err: unknown) {
-      const error = err as { response?: { data?: { message?: string } } };
-      setPasswordError(error.response?.data?.message || 'Failed to change password');
+      logError(err, 'changePassword');
+      const errorMessage = getErrorMessage(err, 'login');
+      setPasswordError(errorMessage);
+      toast.error(errorMessage, 'Failed to Change Password');
     } finally {
       setPasswordSaving(false);
     }
@@ -196,11 +212,14 @@ export default function SettingsPage() {
       setDeleting(true);
       setDeleteError(null);
       await deleteAccount();
+      toast.success('Your account has been deleted. Redirecting...');
       // Redirect will happen automatically due to token invalidation
       window.location.href = '/login';
     } catch (err: unknown) {
-      const error = err as { response?: { data?: { message?: string } } };
-      setDeleteError(error.response?.data?.message || 'Failed to delete account');
+      logError(err, 'deleteAccount');
+      const errorMessage = getErrorMessage(err, 'users');
+      setDeleteError(errorMessage);
+      toast.error(errorMessage, 'Failed to Delete Account');
       setDeleting(false);
     }
   };

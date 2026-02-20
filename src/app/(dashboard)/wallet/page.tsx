@@ -37,6 +37,8 @@ import {
   type TransactionStatus,
   type TransactionQueryParams
 } from '@/lib/api';
+import { getErrorMessage, logError, isNetworkError } from '@/lib/errors';
+import { useToast } from '@/contexts/ToastContext';
 
 /**
  * Wallet Page - View balance and transaction history
@@ -47,6 +49,8 @@ import {
  * 3. Transaction History - Filterable list with pagination
  */
 export default function WalletPage() {
+  const toast = useToast();
+  
   // Wallet state
   const [wallet, setWallet] = useState<Wallet | null>(null);
   const [walletLoading, setWalletLoading] = useState(true);
@@ -88,12 +92,18 @@ export default function WalletPage() {
       const data = await getWallet();
       setWallet(data);
     } catch (err: unknown) {
-      const error = err as { response?: { data?: { message?: string } } };
+      logError(err, 'fetchWallet');
       // If wallet doesn't exist yet (404), show empty state
       if ((err as { response?: { status?: number } }).response?.status === 404) {
         setWallet(null);
       } else {
-        setWalletError(error.response?.data?.message || 'Failed to load wallet');
+        const errorMessage = getErrorMessage(err, 'wallet');
+        setWalletError(errorMessage);
+        
+        // Show toast for network errors
+        if (isNetworkError(err)) {
+          toast.error(errorMessage, 'Connection Error');
+        }
       }
     } finally {
       setWalletLoading(false);
@@ -106,9 +116,15 @@ export default function WalletPage() {
       const response = await getTransactions(filters);
       setTransactions(response.data);
       setTransactionsMeta(response.meta);
-    } catch {
+    } catch (err: unknown) {
+      logError(err, 'fetchTransactions');
       // Silently fail for transactions - wallet might not exist yet
       setTransactions([]);
+      
+      // Only show toast for network errors, not 404s
+      if (isNetworkError(err)) {
+        toast.error('Unable to load transactions. Please check your connection.', 'Connection Error');
+      }
     } finally {
       setTransactionsLoading(false);
     }

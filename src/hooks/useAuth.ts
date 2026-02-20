@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAppDispatch, useAppSelector } from '@/lib/store/hooks';
 import {
@@ -11,6 +11,7 @@ import {
   sendEmailVerification,
   verifyEmailOtp,
   clearError,
+  setUser,
   selectUser,
   selectIsAuthenticated,
   selectIsLoading,
@@ -22,11 +23,25 @@ import {
   selectIsUser,
 } from '@/lib/store/slices/authSlice';
 import type { LoginRequest, RegisterRequest } from '@/lib/api';
-import { getGoogleOAuthUrl, getGithubOAuthUrl } from '@/lib/api';
+import { 
+  getGoogleOAuthUrl, 
+  getGithubOAuthUrl, 
+  getTelegramOAuthUrl, 
+  getTwitterOAuthUrl,
+  requestGuestLogin,
+  verifyOtpAndLogin,
+  isAdmin as checkIsAdmin,
+} from '@/lib/api';
 
 export const useAuth = () => {
   const dispatch = useAppDispatch();
   const router = useRouter();
+
+  // Guest login state
+  const [guestLoginLoading, setGuestLoginLoading] = useState(false);
+  const [guestLoginError, setGuestLoginError] = useState<string | null>(null);
+  const [otpSent, setOtpSent] = useState(false);
+  const [otpEmail, setOtpEmail] = useState<string | null>(null);
 
   // Selectors
   const user = useAppSelector(selectUser);
@@ -53,12 +68,12 @@ export const useAuth = () => {
     async (credentials: LoginRequest) => {
       const result = await dispatch(login(credentials));
       if (login.fulfilled.match(result)) {
-        // Redirect based on user role
+        // Redirect based on user role (supports 6 admin roles)
         const userRole = result.payload.user.role;
-        if (userRole === 'SUPER_ADMIN') {
+        if (checkIsAdmin(userRole)) {
           router.push('/admin');
         } else {
-        router.push('/dashboard');
+          router.push('/dashboard');
         }
         return { success: true };
       }
@@ -114,6 +129,64 @@ export const useAuth = () => {
     window.location.href = getGithubOAuthUrl();
   }, []);
 
+  // New OAuth providers per client decision
+  const loginWithTelegram = useCallback(() => {
+    window.location.href = getTelegramOAuthUrl();
+  }, []);
+
+  const loginWithTwitter = useCallback(() => {
+    window.location.href = getTwitterOAuthUrl();
+  }, []);
+
+  // Guest login handlers (email OTP flow - no password required)
+  const handleRequestGuestLogin = useCallback(async (email: string) => {
+    try {
+      setGuestLoginLoading(true);
+      setGuestLoginError(null);
+      await requestGuestLogin(email);
+      setOtpSent(true);
+      setOtpEmail(email);
+      return { success: true };
+    } catch (err: unknown) {
+      const error = err as { response?: { data?: { message?: string } } };
+      const message = error.response?.data?.message || 'Failed to send OTP';
+      setGuestLoginError(message);
+      return { success: false, error: message };
+    } finally {
+      setGuestLoginLoading(false);
+    }
+  }, []);
+
+  const handleVerifyGuestOtp = useCallback(async (email: string, code: string) => {
+    try {
+      setGuestLoginLoading(true);
+      setGuestLoginError(null);
+      const response = await verifyOtpAndLogin({ email, code });
+      // Update Redux state with user
+      dispatch(setUser(response.user));
+      // Redirect based on role
+      if (checkIsAdmin(response.user.role)) {
+        router.push('/admin');
+      } else {
+        router.push('/dashboard');
+      }
+      return { success: true };
+    } catch (err: unknown) {
+      const error = err as { response?: { data?: { message?: string } } };
+      const message = error.response?.data?.message || 'Invalid OTP code';
+      setGuestLoginError(message);
+      return { success: false, error: message };
+    } finally {
+      setGuestLoginLoading(false);
+    }
+  }, [dispatch, router]);
+
+  const resetGuestLogin = useCallback(() => {
+    setOtpSent(false);
+    setOtpEmail(null);
+    setGuestLoginError(null);
+  }, []);
+
   return {
     // State
     user,
@@ -128,6 +201,12 @@ export const useAuth = () => {
     isAdmin,
     isUser,
 
+    // Guest login state
+    guestLoginLoading,
+    guestLoginError,
+    otpSent,
+    otpEmail,
+
     // Actions
     login: handleLogin,
     register: handleRegister,
@@ -139,6 +218,13 @@ export const useAuth = () => {
     // OAuth (Facebook removed per client decision)
     loginWithGoogle,
     loginWithGithub,
+    loginWithTelegram,
+    loginWithTwitter,
+
+    // Guest login (email OTP flow)
+    requestGuestLogin: handleRequestGuestLogin,
+    verifyGuestOtp: handleVerifyGuestOtp,
+    resetGuestLogin,
   };
 };
 

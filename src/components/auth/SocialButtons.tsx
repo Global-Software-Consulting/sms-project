@@ -1,15 +1,26 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 
 interface SocialButtonsProps {
   onGoogleClick: () => void;
   onGithubClick: () => void;
+  onTelegramClick?: () => void;
+  onTwitterClick?: () => void;
   isLoading?: boolean;
+  /** Show all 4 providers in 2x2 grid, or just Google/GitHub in 1x2 */
+  showAllProviders?: boolean;
 }
 
 /**
  * Social Login Buttons - Following Design Guidelines
+ * 
+ * Supported OAuth Providers (per CLIENT_DECISIONS.md):
+ * - Google ✅ (implemented)
+ * - GitHub ✅ (implemented)
+ * - Telegram ⏳ (pending backend implementation)
+ * - Twitter/X ⏳ (pending backend implementation)
+ * - Facebook ❌ (removed per client request)
  * 
  * Specs from design-guidelines.md:
  * - Button height: 48px
@@ -23,23 +34,44 @@ export const SocialButtons: React.FC<SocialButtonsProps> = ({
   onGoogleClick,
   onGithubClick,
   isLoading = false,
+  showAllProviders = true,
 }) => {
+  const [showComingSoon, setShowComingSoon] = useState<string | null>(null);
+
+  const buttonBaseClass = `
+    h-12 flex items-center justify-center gap-3
+    bg-bg-secondary border border-border-default rounded-xl
+    text-sm font-medium text-text-primary
+    hover:bg-bg-hover hover:border-border-hover
+    focus:outline-none focus:ring-2 focus:ring-border-focus focus:ring-offset-2 focus:ring-offset-bg-primary
+    disabled:opacity-50 disabled:cursor-not-allowed
+    transition-all duration-200
+  `;
+
+  const comingSoonButtonClass = `
+    h-12 flex items-center justify-center gap-3
+    bg-bg-secondary border border-border-default rounded-xl
+    text-sm font-medium text-text-muted
+    hover:bg-bg-hover hover:border-border-hover
+    focus:outline-none focus:ring-2 focus:ring-border-focus focus:ring-offset-2 focus:ring-offset-bg-primary
+    transition-all duration-200
+    cursor-not-allowed opacity-60
+    relative
+  `;
+
+  const handleComingSoonClick = (provider: string) => {
+    setShowComingSoon(provider);
+    setTimeout(() => setShowComingSoon(null), 2000);
+  };
+
   return (
-    <div className="grid grid-cols-2 gap-3">
+    <div className={showAllProviders ? "grid grid-cols-2 gap-3" : "grid grid-cols-2 gap-3"}>
       {/* Google Button */}
       <button
         type="button"
         onClick={onGoogleClick}
         disabled={isLoading}
-        className="
-          h-12 flex items-center justify-center gap-3
-          bg-bg-secondary border border-border-default rounded-xl
-          text-sm font-medium text-text-primary
-          hover:bg-bg-hover hover:border-border-hover
-          focus:outline-none focus:ring-2 focus:ring-border-focus focus:ring-offset-2 focus:ring-offset-bg-primary
-          disabled:opacity-50 disabled:cursor-not-allowed
-          transition-all duration-200
-        "
+        className={buttonBaseClass}
       >
         <svg className="w-5 h-5 flex-shrink-0" viewBox="0 0 24 24">
           <path
@@ -67,15 +99,7 @@ export const SocialButtons: React.FC<SocialButtonsProps> = ({
         type="button"
         onClick={onGithubClick}
         disabled={isLoading}
-        className="
-          h-12 flex items-center justify-center gap-3
-          bg-bg-secondary border border-border-default rounded-xl
-          text-sm font-medium text-text-primary
-          hover:bg-bg-hover hover:border-border-hover
-          focus:outline-none focus:ring-2 focus:ring-border-focus focus:ring-offset-2 focus:ring-offset-bg-primary
-          disabled:opacity-50 disabled:cursor-not-allowed
-          transition-all duration-200
-        "
+        className={buttonBaseClass}
       >
         <svg className="w-5 h-5 flex-shrink-0" fill="currentColor" viewBox="0 0 24 24">
           <path
@@ -86,6 +110,41 @@ export const SocialButtons: React.FC<SocialButtonsProps> = ({
         </svg>
         <span>GitHub</span>
       </button>
+
+      {/* Telegram Button - Coming Soon (backend not implemented yet) */}
+      {showAllProviders && (
+        <button
+          type="button"
+          onClick={() => handleComingSoonClick('telegram')}
+          disabled={true}
+          className={comingSoonButtonClass}
+          title="Coming Soon"
+        >
+          <svg className="w-5 h-5 flex-shrink-0" viewBox="0 0 24 24" fill="none">
+            <path
+              d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-.99-.65-.35-1.01.22-1.59.15-.15 2.71-2.48 2.76-2.69a.2.2 0 00-.05-.18c-.06-.05-.14-.03-.21-.02-.09.02-1.49.95-4.22 2.79-.4.27-.76.41-1.08.4-.36-.01-1.04-.2-1.55-.37-.63-.2-1.12-.31-1.08-.66.02-.18.27-.36.74-.55 2.92-1.27 4.86-2.11 5.83-2.51 2.78-1.16 3.35-1.36 3.73-1.36.08 0 .27.02.39.12.1.08.13.19.14.27-.01.06.01.24 0 .38z"
+              fill="#6b7280"
+            />
+          </svg>
+          <span>{showComingSoon === 'telegram' ? 'Coming Soon' : 'Telegram'}</span>
+        </button>
+      )}
+
+      {/* Twitter/X Button - Coming Soon (backend not implemented yet) */}
+      {showAllProviders && (
+        <button
+          type="button"
+          onClick={() => handleComingSoonClick('twitter')}
+          disabled={true}
+          className={comingSoonButtonClass}
+          title="Coming Soon"
+        >
+          <svg className="w-5 h-5 flex-shrink-0" viewBox="0 0 24 24" fill="#6b7280">
+            <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+          </svg>
+          <span>{showComingSoon === 'twitter' ? 'Coming Soon' : 'Twitter'}</span>
+        </button>
+      )}
     </div>
   );
 };

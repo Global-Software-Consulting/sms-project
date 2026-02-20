@@ -1,19 +1,34 @@
 import { apiClient } from './config';
 
 // ============================================
-// Enums matching backend
+// Enums matching backend (Phase 1 Updated)
 // ============================================
 
-export type SubscriptionStatus = 'ACTIVE' | 'EXPIRED' | 'CANCELLED';
+export type SubscriptionStatus = 'ACTIVE' | 'EXPIRED' | 'CANCELLED' | 'PENDING';
 
 export type PlanSlug = 'free' | 'basic' | 'standard' | 'pro' | 'vip';
+
+/**
+ * Support tier levels (per CLIENT_DECISIONS.md)
+ */
+export type SupportTier = 'community' | 'standard' | 'priority' | 'whatsapp';
+
+/**
+ * Routing priority levels (0-3)
+ * 0 = Standard, 1 = Faster, 2 = Priority, 3 = VIP
+ */
+export type RoutingPriority = 0 | 1 | 2 | 3;
 
 // ============================================
 // Types matching backend DTOs
 // ============================================
 
 /**
- * Membership plan
+ * Membership plan (per CLIENT_DECISIONS.md)
+ * 
+ * Plans: Free, Basic ($29), Standard ($59), Pro ($99), VIP ($199)
+ * API Rate Limits: 30/60/120/240/600 req/min
+ * Active Number Limits: 10/25/50/75/100
  */
 export interface MembershipPlan {
   id: string;
@@ -21,14 +36,19 @@ export interface MembershipPlan {
   name: string;
   description: string | null;
   price: string;              // Decimal as string (e.g., "99.00")
-  discount: number;           // 0-100 percentage
-  orderLimit: number;         // Max orders per request
-  apiRateLimit: number;       // Requests per minute
-  queuePriority: string;      // standard, faster, priority, vip
+  discount: number;           // 0-100 percentage (0/5/10/20/40)
+  orderLimit: number;         // Max orders per checkout (25 default)
+  apiRateLimit: number;       // Requests per minute (30/60/120/240/600)
+  activeNumberLimit: number;  // Max active numbers (10/25/50/75/100)
+  supportTier: SupportTier;   // community/standard/priority/whatsapp
+  routingPriority: RoutingPriority; // 0-3 (Standard/Faster/Priority/VIP)
+  bonusDepositPercent: number; // Bonus on deposits (0/0/2/5/10)
+  queuePriority: string;      // standard, faster, priority, vip (display name)
   features: string[];         // List of feature descriptions
   isPopular: boolean;         // Show "Popular" badge
   sortOrder: number;          // Display order
   isActive: boolean;          // Is plan available
+  autoRenew?: boolean;        // Auto-renew toggle (user preference)
 }
 
 /**
@@ -194,7 +214,16 @@ export const getPlanColor = (slug: PlanSlug): { bg: string; border: string; text
 /**
  * Get queue priority label
  */
-export const getQueueLabel = (priority: string): string => {
+export const getQueueLabel = (priority: string | number): string => {
+  if (typeof priority === 'number') {
+    const labels: Record<number, string> = {
+      0: 'Standard Queue',
+      1: 'Faster Routing',
+      2: 'Priority Routing',
+      3: 'VIP Queue',
+    };
+    return labels[priority] || 'Standard Queue';
+  }
   const labels: Record<string, string> = {
     standard: 'Standard Queue',
     faster: 'Faster Routing',
@@ -202,6 +231,32 @@ export const getQueueLabel = (priority: string): string => {
     vip: 'VIP Queue',
   };
   return labels[priority] || priority;
+};
+
+/**
+ * Get support tier label
+ */
+export const getSupportTierLabel = (tier: SupportTier): string => {
+  const labels: Record<SupportTier, string> = {
+    community: 'Community Support',
+    standard: 'Standard Support',
+    priority: 'Priority Support',
+    whatsapp: 'WhatsApp + Dedicated',
+  };
+  return labels[tier] || tier;
+};
+
+/**
+ * Get support tier color
+ */
+export const getSupportTierColor = (tier: SupportTier): string => {
+  const colors: Record<SupportTier, string> = {
+    community: 'var(--text-muted)',
+    standard: 'var(--info)',
+    priority: 'var(--success)',
+    whatsapp: 'var(--accent-gold)',
+  };
+  return colors[tier] || 'var(--text-muted)';
 };
 
 /**

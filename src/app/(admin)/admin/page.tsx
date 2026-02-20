@@ -18,9 +18,14 @@ import {
   RefreshCw,
   Server,
   Shield,
-  FileText
+  FileText,
+  LogOut,
+  Home,
+  Settings,
+  ChevronDown
 } from 'lucide-react';
 import { Button, Alert } from '@/components/ui';
+import { useAuth } from '@/hooks';
 import { 
   getDashboardOverview,
   getRecentAuditLogs,
@@ -39,11 +44,13 @@ import {
  * Admin Dashboard - Main analytics overview
  */
 export default function AdminDashboardPage() {
+  const { user, logout } = useAuth();
   const [dashboard, setDashboard] = useState<DashboardOverview | null>(null);
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
   const [systemLogs, setSystemLogs] = useState<SystemLog[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [showUserMenu, setShowUserMenu] = useState(false);
 
   const fetchData = async () => {
     try {
@@ -88,25 +95,196 @@ export default function AdminDashboardPage() {
       <div style={{ 
         backgroundColor: 'var(--bg-card)', 
         borderBottom: '1px solid var(--border-default)',
-        padding: '24px'
+        padding: '16px 24px'
       }}>
         <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px' }}>
-            <div>
-              <h1 style={{ fontSize: '28px', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '4px' }}>
-                Admin Dashboard
-              </h1>
-              <p style={{ color: 'var(--text-muted)', fontSize: '14px' }}>
-                Overview of your SMS Sort platform
-              </p>
+            {/* Left: Logo & Navigation */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '32px' }}>
+              <Link href="/admin" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <div style={{ 
+                  width: '36px', 
+                  height: '36px', 
+                  borderRadius: '10px', 
+                  background: 'linear-gradient(135deg, var(--accent-gold) 0%, #D4AF37 100%)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}>
+                  <span style={{ fontSize: '18px', fontWeight: 700, color: 'var(--bg-primary)' }}>S</span>
+                </div>
+                <span style={{ fontSize: '18px', fontWeight: 700, color: 'var(--text-primary)' }}>
+                  SMS<span style={{ color: 'var(--accent-gold)' }}>Pro</span>
+                </span>
+              </Link>
+              
+              {/* Navigation Links */}
+              <nav style={{ display: 'flex', gap: '8px' }} className="hidden sm:!flex">
+                <NavLink href="/admin" icon={Home} label="Home" active />
+                <NavLink href="/admin/users" icon={Users} label="Users" />
+                <NavLink href="/admin/wallets" icon={Wallet} label="Wallets" />
+                <NavLink href="/admin/memberships" icon={Crown} label="Memberships" />
+                <NavLink href="/admin/api-keys" icon={Key} label="API Keys" />
+              </nav>
             </div>
-            <div style={{ display: 'flex', gap: '12px' }}>
-              <Button variant="outline" onClick={fetchData}>
-                <RefreshCw style={{ width: '16px', height: '16px', marginRight: '8px' }} />
+
+            {/* Right: Actions & User Menu */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <Button variant="secondary" onClick={fetchData} size="sm">
+                <RefreshCw style={{ width: '14px', height: '14px', marginRight: '6px' }} />
                 Refresh
               </Button>
+              
+              {/* User Menu */}
+              <div style={{ position: 'relative' }}>
+                <button
+                  onClick={() => setShowUserMenu(!showUserMenu)}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    padding: '8px 12px',
+                    backgroundColor: 'var(--bg-secondary)',
+                    border: '1px solid var(--border-default)',
+                    borderRadius: '10px',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s'
+                  }}
+                >
+                  <div style={{
+                    width: '32px',
+                    height: '32px',
+                    borderRadius: '50%',
+                    background: 'linear-gradient(135deg, var(--accent-gold) 0%, #D4AF37 100%)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                  }}>
+                    <span style={{ fontSize: '14px', fontWeight: 600, color: 'var(--bg-primary)' }}>
+                      {user?.firstName?.[0] || user?.email?.[0]?.toUpperCase() || 'A'}
+                    </span>
+                  </div>
+                  <div style={{ textAlign: 'left' }} className="hidden sm:!block">
+                    <p style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text-primary)', margin: 0 }}>
+                      {user?.firstName || user?.email?.split('@')[0] || 'Admin'}
+                    </p>
+                    <p style={{ fontSize: '11px', color: 'var(--text-muted)', margin: 0 }}>
+                      {user?.role || 'Admin'}
+                    </p>
+                  </div>
+                  <ChevronDown style={{ width: '16px', height: '16px', color: 'var(--text-muted)' }} className="hidden sm:!block" />
+                </button>
+
+                {/* Dropdown Menu */}
+                {showUserMenu && (
+                  <>
+                    <div 
+                      style={{ position: 'fixed', inset: 0, zIndex: 40 }} 
+                      onClick={() => setShowUserMenu(false)}
+                    />
+                    <div style={{
+                      position: 'absolute',
+                      top: '100%',
+                      right: 0,
+                      marginTop: '8px',
+                      width: '200px',
+                      backgroundColor: 'var(--bg-card)',
+                      border: '1px solid var(--border-default)',
+                      borderRadius: '12px',
+                      boxShadow: '0 10px 40px rgba(0,0,0,0.3)',
+                      overflow: 'hidden',
+                      zIndex: 50
+                    }}>
+                      <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--border-default)' }}>
+                        <p style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text-primary)', margin: 0 }}>
+                          {user?.email || 'admin@example.com'}
+                        </p>
+                        <p style={{ fontSize: '11px', color: 'var(--accent-gold)', margin: '2px 0 0 0', textTransform: 'capitalize' }}>
+                          {user?.role?.toLowerCase() || 'Admin'}
+                        </p>
+                      </div>
+                      <div style={{ padding: '8px' }}>
+                        <Link 
+                          href="/dashboard" 
+                          style={{ 
+                            display: 'flex', 
+                            alignItems: 'center', 
+                            gap: '10px', 
+                            padding: '10px 12px',
+                            borderRadius: '8px',
+                            textDecoration: 'none',
+                            color: 'var(--text-secondary)',
+                            transition: 'background-color 0.15s'
+                          }}
+                          onClick={() => setShowUserMenu(false)}
+                        >
+                          <Home style={{ width: '16px', height: '16px' }} />
+                          <span style={{ fontSize: '14px' }}>User Dashboard</span>
+                        </Link>
+                        <Link 
+                          href="/settings" 
+                          style={{ 
+                            display: 'flex', 
+                            alignItems: 'center', 
+                            gap: '10px', 
+                            padding: '10px 12px',
+                            borderRadius: '8px',
+                            textDecoration: 'none',
+                            color: 'var(--text-secondary)',
+                            transition: 'background-color 0.15s'
+                          }}
+                          onClick={() => setShowUserMenu(false)}
+                        >
+                          <Settings style={{ width: '16px', height: '16px' }} />
+                          <span style={{ fontSize: '14px' }}>Settings</span>
+                        </Link>
+                      </div>
+                      <div style={{ padding: '8px', borderTop: '1px solid var(--border-default)' }}>
+                        <button
+                          onClick={() => {
+                            setShowUserMenu(false);
+                            logout();
+                          }}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '10px',
+                            width: '100%',
+                            padding: '10px 12px',
+                            borderRadius: '8px',
+                            border: 'none',
+                            backgroundColor: 'transparent',
+                            color: 'var(--danger)',
+                            cursor: 'pointer',
+                            transition: 'background-color 0.15s',
+                            fontSize: '14px'
+                          }}
+                        >
+                          <LogOut style={{ width: '16px', height: '16px' }} />
+                          <span>Sign Out</span>
+                        </button>
+                      </div>
+                    </div>
+                  </>
+                )}
+              </div>
             </div>
           </div>
+        </div>
+      </div>
+
+      {/* Page Title */}
+      <div style={{ 
+        backgroundColor: 'var(--bg-primary)', 
+        padding: '24px'
+      }}>
+        <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
+          <h1 style={{ fontSize: '28px', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '4px' }}>
+            Admin Dashboard
+          </h1>
+          <p style={{ color: 'var(--text-muted)', fontSize: '14px' }}>
+            Overview of your SMS Sort platform
+          </p>
         </div>
       </div>
 
@@ -568,6 +746,37 @@ function QuickLink({ href, icon: Icon, label }: QuickLinkProps) {
         <span style={{ fontSize: '14px', fontWeight: 500, color: 'var(--text-primary)' }}>{label}</span>
         <ArrowRight style={{ width: '16px', height: '16px', color: 'var(--text-muted)', marginLeft: 'auto' }} />
       </div>
+    </Link>
+  );
+}
+
+interface NavLinkProps {
+  href: string;
+  icon: React.ComponentType<{ style?: React.CSSProperties }>;
+  label: string;
+  active?: boolean;
+}
+
+function NavLink({ href, icon: Icon, label, active }: NavLinkProps) {
+  return (
+    <Link 
+      href={href} 
+      style={{ 
+        display: 'flex',
+        alignItems: 'center',
+        gap: '6px',
+        padding: '8px 12px',
+        borderRadius: '8px',
+        textDecoration: 'none',
+        backgroundColor: active ? 'rgba(198, 167, 94, 0.1)' : 'transparent',
+        color: active ? 'var(--accent-gold)' : 'var(--text-secondary)',
+        fontSize: '13px',
+        fontWeight: 500,
+        transition: 'all 0.15s'
+      }}
+    >
+      <Icon style={{ width: '16px', height: '16px' }} />
+      {label}
     </Link>
   );
 }

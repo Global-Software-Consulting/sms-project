@@ -2,24 +2,64 @@ import { apiClient } from './config';
 import { setTokens, clearTokens, getRefreshToken } from './tokenStorage';
 
 // ============================================
-// Types matching backend DTOs
+// Types matching backend DTOs (Phase 1 Updated)
 // ============================================
 
-export type UserRole = 'USER' | 'SUPER_ADMIN';
+/**
+ * User Roles - 6 admin-level roles + USER
+ * Hierarchy: USER < VIEWER < SUPPORT < FINANCE < MANAGER < ADMIN < OWNER
+ */
+export type UserRole = 
+  | 'USER'      // Regular user, no admin access
+  | 'VIEWER'    // Read-only admin access
+  | 'SUPPORT'   // Read + limited update on users/orders
+  | 'FINANCE'   // Full access to payments/wallets/refunds
+  | 'MANAGER'   // Manage users, orders, providers, SEO
+  | 'ADMIN'     // Full access except system settings
+  | 'OWNER';    // Full access including system settings
+
 export type UserStatus = 'ACTIVE' | 'INACTIVE' | 'BANNED' | 'SUSPENDED' | 'PENDING';
 
+/**
+ * Role hierarchy levels for permission checks
+ */
+export const ROLE_HIERARCHY: Record<UserRole, number> = {
+  USER: 0,
+  VIEWER: 1,
+  SUPPORT: 2,
+  FINANCE: 3,
+  MANAGER: 4,
+  ADMIN: 5,
+  OWNER: 6,
+};
+
+/**
+ * Admin roles (all roles except USER)
+ */
+export const ADMIN_ROLES: UserRole[] = ['VIEWER', 'SUPPORT', 'FINANCE', 'MANAGER', 'ADMIN', 'OWNER'];
+
 // Role checking helpers
-export const isAdmin = (role: UserRole): boolean => role === 'SUPER_ADMIN';
+export const isAdmin = (role: UserRole): boolean => ADMIN_ROLES.includes(role);
+export const isOwner = (role: UserRole): boolean => role === 'OWNER';
 export const isUser = (role: UserRole): boolean => role === 'USER';
+export const hasHigherRole = (userRole: UserRole, targetRole: UserRole): boolean => 
+  ROLE_HIERARCHY[userRole] > ROLE_HIERARCHY[targetRole];
+export const hasEqualOrHigherRole = (userRole: UserRole, targetRole: UserRole): boolean => 
+  ROLE_HIERARCHY[userRole] >= ROLE_HIERARCHY[targetRole];
 
 export interface User {
   id: string;
   email: string;
-  name: string | null;
+  firstName: string;
+  lastName: string;
+  username: string | null;
   avatar: string | null;
+  phone: string | null;
+  country: string;
   role: UserRole;
   status: UserStatus;
   emailVerified: boolean;
+  abuseScore: number;
   createdAt: string;
 }
 
@@ -60,6 +100,15 @@ export interface RegisterRequest {
 }
 
 export interface VerifyEmailRequest {
+  code: string;
+}
+
+export interface GuestLoginRequest {
+  email: string;
+}
+
+export interface VerifyOtpRequest {
+  email: string;
   code: string;
 }
 
@@ -148,6 +197,26 @@ export const verifyEmail = async (code: string): Promise<MessageResponse> => {
   return response.data;
 };
 
+/**
+ * Request guest login OTP (email-code-only, no password required)
+ * POST /api/v1/auth/guest
+ */
+export const requestGuestLogin = async (email: string): Promise<OtpResponse> => {
+  const response = await apiClient.post<OtpResponse>('/auth/guest', { email });
+  return response.data;
+};
+
+/**
+ * Verify OTP and login (for guest login flow)
+ * POST /api/v1/auth/verify-otp
+ */
+export const verifyOtpAndLogin = async (data: VerifyOtpRequest): Promise<AuthResponse> => {
+  const response = await apiClient.post<AuthResponse>('/auth/verify-otp', data);
+  const { accessToken, refreshToken } = response.data;
+  setTokens(accessToken, refreshToken);
+  return response.data;
+};
+
 // ============================================
 // OAuth URLs
 // ============================================
@@ -158,5 +227,20 @@ export const getGoogleOAuthUrl = (): string => {
 
 export const getGithubOAuthUrl = (): string => {
   return `${apiClient.defaults.baseURL}/auth/github`;
+};
+
+/**
+ * Telegram OAuth URL
+ * Note: Telegram uses a different flow (widget-based)
+ */
+export const getTelegramOAuthUrl = (): string => {
+  return `${apiClient.defaults.baseURL}/auth/telegram`;
+};
+
+/**
+ * Twitter/X OAuth URL
+ */
+export const getTwitterOAuthUrl = (): string => {
+  return `${apiClient.defaults.baseURL}/auth/twitter`;
 };
 

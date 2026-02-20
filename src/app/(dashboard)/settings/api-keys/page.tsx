@@ -15,7 +15,6 @@ import {
   Activity,
   ArrowLeft,
   X,
-  Shield,
   Code,
   ExternalLink
 } from 'lucide-react';
@@ -25,7 +24,6 @@ import {
   getApiKeys,
   createApiKey,
   revokeApiKey,
-  formatKeyPrefix,
   getLastUsedText,
   formatUsageCount,
   copyToClipboard,
@@ -33,17 +31,25 @@ import {
   type ApiKey,
   type ApiKeyCreated
 } from '@/lib/api';
+import { getErrorMessage, logError } from '@/lib/errors';
+import { useToast } from '@/contexts/ToastContext';
 
 /**
  * API Keys Management Page
  * 
- * Features:
- * - List all API keys (max 5)
+ * Features (per CLIENT_DECISIONS.md):
+ * - List all API keys (max 3 per user, admin adjustable)
+ * - Key format: bshq_live_<random> or bshq_test_<random>
  * - Create new key with one-time display
+ * - Scoped permissions: read, order, manage, wallet
+ * - Optional IP whitelist per key
+ * - Optional expiration date
  * - Revoke existing keys
  * - View usage statistics
  */
 export default function ApiKeysPage() {
+  const toast = useToast();
+  
   // API Keys state
   const [apiKeys, setApiKeys] = useState<ApiKey[]>([]);
   const [loading, setLoading] = useState(true);
@@ -76,8 +82,10 @@ export default function ApiKeysPage() {
       setApiKeys(response.data);
       setMeta(response.meta);
     } catch (err: unknown) {
-      const error = err as { response?: { data?: { message?: string } } };
-      setError(error.response?.data?.message || 'Failed to load API keys');
+      logError(err, 'fetchApiKeys');
+      const errorMessage = getErrorMessage(err, 'apiKeys');
+      setError(errorMessage);
+      toast.error(errorMessage, 'Failed to Load API Keys');
     } finally {
       setLoading(false);
     }
@@ -95,11 +103,14 @@ export default function ApiKeysPage() {
       const key = await createApiKey({ name: newKeyName.trim() });
       setCreatedKey(key);
       setNewKeyName('');
+      toast.success(`API key "${key.name}" created successfully!`);
       // Refresh list
       await fetchApiKeys();
     } catch (err: unknown) {
-      const error = err as { response?: { data?: { message?: string } } };
-      setError(error.response?.data?.message || 'Failed to create API key');
+      logError(err, 'createApiKey');
+      const errorMessage = getErrorMessage(err, 'apiKeys');
+      setError(errorMessage);
+      toast.error(errorMessage, 'Failed to Create API Key');
     } finally {
       setCreating(false);
     }
@@ -110,7 +121,10 @@ export default function ApiKeysPage() {
       const success = await copyToClipboard(createdKey.key);
       if (success) {
         setKeyCopied(true);
+        toast.success('API key copied to clipboard!');
         setTimeout(() => setKeyCopied(false), 2000);
+      } else {
+        toast.error('Failed to copy to clipboard. Please copy manually.');
       }
     }
   };
@@ -129,14 +143,17 @@ export default function ApiKeysPage() {
       setRevoking(true);
       setError(null);
       await revokeApiKey(keyToRevoke.id, revokeReason || undefined);
+      toast.success(`API key "${keyToRevoke.name}" has been revoked.`);
       setShowRevokeModal(false);
       setKeyToRevoke(null);
       setRevokeReason('');
       // Refresh list
       await fetchApiKeys();
     } catch (err: unknown) {
-      const error = err as { response?: { data?: { message?: string } } };
-      setError(error.response?.data?.message || 'Failed to revoke API key');
+      logError(err, 'revokeApiKey');
+      const errorMessage = getErrorMessage(err, 'apiKeys');
+      setError(errorMessage);
+      toast.error(errorMessage, 'Failed to Revoke API Key');
     } finally {
       setRevoking(false);
     }

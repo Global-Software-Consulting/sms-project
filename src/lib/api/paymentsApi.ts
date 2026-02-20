@@ -76,7 +76,8 @@ export interface GatewaysResponse {
 // ============================================
 
 export interface CreatePaymentRequest {
-  amount: number;           // 5 - 10000
+  amount: number;           // 3 - 100000 (per CLIENT_DECISIONS.md)
+  gateway?: PaymentGateway; // Optional: specify gateway (default: STRIPE)
   successUrl?: string;
   cancelUrl?: string;
 }
@@ -208,10 +209,18 @@ export const getGatewayIcon = (gateway: PaymentGateway): string => {
 export const PRESET_AMOUNTS = [10, 25, 50, 100, 250, 500];
 
 /**
- * Min/Max amounts
+ * Min/Max amounts (per CLIENT_DECISIONS.md)
+ * - Min deposit: $3 (editable by admin)
+ * - Max deposit: $100,000 per transaction (editable by admin)
  */
-export const MIN_AMOUNT = 5;
-export const MAX_AMOUNT = 10000;
+export const MIN_AMOUNT = 3;
+export const MAX_AMOUNT = 100000;
+
+/**
+ * Payment expiry time in minutes (per CLIENT_DECISIONS.md)
+ * Most gateways = 60 minutes
+ */
+export const PAYMENT_EXPIRY_MINUTES = 60;
 
 /**
  * Validate amount

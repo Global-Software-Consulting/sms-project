@@ -1,20 +1,21 @@
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
-import { AxiosError } from 'axios';
 import {
   User,
   UserRole,
   AuthResponse,
   LoginRequest,
   RegisterRequest,
-  ApiError,
   loginUser,
   registerUser,
   logoutUser,
   getCurrentUser,
   requestEmailVerification,
   verifyEmail,
+  isAdmin,
+  ADMIN_ROLES,
 } from '@/lib/api';
 import { hasTokens, clearTokens, setTokens } from '@/lib/api/tokenStorage';
+import { getErrorMessage, logError } from '@/lib/errors';
 
 // ============================================
 // Types
@@ -43,24 +44,6 @@ const initialState: AuthState = {
 };
 
 // ============================================
-// Helper to extract error message
-// ============================================
-
-const getErrorMessage = (error: unknown): string => {
-  if (error instanceof AxiosError) {
-    const apiError = error.response?.data as ApiError | undefined;
-    if (apiError?.message) {
-      return Array.isArray(apiError.message) ? apiError.message[0] : apiError.message;
-    }
-    return error.message;
-  }
-  if (error instanceof Error) {
-    return error.message;
-  }
-  return 'An unexpected error occurred';
-};
-
-// ============================================
 // Async Thunks
 // ============================================
 
@@ -79,6 +62,7 @@ export const initializeAuth = createAsyncThunk<User | null, void, { rejectValue:
       const user = await getCurrentUser();
       return user;
     } catch (error) {
+      logError(error, 'auth/initialize');
       // Clear invalid tokens
       clearTokens();
       return rejectWithValue(getErrorMessage(error));
@@ -96,7 +80,8 @@ export const login = createAsyncThunk<AuthResponse, LoginRequest, { rejectValue:
       const response = await loginUser(credentials);
       return response;
     } catch (error) {
-      return rejectWithValue(getErrorMessage(error));
+      logError(error, 'auth/login');
+      return rejectWithValue(getErrorMessage(error, 'login'));
     }
   }
 );
@@ -111,7 +96,8 @@ export const register = createAsyncThunk<AuthResponse, RegisterRequest, { reject
       const response = await registerUser(data);
       return response;
     } catch (error) {
-      return rejectWithValue(getErrorMessage(error));
+      logError(error, 'auth/register');
+      return rejectWithValue(getErrorMessage(error, 'register'));
     }
   }
 );
@@ -125,6 +111,7 @@ export const logout = createAsyncThunk<void, void, { rejectValue: string }>(
     try {
       await logoutUser();
     } catch (error) {
+      logError(error, 'auth/logout');
       // Still clear tokens even if API call fails
       clearTokens();
       return rejectWithValue(getErrorMessage(error));
@@ -141,6 +128,7 @@ export const sendEmailVerification = createAsyncThunk<void, void, { rejectValue:
     try {
       await requestEmailVerification();
     } catch (error) {
+      logError(error, 'auth/sendEmailVerification');
       return rejectWithValue(getErrorMessage(error));
     }
   }
@@ -155,6 +143,7 @@ export const verifyEmailOtp = createAsyncThunk<void, string, { rejectValue: stri
     try {
       await verifyEmail(code);
     } catch (error) {
+      logError(error, 'auth/verifyEmail');
       return rejectWithValue(getErrorMessage(error));
     }
   }
@@ -316,10 +305,21 @@ export const selectIsInitialized = (state: { auth: AuthState }) => state.auth.is
 export const selectAuthError = (state: { auth: AuthState }) => state.auth.error;
 export const selectEmailVerificationSent = (state: { auth: AuthState }) => state.auth.emailVerificationSent;
 
-// Role-based selectors
+// Role-based selectors (updated for 6 admin roles)
 export const selectUserRole = (state: { auth: AuthState }): UserRole | null => state.auth.user?.role ?? null;
-export const selectIsAdmin = (state: { auth: AuthState }): boolean => state.auth.user?.role === 'SUPER_ADMIN';
+export const selectIsAdmin = (state: { auth: AuthState }): boolean => {
+  const role = state.auth.user?.role;
+  return role ? isAdmin(role) : false;
+};
 export const selectIsUser = (state: { auth: AuthState }): boolean => state.auth.user?.role === 'USER';
+export const selectIsOwner = (state: { auth: AuthState }): boolean => state.auth.user?.role === 'OWNER';
+export const selectHasAdminRole = (state: { auth: AuthState }, requiredRole: UserRole): boolean => {
+  const userRole = state.auth.user?.role;
+  if (!userRole) return false;
+  const userRoleIndex = ADMIN_ROLES.indexOf(userRole);
+  const requiredRoleIndex = ADMIN_ROLES.indexOf(requiredRole);
+  return userRoleIndex >= requiredRoleIndex;
+};
 
 // ============================================
 // Export Reducer

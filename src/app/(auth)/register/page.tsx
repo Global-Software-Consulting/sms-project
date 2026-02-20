@@ -6,9 +6,17 @@ import { Mail, Lock, User, ArrowRight, Check, Globe, AtSign } from "lucide-react
 import { Button, Input, Checkbox, Divider, Alert } from "@/components/ui";
 import { SocialButtons } from "@/components/auth/SocialButtons";
 import { useAuth } from "@/hooks";
+import { useToast } from "@/contexts/ToastContext";
 
 /**
  * Register Page - Premium SMS Activation Platform
+ * 
+ * Features:
+ * - Email/Password registration
+ * - OAuth: Google, GitHub, Telegram, Twitter/X
+ * - Facebook removed per client request
+ * - Password: min 10 chars, letters + numbers required
+ * - Username: optional, 3-24 chars
  * 
  * SPACING (Design Guidelines 6.3.1):
  * - Header margin-bottom: 32px
@@ -19,6 +27,7 @@ import { useAuth } from "@/hooks";
  * - Footer margin-top: 32px
  */
 export default function RegisterPage() {
+  const toast = useToast();
   const {
     register,
     loginWithGoogle,
@@ -69,36 +78,92 @@ export default function RegisterPage() {
   const passwordRequirements = validatePassword(formData.password);
   const isPasswordValid = passwordRequirements.every((req) => req.met);
 
+  // Validate email format
+  const isValidEmail = (email: string): boolean => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  };
+
+  // Validate username format (3-24 chars, letters/numbers/._ only)
+  const isValidUsername = (username: string): boolean => {
+    if (!username) return true; // Optional field
+    const usernameRegex = /^[a-zA-Z0-9._]{3,24}$/;
+    return usernameRegex.test(username);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+    clearError();
 
-    if (!formData.agreeToTerms) {
-      setError("You must agree to the Terms of Service and Privacy Policy");
+    // Client-side validation with user-friendly messages
+    if (!formData.firstName.trim()) {
+      setError("Please enter your first name.");
       return;
     }
 
-    if (formData.password !== formData.confirmPassword) {
-      setError("Passwords do not match");
+    if (!formData.lastName.trim()) {
+      setError("Please enter your last name.");
+      return;
+    }
+
+    if (formData.username && !isValidUsername(formData.username)) {
+      setError("Username must be 3-24 characters and contain only letters, numbers, dots, and underscores.");
+      return;
+    }
+
+    if (!formData.email.trim()) {
+      setError("Please enter your email address.");
+      return;
+    }
+
+    if (!isValidEmail(formData.email)) {
+      setError("Please enter a valid email address.");
+      return;
+    }
+
+    if (!formData.country.trim()) {
+      setError("Please select your country.");
+      return;
+    }
+
+    if (!formData.password) {
+      setError("Please enter a password.");
       return;
     }
 
     if (!isPasswordValid) {
-      setError("Password does not meet the requirements");
+      setError("Password must be at least 10 characters with uppercase, lowercase, and a number.");
       return;
     }
 
+    if (formData.password !== formData.confirmPassword) {
+      setError("Passwords do not match. Please re-enter your password.");
+      return;
+    }
+
+    if (!formData.agreeToTerms) {
+      setError("Please agree to the Terms of Service and Privacy Policy to continue.");
+      return;
+    }
+
+    // Attempt registration
     const result = await register({
-      firstName: formData.firstName,
-      lastName: formData.lastName,
+      firstName: formData.firstName.trim(),
+      lastName: formData.lastName.trim(),
       username: formData.username.trim() || undefined,
-      email: formData.email,
-      country: formData.country,
+      email: formData.email.trim().toLowerCase(),
+      country: formData.country.trim(),
       password: formData.password,
     });
 
     if (!result.success) {
-      setError(result.error || "Registration failed. Please try again.");
+      // The error message from the API will be shown (e.g., "Email already registered")
+      const errorMsg = result.error || "Registration failed. Please try again.";
+      setError(errorMsg);
+      toast.error(errorMsg, "Registration Failed");
+    } else {
+      toast.success("Account created successfully! Redirecting...", "Welcome!");
     }
   };
 
@@ -134,12 +199,13 @@ export default function RegisterPage() {
         </div>
       )}
 
-      {/* Social Buttons - mb: 24px */}
+      {/* Social Buttons - mb: 24px (Google, GitHub, Telegram, Twitter) */}
       <div style={{ marginBottom: '24px' }}>
         <SocialButtons
           onGoogleClick={loginWithGoogle}
           onGithubClick={loginWithGithub}
           isLoading={isLoading}
+          showAllProviders={true}
         />
       </div>
 

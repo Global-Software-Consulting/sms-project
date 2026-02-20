@@ -2,14 +2,11 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import { 
   CreditCard, 
   ArrowLeft, 
   Wallet,
   Check,
-  AlertCircle,
-  ExternalLink,
   Shield,
   Zap,
   Lock
@@ -26,6 +23,8 @@ import {
   isValidAmount,
   type WalletBalance
 } from '@/lib/api';
+import { getErrorMessage, logError } from '@/lib/errors';
+import { useToast } from '@/contexts/ToastContext';
 
 /**
  * Deposit Page - Add funds to wallet via Stripe
@@ -37,7 +36,7 @@ import {
  * 4. After payment: redirect to success/cancel page
  */
 export default function DepositPage() {
-  const router = useRouter();
+  const toast = useToast();
   
   // Wallet balance
   const [balance, setBalance] = useState<WalletBalance | null>(null);
@@ -58,7 +57,8 @@ export default function DepositPage() {
       try {
         const data = await getWalletBalance();
         setBalance(data);
-      } catch {
+      } catch (err: unknown) {
+        logError(err, 'fetchWalletBalance');
         // Ignore - user might not have wallet yet
       } finally {
         setBalanceLoading(false);
@@ -91,7 +91,9 @@ export default function DepositPage() {
   // Handle payment
   const handlePayment = async () => {
     if (!isAmountValid) {
-      setError(`Amount must be between $${MIN_AMOUNT} and $${MAX_AMOUNT.toLocaleString()}`);
+      const errorMsg = `Amount must be between $${MIN_AMOUNT} and $${MAX_AMOUNT.toLocaleString()}`;
+      setError(errorMsg);
+      toast.warning(errorMsg, 'Invalid Amount');
       return;
     }
 
@@ -107,13 +109,18 @@ export default function DepositPage() {
 
       // Redirect to Stripe Checkout
       if (response.checkoutUrl) {
+        toast.info('Redirecting to payment gateway...', 'Processing');
         window.location.href = response.checkoutUrl;
       } else {
-        setError('Failed to create checkout session. Please try again.');
+        const errorMsg = 'Failed to create checkout session. Please try again.';
+        setError(errorMsg);
+        toast.error(errorMsg, 'Payment Error');
       }
     } catch (err: unknown) {
-      const error = err as { response?: { data?: { message?: string } } };
-      setError(error.response?.data?.message || 'Failed to initialize payment. Please try again.');
+      logError(err, 'createPayment');
+      const errorMessage = getErrorMessage(err, 'payment');
+      setError(errorMessage);
+      toast.error(errorMessage, 'Payment Failed');
     } finally {
       setIsProcessing(false);
     }

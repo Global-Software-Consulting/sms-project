@@ -5,3 +5,5 @@ export { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter }
 export { Divider } from "./Divider";
 export { Alert } from "./Alert";
 export { Badge } from "./Badge";
+export { ToastContainer } from "./Toast";
+export type { ToastData, ToastType } from "./Toast";

@@ -43,11 +43,26 @@ apiClient.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
+// Auth endpoints that should NOT trigger token refresh on 401
+// These endpoints are expected to return 401 for invalid credentials
+const AUTH_ENDPOINTS = ['/auth/login', '/auth/register', '/auth/guest', '/auth/verify-otp'];
+
+// Check if the request URL is an auth endpoint
+const isAuthEndpoint = (url: string | undefined): boolean => {
+  if (!url) return false;
+  return AUTH_ENDPOINTS.some(endpoint => url.includes(endpoint));
+};
+
 // Response interceptor - Handle token refresh
 apiClient.interceptors.response.use(
   (response) => response,
   async (error: AxiosError) => {
     const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean };
+
+    // Skip token refresh for auth endpoints - they handle their own 401 errors
+    if (isAuthEndpoint(originalRequest?.url)) {
+      return Promise.reject(error);
+    }
 
     // If error is 401 and we haven't retried yet
     if (error.response?.status === 401 && !originalRequest._retry) {

@@ -52,6 +52,7 @@ export interface AdminUserDetail extends AdminUser {
 
 /**
  * User statistics for admin dashboard
+ * Updated to support 6 admin roles (per CLIENT_DECISIONS.md)
  */
 export interface UserStatistics {
   totalUsers: number;
@@ -63,7 +64,12 @@ export interface UserStatistics {
   newUsersThisMonth: number;
   usersByRole: {
     USER: number;
-    SUPER_ADMIN: number;
+    VIEWER: number;
+    SUPPORT: number;
+    FINANCE: number;
+    MANAGER: number;
+    ADMIN: number;
+    OWNER: number;
   };
 }
 
