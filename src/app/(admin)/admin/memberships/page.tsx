@@ -29,10 +29,12 @@ import {
   formatCurrency,
   formatUserName,
   getUserInitials,
+  getAdminUsers,
   type AdminSubscription,
   type AdminSubscriptionQueryParams,
   type MembershipStatistics,
-  type SubscriptionStatus
+  type SubscriptionStatus,
+  type AdminUser
 } from '@/lib/api';
 import { getPlans, type MembershipPlan } from '@/lib/api/membershipApi';
 
@@ -78,6 +80,13 @@ export default function AdminMembershipsPage() {
   const [grantPlanSlug, setGrantPlanSlug] = useState('');
   const [grantDuration, setGrantDuration] = useState('30');
   const [grantReason, setGrantReason] = useState('');
+  
+  // User search for grant modal
+  const [userSearchQuery, setUserSearchQuery] = useState('');
+  const [userSearchResults, setUserSearchResults] = useState<AdminUser[]>([]);
+  const [userSearchLoading, setUserSearchLoading] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<AdminUser | null>(null);
+  const [showUserDropdown, setShowUserDropdown] = useState(false);
 
   // Fetch subscriptions
   const fetchSubscriptions = useCallback(async () => {
@@ -132,6 +141,52 @@ export default function AdminMembershipsPage() {
     setFilters(prev => ({ ...prev, search: searchInput || undefined, page: 1 }));
   };
 
+  // Search users for grant modal
+  const searchUsersForGrant = useCallback(async (query: string) => {
+    if (!query || query.length < 2) {
+      setUserSearchResults([]);
+      setShowUserDropdown(false);
+      return;
+    }
+    
+    try {
+      setUserSearchLoading(true);
+      const response = await getAdminUsers({ search: query, limit: 10 });
+      setUserSearchResults(response.data);
+      setShowUserDropdown(true);
+    } catch {
+      setUserSearchResults([]);
+    } finally {
+      setUserSearchLoading(false);
+    }
+  }, []);
+
+  // Debounced user search
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (userSearchQuery) {
+        searchUsersForGrant(userSearchQuery);
+      }
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [userSearchQuery, searchUsersForGrant]);
+
+  // Select user from dropdown
+  const handleSelectUser = (user: AdminUser) => {
+    setSelectedUser(user);
+    setGrantUserId(user.id);
+    setUserSearchQuery(user.email);
+    setShowUserDropdown(false);
+  };
+
+  // Clear selected user
+  const handleClearUser = () => {
+    setSelectedUser(null);
+    setGrantUserId('');
+    setUserSearchQuery('');
+    setUserSearchResults([]);
+  };
+
   // Handle filter change
   const handleFilterChange = (key: keyof AdminSubscriptionQueryParams, value: string | undefined) => {
     setFilters(prev => ({ ...prev, [key]: value, page: 1 }));
@@ -160,6 +215,9 @@ export default function AdminMembershipsPage() {
       setGrantPlanSlug('');
       setGrantDuration('30');
       setGrantReason('');
+      setSelectedUser(null);
+      setUserSearchQuery('');
+      setUserSearchResults([]);
       await fetchSubscriptions();
       await fetchStats();
     } catch (err: unknown) {
@@ -552,26 +610,190 @@ export default function AdminMembershipsPage() {
               </button>
             </div>
 
-            <div style={{ marginBottom: '16px' }}>
+            <div style={{ marginBottom: '16px', position: 'relative' }}>
               <label style={{ display: 'block', fontSize: '14px', fontWeight: 500, color: 'var(--text-primary)', marginBottom: '8px' }}>
-                User ID <span style={{ color: 'var(--danger)' }}>*</span>
+                Search User <span style={{ color: 'var(--danger)' }}>*</span>
               </label>
-              <input
-                type="text"
-                value={grantUserId}
-                onChange={(e) => setGrantUserId(e.target.value)}
-                placeholder="Enter user ID"
-                style={{
-                  width: '100%',
-                  height: '44px',
-                  padding: '0 12px',
+              
+              {/* Selected User Display */}
+              {selectedUser ? (
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  padding: '10px 12px',
                   backgroundColor: 'var(--bg-secondary)',
-                  border: '1px solid var(--border-default)',
+                  border: '1px solid var(--accent-gold)',
                   borderRadius: '8px',
-                  color: 'var(--text-primary)',
-                  fontSize: '14px'
-                }}
-              />
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <div style={{
+                      width: '32px',
+                      height: '32px',
+                      borderRadius: '50%',
+                      backgroundColor: 'var(--accent-gold)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: '12px',
+                      fontWeight: 600,
+                      color: 'var(--bg-primary)'
+                    }}>
+                      {getUserInitials(selectedUser)}
+                    </div>
+                    <div>
+                      <div style={{ fontSize: '14px', fontWeight: 500, color: 'var(--text-primary)' }}>
+                        {formatUserName(selectedUser)}
+                      </div>
+                      <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+                        {selectedUser.email}
+                      </div>
+                    </div>
+                  </div>
+                  <button 
+                    onClick={handleClearUser}
+                    style={{ 
+                      padding: '4px', 
+                      background: 'none', 
+                      border: 'none', 
+                      cursor: 'pointer',
+                      color: 'var(--text-muted)'
+                    }}
+                  >
+                    <X style={{ width: '16px', height: '16px' }} />
+                  </button>
+                </div>
+              ) : (
+                <>
+                  {/* Search Input */}
+                  <div style={{ position: 'relative' }}>
+                    <Search style={{ 
+                      position: 'absolute', 
+                      left: '12px', 
+                      top: '50%', 
+                      transform: 'translateY(-50%)', 
+                      width: '16px', 
+                      height: '16px', 
+                      color: 'var(--text-muted)' 
+                    }} />
+                    <input
+                      type="text"
+                      value={userSearchQuery}
+                      onChange={(e) => setUserSearchQuery(e.target.value)}
+                      placeholder="Search by email or username..."
+                      style={{
+                        width: '100%',
+                        height: '44px',
+                        padding: '0 12px 0 40px',
+                        backgroundColor: 'var(--bg-secondary)',
+                        border: '1px solid var(--border-default)',
+                        borderRadius: '8px',
+                        color: 'var(--text-primary)',
+                        fontSize: '14px'
+                      }}
+                    />
+                    {userSearchLoading && (
+                      <RefreshCw style={{ 
+                        position: 'absolute', 
+                        right: '12px', 
+                        top: '50%', 
+                        transform: 'translateY(-50%)', 
+                        width: '16px', 
+                        height: '16px', 
+                        color: 'var(--text-muted)',
+                        animation: 'spin 1s linear infinite'
+                      }} />
+                    )}
+                  </div>
+                  
+                  {/* Search Results Dropdown */}
+                  {showUserDropdown && userSearchResults.length > 0 && (
+                    <div style={{
+                      position: 'absolute',
+                      top: '100%',
+                      left: 0,
+                      right: 0,
+                      marginTop: '4px',
+                      backgroundColor: 'var(--bg-card)',
+                      border: '1px solid var(--border-default)',
+                      borderRadius: '8px',
+                      boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+                      zIndex: 10,
+                      maxHeight: '200px',
+                      overflowY: 'auto'
+                    }}>
+                      {userSearchResults.map(user => (
+                        <button
+                          key={user.id}
+                          onClick={() => handleSelectUser(user)}
+                          style={{
+                            width: '100%',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '10px',
+                            padding: '10px 12px',
+                            background: 'none',
+                            border: 'none',
+                            borderBottom: '1px solid var(--border-subtle)',
+                            cursor: 'pointer',
+                            textAlign: 'left'
+                          }}
+                          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--bg-secondary)'}
+                          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                        >
+                          <div style={{
+                            width: '32px',
+                            height: '32px',
+                            borderRadius: '50%',
+                            backgroundColor: 'var(--accent-gold)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            fontSize: '12px',
+                            fontWeight: 600,
+                            color: 'var(--bg-primary)',
+                            flexShrink: 0
+                          }}>
+                            {getUserInitials(user)}
+                          </div>
+                          <div style={{ overflow: 'hidden' }}>
+                            <div style={{ fontSize: '14px', fontWeight: 500, color: 'var(--text-primary)' }}>
+                              {formatUserName(user)}
+                            </div>
+                            <div style={{ fontSize: '12px', color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                              {user.email}
+                            </div>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                  
+                  {/* No Results Message */}
+                  {showUserDropdown && userSearchQuery.length >= 2 && userSearchResults.length === 0 && !userSearchLoading && (
+                    <div style={{
+                      position: 'absolute',
+                      top: '100%',
+                      left: 0,
+                      right: 0,
+                      marginTop: '4px',
+                      padding: '12px',
+                      backgroundColor: 'var(--bg-card)',
+                      border: '1px solid var(--border-default)',
+                      borderRadius: '8px',
+                      fontSize: '14px',
+                      color: 'var(--text-muted)',
+                      textAlign: 'center'
+                    }}>
+                      No users found
+                    </div>
+                  )}
+                </>
+              )}
+              
+              <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '6px' }}>
+                Type at least 2 characters to search users by email or username
+              </p>
             </div>
 
             <div style={{ marginBottom: '16px' }}>

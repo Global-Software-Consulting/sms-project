@@ -2,6 +2,7 @@
 
 > All pages required per CLIENT_DECISIONS.md + client requirement docs.
 > Reference site: CheapStreamTV.com (admin panel), sms-man.com / 5sim.net (product flow)
+> Last Updated: February 23, 2026
 
 ---
 
@@ -30,7 +31,7 @@
 | 12 | Settings | `/settings` | Done | Add 2FA section, notification prefs, email change flow |
 | 13 | API Keys | `/settings/api-keys` | Done | Max 3 keys, bshq_ prefix display, scopes UI, IP whitelist, expiration |
 
-### Admin Pages (5 built, many needed)
+### Admin Pages (7 built, many needed)
 
 | # | Page | Route | Status | Updates Needed |
 |---|------|-------|--------|----------------|
@@ -44,96 +45,124 @@
 
 ---
 
-## Pages to Build
+## Public/Marketing Pages - ✅ PHASE 4 COMPLETE
 
-### Public/Marketing Pages (Priority: HIGH for SEO)
+> Location: `src/app/(public)/`
+> Components: `src/components/layout/PublicHeader.tsx`, `PublicFooter.tsx`
 
-| # | Page | Route | Description |
-|---|------|-------|-------------|
-| 21 | Landing | `/` | Hero section, feature highlights, pricing preview, trust signals, CTA |
-| 22 | Home | `/home` | Product overview for logged-out users, service preview |
-| 23 | Features | `/features` | Detailed feature breakdown with visuals |
-| 24 | About Us | `/about` | Company info, mission, team |
-| 25 | Contact Us | `/contact` | Contact form, email, social links |
-| 26 | Customer Reviews | `/reviews` | User reviews display (TrustPilot-style) |
+### Implemented ✅
 
-### Product Pages (Priority: CRITICAL — core product)
+| # | Page | Route | Status | Description |
+|---|------|-------|--------|-------------|
+| 21 | Landing | `/` | ✅ Done | Hero, features, pricing preview, testimonials, CTA |
+| 22 | Features | `/features` | ✅ Done | Detailed feature breakdown with visuals |
+| 23 | About Us | `/about` | ✅ Done | Company info, values, timeline, mission |
+| 24 | Contact Us | `/contact` | ✅ Done | Contact form, support info, quick links |
+| 25 | FAQ | `/faq` | ✅ Done | Searchable accordion FAQ by category |
+| 26 | Pricing (Public) | `/pricing-public` | ✅ Done | Public pricing with plan comparison |
+| 27 | Privacy Policy | `/privacy` | ✅ Done | Full privacy policy document |
+| 28 | Terms of Use | `/terms` | ✅ Done | Full terms of service document |
+| 29 | Status Page | `/status` | ✅ Done | System status, incidents, uptime stats |
+| 30 | Blog List | `/blog` | ✅ Done | Paginated posts with categories, search |
+| 31 | Blog Post | `/blog/[slug]` | ✅ Done | Single post with sharing, related articles |
+| 32 | 404 Page | `not-found.tsx` | ✅ Done | Custom 404 with navigation links |
 
-| # | Page | Route | Description |
-|---|------|-------|-------------|
-| 27 | **Receive SMS (Activation)** | `/activate` | Main product page: select provider (V1/V2), country, service → buy number → receive SMS code. Filters: cheapest, popular, available. Favorites. "Only Show Available Now" toggle |
-| 28 | **Rent Numbers** | `/rent` | Rent phone numbers (sms-man). Select country/duration. Receive multiple SMS during rental. Extend/cancel |
-| 29 | **Order History** | `/orders` | User's SMS orders list. Status tracking. Refund requests |
-| 30 | **Order Detail** | `/orders/[id]` | Single order: phone number, SMS code, provider, cost, status, timeline |
+### Pending (Require Other Phases)
 
-### API & Developer Pages
-
-| # | Page | Route | Description |
-|---|------|-------|-------------|
-| 31 | API Documentation | `/api-docs` | Public API docs. Endpoints, auth, examples. Interactive playground |
-| 32 | API Connections | `/api-connections` | Overview of API system, getting started guide |
-
-### Content Pages
-
-| # | Page | Route | Description |
-|---|------|-------|-------------|
-| 33 | Blog | `/blog` | Blog post list with pagination, categories |
-| 34 | Blog Post | `/blog/[slug]` | Single blog post with SEO meta |
-| 35 | Help | `/help` | Help center with search, categories |
-| 36 | Knowledge Base | `/knowledge-base` | Articles organized by topic |
-| 37 | KB Article | `/knowledge-base/[slug]` | Single KB article |
-| 38 | FAQ | `/faq` | Accordion FAQ sections |
-
-### User Feature Pages
-
-| # | Page | Route | Description |
-|---|------|-------|-------------|
-| 39 | Referral Program | `/referral` | Referral dashboard, invite link, earnings, payout history |
-| 40 | Favorites | `/favorites` | User's favorited services (V1 + V2) |
-| 41 | Notifications | `/notifications` | User notification center |
-
-### Legal Pages
-
-| # | Page | Route | Description |
-|---|------|-------|-------------|
-| 42 | Privacy Policy | `/privacy` | Privacy policy (admin-editable content) |
-| 43 | Terms of Use | `/terms` | Terms of service |
-| 44 | Payment & Refund | `/payment-policy` | Payment and refund policy |
-| 45 | Legal Disclaimer | `/disclaimer` | Legal disclaimer |
-
-### Utility Pages
-
-| # | Page | Route | Description |
-|---|------|-------|-------------|
-| 46 | 404 | `/not-found` | Custom 404 with navigation links |
-| 47 | Payment Status | `/payment/status` | Payment confirmation/failure page |
-| 48 | Status Page | `/status` | Provider uptime status, system health |
-
-### Admin Pages to Build
-
-| # | Page | Route | Description |
-|---|------|-------|-------------|
-| 49 | Admin Payments | `/admin/payments` | Payment list, detail, refund controls, gateway stats |
-| 50 | Admin Payment Detail | `/admin/payments/[id]` | Single payment detail, gateway info, refund action |
-| 51 | Admin SMS Providers | `/admin/providers` | Provider management: CRUD, priority (drag & drop), enable/disable |
-| 52 | Admin Provider Detail | `/admin/providers/[id]` | Provider config: services, markup, display name |
-| 53 | Admin Services | `/admin/services` | Service list: enable/disable, price overrides, icons, categories |
-| 54 | Admin Orders | `/admin/orders` | SMS order list, status, refunds |
-| 55 | Admin Abuse Control | `/admin/abuse` | Abuse dashboard: flagged users, score distribution, blocked entities |
-| 56 | Admin Settings | `/admin/settings` | General site settings, SMTP config, login method toggles |
-| 57 | Admin SEO | `/admin/seo` | Per-page meta tags, sitemap config, OG tags |
-| 58 | Admin Blog | `/admin/blog` | Blog CRUD (create/edit/delete/publish posts) |
-| 59 | Admin Reviews | `/admin/reviews` | Review moderation (approve/reject/feature) |
-| 60 | Admin Coupons | `/admin/coupons` | Coupon CRUD (codes, discounts, limits, expiry) |
-| 61 | Admin Affiliates | `/admin/affiliates` | Affiliate management, payouts, performance |
-| 62 | Admin Notifications | `/admin/notifications` | Email templates, alert config, notification log |
-| 63 | Admin Addons | `/admin/addons` | Integration toggles (LiveChatAI, TrustPilot, GA, Clarity, etc.) |
-| 64 | Admin Roles | `/admin/roles` | Role management: 6 roles with CRUD permission toggles |
-| 65 | Admin Logs | `/admin/logs` | Audit logs + system logs viewer with filters |
+| # | Page | Route | Dependency | Description |
+|---|------|-------|------------|-------------|
+| 33 | Customer Reviews | `/reviews` | Phase 7 | User reviews display (TrustPilot-style) |
+| 34 | Help Center | `/help` | Content | Help center with search, categories |
+| 35 | Knowledge Base | `/knowledge-base` | Content | Articles organized by topic |
+| 36 | Payment & Refund | `/payment-policy` | Content | Payment and refund policy |
+| 37 | Legal Disclaimer | `/disclaimer` | Content | Legal disclaimer |
+| 38 | Payment Status | `/payment/status` | Integration | Payment confirmation/failure page |
+| 39 | Referral Program | `/referral` | Phase 7 | Referral dashboard, invite link, earnings |
 
 ---
 
-## Build Order (Recommended)
+## Product Pages (Priority: CRITICAL — requires Phase 2)
+
+| # | Page | Route | Status | Description |
+|---|------|-------|--------|-------------|
+| 40 | **Receive SMS (Activation)** | `/activate` | ⏳ Pending | Main product page: select provider, country, service → buy number → receive SMS |
+| 41 | **Rent Numbers** | `/rent` | ⏳ Pending | Rent phone numbers, select country/duration, receive multiple SMS |
+| 42 | **Order History** | `/orders` | ⏳ Pending | User's SMS orders list, status tracking, refund requests |
+| 43 | **Order Detail** | `/orders/[id]` | ⏳ Pending | Single order: phone number, SMS code, provider, cost, status |
+| 44 | **Favorites** | `/favorites` | ⏳ Pending | User's favorited services (V1 + V2) |
+
+---
+
+## API & Developer Pages
+
+| # | Page | Route | Status | Description |
+|---|------|-------|--------|-------------|
+| 45 | API Documentation | `/api-docs` | ⏳ Pending | Public API docs, endpoints, auth, examples |
+| 46 | API Connections | `/api-connections` | ⏳ Pending | Overview of API system, getting started guide |
+
+---
+
+## User Feature Pages
+
+| # | Page | Route | Status | Description |
+|---|------|-------|--------|-------------|
+| 47 | Notifications | `/notifications` | ⏳ Pending | User notification center |
+
+---
+
+## Admin Pages to Build (Phase 5)
+
+### Core Admin Pages
+
+| # | Page | Route | Priority | Description |
+|---|------|-------|----------|-------------|
+| 48 | Admin Payments | `/admin/payments` | HIGH | Payment list, detail, refund controls, gateway stats |
+| 49 | Admin Payment Detail | `/admin/payments/[id]` | HIGH | Single payment detail, gateway info, refund action |
+| 50 | Admin Abuse Control | `/admin/abuse` | MEDIUM | Abuse dashboard: flagged users, score distribution |
+| 51 | Admin Settings | `/admin/settings` | MEDIUM | General site settings, SMTP config, login methods |
+
+### SMS Admin Pages (Requires Phase 2)
+
+| # | Page | Route | Priority | Description |
+|---|------|-------|----------|-------------|
+| 52 | Admin SMS Providers | `/admin/providers` | HIGH | Provider CRUD, priority (drag & drop), enable/disable |
+| 53 | Admin Provider Detail | `/admin/providers/[id]` | HIGH | Provider config: services, markup, display name |
+| 54 | Admin Services | `/admin/services` | HIGH | Service list: enable/disable, price overrides, icons |
+| 55 | Admin Orders | `/admin/orders` | HIGH | SMS order list, status, refunds |
+
+### Content Admin Pages
+
+| # | Page | Route | Priority | Description |
+|---|------|-------|----------|-------------|
+| 56 | Admin SEO | `/admin/seo` | MEDIUM | Per-page meta tags, sitemap config, OG tags |
+| 57 | Admin Blog | `/admin/blog` | LOW | Blog CRUD (create/edit/delete/publish posts) |
+| 58 | Admin Reviews | `/admin/reviews` | LOW | Review moderation (approve/reject/feature) |
+
+### Business Admin Pages
+
+| # | Page | Route | Priority | Description |
+|---|------|-------|----------|-------------|
+| 59 | Admin Coupons | `/admin/coupons` | LOW | Coupon CRUD (codes, discounts, limits, expiry) |
+| 60 | Admin Affiliates | `/admin/affiliates` | LOW | Affiliate management, payouts, performance |
+| 61 | Admin Notifications | `/admin/notifications` | LOW | Email templates, alert config, notification log |
+| 62 | Admin Addons | `/admin/addons` | LOW | Integration toggles (LiveChatAI, TrustPilot, etc.) |
+| 63 | Admin Roles | `/admin/roles` | LOW | Role management: 6 roles with CRUD permission toggles |
+| 64 | Admin Logs | `/admin/logs` | LOW | Audit logs + system logs viewer with filters |
+
+---
+
+## Build Order (Updated)
+
+### ✅ Sprint 4: Public/Marketing Pages - COMPLETE
+1. ✅ Landing page
+2. ✅ Features page
+3. ✅ About Us, Contact Us
+4. ✅ Blog + Blog Post
+5. ✅ FAQ
+6. ✅ Pricing (Public)
+7. ✅ Privacy Policy, Terms of Use
+8. ✅ 404 page
+9. ✅ Status Page
 
 ### Sprint 1: Fix Existing Pages
 1. Update login/register (remove Facebook, add Telegram/Twitter/X, guest login)
@@ -142,33 +171,25 @@
 4. Update pricing page (Free tier, annual toggle, active numbers)
 5. Update API keys page (bshq_ prefix, max 3, scopes)
 
-### Sprint 2: Core Product Pages (CRITICAL)
+### Sprint 2: Core Product Pages (CRITICAL - Requires Phase 2)
 1. **Receive SMS (Activation)** page — the main product
 2. **Rent Numbers** page
 3. Order History + Order Detail pages
 4. Favorites page
 
-### Sprint 3: Admin Expansion
-1. Admin Providers + Provider Detail
-2. Admin Services
-3. Admin Orders
-4. Admin Payments + Payment Detail
-5. Admin Settings (general + SMTP)
-6. Admin Abuse Control
+### Sprint 3: Admin Expansion (Phase 5)
+1. Admin Payments + Payment Detail
+2. Admin Settings (general + SMTP)
+3. Admin Abuse Control
+4. Admin Providers + Provider Detail (Phase 2)
+5. Admin Services (Phase 2)
+6. Admin Orders (Phase 2)
 
-### Sprint 4: Public/Marketing Pages
-1. Landing page
-2. Features page
-3. About Us, Contact Us
-4. Blog + Blog Post
-5. FAQ, Help, Knowledge Base
-6. Customer Reviews
-
-### Sprint 5: Legal + Utility
-1. Privacy Policy, Terms, Payment Policy, Disclaimer
-2. 404 page
-3. Payment Status page
-4. Status Page
+### Sprint 5: Remaining Content
+1. Help Center, Knowledge Base
+2. Payment & Refund Policy, Legal Disclaimer
+3. Customer Reviews
+4. Payment Status page
 
 ### Sprint 6: Advanced Features
 1. Referral Program page
@@ -184,15 +205,24 @@
 |----------|-------|----------|-------|
 | Auth | 5 | 0 (updates only) | 5 |
 | Dashboard | 8 | 4 | 12 |
-| Admin | 5 | 17 | 22 |
-| Public/Marketing | 0 | 6 | 6 |
-| Product (SMS) | 0 | 4 | 4 |
-| Content | 0 | 6 | 6 |
-| Legal | 0 | 4 | 4 |
-| Utility | 0 | 3 | 3 |
-| User Features | 0 | 3 | 3 |
-| **Total** | **18** | **47** | **65** |
+| Admin | 7 | 17 | 24 |
+| Public/Marketing | **12** | 7 | 19 |
+| Product (SMS) | 0 | 5 | 5 |
+| API/Developer | 0 | 2 | 2 |
+| User Features | 0 | 1 | 1 |
+| **Total** | **32** | **36** | **68** |
+
+---
+
+## Components Created (Phase 4)
+
+| Component | Location | Description |
+|-----------|----------|-------------|
+| `PublicHeader` | `components/layout/PublicHeader.tsx` | Responsive nav with dropdowns, mobile menu |
+| `PublicFooter` | `components/layout/PublicFooter.tsx` | Links, newsletter, social icons |
+| Public Layout | `app/(public)/layout.tsx` | Wrapper with header/footer |
 
 ---
 
 *Reference: CLIENT_DECISIONS.md for all requirements.*
+*See IMPLEMENTATION_ROADMAP.md for phase details.*

@@ -679,8 +679,13 @@ export default function AdminUserDetailPage() {
                 fontSize: '14px'
               }}
             >
-              <option value="USER">User</option>
-              <option value="SUPER_ADMIN">Super Admin</option>
+              <option value="USER">User (Customer)</option>
+              <option value="VIEWER">Viewer (Read-only Admin)</option>
+              <option value="SUPPORT">Support (User Support)</option>
+              <option value="FINANCE">Finance (Payments/Wallets)</option>
+              <option value="MANAGER">Manager (Operations)</option>
+              <option value="ADMIN">Admin (Full Access)</option>
+              <option value="OWNER" disabled>Owner (System Owner - Protected)</option>
             </select>
           </div>
         </ActionModal>

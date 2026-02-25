@@ -2,7 +2,7 @@
 
 import React from "react";
 import Link from "next/link";
-import { MessageSquare, Shield, Zap, Globe } from "lucide-react";
+import { MessageSquare, Shield, Zap, Globe, ArrowLeft } from "lucide-react";
 
 interface AuthLayoutProps {
   children: React.ReactNode;
@@ -113,8 +113,17 @@ export const AuthLayout: React.FC<AuthLayoutProps> = ({ children }) => {
       {/* Right Side - Auth Form with proper breathing space */}
       <div className="w-full lg:w-1/2 xl:w-[45%] flex items-center justify-center px-6 py-12 sm:px-8 lg:px-12 xl:px-16">
         <div className="w-full max-w-[420px]">
+          {/* Back to Home Link */}
+          <Link 
+            href="/" 
+            className="inline-flex items-center gap-2 text-sm text-text-muted hover:text-accent-gold transition-colors mb-6"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            Back to Home
+          </Link>
+
           {/* Mobile Logo - 32px margin bottom */}
-          <div className="lg:hidden mb-10 text-center">
+          <div className="lg:hidden mb-8 text-center">
             <Link href="/" className="inline-flex items-center gap-3">
               <div className="w-10 h-10 rounded-xl bg-gold-gradient flex items-center justify-center shadow-gold">
                 <MessageSquare className="w-5 h-5 text-bg-primary" />

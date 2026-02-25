@@ -22,7 +22,12 @@ import {
   LogOut,
   Home,
   Settings,
-  ChevronDown
+  ChevronDown,
+  Star,
+  Zap,
+  Search,
+  PenTool,
+  ScrollText
 } from 'lucide-react';
 import { Button, Alert } from '@/components/ui';
 import { useAuth } from '@/hooks';
@@ -123,6 +128,8 @@ export default function AdminDashboardPage() {
                 <NavLink href="/admin" icon={Home} label="Home" active />
                 <NavLink href="/admin/users" icon={Users} label="Users" />
                 <NavLink href="/admin/wallets" icon={Wallet} label="Wallets" />
+                <NavLink href="/admin/payments" icon={DollarSign} label="Payments" />
+                <NavLink href="/admin/abuse" icon={Shield} label="Abuse" />
                 <NavLink href="/admin/memberships" icon={Crown} label="Memberships" />
                 <NavLink href="/admin/api-keys" icon={Key} label="API Keys" />
               </nav>
@@ -577,17 +584,34 @@ export default function AdminDashboardPage() {
           </div>
         </div>
 
-        {/* Quick Links */}
+        {/* Quick Links - Core */}
         <div style={{ 
           marginTop: '24px',
           display: 'grid', 
           gridTemplateColumns: 'repeat(2, 1fr)', 
           gap: '16px' 
-        }} className="sm:!grid-cols-4">
+        }} className="sm:!grid-cols-4 lg:!grid-cols-6">
           <QuickLink href="/admin/users" icon={Users} label="Manage Users" />
           <QuickLink href="/admin/wallets" icon={Wallet} label="Manage Wallets" />
+          <QuickLink href="/admin/payments" icon={DollarSign} label="Payments" />
+          <QuickLink href="/admin/abuse" icon={Shield} label="Abuse Control" />
           <QuickLink href="/admin/memberships" icon={Crown} label="Memberships" />
           <QuickLink href="/admin/api-keys" icon={Key} label="API Keys" />
+        </div>
+
+        {/* Quick Links - Content & Settings */}
+        <div style={{ 
+          marginTop: '16px',
+          display: 'grid', 
+          gridTemplateColumns: 'repeat(2, 1fr)', 
+          gap: '16px' 
+        }} className="sm:!grid-cols-4 lg:!grid-cols-6">
+          <QuickLink href="/admin/blog" icon={PenTool} label="Blog Posts" />
+          <QuickLink href="/admin/reviews" icon={Star} label="Reviews" />
+          <QuickLink href="/admin/seo" icon={Search} label="SEO Settings" />
+          <QuickLink href="/admin/addons" icon={Zap} label="Addons" />
+          <QuickLink href="/admin/logs" icon={ScrollText} label="System Logs" />
+          <QuickLink href="/admin/settings" icon={Settings} label="Settings" />
         </div>
       </div>
     </div>

@@ -373,7 +373,12 @@ export default function AdminUsersPage() {
                 >
                   <option value="">All Roles</option>
                   <option value="USER">User</option>
-                  <option value="SUPER_ADMIN">Super Admin</option>
+                  <option value="VIEWER">Viewer</option>
+                  <option value="SUPPORT">Support</option>
+                  <option value="FINANCE">Finance</option>
+                  <option value="MANAGER">Manager</option>
+                  <option value="ADMIN">Admin</option>
+                  <option value="OWNER">Owner</option>
                 </select>
               </div>
 

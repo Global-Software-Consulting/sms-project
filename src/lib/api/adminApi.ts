@@ -264,11 +264,17 @@ export const getUserStatusColor = (status: UserStatus): { bg: string; text: stri
 
 /**
  * Get role badge color
+ * All 7 roles: USER, VIEWER, SUPPORT, FINANCE, MANAGER, ADMIN, OWNER
  */
 export const getUserRoleColor = (role: UserRole): { bg: string; text: string } => {
   const colors: Record<UserRole, { bg: string; text: string }> = {
     USER: { bg: 'rgba(107, 114, 128, 0.1)', text: 'var(--text-secondary)' },
-    SUPER_ADMIN: { bg: 'rgba(198, 167, 94, 0.1)', text: 'var(--accent-gold)' },
+    VIEWER: { bg: 'rgba(156, 163, 175, 0.15)', text: '#9CA3AF' },
+    SUPPORT: { bg: 'rgba(59, 130, 246, 0.15)', text: '#3B82F6' },
+    FINANCE: { bg: 'rgba(16, 185, 129, 0.15)', text: '#10B981' },
+    MANAGER: { bg: 'rgba(139, 92, 246, 0.15)', text: '#8B5CF6' },
+    ADMIN: { bg: 'rgba(245, 158, 11, 0.15)', text: '#F59E0B' },
+    OWNER: { bg: 'rgba(198, 167, 94, 0.2)', text: 'var(--accent-gold)' },
   };
   return colors[role] || colors.USER;
 };
@@ -881,4 +887,486 @@ export const getApiKeyStatistics = async (): Promise<ApiKeyStatistics> => {
 export const adminRevokeApiKey = async (keyId: string, reason?: string): Promise<{ message: string; success: boolean }> => {
   const response = await apiClient.delete(`/admin/api-keys/${keyId}`, { data: { reason } });
   return response.data;
+};
+
+// ============================================
+// Admin Payments Types
+// ============================================
+
+export type PaymentGateway = 'STRIPE' | 'PAYGATE' | 'PLISIO' | 'CRYPTOMUS' | 'NOWPAYMENTS' | 'VOLET' | 'BINANCE';
+export type PaymentStatus = 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'FAILED' | 'CANCELLED' | 'EXPIRED' | 'REFUNDED';
+
+export interface AdminPayment {
+  id: string;
+  userId: string;
+  gateway: PaymentGateway;
+  status: PaymentStatus;
+  amount: string;
+  currency: string;
+  feeAmount: string | null;
+  netAmount: string | null;
+  checkoutUrl: string | null;
+  gatewayPaymentId: string | null;
+  gatewayResponse: Record<string, unknown> | null;
+  expiresAt: string;
+  completedAt: string | null;
+  refundedAt: string | null;
+  refundReason: string | null;
+  createdAt: string;
+  updatedAt: string;
+  user: {
+    id: string;
+    email: string;
+    firstName: string | null;
+    lastName: string | null;
+    username: string | null;
+  };
+}
+
+export interface AdminPaymentDetail extends AdminPayment {
+  walletTransaction?: {
+    id: string;
+    type: string;
+    amount: string;
+    description: string;
+    createdAt: string;
+  };
+}
+
+export interface PaymentStatistics {
+  totalPayments: number;
+  completedPayments: number;
+  pendingPayments: number;
+  failedPayments: number;
+  refundedPayments: number;
+  totalRevenue: string;
+  revenueToday: string;
+  revenueThisWeek: string;
+  revenueThisMonth: string;
+  totalFees: string;
+  avgPaymentAmount: string;
+  byGateway: Record<PaymentGateway, { count: number; total: string }>;
+  byStatus: Record<PaymentStatus, number>;
+}
+
+export interface AdminPaymentsResponse {
+  data: AdminPayment[];
+  meta: {
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+    hasNextPage: boolean;
+    hasPrevPage: boolean;
+  };
+}
+
+export interface AdminPaymentQueryParams {
+  search?: string;
+  status?: PaymentStatus;
+  gateway?: PaymentGateway;
+  userId?: string;
+  fromDate?: string;
+  toDate?: string;
+  minAmount?: number;
+  maxAmount?: number;
+  sortBy?: 'createdAt' | 'amount' | 'completedAt';
+  sortOrder?: 'asc' | 'desc';
+  page?: number;
+  limit?: number;
+}
+
+export interface AdminRefundRequest {
+  amount?: number;
+  reason: string;
+}
+
+export interface AdminMarkCompletedRequest {
+  note?: string;
+}
+
+// ============================================
+// Admin Payments API Functions
+// ============================================
+
+/**
+ * Get all payments (admin)
+ * GET /api/v1/admin/payments
+ */
+export const getAdminPayments = async (params?: AdminPaymentQueryParams): Promise<AdminPaymentsResponse> => {
+  const response = await apiClient.get<AdminPaymentsResponse>('/admin/payments', { params });
+  return response.data;
+};
+
+/**
+ * Get payment statistics (admin)
+ * GET /api/v1/admin/payments/statistics
+ */
+export const getPaymentStatistics = async (): Promise<PaymentStatistics> => {
+  const response = await apiClient.get<PaymentStatistics>('/admin/payments/statistics');
+  return response.data;
+};
+
+/**
+ * Get single payment details (admin)
+ * GET /api/v1/admin/payments/:id
+ */
+export const getAdminPayment = async (id: string): Promise<AdminPaymentDetail> => {
+  const response = await apiClient.get<AdminPaymentDetail>(`/admin/payments/${id}`);
+  return response.data;
+};
+
+/**
+ * Refund a payment (admin)
+ * POST /api/v1/admin/payments/:id/refund
+ */
+export const refundPayment = async (id: string, data: AdminRefundRequest): Promise<{ message: string; payment: AdminPayment }> => {
+  const response = await apiClient.post(`/admin/payments/${id}/refund`, data);
+  return response.data;
+};
+
+/**
+ * Mark payment as completed (admin)
+ * POST /api/v1/admin/payments/:id/mark-completed
+ */
+export const markPaymentCompleted = async (id: string, data?: AdminMarkCompletedRequest): Promise<{ message: string; payment: AdminPayment }> => {
+  const response = await apiClient.post(`/admin/payments/${id}/mark-completed`, data || {});
+  return response.data;
+};
+
+// ============================================
+// Admin Payments Helper Functions
+// ============================================
+
+/**
+ * Get payment status color
+ */
+export const getPaymentStatusColor = (status: PaymentStatus): { bg: string; text: string } => {
+  const colors: Record<PaymentStatus, { bg: string; text: string }> = {
+    PENDING: { bg: 'rgba(245, 158, 11, 0.1)', text: 'var(--warning)' },
+    PROCESSING: { bg: 'rgba(59, 130, 246, 0.1)', text: 'var(--info)' },
+    COMPLETED: { bg: 'rgba(34, 197, 94, 0.1)', text: 'var(--success)' },
+    FAILED: { bg: 'rgba(239, 68, 68, 0.1)', text: 'var(--danger)' },
+    CANCELLED: { bg: 'rgba(107, 114, 128, 0.1)', text: 'var(--text-muted)' },
+    EXPIRED: { bg: 'rgba(107, 114, 128, 0.1)', text: 'var(--text-muted)' },
+    REFUNDED: { bg: 'rgba(139, 92, 246, 0.1)', text: '#8B5CF6' },
+  };
+  return colors[status] || colors.PENDING;
+};
+
+/**
+ * Get gateway display info
+ */
+export const getGatewayInfo = (gateway: PaymentGateway): { name: string; icon: string; color: string } => {
+  const gateways: Record<PaymentGateway, { name: string; icon: string; color: string }> = {
+    STRIPE: { name: 'Stripe', icon: '💳', color: '#635BFF' },
+    PAYGATE: { name: 'PayGate', icon: '🏦', color: '#00A86B' },
+    PLISIO: { name: 'Plisio', icon: '₿', color: '#F7931A' },
+    CRYPTOMUS: { name: 'Cryptomus', icon: '🪙', color: '#00D4AA' },
+    NOWPAYMENTS: { name: 'NOWPayments', icon: '💰', color: '#00C26F' },
+    VOLET: { name: 'Volet', icon: '💵', color: '#4F46E5' },
+    BINANCE: { name: 'Binance', icon: '🔶', color: '#F0B90B' },
+  };
+  return gateways[gateway] || { name: gateway, icon: '💳', color: '#6B7280' };
+};
+
+/**
+ * Format payment amount
+ */
+export const formatPaymentAmount = (amount: string | number, currency: string = 'USD'): string => {
+  const num = typeof amount === 'string' ? parseFloat(amount) : amount;
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency,
+    minimumFractionDigits: 2,
+  }).format(num);
+};
+
+/**
+ * Format date for display
+ */
+export const formatPaymentDate = (date: string | null): string => {
+  if (!date) return '-';
+  return new Date(date).toLocaleString('en-US', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+};
+
+/**
+ * Format relative time
+ */
+export const formatRelativeTime = (date: string | null): string => {
+  if (!date) return 'Never';
+  
+  const d = new Date(date);
+  const now = new Date();
+  const diffMs = now.getTime() - d.getTime();
+  const diffMins = Math.floor(diffMs / 60000);
+  const diffHours = Math.floor(diffMs / 3600000);
+  const diffDays = Math.floor(diffMs / 86400000);
+  
+  if (diffMins < 1) return 'Just now';
+  if (diffMins < 60) return `${diffMins}m ago`;
+  if (diffHours < 24) return `${diffHours}h ago`;
+  if (diffDays < 7) return `${diffDays}d ago`;
+  
+  return d.toLocaleDateString();
+};
+
+// ============================================
+// Admin Abuse Control Types
+// ============================================
+
+export type BlockType = 'IP' | 'DOMAIN' | 'COUNTRY';
+
+export interface BlockedEntity {
+  id: string;
+  type: BlockType;
+  value: string;
+  reason: string | null;
+  expiresAt: string | null;
+  createdById: string;
+  createdAt: string;
+  createdBy?: {
+    email: string;
+    firstName: string | null;
+  };
+}
+
+export interface AbuseConfig {
+  thresholds: {
+    normal: { min: number; max: number };
+    watch: { min: number; max: number };
+    restricted: { min: number; max: number };
+    freeze: { min: number; max: number };
+  };
+  orderFrequencySeconds: number;
+  maxOrderQuantity: number;
+  autoFreezeDurationHours: number;
+  loginAttempts: number;
+  loginCooldownMinutes: number;
+}
+
+export interface AbuseStatistics {
+  totalUsers: number;
+  normalUsers: number;
+  watchUsers: number;
+  restrictedUsers: number;
+  frozenUsers: number;
+  blockedIPs: number;
+  blockedDomains: number;
+  blockedCountries: number;
+  recentIncidents: number;
+  chargebacksThisMonth: number;
+}
+
+export interface AtRiskUser {
+  id: string;
+  email: string;
+  firstName: string | null;
+  lastName: string | null;
+  abuseScore: number;
+  status: string;
+  lastLoginAt: string | null;
+  createdAt: string;
+  riskLevel: 'watch' | 'restricted' | 'freeze';
+}
+
+export interface UserAbuseInfo {
+  userId: string;
+  email: string;
+  firstName: string | null;
+  lastName: string | null;
+  abuseScore: number;
+  status: string;
+  riskLevel: 'normal' | 'watch' | 'restricted' | 'freeze';
+  orderLimit: number | null;
+  loginAttempts: number;
+  lastLoginAt: string | null;
+  walletLocked: boolean;
+  recentIncidents: {
+    type: string;
+    description: string;
+    createdAt: string;
+  }[];
+}
+
+export interface AbuseScoreHistory {
+  id: string;
+  previousScore: number;
+  newScore: number;
+  reason: string;
+  changedBy: string | null;
+  createdAt: string;
+}
+
+export interface BlockedEntitiesResponse {
+  data: BlockedEntity[];
+  meta: {
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+    hasNextPage: boolean;
+    hasPrevPage: boolean;
+  };
+}
+
+export interface AtRiskUsersResponse {
+  data: AtRiskUser[];
+  meta: {
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+    hasNextPage: boolean;
+    hasPrevPage: boolean;
+  };
+}
+
+export interface BlockQueryParams {
+  type?: BlockType;
+  search?: string;
+  page?: number;
+  limit?: number;
+}
+
+export interface AbuseUserQueryParams {
+  minScore?: number;
+  maxScore?: number;
+  riskLevel?: 'watch' | 'restricted' | 'freeze';
+  search?: string;
+  page?: number;
+  limit?: number;
+}
+
+export interface CreateBlockRequest {
+  type: BlockType;
+  value: string;
+  reason?: string;
+  expiresAt?: string;
+}
+
+export interface AdjustScoreRequest {
+  newScore: number;
+  reason: string;
+}
+
+// ============================================
+// Admin Abuse Control API Functions
+// ============================================
+
+/**
+ * Get abuse control configuration
+ */
+export const getAbuseConfig = async (): Promise<AbuseConfig> => {
+  const response = await apiClient.get<AbuseConfig>('/admin/abuse/config');
+  return response.data;
+};
+
+/**
+ * Get abuse control statistics
+ */
+export const getAbuseStatistics = async (): Promise<AbuseStatistics> => {
+  const response = await apiClient.get<AbuseStatistics>('/admin/abuse/statistics');
+  return response.data;
+};
+
+/**
+ * List blocked entities
+ */
+export const getBlockedEntities = async (params?: BlockQueryParams): Promise<BlockedEntitiesResponse> => {
+  const response = await apiClient.get<BlockedEntitiesResponse>('/admin/abuse/blocked', { params });
+  return response.data;
+};
+
+/**
+ * Create a new block
+ */
+export const createBlock = async (data: CreateBlockRequest): Promise<BlockedEntity> => {
+  const response = await apiClient.post<BlockedEntity>('/admin/abuse/blocked', data);
+  return response.data;
+};
+
+/**
+ * Remove a block
+ */
+export const removeBlock = async (blockId: string): Promise<{ message: string; success: boolean }> => {
+  const response = await apiClient.delete(`/admin/abuse/blocked/${blockId}`);
+  return response.data;
+};
+
+/**
+ * Get at-risk users
+ */
+export const getAtRiskUsers = async (params?: AbuseUserQueryParams): Promise<AtRiskUsersResponse> => {
+  const response = await apiClient.get<AtRiskUsersResponse>('/admin/abuse/users/at-risk', { params });
+  return response.data;
+};
+
+/**
+ * Get user abuse info
+ */
+export const getUserAbuseInfo = async (userId: string): Promise<UserAbuseInfo> => {
+  const response = await apiClient.get<UserAbuseInfo>(`/admin/abuse/users/${userId}`);
+  return response.data;
+};
+
+/**
+ * Adjust user abuse score
+ */
+export const adjustUserAbuseScore = async (userId: string, data: AdjustScoreRequest): Promise<UserAbuseInfo> => {
+  const response = await apiClient.post<UserAbuseInfo>(`/admin/abuse/users/${userId}/adjust-score`, data);
+  return response.data;
+};
+
+/**
+ * Get user abuse score history
+ */
+export const getUserAbuseHistory = async (userId: string, limit?: number): Promise<AbuseScoreHistory[]> => {
+  const response = await apiClient.get<AbuseScoreHistory[]>(`/admin/abuse/users/${userId}/history`, { params: { limit } });
+  return response.data;
+};
+
+// ============================================
+// Abuse Control Helper Functions
+// ============================================
+
+/**
+ * Get risk level color
+ */
+export const getRiskLevelColor = (level: string): { bg: string; text: string } => {
+  const colors: Record<string, { bg: string; text: string }> = {
+    normal: { bg: 'rgba(34, 197, 94, 0.1)', text: 'var(--success)' },
+    watch: { bg: 'rgba(245, 158, 11, 0.1)', text: 'var(--warning)' },
+    restricted: { bg: 'rgba(249, 115, 22, 0.1)', text: '#F97316' },
+    freeze: { bg: 'rgba(239, 68, 68, 0.1)', text: 'var(--danger)' },
+  };
+  return colors[level] || colors.normal;
+};
+
+/**
+ * Get abuse score color based on thresholds
+ */
+export const getAbuseScoreColor = (score: number): { bg: string; text: string } => {
+  if (score >= 91) return { bg: 'rgba(239, 68, 68, 0.1)', text: 'var(--danger)' };
+  if (score >= 76) return { bg: 'rgba(249, 115, 22, 0.1)', text: '#F97316' };
+  if (score >= 61) return { bg: 'rgba(245, 158, 11, 0.1)', text: 'var(--warning)' };
+  return { bg: 'rgba(34, 197, 94, 0.1)', text: 'var(--success)' };
+};
+
+/**
+ * Get block type color
+ */
+export const getBlockTypeColor = (type: BlockType): { bg: string; text: string } => {
+  const colors: Record<BlockType, { bg: string; text: string }> = {
+    IP: { bg: 'rgba(239, 68, 68, 0.1)', text: 'var(--danger)' },
+    DOMAIN: { bg: 'rgba(245, 158, 11, 0.1)', text: 'var(--warning)' },
+    COUNTRY: { bg: 'rgba(59, 130, 246, 0.1)', text: 'var(--info)' },
+  };
+  return colors[type] || colors.IP;
 };
