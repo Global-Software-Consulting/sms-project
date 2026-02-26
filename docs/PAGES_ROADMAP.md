@@ -2,7 +2,7 @@
 
 > All pages required per CLIENT_DECISIONS.md + client requirement docs.
 > Reference site: CheapStreamTV.com (admin panel), sms-man.com / 5sim.net (product flow)
-> Last Updated: February 23, 2026
+> Last Updated: February 26, 2026
 
 ---
 
@@ -81,15 +81,17 @@
 
 ---
 
-## Product Pages (Priority: CRITICAL — requires Phase 2)
+## Product Pages (Priority: CRITICAL — Backend API Ready ✅)
 
-| # | Page | Route | Status | Description |
-|---|------|-------|--------|-------------|
-| 40 | **Receive SMS (Activation)** | `/activate` | ⏳ Pending | Main product page: select provider, country, service → buy number → receive SMS |
-| 41 | **Rent Numbers** | `/rent` | ⏳ Pending | Rent phone numbers, select country/duration, receive multiple SMS |
-| 42 | **Order History** | `/orders` | ⏳ Pending | User's SMS orders list, status tracking, refund requests |
-| 43 | **Order Detail** | `/orders/[id]` | ⏳ Pending | Single order: phone number, SMS code, provider, cost, status |
-| 44 | **Favorites** | `/favorites` | ⏳ Pending | User's favorited services (V1 + V2) |
+> Phase 2 backend is complete (32 API endpoints). These pages can now be built.
+
+| # | Page | Route | Status | Backend API | Description |
+|---|------|-------|--------|-------------|-------------|
+| 40 | **Receive SMS (Activation)** | `/activate` | ⏳ Pending | ✅ Ready | Main product page: select provider, country, service → buy number → receive SMS |
+| 41 | **Rent Numbers** | `/rent` | ⏳ Pending | ✅ Ready | Rent phone numbers, select country/duration, receive multiple SMS |
+| 42 | **Order History** | `/orders` | ⏳ Pending | ✅ Ready | User's SMS orders list, status tracking, refund requests |
+| 43 | **Order Detail** | `/orders/[id]` | ⏳ Pending | ✅ Ready | Single order: phone number, SMS code, provider, cost, status |
+| 44 | **Favorites** | `/favorites` | ⏳ Pending | ✅ Ready | User's favorited services (V1 + V2) |
 
 ---
 
@@ -121,14 +123,14 @@
 | 50 | Admin Abuse Control | `/admin/abuse` | MEDIUM | Abuse dashboard: flagged users, score distribution |
 | 51 | Admin Settings | `/admin/settings` | MEDIUM | General site settings, SMTP config, login methods |
 
-### SMS Admin Pages (Requires Phase 2)
+### SMS Admin Pages (Backend API Ready ✅)
 
-| # | Page | Route | Priority | Description |
-|---|------|-------|----------|-------------|
-| 52 | Admin SMS Providers | `/admin/providers` | HIGH | Provider CRUD, priority (drag & drop), enable/disable |
-| 53 | Admin Provider Detail | `/admin/providers/[id]` | HIGH | Provider config: services, markup, display name |
-| 54 | Admin Services | `/admin/services` | HIGH | Service list: enable/disable, price overrides, icons |
-| 55 | Admin Orders | `/admin/orders` | HIGH | SMS order list, status, refunds |
+| # | Page | Route | Priority | Backend API | Description |
+|---|------|-------|----------|-------------|-------------|
+| 52 | Admin SMS Providers | `/admin/providers` | HIGH | ✅ Ready | Provider CRUD, priority, balance, enable/disable |
+| 53 | Admin Provider Detail | `/admin/providers/[id]` | HIGH | ✅ Ready | Provider config: services, markup, display name, sync |
+| 54 | Admin Services | `/admin/services` | HIGH | ✅ Ready | Service list: enable/disable, bulk-disable, icons |
+| 55 | Admin Orders | `/admin/orders` | HIGH | ✅ Ready | SMS order list, status, manual refunds |
 
 ### Content Admin Pages
 

@@ -522,11 +522,17 @@ NEXT_PUBLIC_API_URL=http://localhost:3000/api/v1
 
 ---
 
-## 📞 Contact for Questions
+## 📞 Client Questions — ANSWERED
 
-All questions marked with `[ ]` above need client input before implementation.
+All client questions listed in modules above have been answered in `sms-api/docs/CLIENT_DECISIONS.md`.
+Key answers:
+- **Auth**: Remember Me = yes, Email verification = required, Password reset = yes, Social login = Google/Telegram/Twitter/GitHub (NO Facebook)
+- **Users**: Email change = yes (with verification), Username change = yes (unique), Avatar = URL input, 2FA = later, Notifications = yes
+- **Wallet**: Export = CSV + JSON, Withdrawals = affiliate payouts only, Multi-currency display = yes (15+ currencies)
+- **Payments**: All 7 gateways, Invoice = yes, Payment history = in wallet page
+- **API Keys**: Expiration = optional, IP whitelist = optional, Scopes = read/order/manage/wallet, Max = 3 per user
 
 ---
 
-*Last Updated: February 16, 2026*
+*Last Updated: February 26, 2026*
 
