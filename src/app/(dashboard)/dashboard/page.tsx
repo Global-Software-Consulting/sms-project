@@ -75,7 +75,7 @@ export default function DashboardPage() {
             icon={<Smartphone style={{ width: '24px', height: '24px' }} />}
             title="Get Number"
             description="Activate a new number"
-            href="/sms-activation"
+            href="/activate"
             color="gold"
           />
           <ActionCard

@@ -19,7 +19,8 @@ import {
   BarChart3,
   Package,
   Users,
-  Crown
+  Crown,
+  Star
 } from 'lucide-react';
 import { Button, Badge } from '@/components/ui';
 import { useAuth } from '@/hooks';
@@ -106,8 +107,8 @@ export function DashboardShell({ children }: DashboardShellProps) {
             </p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
               <NavItem href="/dashboard" icon={<BarChart3 style={{ width: '18px', height: '18px' }} />} label="Dashboard" active={pathname === '/dashboard'} />
-              <NavItem href="/sms-activation" icon={<Smartphone style={{ width: '18px', height: '18px' }} />} label="SMS Activation" active={pathname === '/sms-activation'} />
-              <NavItem href="/number-rental" icon={<History style={{ width: '18px', height: '18px' }} />} label="Number Rental" active={pathname === '/number-rental'} badge="New" />
+              <NavItem href="/activate" icon={<Smartphone style={{ width: '18px', height: '18px' }} />} label="SMS Activation" active={pathname === '/activate'} />
+              <NavItem href="/rent" icon={<History style={{ width: '18px', height: '18px' }} />} label="Number Rental" active={pathname === '/rent'} badge="New" />
             </div>
           </div>
 
@@ -118,8 +119,9 @@ export function DashboardShell({ children }: DashboardShellProps) {
             </p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
               <NavItem href="/wallet" icon={<Wallet style={{ width: '18px', height: '18px' }} />} label="Wallet" active={pathname === '/wallet'} />
+              <NavItem href="/orders" icon={<Package style={{ width: '18px', height: '18px' }} />} label="Orders" active={pathname === '/orders' || pathname.startsWith('/orders/')} />
+              <NavItem href="/favorites" icon={<Star style={{ width: '18px', height: '18px' }} />} label="Favorites" active={pathname === '/favorites'} />
               <NavItem href="/pricing" icon={<Crown style={{ width: '18px', height: '18px' }} />} label="Membership" active={pathname === '/pricing'} />
-              <NavItem href="/orders" icon={<Package style={{ width: '18px', height: '18px' }} />} label="Orders" active={pathname === '/orders'} />
               <NavItem href="/referrals" icon={<Users style={{ width: '18px', height: '18px' }} />} label="Referrals" active={pathname === '/referrals'} />
             </div>
           </div>

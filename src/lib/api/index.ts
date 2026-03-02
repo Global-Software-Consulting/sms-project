@@ -7,3 +7,4 @@ export * from './membershipApi';
 export * from './paymentsApi';
 export * from './apiKeysApi';
 export * from './adminApi';
+export * from './smsApi';

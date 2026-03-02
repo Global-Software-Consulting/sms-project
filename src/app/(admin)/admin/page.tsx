@@ -27,7 +27,9 @@ import {
   Zap,
   Search,
   PenTool,
-  ScrollText
+  ScrollText,
+  Smartphone,
+  MessageSquare
 } from 'lucide-react';
 import { Button, Alert } from '@/components/ui';
 import { useAuth } from '@/hooks';
@@ -126,12 +128,12 @@ export default function AdminDashboardPage() {
               {/* Navigation Links */}
               <nav style={{ display: 'flex', gap: '8px' }} className="hidden sm:!flex">
                 <NavLink href="/admin" icon={Home} label="Home" active />
+                <NavLink href="/admin/providers" icon={Server} label="Providers" />
+                <NavLink href="/admin/services" icon={Smartphone} label="Services" />
+                <NavLink href="/admin/sms-orders" icon={MessageSquare} label="SMS Orders" />
                 <NavLink href="/admin/users" icon={Users} label="Users" />
                 <NavLink href="/admin/wallets" icon={Wallet} label="Wallets" />
                 <NavLink href="/admin/payments" icon={DollarSign} label="Payments" />
-                <NavLink href="/admin/abuse" icon={Shield} label="Abuse" />
-                <NavLink href="/admin/memberships" icon={Crown} label="Memberships" />
-                <NavLink href="/admin/api-keys" icon={Key} label="API Keys" />
               </nav>
             </div>
 
@@ -591,9 +593,21 @@ export default function AdminDashboardPage() {
           gridTemplateColumns: 'repeat(2, 1fr)', 
           gap: '16px' 
         }} className="sm:!grid-cols-4 lg:!grid-cols-6">
+          <QuickLink href="/admin/providers" icon={Server} label="SMS Providers" />
+          <QuickLink href="/admin/services" icon={Smartphone} label="SMS Services" />
+          <QuickLink href="/admin/sms-orders" icon={MessageSquare} label="SMS Orders" />
           <QuickLink href="/admin/users" icon={Users} label="Manage Users" />
           <QuickLink href="/admin/wallets" icon={Wallet} label="Manage Wallets" />
           <QuickLink href="/admin/payments" icon={DollarSign} label="Payments" />
+        </div>
+
+        {/* Quick Links - User & Access Management */}
+        <div style={{ 
+          marginTop: '16px',
+          display: 'grid', 
+          gridTemplateColumns: 'repeat(2, 1fr)', 
+          gap: '16px' 
+        }} className="sm:!grid-cols-4 lg:!grid-cols-6">
           <QuickLink href="/admin/abuse" icon={Shield} label="Abuse Control" />
           <QuickLink href="/admin/memberships" icon={Crown} label="Memberships" />
           <QuickLink href="/admin/api-keys" icon={Key} label="API Keys" />
