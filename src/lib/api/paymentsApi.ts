@@ -72,6 +72,65 @@ export interface GatewaysResponse {
 }
 
 // ============================================
+// PayGate.to Provider Types (like CheapStreamTV)
+// ============================================
+
+export type PaygateProvider = 'multi' | 'bitnovo' | 'mercuryo' | 'unlimit' | 'guardarian' | 'wert';
+
+export interface PaygateProviderConfig {
+  id: PaygateProvider;
+  name: string;
+  description: string;
+  minAmount: number;
+  regions?: string[];
+  paymentMethods?: string[];
+  recommended?: boolean;
+}
+
+// Available PayGate.to providers (matching CheapStreamTV)
+export const PAYGATE_PROVIDERS: PaygateProviderConfig[] = [
+  {
+    id: 'multi',
+    name: 'Multi Provider',
+    description: 'Automatically selects the best payment provider for your region',
+    minAmount: 1,
+    recommended: true,
+  },
+  {
+    id: 'bitnovo',
+    name: 'Bitnovo',
+    description: 'Credit/Debit Card - Europe, Latin America (Spain, Portugal, Italy, France, Mexico)',
+    minAmount: 10,
+    regions: ['Europe', 'Latin America'],
+  },
+  {
+    id: 'mercuryo',
+    name: 'Mercuryo',
+    description: 'Credit/Debit Card - 180+ countries, Apple Pay, Google Pay',
+    minAmount: 30,
+    paymentMethods: ['Card', 'Apple Pay', 'Google Pay'],
+  },
+  {
+    id: 'unlimit',
+    name: 'Unlimit',
+    description: 'Credit/Debit Card - 150+ countries, local payment methods',
+    minAmount: 10,
+  },
+  {
+    id: 'guardarian',
+    name: 'Guardarian',
+    description: 'Credit/Debit Card - 170+ countries, 50+ payment methods, high limits',
+    minAmount: 20,
+  },
+  {
+    id: 'wert',
+    name: 'Wert',
+    description: 'Credit/Debit Card via Wert - Global coverage',
+    minAmount: 50,
+  },
+];
+
+// ============================================
 // Request DTOs
 // ============================================
 
@@ -80,6 +139,8 @@ export interface CreatePaymentRequest {
   gateway?: PaymentGateway; // Optional: specify gateway (default: STRIPE)
   successUrl?: string;
   cancelUrl?: string;
+  // PayGate.to provider selection (like CheapStreamTV)
+  paygateProvider?: PaygateProvider;
 }
 
 export interface PaymentQueryParams {

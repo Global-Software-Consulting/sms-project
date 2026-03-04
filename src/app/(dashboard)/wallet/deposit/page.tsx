@@ -13,7 +13,9 @@ import {
   Bitcoin,
   ArrowRightLeft,
   Globe,
-  ChevronRight
+  ChevronRight,
+  X,
+  Star
 } from 'lucide-react';
 import { Button, Alert } from '@/components/ui';
 import { DashboardShell } from '@/components/layout';
@@ -24,8 +26,9 @@ import {
   PRESET_AMOUNTS,
   MIN_AMOUNT,
   MAX_AMOUNT,
-  isValidAmount,
-  type WalletBalance
+  PAYGATE_PROVIDERS,
+  type WalletBalance,
+  type PaygateProvider
 } from '@/lib/api';
 import { getErrorMessage, logError } from '@/lib/errors';
 import { useToast } from '@/contexts/ToastContext';
@@ -42,6 +45,7 @@ interface GatewayOption {
   color: string;
   popular?: boolean;
   minAmount?: number;
+  hasProviderSelection?: boolean; // For PayGate
 }
 
 const GATEWAY_OPTIONS: GatewayOption[] = [
@@ -65,10 +69,11 @@ const GATEWAY_OPTIONS: GatewayOption[] = [
   {
     id: 'PAYGATE',
     name: 'PayGate Multi-Currency',
-    description: 'Multiple currencies supported',
+    description: 'Secure Card Payments - Multiple providers available',
     icon: Globe,
     type: 'card',
-    color: '#F59E0B',
+    color: '#10B981',
+    hasProviderSelection: true, // Shows provider selection modal
   },
   {
     id: 'PLISIO',
@@ -110,10 +115,11 @@ const GATEWAY_OPTIONS: GatewayOption[] = [
  * 
  * Flow:
  * 1. User selects payment gateway
- * 2. User selects/enters amount
- * 3. Click "Continue to Payment"
- * 4. Redirect to gateway checkout
- * 5. After payment: redirect to success/cancel page
+ * 2. If PayGate: Show provider selection modal (like CheapStreamTV)
+ * 3. User selects/enters amount
+ * 4. Click "Continue to Payment"
+ * 5. Redirect to gateway checkout
+ * 6. After payment: redirect to success/cancel page
  */
 export default function DepositPage() {
   const toast = useToast();
@@ -124,6 +130,10 @@ export default function DepositPage() {
   
   // Gateway selection
   const [selectedGateway, setSelectedGateway] = useState<PaymentGateway>('STRIPE');
+  
+  // PayGate provider selection (like CheapStreamTV)
+  const [showProviderModal, setShowProviderModal] = useState(false);
+  const [selectedPaygateProvider, setSelectedPaygateProvider] = useState<PaygateProvider>('multi');
   
   // Amount selection
   const [amount, setAmount] = useState<number>(50);
@@ -155,7 +165,17 @@ export default function DepositPage() {
   
   // Get selected gateway info
   const selectedGatewayInfo = GATEWAY_OPTIONS.find(g => g.id === selectedGateway);
-  const minAmountForGateway = selectedGatewayInfo?.minAmount || MIN_AMOUNT;
+  
+  // Get min amount based on gateway and provider
+  const getMinAmount = () => {
+    if (selectedGateway === 'PAYGATE') {
+      const provider = PAYGATE_PROVIDERS.find(p => p.id === selectedPaygateProvider);
+      return provider?.minAmount || 1;
+    }
+    return selectedGatewayInfo?.minAmount || MIN_AMOUNT;
+  };
+  
+  const minAmountForGateway = getMinAmount();
   
   // Validate amount
   const isAmountValid = effectiveAmount >= minAmountForGateway && effectiveAmount <= MAX_AMOUNT;
@@ -181,6 +201,21 @@ export default function DepositPage() {
   const handleGatewaySelect = (gateway: PaymentGateway) => {
     setSelectedGateway(gateway);
     setError(null);
+    
+    // If PayGate is selected, show provider selection modal
+    if (gateway === 'PAYGATE') {
+      setShowProviderModal(true);
+    }
+  };
+
+  // Handle PayGate provider selection
+  const handleProviderSelect = (provider: PaygateProvider) => {
+    setSelectedPaygateProvider(provider);
+  };
+
+  // Confirm provider selection and close modal
+  const handleConfirmProvider = () => {
+    setShowProviderModal(false);
   };
 
   // Handle payment
@@ -192,6 +227,17 @@ export default function DepositPage() {
       return;
     }
 
+    // If PayGate is selected but amount is below provider minimum
+    if (selectedGateway === 'PAYGATE') {
+      const provider = PAYGATE_PROVIDERS.find(p => p.id === selectedPaygateProvider);
+      if (provider && effectiveAmount < provider.minAmount) {
+        const errorMsg = `Minimum amount for ${provider.name} is $${provider.minAmount}`;
+        setError(errorMsg);
+        toast.warning(errorMsg, 'Amount Too Low');
+        return;
+      }
+    }
+
     try {
       setIsProcessing(true);
       setError(null);
@@ -201,6 +247,8 @@ export default function DepositPage() {
         gateway: selectedGateway,
         successUrl: `${window.location.origin}/wallet/deposit/success`,
         cancelUrl: `${window.location.origin}/wallet/deposit/cancel`,
+        // Include PayGate provider if selected
+        ...(selectedGateway === 'PAYGATE' && { paygateProvider: selectedPaygateProvider }),
       });
 
       // Handle different gateway responses
@@ -233,6 +281,9 @@ export default function DepositPage() {
   const cardGateways = GATEWAY_OPTIONS.filter(g => g.type === 'card');
   const cryptoGateways = GATEWAY_OPTIONS.filter(g => g.type === 'crypto');
   const transferGateways = GATEWAY_OPTIONS.filter(g => g.type === 'transfer');
+
+  // Get selected PayGate provider info
+  const selectedProviderInfo = PAYGATE_PROVIDERS.find(p => p.id === selectedPaygateProvider);
 
   return (
     <DashboardShell>
@@ -308,6 +359,7 @@ export default function DepositPage() {
                     gateway={gateway}
                     isSelected={selectedGateway === gateway.id}
                     onClick={() => handleGatewaySelect(gateway.id)}
+                    selectedProvider={gateway.id === 'PAYGATE' ? selectedProviderInfo?.name : undefined}
                   />
                 ))}
               </div>
@@ -451,6 +503,12 @@ export default function DepositPage() {
                 <span style={{ color: 'var(--text-muted)' }}>Payment Method</span>
                 <span style={{ fontWeight: 500, color: 'var(--text-primary)' }}>{selectedGatewayInfo?.name}</span>
               </div>
+              {selectedGateway === 'PAYGATE' && selectedProviderInfo && (
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span style={{ color: 'var(--text-muted)' }}>Provider</span>
+                  <span style={{ fontWeight: 500, color: 'var(--text-primary)' }}>{selectedProviderInfo.name}</span>
+                </div>
+              )}
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                 <span style={{ color: 'var(--text-muted)' }}>Deposit Amount</span>
                 <span style={{ fontWeight: 500, color: 'var(--text-primary)' }}>{formatAmount(effectiveAmount)}</span>
@@ -525,6 +583,17 @@ export default function DepositPage() {
           </div>
         </div>
       </div>
+
+      {/* PayGate Provider Selection Modal (like CheapStreamTV) */}
+      {showProviderModal && (
+        <PaygateProviderModal
+          selectedProvider={selectedPaygateProvider}
+          onSelect={handleProviderSelect}
+          onConfirm={handleConfirmProvider}
+          onClose={() => setShowProviderModal(false)}
+          currentAmount={effectiveAmount}
+        />
+      )}
     </DashboardShell>
   );
 }
@@ -535,9 +604,10 @@ interface GatewayButtonProps {
   gateway: GatewayOption;
   isSelected: boolean;
   onClick: () => void;
+  selectedProvider?: string;
 }
 
-function GatewayButton({ gateway, isSelected, onClick }: GatewayButtonProps) {
+function GatewayButton({ gateway, isSelected, onClick, selectedProvider }: GatewayButtonProps) {
   const Icon = gateway.icon;
   
   return (
@@ -590,6 +660,12 @@ function GatewayButton({ gateway, isSelected, onClick }: GatewayButtonProps) {
         <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginTop: '2px' }}>
           {gateway.description}
         </p>
+        {/* Show selected provider for PayGate */}
+        {gateway.hasProviderSelection && isSelected && selectedProvider && (
+          <p style={{ fontSize: '12px', color: gateway.color, marginTop: '4px', fontWeight: 500 }}>
+            Provider: {selectedProvider}
+          </p>
+        )}
       </div>
       <ChevronRight style={{ 
         width: '18px', 
@@ -598,5 +674,200 @@ function GatewayButton({ gateway, isSelected, onClick }: GatewayButtonProps) {
         flexShrink: 0
       }} />
     </button>
+  );
+}
+
+/* ==================== PAYGATE PROVIDER MODAL ==================== */
+
+interface PaygateProviderModalProps {
+  selectedProvider: PaygateProvider;
+  onSelect: (provider: PaygateProvider) => void;
+  onConfirm: () => void;
+  onClose: () => void;
+  currentAmount: number;
+}
+
+function PaygateProviderModal({ 
+  selectedProvider, 
+  onSelect, 
+  onConfirm, 
+  onClose,
+  currentAmount 
+}: PaygateProviderModalProps) {
+  return (
+    <div style={{
+      position: 'fixed',
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      backgroundColor: 'rgba(0, 0, 0, 0.7)',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      zIndex: 1000,
+      padding: '20px'
+    }}>
+      <div style={{
+        backgroundColor: 'var(--bg-card)',
+        borderRadius: '20px',
+        width: '100%',
+        maxWidth: '500px',
+        maxHeight: '90vh',
+        overflow: 'auto',
+        border: '1px solid var(--border-default)'
+      }}>
+        {/* Header */}
+        <div style={{
+          padding: '20px 24px',
+          borderBottom: '1px solid var(--border-default)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between'
+        }}>
+          <div>
+            <h2 style={{ fontSize: '18px', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '4px' }}>
+              Select Payment Provider
+            </h2>
+            <p style={{ fontSize: '13px', color: 'var(--text-muted)' }}>
+              Choose how you want to pay with PayGate
+            </p>
+          </div>
+          <button
+            onClick={onClose}
+            style={{
+              width: '32px',
+              height: '32px',
+              borderRadius: '8px',
+              border: 'none',
+              backgroundColor: 'var(--bg-secondary)',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center'
+            }}
+          >
+            <X style={{ width: '18px', height: '18px', color: 'var(--text-muted)' }} />
+          </button>
+        </div>
+
+        {/* Provider List */}
+        <div style={{ padding: '16px 24px' }}>
+          <p style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '12px' }}>
+            💳 Card Payments
+          </p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            {PAYGATE_PROVIDERS.map((provider) => {
+              const isDisabled = currentAmount > 0 && currentAmount < provider.minAmount;
+              const amountNeeded = provider.minAmount - currentAmount;
+              
+              return (
+                <button
+                  key={provider.id}
+                  onClick={() => !isDisabled && onSelect(provider.id)}
+                  disabled={isDisabled}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'flex-start',
+                    gap: '14px',
+                    padding: '14px 16px',
+                    borderRadius: '12px',
+                    border: `2px solid ${selectedProvider === provider.id ? '#10B981' : 'var(--border-default)'}`,
+                    backgroundColor: selectedProvider === provider.id ? 'rgba(16, 185, 129, 0.1)' : 'var(--bg-secondary)',
+                    cursor: isDisabled ? 'not-allowed' : 'pointer',
+                    opacity: isDisabled ? 0.6 : 1,
+                    transition: 'all 150ms ease',
+                    textAlign: 'left',
+                    width: '100%'
+                  }}
+                >
+                  <div style={{ 
+                    width: '40px', 
+                    height: '40px', 
+                    borderRadius: '10px', 
+                    backgroundColor: selectedProvider === provider.id ? 'rgba(16, 185, 129, 0.2)' : 'var(--bg-primary)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    flexShrink: 0
+                  }}>
+                    {provider.recommended ? (
+                      <Globe style={{ width: '20px', height: '20px', color: '#10B981' }} />
+                    ) : (
+                      <CreditCard style={{ width: '20px', height: '20px', color: '#F59E0B' }} />
+                    )}
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                      <span style={{ fontSize: '15px', fontWeight: 600, color: 'var(--text-primary)' }}>
+                        {provider.name}
+                      </span>
+                      {provider.recommended && (
+                        <span style={{ 
+                          padding: '2px 6px', 
+                          borderRadius: '4px', 
+                          fontSize: '10px', 
+                          fontWeight: 600,
+                          backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                          color: '#10B981',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '3px'
+                        }}>
+                          <Star style={{ width: '10px', height: '10px' }} />
+                          Recommended
+                        </span>
+                      )}
+                    </div>
+                    <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '6px' }}>
+                      {provider.description}
+                    </p>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span style={{ fontSize: '12px', fontWeight: 600, color: '#10B981' }}>
+                        Min: ${provider.minAmount}
+                      </span>
+                      {isDisabled && amountNeeded > 0 && (
+                        <span style={{ fontSize: '11px', color: 'var(--danger)' }}>
+                          You need ${amountNeeded.toFixed(2)} more for this provider
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  {selectedProvider === provider.id && (
+                    <div style={{
+                      width: '24px',
+                      height: '24px',
+                      borderRadius: '50%',
+                      backgroundColor: '#10B981',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      flexShrink: 0
+                    }}>
+                      <Check style={{ width: '14px', height: '14px', color: 'white' }} />
+                    </div>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div style={{
+          padding: '16px 24px 24px',
+          borderTop: '1px solid var(--border-default)'
+        }}>
+          <Button 
+            fullWidth 
+            size="lg" 
+            onClick={onConfirm}
+          >
+            <Check style={{ width: '18px', height: '18px', marginRight: '8px' }} />
+            Confirm Provider Selection
+          </Button>
+        </div>
+      </div>
+    </div>
   );
 }
