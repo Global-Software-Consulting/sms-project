@@ -14,11 +14,7 @@ import {
   Clock,
   Lock,
   TrendingUp,
-  CheckCircle2,
-  CreditCard,
-  Headphones,
-  MessageSquare,
-  Smartphone,
+  CheckCircle2
 } from "lucide-react";
 
 export default function Home() {
@@ -103,15 +99,6 @@ export default function Home() {
     }
   ];
 
-  const popularServices = [
-    { name: "WhatsApp", icon: "📱", price: "$0.50" },
-    { name: "Telegram", icon: "✈️", price: "$0.35" },
-    { name: "Google", icon: "🔍", price: "$0.45" },
-    { name: "Instagram", icon: "📸", price: "$0.55" },
-    { name: "Twitter/X", icon: "🐦", price: "$0.40" },
-    { name: "Discord", icon: "🎮", price: "$0.30" },
-  ];
-
   return (
     <div className="w-full">
       {/* Hero Section */}
@@ -141,7 +128,7 @@ export default function Home() {
               </Link>
             </Button>
             <Button asChild size="lg" variant="outline" className="text-base w-full sm:w-auto">
-              <Link href="/pricing-public">View Pricing</Link>
+              <Link href="/pricing">View Pricing</Link>
             </Button>
           </div>
 
@@ -153,38 +140,6 @@ export default function Home() {
                 <p className="text-xs sm:text-sm text-muted-foreground">{stat.label}</p>
               </div>
             ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Popular Services Section */}
-      <section className="container mx-auto px-4 py-20 border-t border-border">
-        <div className="max-w-5xl mx-auto">
-          <div className="text-center space-y-4 mb-12">
-            <h2 className="text-3xl md:text-4xl font-bold">Popular Services</h2>
-            <p className="text-lg text-muted-foreground">
-              Get instant verification for the most popular platforms
-            </p>
-          </div>
-
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-            {popularServices.map((service) => (
-              <Card key={service.name} className="text-center cursor-pointer card-hover-lift">
-                <CardContent className="p-6">
-                  <div className="text-4xl mb-3">{service.icon}</div>
-                  <div className="font-semibold mb-1">{service.name}</div>
-                  <div className="text-primary font-bold">from {service.price}</div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-
-          <div className="text-center mt-10">
-            <Button asChild variant="outline">
-              <Link href="/activate">
-                View All Services <ArrowRight className="ml-2 h-4 w-4" />
-              </Link>
-            </Button>
           </div>
         </div>
       </section>
@@ -428,7 +383,7 @@ export default function Home() {
                     className="w-full mt-6" 
                     variant={tier.name === "VIP" ? "default" : "outline"}
                   >
-                    <Link href="/dashboard/membership">
+                    <Link href="/dashboard/pricing">
                       {tier.name === "Basic" ? "Get Started" : "Upgrade"}
                     </Link>
                   </Button>

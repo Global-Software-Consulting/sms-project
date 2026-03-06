@@ -1,3 +1,5 @@
+"use client";
+
 import Link from "next/link";
 import { Twitter, Github, Linkedin } from "lucide-react";
 
@@ -37,9 +39,9 @@ export function Footer() {
             <h4 className="font-semibold mb-3 sm:mb-4 text-sm sm:text-base">Product</h4>
             <ul className="space-y-2">
               <li><Link href="/features" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Features</Link></li>
-              <li><Link href="/pricing-public" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Pricing</Link></li>
+              <li><Link href="/pricing" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Pricing</Link></li>
               <li><Link href="/membership" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Membership</Link></li>
-              <li><Link href="/api" className="text-sm text-muted-foreground hover:text-foreground transition-colors">API</Link></li>
+              <li><Link href="/api-docs" className="text-sm text-muted-foreground hover:text-foreground transition-colors">API</Link></li>
               <li><Link href="/status" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Status</Link></li>
             </ul>
           </div>
@@ -84,4 +86,3 @@ export function Footer() {
     </footer>
   );
 }
-

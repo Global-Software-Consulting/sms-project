@@ -6,7 +6,7 @@ import { useTheme } from "next-themes";
 import { Moon, Sun, Menu, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState, useEffect } from "react";
-import { cn } from "@/lib/utils";
+import { cn } from "@/components/ui/utils";
 
 export function Header() {
   const { theme, setTheme } = useTheme();
@@ -25,8 +25,8 @@ export function Header() {
 
   const navItems = [
     { name: "Features", href: "/features" },
-    { name: "Pricing", href: "/pricing-public" },
-    { name: "API", href: "/api" },
+    { name: "Pricing", href: "/pricing" },
+    { name: "API", href: "/api-docs" },
     { name: "Membership", href: "/membership" },
     { name: "Knowledge Base", href: "/knowledge-base" },
     { name: "Help", href: "/help" },
@@ -137,4 +137,3 @@ export function Header() {
     </header>
   );
 }
-
