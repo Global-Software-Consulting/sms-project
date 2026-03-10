@@ -1,23 +1,24 @@
-import { apiClient } from './config';
+import { apiClient } from '@/config/client.config';
+import { API_ENDPOINTS } from '@/config/server.config';
 
 // ============================================
 // Enums matching backend
 // ============================================
 
-export type TransactionType = 
-  | 'DEPOSIT'      // Add funds from payment gateway
-  | 'PURCHASE'     // Buy SMS/service
-  | 'REFUND'       // Refund for failed service
-  | 'BONUS'        // Admin promotional credit
-  | 'ADJUSTMENT'   // Admin manual correction
-  | 'WITHDRAW';    // User withdrawal (if allowed)
+export type TransactionType =
+  | 'DEPOSIT' // Add funds from payment gateway
+  | 'PURCHASE' // Buy SMS/service
+  | 'REFUND' // Refund for failed service
+  | 'BONUS' // Admin promotional credit
+  | 'ADJUSTMENT' // Admin manual correction
+  | 'WITHDRAW'; // User withdrawal (if allowed)
 
-export type TransactionStatus = 
-  | 'PENDING'      // Awaiting confirmation
-  | 'COMPLETED'    // Successfully processed
-  | 'FAILED'       // Transaction failed
-  | 'CANCELLED'    // Cancelled
-  | 'REVERSED';    // Reversed/refunded
+export type TransactionStatus =
+  | 'PENDING' // Awaiting confirmation
+  | 'COMPLETED' // Successfully processed
+  | 'FAILED' // Transaction failed
+  | 'CANCELLED' // Cancelled
+  | 'REVERSED'; // Reversed/refunded
 
 // ============================================
 // Types matching backend DTOs
@@ -29,14 +30,14 @@ export type TransactionStatus =
 export interface Wallet {
   id: string;
   userId: string;
-  balance: string;           // Decimal as string (e.g., "150.50")
-  currency: string;          // Default: USD
-  totalDeposited: string;    // Lifetime deposits
-  totalSpent: string;        // Lifetime spending
-  totalRefunded: string;     // Lifetime refunds
-  totalBonus: string;        // Lifetime bonus received
-  isLocked: boolean;         // Is wallet locked?
-  lockedAt: string | null;   // When locked
+  balance: string; // Decimal as string (e.g., "150.50")
+  currency: string; // Default: USD
+  totalDeposited: string; // Lifetime deposits
+  totalSpent: string; // Lifetime spending
+  totalRefunded: string; // Lifetime refunds
+  totalBonus: string; // Lifetime bonus received
+  isLocked: boolean; // Is wallet locked?
+  lockedAt: string | null; // When locked
   lockedReason: string | null; // Why locked
   createdAt: string;
   updatedAt: string;
@@ -59,14 +60,14 @@ export interface WalletTransaction {
   walletId: string;
   type: TransactionType;
   status: TransactionStatus;
-  amount: string;            // Amount (+/-)
-  balanceBefore: string;     // Balance before transaction
-  balanceAfter: string;      // Balance after transaction
-  referenceType: string | null;  // Related entity type (e.g., "PAYMENT", "ORDER")
-  referenceId: string | null;    // Related entity ID
+  amount: string; // Amount (+/-)
+  balanceBefore: string; // Balance before transaction
+  balanceAfter: string; // Balance after transaction
+  referenceType: string | null; // Related entity type (e.g., "PAYMENT", "ORDER")
+  referenceId: string | null; // Related entity ID
   description: string | null;
   metadata: Record<string, unknown> | null;
-  performedBy: string | null;    // Admin ID (if admin action)
+  performedBy: string | null; // Admin ID (if admin action)
   createdAt: string;
   completedAt: string | null;
 }
@@ -92,10 +93,10 @@ export interface TransactionListResponse {
 export interface TransactionQueryParams {
   type?: TransactionType;
   status?: TransactionStatus;
-  fromDate?: string;         // YYYY-MM-DD
-  toDate?: string;           // YYYY-MM-DD
-  page?: number;             // Default: 1
-  limit?: number;            // Default: 20, max: 100
+  fromDate?: string; // YYYY-MM-DD
+  toDate?: string; // YYYY-MM-DD
+  page?: number; // Default: 1
+  limit?: number; // Default: 20, max: 100
 }
 
 // ============================================
@@ -107,7 +108,7 @@ export interface TransactionQueryParams {
  * GET /api/v1/wallet
  */
 export const getWallet = async (): Promise<Wallet> => {
-  const response = await apiClient.get<Wallet>('/wallet');
+  const response = await apiClient.get<Wallet>(API_ENDPOINTS.WALLET.ROOT);
   return response.data;
 };
 
@@ -116,7 +117,9 @@ export const getWallet = async (): Promise<Wallet> => {
  * GET /api/v1/wallet/balance
  */
 export const getWalletBalance = async (): Promise<WalletBalance> => {
-  const response = await apiClient.get<WalletBalance>('/wallet/balance');
+  const response = await apiClient.get<WalletBalance>(
+    API_ENDPOINTS.WALLET.BALANCE,
+  );
   return response.data;
 };
 
@@ -124,8 +127,13 @@ export const getWalletBalance = async (): Promise<WalletBalance> => {
  * Get transaction history with filters
  * GET /api/v1/wallet/transactions
  */
-export const getTransactions = async (params?: TransactionQueryParams): Promise<TransactionListResponse> => {
-  const response = await apiClient.get<TransactionListResponse>('/wallet/transactions', { params });
+export const getTransactions = async (
+  params?: TransactionQueryParams,
+): Promise<TransactionListResponse> => {
+  const response = await apiClient.get<TransactionListResponse>(
+    API_ENDPOINTS.WALLET.TRANSACTIONS,
+    { params },
+  );
   return response.data;
 };
 
@@ -133,8 +141,12 @@ export const getTransactions = async (params?: TransactionQueryParams): Promise<
  * Get single transaction by ID
  * GET /api/v1/wallet/transactions/:id
  */
-export const getTransaction = async (id: string): Promise<WalletTransaction> => {
-  const response = await apiClient.get<WalletTransaction>(`/wallet/transactions/${id}`);
+export const getTransaction = async (
+  id: string,
+): Promise<WalletTransaction> => {
+  const response = await apiClient.get<WalletTransaction>(
+    API_ENDPOINTS.WALLET.TRANSACTION(id),
+  );
   return response.data;
 };
 
@@ -145,7 +157,10 @@ export const getTransaction = async (id: string): Promise<WalletTransaction> => 
 /**
  * Format balance for display
  */
-export const formatBalance = (balance: string, currency: string = 'USD'): string => {
+export const formatBalance = (
+  balance: string,
+  currency: string = 'USD',
+): string => {
   const num = parseFloat(balance);
   return new Intl.NumberFormat('en-US', {
     style: 'currency',
@@ -186,7 +201,9 @@ export const getTransactionTypeColor = (type: TransactionType): string => {
 /**
  * Get transaction status color
  */
-export const getTransactionStatusColor = (status: TransactionStatus): string => {
+export const getTransactionStatusColor = (
+  status: TransactionStatus,
+): string => {
   const colors: Record<TransactionStatus, string> = {
     PENDING: 'var(--warning)',
     COMPLETED: 'var(--success)',
@@ -203,4 +220,3 @@ export const getTransactionStatusColor = (status: TransactionStatus): string => 
 export const isPositiveTransaction = (type: TransactionType): boolean => {
   return ['DEPOSIT', 'REFUND', 'BONUS'].includes(type);
 };
-

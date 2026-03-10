@@ -1,50 +1,31 @@
-import type { Metadata } from "next";
-import "./globals.css";
-import { SessionProvider } from "@/components/providers/SessionProvider";
-import { StoreProvider } from "@/components/providers/StoreProvider";
-import { AuthInitializer } from "@/components/providers/AuthInitializer";
-import { ToastProvider } from "@/contexts/ToastContext";
-import { ErrorBoundary } from "@/components/ErrorBoundary";
+import type { Metadata } from 'next';
+import { ThemeProvider } from '@/components/theme-provider';
+import { StoreProvider } from '@/components/providers/StoreProvider';
+import { Toaster } from '@/components/ui/sonner';
+import './globals.css';
 
 export const metadata: Metadata = {
-  title: "SMS Activation Platform - Premium Virtual Numbers",
-  description: "Premium SMS Activation & Number Rental platform. Get instant virtual numbers for verification with high success rates.",
-  keywords: "SMS activation, virtual numbers, phone verification, temporary numbers, SMS rental",
-  openGraph: {
-    title: "SMS Activation Platform - Premium Virtual Numbers",
-    description: "Premium SMS Activation & Number Rental platform with multi-provider support.",
-    type: "website",
+  title: {
+    default: 'SMSPro',
+    template: '%s | SMSPro',
   },
+  description:
+    'Premium SMS activation and number rental platform. Fast, reliable, and secure.',
 };
 
 export default function RootLayout({
   children,
-}: Readonly<{
+}: {
   children: React.ReactNode;
-}>) {
+}) {
   return (
-    <html lang="en">
-      <head>
-        {/* Satoshi Font - Primary font for dark mode */}
-        <link rel="preconnect" href="https://api.fontshare.com" />
-        <link
-          href="https://api.fontshare.com/v2/css?f[]=satoshi@400,500,600,700&display=swap"
-          rel="stylesheet"
-        />
-      </head>
-      {/* suppressHydrationWarning prevents hydration mismatch errors caused by browser extensions 
-          (e.g., Grammarly) that modify the DOM before React hydrates */}
-      <body className="antialiased" suppressHydrationWarning>
+    <html lang="en" suppressHydrationWarning>
+      <body>
         <StoreProvider>
-          <ToastProvider position="top-right">
-            <ErrorBoundary>
-              <AuthInitializer>
-                <SessionProvider>
-                  {children}
-                </SessionProvider>
-              </AuthInitializer>
-            </ErrorBoundary>
-          </ToastProvider>
+          <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
+            {children}
+            <Toaster />
+          </ThemeProvider>
         </StoreProvider>
       </body>
     </html>

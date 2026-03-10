@@ -1,5 +1,6 @@
-import { apiClient } from './config';
+import { apiClient } from '@/config/client.config';
 import { setTokens, clearTokens, getRefreshToken } from './tokenStorage';
+import { API_ENDPOINTS } from '@/config/server.config';
 
 // ============================================
 // Types matching backend DTOs (Phase 1 Updated)
@@ -9,16 +10,21 @@ import { setTokens, clearTokens, getRefreshToken } from './tokenStorage';
  * User Roles - 6 admin-level roles + USER
  * Hierarchy: USER < VIEWER < SUPPORT < FINANCE < MANAGER < ADMIN < OWNER
  */
-export type UserRole = 
-  | 'USER'      // Regular user, no admin access
-  | 'VIEWER'    // Read-only admin access
-  | 'SUPPORT'   // Read + limited update on users/orders
-  | 'FINANCE'   // Full access to payments/wallets/refunds
-  | 'MANAGER'   // Manage users, orders, providers, SEO
-  | 'ADMIN'     // Full access except system settings
-  | 'OWNER';    // Full access including system settings
+export type UserRole =
+  | 'USER' // Regular user, no admin access
+  | 'VIEWER' // Read-only admin access
+  | 'SUPPORT' // Read + limited update on users/orders
+  | 'FINANCE' // Full access to payments/wallets/refunds
+  | 'MANAGER' // Manage users, orders, providers, SEO
+  | 'ADMIN' // Full access except system settings
+  | 'OWNER'; // Full access including system settings
 
-export type UserStatus = 'ACTIVE' | 'INACTIVE' | 'BANNED' | 'SUSPENDED' | 'PENDING';
+export type UserStatus =
+  | 'ACTIVE'
+  | 'INACTIVE'
+  | 'BANNED'
+  | 'SUSPENDED'
+  | 'PENDING';
 
 /**
  * Role hierarchy levels for permission checks
@@ -36,16 +42,27 @@ export const ROLE_HIERARCHY: Record<UserRole, number> = {
 /**
  * Admin roles (all roles except USER)
  */
-export const ADMIN_ROLES: UserRole[] = ['VIEWER', 'SUPPORT', 'FINANCE', 'MANAGER', 'ADMIN', 'OWNER'];
+export const ADMIN_ROLES: UserRole[] = [
+  'VIEWER',
+  'SUPPORT',
+  'FINANCE',
+  'MANAGER',
+  'ADMIN',
+  'OWNER',
+];
 
 // Role checking helpers
 export const isAdmin = (role: UserRole): boolean => ADMIN_ROLES.includes(role);
 export const isOwner = (role: UserRole): boolean => role === 'OWNER';
 export const isUser = (role: UserRole): boolean => role === 'USER';
-export const hasHigherRole = (userRole: UserRole, targetRole: UserRole): boolean => 
-  ROLE_HIERARCHY[userRole] > ROLE_HIERARCHY[targetRole];
-export const hasEqualOrHigherRole = (userRole: UserRole, targetRole: UserRole): boolean => 
-  ROLE_HIERARCHY[userRole] >= ROLE_HIERARCHY[targetRole];
+export const hasHigherRole = (
+  userRole: UserRole,
+  targetRole: UserRole,
+): boolean => ROLE_HIERARCHY[userRole] > ROLE_HIERARCHY[targetRole];
+export const hasEqualOrHigherRole = (
+  userRole: UserRole,
+  targetRole: UserRole,
+): boolean => ROLE_HIERARCHY[userRole] >= ROLE_HIERARCHY[targetRole];
 
 export interface User {
   id: string;
@@ -94,7 +111,7 @@ export interface RegisterRequest {
   firstName: string;
   lastName: string;
   email: string;
-  username?: string;  // Optional - 3-24 chars, letters/numbers/._ only
+  username?: string; // Optional - 3-24 chars, letters/numbers/._ only
   country: string;
   password: string;
 }
@@ -129,8 +146,13 @@ export interface ApiError {
 /**
  * Register a new user
  */
-export const registerUser = async (data: RegisterRequest): Promise<AuthResponse> => {
-  const response = await apiClient.post<AuthResponse>('/auth/register', data);
+export const registerUser = async (
+  data: RegisterRequest,
+): Promise<AuthResponse> => {
+  const response = await apiClient.post<AuthResponse>(
+    API_ENDPOINTS.AUTH.REGISTER,
+    data,
+  );
   const { accessToken, refreshToken } = response.data;
   setTokens(accessToken, refreshToken);
   return response.data;
@@ -140,7 +162,10 @@ export const registerUser = async (data: RegisterRequest): Promise<AuthResponse>
  * Login with email and password
  */
 export const loginUser = async (data: LoginRequest): Promise<AuthResponse> => {
-  const response = await apiClient.post<AuthResponse>('/auth/login', data);
+  const response = await apiClient.post<AuthResponse>(
+    API_ENDPOINTS.AUTH.LOGIN,
+    data,
+  );
   const { accessToken, refreshToken } = response.data;
   setTokens(accessToken, refreshToken);
   return response.data;
@@ -150,7 +175,7 @@ export const loginUser = async (data: LoginRequest): Promise<AuthResponse> => {
  * Get current authenticated user
  */
 export const getCurrentUser = async (): Promise<User> => {
-  const response = await apiClient.get<User>('/auth/me');
+  const response = await apiClient.get<User>(API_ENDPOINTS.AUTH.ME);
   return response.data;
 };
 
@@ -162,7 +187,10 @@ export const refreshTokens = async (): Promise<AuthResponse> => {
   if (!refreshToken) {
     throw new Error('No refresh token available');
   }
-  const response = await apiClient.post<AuthResponse>('/auth/refresh', { refreshToken });
+  const response = await apiClient.post<AuthResponse>(
+    API_ENDPOINTS.AUTH.REFRESH,
+    { refreshToken },
+  );
   const { accessToken, refreshToken: newRefreshToken } = response.data;
   setTokens(accessToken, newRefreshToken);
   return response.data;
@@ -174,7 +202,10 @@ export const refreshTokens = async (): Promise<AuthResponse> => {
 export const logoutUser = async (): Promise<MessageResponse> => {
   try {
     const refreshToken = getRefreshToken();
-    const response = await apiClient.post<MessageResponse>('/auth/logout', { refreshToken });
+    const response = await apiClient.post<MessageResponse>(
+      API_ENDPOINTS.AUTH.LOGOUT,
+      { refreshToken },
+    );
     return response.data;
   } finally {
     clearTokens();
@@ -185,7 +216,9 @@ export const logoutUser = async (): Promise<MessageResponse> => {
  * Request email verification OTP
  */
 export const requestEmailVerification = async (): Promise<OtpResponse> => {
-  const response = await apiClient.post<OtpResponse>('/auth/request-email-verification');
+  const response = await apiClient.post<OtpResponse>(
+    API_ENDPOINTS.AUTH.REQUEST_EMAIL_VERIFICATION,
+  );
   return response.data;
 };
 
@@ -193,7 +226,10 @@ export const requestEmailVerification = async (): Promise<OtpResponse> => {
  * Verify email with OTP code
  */
 export const verifyEmail = async (code: string): Promise<MessageResponse> => {
-  const response = await apiClient.post<MessageResponse>('/auth/verify-email', { code });
+  const response = await apiClient.post<MessageResponse>(
+    API_ENDPOINTS.AUTH.VERIFY_EMAIL,
+    { code },
+  );
   return response.data;
 };
 
@@ -201,8 +237,12 @@ export const verifyEmail = async (code: string): Promise<MessageResponse> => {
  * Request guest login OTP (email-code-only, no password required)
  * POST /api/v1/auth/guest
  */
-export const requestGuestLogin = async (email: string): Promise<OtpResponse> => {
-  const response = await apiClient.post<OtpResponse>('/auth/guest', { email });
+export const requestGuestLogin = async (
+  email: string,
+): Promise<OtpResponse> => {
+  const response = await apiClient.post<OtpResponse>(API_ENDPOINTS.AUTH.GUEST, {
+    email,
+  });
   return response.data;
 };
 
@@ -210,8 +250,13 @@ export const requestGuestLogin = async (email: string): Promise<OtpResponse> => 
  * Verify OTP and login (for guest login flow)
  * POST /api/v1/auth/verify-otp
  */
-export const verifyOtpAndLogin = async (data: VerifyOtpRequest): Promise<AuthResponse> => {
-  const response = await apiClient.post<AuthResponse>('/auth/verify-otp', data);
+export const verifyOtpAndLogin = async (
+  data: VerifyOtpRequest,
+): Promise<AuthResponse> => {
+  const response = await apiClient.post<AuthResponse>(
+    API_ENDPOINTS.AUTH.VERIFY_OTP,
+    data,
+  );
   const { accessToken, refreshToken } = response.data;
   setTokens(accessToken, refreshToken);
   return response.data;
@@ -222,11 +267,11 @@ export const verifyOtpAndLogin = async (data: VerifyOtpRequest): Promise<AuthRes
 // ============================================
 
 export const getGoogleOAuthUrl = (): string => {
-  return `${apiClient.defaults.baseURL}/auth/google`;
+  return `${apiClient.defaults.baseURL}${API_ENDPOINTS.AUTH.GOOGLE}`;
 };
 
 export const getGithubOAuthUrl = (): string => {
-  return `${apiClient.defaults.baseURL}/auth/github`;
+  return `${apiClient.defaults.baseURL}${API_ENDPOINTS.AUTH.GITHUB}`;
 };
 
 /**
@@ -234,13 +279,12 @@ export const getGithubOAuthUrl = (): string => {
  * Note: Telegram uses a different flow (widget-based)
  */
 export const getTelegramOAuthUrl = (): string => {
-  return `${apiClient.defaults.baseURL}/auth/telegram`;
+  return `${apiClient.defaults.baseURL}${API_ENDPOINTS.AUTH.TELEGRAM}`;
 };
 
 /**
  * Twitter/X OAuth URL
  */
 export const getTwitterOAuthUrl = (): string => {
-  return `${apiClient.defaults.baseURL}/auth/twitter`;
+  return `${apiClient.defaults.baseURL}${API_ENDPOINTS.AUTH.TWITTER}`;
 };
-

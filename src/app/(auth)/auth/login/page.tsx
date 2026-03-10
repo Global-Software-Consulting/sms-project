@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
@@ -16,30 +16,64 @@ import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Eye, EyeOff, Lock, Mail, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
+import { useAppDispatch, useAppSelector } from '@/lib/store/hooks';
+import {
+  login,
+  selectIsLoading,
+  selectAuthError,
+  selectIsAuthenticated,
+  clearError,
+} from '@/lib/store/slices/authSlice';
+import { getGoogleOAuthUrl, getGithubOAuthUrl } from '@/lib/api';
 
 export default function Login() {
   const router = useRouter();
+  const dispatch = useAppDispatch();
+  const isLoading = useAppSelector(selectIsLoading);
+  const authError = useAppSelector(selectAuthError);
+  const isAuthenticated = useAppSelector(selectIsAuthenticated);
+
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [rememberMe, setRememberMe] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
+
+  // Redirect if already authenticated
+  useEffect(() => {
+    if (isAuthenticated) {
+      router.push('/dashboard');
+    }
+  }, [isAuthenticated, router]);
+
+  // Show error toast
+  useEffect(() => {
+    if (authError) {
+      toast.error('Login failed', {
+        description: authError,
+      });
+      dispatch(clearError());
+    }
+  }, [authError, dispatch]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsLoading(true);
 
-    // Simulate API call
-    setTimeout(() => {
-      setIsLoading(false);
+    const result = await dispatch(login({ email, password }));
+
+    if (login.fulfilled.match(result)) {
       toast.success('Welcome back!', {
         description: 'Redirecting to your dashboard...',
       });
-      // Navigate to dashboard after successful login
-      setTimeout(() => {
-        router.push('/dashboard');
-      }, 500);
-    }, 1500);
+      router.push('/dashboard');
+    }
+  };
+
+  const handleGoogleLogin = () => {
+    window.location.href = getGoogleOAuthUrl();
+  };
+
+  const handleGithubLogin = () => {
+    window.location.href = getGithubOAuthUrl();
   };
 
   return (
@@ -195,7 +229,12 @@ export default function Login() {
 
             {/* Social Login */}
             <div className="grid grid-cols-2 gap-3">
-              <Button variant="outline" type="button">
+              <Button
+                variant="outline"
+                type="button"
+                onClick={handleGoogleLogin}
+                disabled={isLoading}
+              >
                 <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24">
                   <path
                     fill="currentColor"
@@ -216,7 +255,12 @@ export default function Login() {
                 </svg>
                 Google
               </Button>
-              <Button variant="outline" type="button">
+              <Button
+                variant="outline"
+                type="button"
+                onClick={handleGithubLogin}
+                disabled={isLoading}
+              >
                 <svg
                   className="mr-2 h-4 w-4"
                   fill="currentColor"

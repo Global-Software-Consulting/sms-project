@@ -64,4 +64,3 @@ export const hasTokens = (): boolean => {
   const tokens = getTokens();
   return !!tokens?.accessToken && !!tokens?.refreshToken;
 };
-

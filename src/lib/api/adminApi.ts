@@ -1,5 +1,6 @@
-import { apiClient } from './config';
+import { apiClient } from '@/config/client.config';
 import { UserRole, UserStatus } from './authApi';
+import { API_ENDPOINTS } from '@/config/server.config';
 
 // ============================================
 // Admin User Types
@@ -96,7 +97,13 @@ export interface AdminUserQueryParams {
   search?: string;
   role?: UserRole;
   status?: UserStatus;
-  sortBy?: 'createdAt' | 'updatedAt' | 'email' | 'name' | 'lastLoginAt' | 'abuseScore';
+  sortBy?:
+    | 'createdAt'
+    | 'updatedAt'
+    | 'email'
+    | 'name'
+    | 'lastLoginAt'
+    | 'abuseScore';
   sortOrder?: 'asc' | 'desc';
   page?: number;
   limit?: number;
@@ -140,8 +147,13 @@ export interface SuspendUserRequest {
  * Get all users (paginated)
  * GET /api/v1/admin/users
  */
-export const getAdminUsers = async (params?: AdminUserQueryParams): Promise<AdminUsersResponse> => {
-  const response = await apiClient.get<AdminUsersResponse>('/admin/users', { params });
+export const getAdminUsers = async (
+  params?: AdminUserQueryParams,
+): Promise<AdminUsersResponse> => {
+  const response = await apiClient.get<AdminUsersResponse>(
+    API_ENDPOINTS.ADMIN.USERS.ROOT,
+    { params },
+  );
   return response.data;
 };
 
@@ -150,7 +162,9 @@ export const getAdminUsers = async (params?: AdminUserQueryParams): Promise<Admi
  * GET /api/v1/admin/users/statistics
  */
 export const getUserStatistics = async (): Promise<UserStatistics> => {
-  const response = await apiClient.get<UserStatistics>('/admin/users/statistics');
+  const response = await apiClient.get<UserStatistics>(
+    API_ENDPOINTS.ADMIN.USERS.STATISTICS,
+  );
   return response.data;
 };
 
@@ -159,7 +173,9 @@ export const getUserStatistics = async (): Promise<UserStatistics> => {
  * GET /api/v1/admin/users/:id
  */
 export const getAdminUser = async (id: string): Promise<AdminUserDetail> => {
-  const response = await apiClient.get<AdminUserDetail>(`/admin/users/${id}`);
+  const response = await apiClient.get<AdminUserDetail>(
+    API_ENDPOINTS.ADMIN.USERS.DETAIL(id),
+  );
   return response.data;
 };
 
@@ -167,8 +183,14 @@ export const getAdminUser = async (id: string): Promise<AdminUserDetail> => {
  * Update user
  * PATCH /api/v1/admin/users/:id
  */
-export const updateAdminUser = async (id: string, data: AdminUpdateUserRequest): Promise<AdminUser> => {
-  const response = await apiClient.patch<AdminUser>(`/admin/users/${id}`, data);
+export const updateAdminUser = async (
+  id: string,
+  data: AdminUpdateUserRequest,
+): Promise<AdminUser> => {
+  const response = await apiClient.patch<AdminUser>(
+    API_ENDPOINTS.ADMIN.USERS.DETAIL(id),
+    data,
+  );
   return response.data;
 };
 
@@ -176,8 +198,12 @@ export const updateAdminUser = async (id: string, data: AdminUpdateUserRequest):
  * Delete user (soft delete)
  * DELETE /api/v1/admin/users/:id
  */
-export const deleteAdminUser = async (id: string): Promise<{ message: string }> => {
-  const response = await apiClient.delete<{ message: string }>(`/admin/users/${id}`);
+export const deleteAdminUser = async (
+  id: string,
+): Promise<{ message: string }> => {
+  const response = await apiClient.delete<{ message: string }>(
+    API_ENDPOINTS.ADMIN.USERS.DETAIL(id),
+  );
   return response.data;
 };
 
@@ -185,8 +211,14 @@ export const deleteAdminUser = async (id: string): Promise<{ message: string }> 
  * Ban user
  * POST /api/v1/admin/users/:id/ban
  */
-export const banUser = async (id: string, data: BanUserRequest): Promise<AdminUser> => {
-  const response = await apiClient.post<AdminUser>(`/admin/users/${id}/ban`, data);
+export const banUser = async (
+  id: string,
+  data: BanUserRequest,
+): Promise<AdminUser> => {
+  const response = await apiClient.post<AdminUser>(
+    API_ENDPOINTS.ADMIN.USERS.BAN(id),
+    data,
+  );
   return response.data;
 };
 
@@ -195,7 +227,9 @@ export const banUser = async (id: string, data: BanUserRequest): Promise<AdminUs
  * POST /api/v1/admin/users/:id/unban
  */
 export const unbanUser = async (id: string): Promise<AdminUser> => {
-  const response = await apiClient.post<AdminUser>(`/admin/users/${id}/unban`);
+  const response = await apiClient.post<AdminUser>(
+    API_ENDPOINTS.ADMIN.USERS.UNBAN(id),
+  );
   return response.data;
 };
 
@@ -203,8 +237,14 @@ export const unbanUser = async (id: string): Promise<AdminUser> => {
  * Suspend user
  * POST /api/v1/admin/users/:id/suspend
  */
-export const suspendUser = async (id: string, data: SuspendUserRequest): Promise<AdminUser> => {
-  const response = await apiClient.post<AdminUser>(`/admin/users/${id}/suspend`, data);
+export const suspendUser = async (
+  id: string,
+  data: SuspendUserRequest,
+): Promise<AdminUser> => {
+  const response = await apiClient.post<AdminUser>(
+    API_ENDPOINTS.ADMIN.USERS.SUSPEND(id),
+    data,
+  );
   return response.data;
 };
 
@@ -213,7 +253,9 @@ export const suspendUser = async (id: string, data: SuspendUserRequest): Promise
  * POST /api/v1/admin/users/:id/activate
  */
 export const activateUser = async (id: string): Promise<AdminUser> => {
-  const response = await apiClient.post<AdminUser>(`/admin/users/${id}/activate`);
+  const response = await apiClient.post<AdminUser>(
+    API_ENDPOINTS.ADMIN.USERS.ACTIVATE(id),
+  );
   return response.data;
 };
 
@@ -221,8 +263,14 @@ export const activateUser = async (id: string): Promise<AdminUser> => {
  * Change user role
  * PATCH /api/v1/admin/users/:id/role
  */
-export const changeUserRole = async (id: string, data: ChangeRoleRequest): Promise<AdminUser> => {
-  const response = await apiClient.patch<AdminUser>(`/admin/users/${id}/role`, data);
+export const changeUserRole = async (
+  id: string,
+  data: ChangeRoleRequest,
+): Promise<AdminUser> => {
+  const response = await apiClient.patch<AdminUser>(
+    API_ENDPOINTS.ADMIN.USERS.ROLE(id),
+    data,
+  );
   return response.data;
 };
 
@@ -230,8 +278,14 @@ export const changeUserRole = async (id: string, data: ChangeRoleRequest): Promi
  * Set user limits
  * PATCH /api/v1/admin/users/:id/limits
  */
-export const setUserLimits = async (id: string, data: SetLimitsRequest): Promise<AdminUser> => {
-  const response = await apiClient.patch<AdminUser>(`/admin/users/${id}/limits`, data);
+export const setUserLimits = async (
+  id: string,
+  data: SetLimitsRequest,
+): Promise<AdminUser> => {
+  const response = await apiClient.patch<AdminUser>(
+    API_ENDPOINTS.ADMIN.USERS.LIMITS(id),
+    data,
+  );
   return response.data;
 };
 
@@ -239,8 +293,14 @@ export const setUserLimits = async (id: string, data: SetLimitsRequest): Promise
  * Set user abuse score
  * PATCH /api/v1/admin/users/:id/abuse-score
  */
-export const setUserAbuseScore = async (id: string, data: SetAbuseScoreRequest): Promise<AdminUser> => {
-  const response = await apiClient.patch<AdminUser>(`/admin/users/${id}/abuse-score`, data);
+export const setUserAbuseScore = async (
+  id: string,
+  data: SetAbuseScoreRequest,
+): Promise<AdminUser> => {
+  const response = await apiClient.patch<AdminUser>(
+    API_ENDPOINTS.ADMIN.USERS.ABUSE_SCORE(id),
+    data,
+  );
   return response.data;
 };
 
@@ -251,7 +311,9 @@ export const setUserAbuseScore = async (id: string, data: SetAbuseScoreRequest):
 /**
  * Get status badge color
  */
-export const getUserStatusColor = (status: UserStatus): { bg: string; text: string } => {
+export const getUserStatusColor = (
+  status: UserStatus,
+): { bg: string; text: string } => {
   const colors: Record<UserStatus, { bg: string; text: string }> = {
     ACTIVE: { bg: 'rgba(34, 197, 94, 0.1)', text: 'var(--success)' },
     INACTIVE: { bg: 'rgba(107, 114, 128, 0.1)', text: 'var(--text-muted)' },
@@ -266,7 +328,9 @@ export const getUserStatusColor = (status: UserStatus): { bg: string; text: stri
  * Get role badge color
  * All 7 roles: USER, VIEWER, SUPPORT, FINANCE, MANAGER, ADMIN, OWNER
  */
-export const getUserRoleColor = (role: UserRole): { bg: string; text: string } => {
+export const getUserRoleColor = (
+  role: UserRole,
+): { bg: string; text: string } => {
   const colors: Record<UserRole, { bg: string; text: string }> = {
     USER: { bg: 'rgba(107, 114, 128, 0.1)', text: 'var(--text-secondary)' },
     VIEWER: { bg: 'rgba(156, 163, 175, 0.15)', text: '#9CA3AF' },
@@ -307,19 +371,19 @@ export const getUserInitials = (user: AdminUser): string => {
  */
 export const formatLastLogin = (lastLoginAt: string | null): string => {
   if (!lastLoginAt) return 'Never';
-  
+
   const date = new Date(lastLoginAt);
   const now = new Date();
   const diffMs = now.getTime() - date.getTime();
   const diffMins = Math.floor(diffMs / 60000);
   const diffHours = Math.floor(diffMs / 3600000);
   const diffDays = Math.floor(diffMs / 86400000);
-  
+
   if (diffMins < 1) return 'Just now';
   if (diffMins < 60) return `${diffMins}m ago`;
   if (diffHours < 24) return `${diffHours}h ago`;
   if (diffDays < 7) return `${diffDays}d ago`;
-  
+
   return date.toLocaleDateString();
 };
 
@@ -411,8 +475,13 @@ export interface AdminLockWalletRequest {
 /**
  * Get all wallets (paginated)
  */
-export const getAdminWallets = async (params?: AdminWalletQueryParams): Promise<AdminWalletsResponse> => {
-  const response = await apiClient.get<AdminWalletsResponse>('/admin/wallets', { params });
+export const getAdminWallets = async (
+  params?: AdminWalletQueryParams,
+): Promise<AdminWalletsResponse> => {
+  const response = await apiClient.get<AdminWalletsResponse>(
+    API_ENDPOINTS.ADMIN.WALLETS.ROOT,
+    { params },
+  );
   return response.data;
 };
 
@@ -420,55 +489,89 @@ export const getAdminWallets = async (params?: AdminWalletQueryParams): Promise<
  * Get wallet statistics
  */
 export const getWalletStatistics = async (): Promise<WalletStatistics> => {
-  const response = await apiClient.get<WalletStatistics>('/admin/wallets/statistics');
+  const response = await apiClient.get<WalletStatistics>(
+    API_ENDPOINTS.ADMIN.WALLETS.STATISTICS,
+  );
   return response.data;
 };
 
 /**
  * Get user's wallet details
  */
-export const getAdminWallet = async (userId: string): Promise<AdminWalletDetail> => {
-  const response = await apiClient.get<AdminWalletDetail>(`/admin/wallets/${userId}`);
+export const getAdminWallet = async (
+  userId: string,
+): Promise<AdminWalletDetail> => {
+  const response = await apiClient.get<AdminWalletDetail>(
+    API_ENDPOINTS.ADMIN.WALLETS.DETAIL(userId),
+  );
   return response.data;
 };
 
 /**
  * Credit wallet (add bonus)
  */
-export const creditWallet = async (userId: string, data: AdminCreditRequest): Promise<{ message: string; newBalance: string; transactionId: string }> => {
-  const response = await apiClient.post(`/admin/wallets/${userId}/credit`, data);
+export const creditWallet = async (
+  userId: string,
+  data: AdminCreditRequest,
+): Promise<{ message: string; newBalance: string; transactionId: string }> => {
+  const response = await apiClient.post(
+    API_ENDPOINTS.ADMIN.WALLETS.CREDIT(userId),
+    data,
+  );
   return response.data;
 };
 
 /**
  * Debit wallet (remove funds)
  */
-export const debitWallet = async (userId: string, data: AdminDebitRequest): Promise<{ message: string; newBalance: string; transactionId: string }> => {
-  const response = await apiClient.post(`/admin/wallets/${userId}/debit`, data);
+export const debitWallet = async (
+  userId: string,
+  data: AdminDebitRequest,
+): Promise<{ message: string; newBalance: string; transactionId: string }> => {
+  const response = await apiClient.post(
+    API_ENDPOINTS.ADMIN.WALLETS.DEBIT(userId),
+    data,
+  );
   return response.data;
 };
 
 /**
  * Adjust wallet (positive or negative)
  */
-export const adjustWallet = async (userId: string, data: AdminAdjustRequest): Promise<{ message: string; newBalance: string; transactionId: string }> => {
-  const response = await apiClient.post(`/admin/wallets/${userId}/adjust`, data);
+export const adjustWallet = async (
+  userId: string,
+  data: AdminAdjustRequest,
+): Promise<{ message: string; newBalance: string; transactionId: string }> => {
+  const response = await apiClient.post(
+    API_ENDPOINTS.ADMIN.WALLETS.ADJUST(userId),
+    data,
+  );
   return response.data;
 };
 
 /**
  * Lock wallet
  */
-export const lockWallet = async (userId: string, data: AdminLockWalletRequest): Promise<{ message: string }> => {
-  const response = await apiClient.post(`/admin/wallets/${userId}/lock`, data);
+export const lockWallet = async (
+  userId: string,
+  data: AdminLockWalletRequest,
+): Promise<{ message: string }> => {
+  const response = await apiClient.post(
+    API_ENDPOINTS.ADMIN.WALLETS.LOCK(userId),
+    data,
+  );
   return response.data;
 };
 
 /**
  * Unlock wallet
  */
-export const unlockWallet = async (userId: string): Promise<{ message: string }> => {
-  const response = await apiClient.post(`/admin/wallets/${userId}/unlock`);
+export const unlockWallet = async (
+  userId: string,
+): Promise<{ message: string }> => {
+  const response = await apiClient.post(
+    API_ENDPOINTS.ADMIN.WALLETS.UNLOCK(userId),
+  );
   return response.data;
 };
 
@@ -594,55 +697,87 @@ export interface ChartQueryParams {
  * Get dashboard overview
  */
 export const getDashboardOverview = async (): Promise<DashboardOverview> => {
-  const response = await apiClient.get<DashboardOverview>('/admin/analytics/dashboard');
+  const response = await apiClient.get<DashboardOverview>(
+    API_ENDPOINTS.ADMIN.ANALYTICS.DASHBOARD,
+  );
   return response.data;
 };
 
 /**
  * Get revenue chart data
  */
-export const getRevenueChart = async (params?: ChartQueryParams): Promise<RevenueChartData> => {
-  const response = await apiClient.get<RevenueChartData>('/admin/analytics/revenue', { params });
+export const getRevenueChart = async (
+  params?: ChartQueryParams,
+): Promise<RevenueChartData> => {
+  const response = await apiClient.get<RevenueChartData>(
+    API_ENDPOINTS.ADMIN.ANALYTICS.REVENUE,
+    { params },
+  );
   return response.data;
 };
 
 /**
  * Get user growth chart data
  */
-export const getUserGrowthChart = async (params?: ChartQueryParams): Promise<UserGrowthChartData> => {
-  const response = await apiClient.get<UserGrowthChartData>('/admin/analytics/users/growth', { params });
+export const getUserGrowthChart = async (
+  params?: ChartQueryParams,
+): Promise<UserGrowthChartData> => {
+  const response = await apiClient.get<UserGrowthChartData>(
+    API_ENDPOINTS.ADMIN.ANALYTICS.USERS_GROWTH,
+    { params },
+  );
   return response.data;
 };
 
 /**
  * Get payment gateway breakdown
  */
-export const getPaymentBreakdown = async (params?: ChartQueryParams): Promise<PaymentBreakdown[]> => {
-  const response = await apiClient.get<PaymentBreakdown[]>('/admin/analytics/payments/breakdown', { params });
+export const getPaymentBreakdown = async (
+  params?: ChartQueryParams,
+): Promise<PaymentBreakdown[]> => {
+  const response = await apiClient.get<PaymentBreakdown[]>(
+    API_ENDPOINTS.ADMIN.ANALYTICS.PAYMENTS_BREAKDOWN,
+    { params },
+  );
   return response.data;
 };
 
 /**
  * Get membership breakdown
  */
-export const getMembershipBreakdown = async (params?: ChartQueryParams): Promise<MembershipBreakdown[]> => {
-  const response = await apiClient.get<MembershipBreakdown[]>('/admin/analytics/memberships/breakdown', { params });
+export const getMembershipBreakdown = async (
+  params?: ChartQueryParams,
+): Promise<MembershipBreakdown[]> => {
+  const response = await apiClient.get<MembershipBreakdown[]>(
+    API_ENDPOINTS.ADMIN.ANALYTICS.MEMBERSHIPS_BREAKDOWN,
+    { params },
+  );
   return response.data;
 };
 
 /**
  * Get recent audit logs (for widget)
  */
-export const getRecentAuditLogs = async (limit?: number): Promise<AuditLog[]> => {
-  const response = await apiClient.get<AuditLog[]>('/admin/analytics/recent/audit-logs', { params: { limit } });
+export const getRecentAuditLogs = async (
+  limit?: number,
+): Promise<AuditLog[]> => {
+  const response = await apiClient.get<AuditLog[]>(
+    API_ENDPOINTS.ADMIN.ANALYTICS.RECENT_AUDIT_LOGS,
+    { params: { limit } },
+  );
   return response.data;
 };
 
 /**
  * Get recent system logs (for widget)
  */
-export const getRecentSystemLogs = async (limit?: number): Promise<SystemLog[]> => {
-  const response = await apiClient.get<SystemLog[]>('/admin/analytics/recent/system-logs', { params: { limit } });
+export const getRecentSystemLogs = async (
+  limit?: number,
+): Promise<SystemLog[]> => {
+  const response = await apiClient.get<SystemLog[]>(
+    API_ENDPOINTS.ADMIN.ANALYTICS.RECENT_SYSTEM_LOGS,
+    { params: { limit } },
+  );
   return response.data;
 };
 
@@ -674,7 +809,9 @@ export const formatNumber = (num: number): string => {
 /**
  * Get growth indicator
  */
-export const getGrowthIndicator = (percent: number): { color: string; icon: 'up' | 'down' | 'neutral' } => {
+export const getGrowthIndicator = (
+  percent: number,
+): { color: string; icon: 'up' | 'down' | 'neutral' } => {
   if (percent > 0) return { color: 'var(--success)', icon: 'up' };
   if (percent < 0) return { color: 'var(--danger)', icon: 'down' };
   return { color: 'var(--text-muted)', icon: 'neutral' };
@@ -683,7 +820,9 @@ export const getGrowthIndicator = (percent: number): { color: string; icon: 'up'
 /**
  * Get system health color
  */
-export const getSystemHealthColor = (status: 'healthy' | 'degraded' | 'down'): string => {
+export const getSystemHealthColor = (
+  status: 'healthy' | 'degraded' | 'down',
+): string => {
   const colors = {
     healthy: 'var(--success)',
     degraded: 'var(--warning)',
@@ -695,7 +834,9 @@ export const getSystemHealthColor = (status: 'healthy' | 'degraded' | 'down'): s
 /**
  * Get log level color
  */
-export const getLogLevelColor = (level: string): { bg: string; text: string } => {
+export const getLogLevelColor = (
+  level: string,
+): { bg: string; text: string } => {
   const colors: Record<string, { bg: string; text: string }> = {
     INFO: { bg: 'rgba(59, 130, 246, 0.1)', text: 'var(--info)' },
     WARN: { bg: 'rgba(245, 158, 11, 0.1)', text: 'var(--warning)' },
@@ -781,31 +922,46 @@ export interface AdminGrantSubscriptionRequest {
 /**
  * Get all subscriptions (paginated)
  */
-export const getAdminSubscriptions = async (params?: AdminSubscriptionQueryParams): Promise<AdminSubscriptionsResponse> => {
-  const response = await apiClient.get<AdminSubscriptionsResponse>('/admin/membership/subscriptions', { params });
+export const getAdminSubscriptions = async (
+  params?: AdminSubscriptionQueryParams,
+): Promise<AdminSubscriptionsResponse> => {
+  const response = await apiClient.get<AdminSubscriptionsResponse>(
+    API_ENDPOINTS.ADMIN.MEMBERSHIP.SUBSCRIPTIONS,
+    { params },
+  );
   return response.data;
 };
 
 /**
  * Get membership statistics
  */
-export const getMembershipStatistics = async (): Promise<MembershipStatistics> => {
-  const response = await apiClient.get<MembershipStatistics>('/admin/membership/statistics');
-  return response.data;
-};
+export const getMembershipStatistics =
+  async (): Promise<MembershipStatistics> => {
+    const response = await apiClient.get<MembershipStatistics>(
+      API_ENDPOINTS.ADMIN.MEMBERSHIP.STATISTICS,
+    );
+    return response.data;
+  };
 
 /**
  * Grant subscription to user (free gift)
  */
-export const grantSubscription = async (data: AdminGrantSubscriptionRequest): Promise<{ message: string; subscription: AdminSubscription }> => {
-  const response = await apiClient.post('/admin/membership/grant', data);
+export const grantSubscription = async (
+  data: AdminGrantSubscriptionRequest,
+): Promise<{ message: string; subscription: AdminSubscription }> => {
+  const response = await apiClient.post(
+    API_ENDPOINTS.ADMIN.MEMBERSHIP.GRANT,
+    data,
+  );
   return response.data;
 };
 
 /**
  * Get subscription status color
  */
-export const getSubscriptionStatusColor = (status: SubscriptionStatus): { bg: string; text: string } => {
+export const getSubscriptionStatusColor = (
+  status: SubscriptionStatus,
+): { bg: string; text: string } => {
   const colors: Record<SubscriptionStatus, { bg: string; text: string }> = {
     ACTIVE: { bg: 'rgba(34, 197, 94, 0.1)', text: 'var(--success)' },
     EXPIRED: { bg: 'rgba(107, 114, 128, 0.1)', text: 'var(--text-muted)' },
@@ -868,8 +1024,13 @@ export interface AdminApiKeyQueryParams {
 /**
  * Get all API keys (paginated)
  */
-export const getAdminApiKeys = async (params?: AdminApiKeyQueryParams): Promise<AdminApiKeysResponse> => {
-  const response = await apiClient.get<AdminApiKeysResponse>('/admin/api-keys', { params });
+export const getAdminApiKeys = async (
+  params?: AdminApiKeyQueryParams,
+): Promise<AdminApiKeysResponse> => {
+  const response = await apiClient.get<AdminApiKeysResponse>(
+    API_ENDPOINTS.ADMIN.API_KEYS.ROOT,
+    { params },
+  );
   return response.data;
 };
 
@@ -877,15 +1038,23 @@ export const getAdminApiKeys = async (params?: AdminApiKeyQueryParams): Promise<
  * Get API key statistics
  */
 export const getApiKeyStatistics = async (): Promise<ApiKeyStatistics> => {
-  const response = await apiClient.get<ApiKeyStatistics>('/admin/api-keys/statistics');
+  const response = await apiClient.get<ApiKeyStatistics>(
+    API_ENDPOINTS.ADMIN.API_KEYS.STATISTICS,
+  );
   return response.data;
 };
 
 /**
  * Admin revoke any API key
  */
-export const adminRevokeApiKey = async (keyId: string, reason?: string): Promise<{ message: string; success: boolean }> => {
-  const response = await apiClient.delete(`/admin/api-keys/${keyId}`, { data: { reason } });
+export const adminRevokeApiKey = async (
+  keyId: string,
+  reason?: string,
+): Promise<{ message: string; success: boolean }> => {
+  const response = await apiClient.delete(
+    API_ENDPOINTS.ADMIN.API_KEYS.DETAIL(keyId),
+    { data: { reason } },
+  );
   return response.data;
 };
 
@@ -893,8 +1062,22 @@ export const adminRevokeApiKey = async (keyId: string, reason?: string): Promise
 // Admin Payments Types
 // ============================================
 
-export type PaymentGateway = 'STRIPE' | 'PAYGATE' | 'PLISIO' | 'CRYPTOMUS' | 'NOWPAYMENTS' | 'VOLET' | 'BINANCE';
-export type PaymentStatus = 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'FAILED' | 'CANCELLED' | 'EXPIRED' | 'REFUNDED';
+export type PaymentGateway =
+  | 'STRIPE'
+  | 'PAYGATE'
+  | 'PLISIO'
+  | 'CRYPTOMUS'
+  | 'NOWPAYMENTS'
+  | 'VOLET'
+  | 'BINANCE';
+export type PaymentStatus =
+  | 'PENDING'
+  | 'PROCESSING'
+  | 'COMPLETED'
+  | 'FAILED'
+  | 'CANCELLED'
+  | 'EXPIRED'
+  | 'REFUNDED';
 
 export interface AdminPayment {
   id: string;
@@ -993,8 +1176,13 @@ export interface AdminMarkCompletedRequest {
  * Get all payments (admin)
  * GET /api/v1/admin/payments
  */
-export const getAdminPayments = async (params?: AdminPaymentQueryParams): Promise<AdminPaymentsResponse> => {
-  const response = await apiClient.get<AdminPaymentsResponse>('/admin/payments', { params });
+export const getAdminPayments = async (
+  params?: AdminPaymentQueryParams,
+): Promise<AdminPaymentsResponse> => {
+  const response = await apiClient.get<AdminPaymentsResponse>(
+    API_ENDPOINTS.ADMIN.PAYMENTS.ROOT,
+    { params },
+  );
   return response.data;
 };
 
@@ -1003,7 +1191,9 @@ export const getAdminPayments = async (params?: AdminPaymentQueryParams): Promis
  * GET /api/v1/admin/payments/statistics
  */
 export const getPaymentStatistics = async (): Promise<PaymentStatistics> => {
-  const response = await apiClient.get<PaymentStatistics>('/admin/payments/statistics');
+  const response = await apiClient.get<PaymentStatistics>(
+    API_ENDPOINTS.ADMIN.PAYMENTS.STATISTICS,
+  );
   return response.data;
 };
 
@@ -1011,8 +1201,12 @@ export const getPaymentStatistics = async (): Promise<PaymentStatistics> => {
  * Get single payment details (admin)
  * GET /api/v1/admin/payments/:id
  */
-export const getAdminPayment = async (id: string): Promise<AdminPaymentDetail> => {
-  const response = await apiClient.get<AdminPaymentDetail>(`/admin/payments/${id}`);
+export const getAdminPayment = async (
+  id: string,
+): Promise<AdminPaymentDetail> => {
+  const response = await apiClient.get<AdminPaymentDetail>(
+    API_ENDPOINTS.ADMIN.PAYMENTS.DETAIL(id),
+  );
   return response.data;
 };
 
@@ -1020,8 +1214,14 @@ export const getAdminPayment = async (id: string): Promise<AdminPaymentDetail> =
  * Refund a payment (admin)
  * POST /api/v1/admin/payments/:id/refund
  */
-export const refundPayment = async (id: string, data: AdminRefundRequest): Promise<{ message: string; payment: AdminPayment }> => {
-  const response = await apiClient.post(`/admin/payments/${id}/refund`, data);
+export const refundPayment = async (
+  id: string,
+  data: AdminRefundRequest,
+): Promise<{ message: string; payment: AdminPayment }> => {
+  const response = await apiClient.post(
+    API_ENDPOINTS.ADMIN.PAYMENTS.REFUND(id),
+    data,
+  );
   return response.data;
 };
 
@@ -1029,8 +1229,14 @@ export const refundPayment = async (id: string, data: AdminRefundRequest): Promi
  * Mark payment as completed (admin)
  * POST /api/v1/admin/payments/:id/mark-completed
  */
-export const markPaymentCompleted = async (id: string, data?: AdminMarkCompletedRequest): Promise<{ message: string; payment: AdminPayment }> => {
-  const response = await apiClient.post(`/admin/payments/${id}/mark-completed`, data || {});
+export const markPaymentCompleted = async (
+  id: string,
+  data?: AdminMarkCompletedRequest,
+): Promise<{ message: string; payment: AdminPayment }> => {
+  const response = await apiClient.post(
+    API_ENDPOINTS.ADMIN.PAYMENTS.MARK_COMPLETED(id),
+    data || {},
+  );
   return response.data;
 };
 
@@ -1041,7 +1247,9 @@ export const markPaymentCompleted = async (id: string, data?: AdminMarkCompleted
 /**
  * Get payment status color
  */
-export const getPaymentStatusColor = (status: PaymentStatus): { bg: string; text: string } => {
+export const getPaymentStatusColor = (
+  status: PaymentStatus,
+): { bg: string; text: string } => {
   const colors: Record<PaymentStatus, { bg: string; text: string }> = {
     PENDING: { bg: 'rgba(245, 158, 11, 0.1)', text: 'var(--warning)' },
     PROCESSING: { bg: 'rgba(59, 130, 246, 0.1)', text: 'var(--info)' },
@@ -1057,8 +1265,13 @@ export const getPaymentStatusColor = (status: PaymentStatus): { bg: string; text
 /**
  * Get gateway display info
  */
-export const getGatewayInfo = (gateway: PaymentGateway): { name: string; icon: string; color: string } => {
-  const gateways: Record<PaymentGateway, { name: string; icon: string; color: string }> = {
+export const getGatewayInfo = (
+  gateway: PaymentGateway,
+): { name: string; icon: string; color: string } => {
+  const gateways: Record<
+    PaymentGateway,
+    { name: string; icon: string; color: string }
+  > = {
     STRIPE: { name: 'Stripe', icon: '💳', color: '#635BFF' },
     PAYGATE: { name: 'PayGate', icon: '🏦', color: '#00A86B' },
     PLISIO: { name: 'Plisio', icon: '₿', color: '#F7931A' },
@@ -1073,7 +1286,10 @@ export const getGatewayInfo = (gateway: PaymentGateway): { name: string; icon: s
 /**
  * Format payment amount
  */
-export const formatPaymentAmount = (amount: string | number, currency: string = 'USD'): string => {
+export const formatPaymentAmount = (
+  amount: string | number,
+  currency: string = 'USD',
+): string => {
   const num = typeof amount === 'string' ? parseFloat(amount) : amount;
   return new Intl.NumberFormat('en-US', {
     style: 'currency',
@@ -1101,19 +1317,19 @@ export const formatPaymentDate = (date: string | null): string => {
  */
 export const formatRelativeTime = (date: string | null): string => {
   if (!date) return 'Never';
-  
+
   const d = new Date(date);
   const now = new Date();
   const diffMs = now.getTime() - d.getTime();
   const diffMins = Math.floor(diffMs / 60000);
   const diffHours = Math.floor(diffMs / 3600000);
   const diffDays = Math.floor(diffMs / 86400000);
-  
+
   if (diffMins < 1) return 'Just now';
   if (diffMins < 60) return `${diffMins}m ago`;
   if (diffHours < 24) return `${diffHours}h ago`;
   if (diffDays < 7) return `${diffDays}d ago`;
-  
+
   return d.toLocaleDateString();
 };
 
@@ -1264,7 +1480,9 @@ export interface AdjustScoreRequest {
  * Get abuse control configuration
  */
 export const getAbuseConfig = async (): Promise<AbuseConfig> => {
-  const response = await apiClient.get<AbuseConfig>('/admin/abuse/config');
+  const response = await apiClient.get<AbuseConfig>(
+    API_ENDPOINTS.ADMIN.ABUSE.CONFIG,
+  );
   return response.data;
 };
 
@@ -1272,63 +1490,100 @@ export const getAbuseConfig = async (): Promise<AbuseConfig> => {
  * Get abuse control statistics
  */
 export const getAbuseStatistics = async (): Promise<AbuseStatistics> => {
-  const response = await apiClient.get<AbuseStatistics>('/admin/abuse/statistics');
+  const response = await apiClient.get<AbuseStatistics>(
+    API_ENDPOINTS.ADMIN.ABUSE.STATISTICS,
+  );
   return response.data;
 };
 
 /**
  * List blocked entities
  */
-export const getBlockedEntities = async (params?: BlockQueryParams): Promise<BlockedEntitiesResponse> => {
-  const response = await apiClient.get<BlockedEntitiesResponse>('/admin/abuse/blocked', { params });
+export const getBlockedEntities = async (
+  params?: BlockQueryParams,
+): Promise<BlockedEntitiesResponse> => {
+  const response = await apiClient.get<BlockedEntitiesResponse>(
+    API_ENDPOINTS.ADMIN.ABUSE.BLOCKED,
+    { params },
+  );
   return response.data;
 };
 
 /**
  * Create a new block
  */
-export const createBlock = async (data: CreateBlockRequest): Promise<BlockedEntity> => {
-  const response = await apiClient.post<BlockedEntity>('/admin/abuse/blocked', data);
+export const createBlock = async (
+  data: CreateBlockRequest,
+): Promise<BlockedEntity> => {
+  const response = await apiClient.post<BlockedEntity>(
+    API_ENDPOINTS.ADMIN.ABUSE.BLOCKED,
+    data,
+  );
   return response.data;
 };
 
 /**
  * Remove a block
  */
-export const removeBlock = async (blockId: string): Promise<{ message: string; success: boolean }> => {
-  const response = await apiClient.delete(`/admin/abuse/blocked/${blockId}`);
+export const removeBlock = async (
+  blockId: string,
+): Promise<{ message: string; success: boolean }> => {
+  const response = await apiClient.delete(
+    API_ENDPOINTS.ADMIN.ABUSE.BLOCKED_DETAIL(blockId),
+  );
   return response.data;
 };
 
 /**
  * Get at-risk users
  */
-export const getAtRiskUsers = async (params?: AbuseUserQueryParams): Promise<AtRiskUsersResponse> => {
-  const response = await apiClient.get<AtRiskUsersResponse>('/admin/abuse/users/at-risk', { params });
+export const getAtRiskUsers = async (
+  params?: AbuseUserQueryParams,
+): Promise<AtRiskUsersResponse> => {
+  const response = await apiClient.get<AtRiskUsersResponse>(
+    API_ENDPOINTS.ADMIN.ABUSE.USERS_AT_RISK,
+    { params },
+  );
   return response.data;
 };
 
 /**
  * Get user abuse info
  */
-export const getUserAbuseInfo = async (userId: string): Promise<UserAbuseInfo> => {
-  const response = await apiClient.get<UserAbuseInfo>(`/admin/abuse/users/${userId}`);
+export const getUserAbuseInfo = async (
+  userId: string,
+): Promise<UserAbuseInfo> => {
+  const response = await apiClient.get<UserAbuseInfo>(
+    API_ENDPOINTS.ADMIN.ABUSE.USER_INFO(userId),
+  );
   return response.data;
 };
 
 /**
  * Adjust user abuse score
  */
-export const adjustUserAbuseScore = async (userId: string, data: AdjustScoreRequest): Promise<UserAbuseInfo> => {
-  const response = await apiClient.post<UserAbuseInfo>(`/admin/abuse/users/${userId}/adjust-score`, data);
+export const adjustUserAbuseScore = async (
+  userId: string,
+  data: AdjustScoreRequest,
+): Promise<UserAbuseInfo> => {
+  const response = await apiClient.post<UserAbuseInfo>(
+    API_ENDPOINTS.ADMIN.ABUSE.USER_ADJUST_SCORE(userId),
+    data,
+  );
   return response.data;
 };
 
 /**
  * Get user abuse score history
  */
-export const getUserAbuseHistory = async (userId: string, limit?: number): Promise<AbuseScoreHistory[]> => {
-  const response = await apiClient.get<AbuseScoreHistory[]>(`/admin/abuse/users/${userId}/history`, { params: { limit } });
+export const getUserAbuseHistory = async (
+  userId: string,
+  limit?: number,
+): Promise<AbuseScoreHistory[]> => {
+  const response = await apiClient.get<AbuseScoreHistory[]>(
+    API_ENDPOINTS.ADMIN.ABUSE.USER_HISTORY(userId),
+    { params: { limit } },
+  );
   return response.data;
 };
 
@@ -1339,7 +1594,9 @@ export const getUserAbuseHistory = async (userId: string, limit?: number): Promi
 /**
  * Get risk level color
  */
-export const getRiskLevelColor = (level: string): { bg: string; text: string } => {
+export const getRiskLevelColor = (
+  level: string,
+): { bg: string; text: string } => {
   const colors: Record<string, { bg: string; text: string }> = {
     normal: { bg: 'rgba(34, 197, 94, 0.1)', text: 'var(--success)' },
     watch: { bg: 'rgba(245, 158, 11, 0.1)', text: 'var(--warning)' },
@@ -1352,17 +1609,23 @@ export const getRiskLevelColor = (level: string): { bg: string; text: string } =
 /**
  * Get abuse score color based on thresholds
  */
-export const getAbuseScoreColor = (score: number): { bg: string; text: string } => {
-  if (score >= 91) return { bg: 'rgba(239, 68, 68, 0.1)', text: 'var(--danger)' };
+export const getAbuseScoreColor = (
+  score: number,
+): { bg: string; text: string } => {
+  if (score >= 91)
+    return { bg: 'rgba(239, 68, 68, 0.1)', text: 'var(--danger)' };
   if (score >= 76) return { bg: 'rgba(249, 115, 22, 0.1)', text: '#F97316' };
-  if (score >= 61) return { bg: 'rgba(245, 158, 11, 0.1)', text: 'var(--warning)' };
+  if (score >= 61)
+    return { bg: 'rgba(245, 158, 11, 0.1)', text: 'var(--warning)' };
   return { bg: 'rgba(34, 197, 94, 0.1)', text: 'var(--success)' };
 };
 
 /**
  * Get block type color
  */
-export const getBlockTypeColor = (type: BlockType): { bg: string; text: string } => {
+export const getBlockTypeColor = (
+  type: BlockType,
+): { bg: string; text: string } => {
   const colors: Record<BlockType, { bg: string; text: string }> = {
     IP: { bg: 'rgba(239, 68, 68, 0.1)', text: 'var(--danger)' },
     DOMAIN: { bg: 'rgba(245, 158, 11, 0.1)', text: 'var(--warning)' },

@@ -1,22 +1,23 @@
-import { apiClient } from './config';
+import { apiClient } from '@/config/client.config';
+import { API_ENDPOINTS } from '@/config/server.config';
 
 // ============================================
 // Enums matching backend Prisma schema
 // ============================================
 
 export type SmsOrderStatus =
-  | 'PENDING'       // Order created, waiting for provider confirmation
-  | 'WAITING_SMS'   // Number assigned, waiting for SMS to arrive
-  | 'COMPLETED'     // SMS received successfully
-  | 'CANCELLED'     // User cancelled before SMS arrived
-  | 'EXPIRED'       // Timed out without receiving SMS
-  | 'REFUNDED';     // Admin issued manual refund
+  | 'PENDING' // Order created, waiting for provider confirmation
+  | 'WAITING_SMS' // Number assigned, waiting for SMS to arrive
+  | 'COMPLETED' // SMS received successfully
+  | 'CANCELLED' // User cancelled before SMS arrived
+  | 'EXPIRED' // Timed out without receiving SMS
+  | 'REFUNDED'; // Admin issued manual refund
 
 export type SmsRentalStatus =
-  | 'ACTIVE'        // Rental is active, receiving messages
-  | 'COMPLETED'     // Rental period ended normally
-  | 'CANCELLED'     // User cancelled early
-  | 'EXPIRED';      // Rental period ended
+  | 'ACTIVE' // Rental is active, receiving messages
+  | 'COMPLETED' // Rental period ended normally
+  | 'CANCELLED' // User cancelled early
+  | 'EXPIRED'; // Rental period ended
 
 // ============================================
 // Types matching backend DTOs
@@ -33,9 +34,9 @@ export interface SmsProvider {
   isActive: boolean;
   priority: number;
   supportsRental: boolean;
-  balance?: string;        // Admin only
-  markup?: number;         // Admin only
-  lastSyncAt?: string;     // Admin only
+  balance?: string; // Admin only
+  markup?: number; // Admin only
+  lastSyncAt?: string; // Admin only
 }
 
 /**
@@ -65,7 +66,7 @@ export interface SmsCountry {
   providerId: string;
   externalCountryId: string;
   name: string;
-  code: string;           // ISO 3166-1 alpha-2 (US, RU, IN)
+  code: string; // ISO 3166-1 alpha-2 (US, RU, IN)
   iconUrl: string | null;
   isActive: boolean;
   provider?: {
@@ -98,9 +99,9 @@ export interface SmsProduct {
     displayName: string;
     slug: string;
   };
-  price: string;           // Our price (before membership discount)
-  yourPrice: string;       // Price after membership discount
-  providerPrice: string;   // Original provider price
+  price: string; // Our price (before membership discount)
+  yourPrice: string; // Price after membership discount
+  providerPrice: string; // Original provider price
   availableCount: number;
   lastSyncAt: string | null;
 }
@@ -163,7 +164,7 @@ export interface SmsRental {
   };
   phoneNumber: string | null;
   status: SmsRentalStatus;
-  rentalDuration: number;  // Hours
+  rentalDuration: number; // Hours
   cost: string;
   discount: string;
   finalCost: string;
@@ -301,7 +302,7 @@ export interface ProductQueryParams {
   countryId?: string;
   category?: string;
   search?: string;
-  available?: boolean;     // Only show available (count > 0)
+  available?: boolean; // Only show available (count > 0)
   sortBy?: 'price_asc' | 'price_desc' | 'popular' | 'available';
   page?: number;
   limit?: number;
@@ -324,8 +325,8 @@ export interface CountryQueryParams {
 
 export interface OrderQueryParams {
   status?: SmsOrderStatus;
-  fromDate?: string;       // YYYY-MM-DD
-  toDate?: string;         // YYYY-MM-DD
+  fromDate?: string; // YYYY-MM-DD
+  toDate?: string; // YYYY-MM-DD
   page?: number;
   limit?: number;
 }
@@ -412,7 +413,9 @@ export interface SyncResponse {
  * GET /api/v1/sms/providers
  */
 export const getProviders = async (): Promise<ProvidersResponse> => {
-  const response = await apiClient.get<ProvidersResponse>('/sms/providers');
+  const response = await apiClient.get<ProvidersResponse>(
+    API_ENDPOINTS.SMS.PROVIDERS,
+  );
   return response.data;
 };
 
@@ -420,8 +423,13 @@ export const getProviders = async (): Promise<ProvidersResponse> => {
  * Get list of services (filterable)
  * GET /api/v1/sms/services
  */
-export const getServices = async (params?: ServiceQueryParams): Promise<PaginatedResponse<SmsService>> => {
-  const response = await apiClient.get<PaginatedResponse<SmsService>>('/sms/services', { params });
+export const getServices = async (
+  params?: ServiceQueryParams,
+): Promise<PaginatedResponse<SmsService>> => {
+  const response = await apiClient.get<PaginatedResponse<SmsService>>(
+    API_ENDPOINTS.SMS.SERVICES,
+    { params },
+  );
   return response.data;
 };
 
@@ -429,8 +437,13 @@ export const getServices = async (params?: ServiceQueryParams): Promise<Paginate
  * Get list of countries (filterable)
  * GET /api/v1/sms/countries
  */
-export const getCountries = async (params?: CountryQueryParams): Promise<PaginatedResponse<SmsCountry>> => {
-  const response = await apiClient.get<PaginatedResponse<SmsCountry>>('/sms/countries', { params });
+export const getCountries = async (
+  params?: CountryQueryParams,
+): Promise<PaginatedResponse<SmsCountry>> => {
+  const response = await apiClient.get<PaginatedResponse<SmsCountry>>(
+    API_ENDPOINTS.SMS.COUNTRIES,
+    { params },
+  );
   return response.data;
 };
 
@@ -438,8 +451,13 @@ export const getCountries = async (params?: CountryQueryParams): Promise<Paginat
  * Get products with prices (filterable)
  * GET /api/v1/sms/products
  */
-export const getProducts = async (params?: ProductQueryParams): Promise<PaginatedResponse<SmsProduct>> => {
-  const response = await apiClient.get<PaginatedResponse<SmsProduct>>('/sms/products', { params });
+export const getProducts = async (
+  params?: ProductQueryParams,
+): Promise<PaginatedResponse<SmsProduct>> => {
+  const response = await apiClient.get<PaginatedResponse<SmsProduct>>(
+    API_ENDPOINTS.SMS.PRODUCTS,
+    { params },
+  );
   return response.data;
 };
 
@@ -449,8 +467,13 @@ export const getProducts = async (params?: ProductQueryParams): Promise<Paginate
  * Buy a number for SMS activation
  * POST /api/v1/sms/activate
  */
-export const activateNumber = async (productId: string): Promise<ActivateResponse> => {
-  const response = await apiClient.post<ActivateResponse>('/sms/activate', { productId });
+export const activateNumber = async (
+  productId: string,
+): Promise<ActivateResponse> => {
+  const response = await apiClient.post<ActivateResponse>(
+    API_ENDPOINTS.SMS.ACTIVATE,
+    { productId },
+  );
   return response.data;
 };
 
@@ -458,8 +481,12 @@ export const activateNumber = async (productId: string): Promise<ActivateRespons
  * Check SMS status for an order
  * GET /api/v1/sms/activate/:orderId
  */
-export const checkOrderStatus = async (orderId: string): Promise<{ order: SmsOrder }> => {
-  const response = await apiClient.get<{ order: SmsOrder }>(`/sms/activate/${orderId}`);
+export const checkOrderStatus = async (
+  orderId: string,
+): Promise<{ order: SmsOrder }> => {
+  const response = await apiClient.get<{ order: SmsOrder }>(
+    API_ENDPOINTS.SMS.ACTIVATE_ORDER(orderId),
+  );
   return response.data;
 };
 
@@ -468,7 +495,9 @@ export const checkOrderStatus = async (orderId: string): Promise<{ order: SmsOrd
  * POST /api/v1/sms/activate/:orderId/cancel
  */
 export const cancelOrder = async (orderId: string): Promise<CancelResponse> => {
-  const response = await apiClient.post<CancelResponse>(`/sms/activate/${orderId}/cancel`);
+  const response = await apiClient.post<CancelResponse>(
+    API_ENDPOINTS.SMS.ACTIVATE_CANCEL(orderId),
+  );
   return response.data;
 };
 
@@ -476,8 +505,13 @@ export const cancelOrder = async (orderId: string): Promise<CancelResponse> => {
  * Get user's activation order history
  * GET /api/v1/sms/activate/history
  */
-export const getOrderHistory = async (params?: OrderQueryParams): Promise<PaginatedResponse<SmsOrder>> => {
-  const response = await apiClient.get<PaginatedResponse<SmsOrder>>('/sms/activate/history', { params });
+export const getOrderHistory = async (
+  params?: OrderQueryParams,
+): Promise<PaginatedResponse<SmsOrder>> => {
+  const response = await apiClient.get<PaginatedResponse<SmsOrder>>(
+    API_ENDPOINTS.SMS.ACTIVATE_HISTORY,
+    { params },
+  );
   return response.data;
 };
 
@@ -490,9 +524,9 @@ export const getOrderHistory = async (params?: OrderQueryParams): Promise<Pagina
 export const rentNumber = async (
   serviceId: string,
   countryId: string,
-  duration: 1 | 4 | 12 | 24 | 48 | 72
+  duration: 1 | 4 | 12 | 24 | 48 | 72,
 ): Promise<RentResponse> => {
-  const response = await apiClient.post<RentResponse>('/sms/rent', {
+  const response = await apiClient.post<RentResponse>(API_ENDPOINTS.SMS.RENT, {
     serviceId,
     countryId,
     duration,
@@ -504,8 +538,12 @@ export const rentNumber = async (
  * Check rental status and messages
  * GET /api/v1/sms/rent/:rentalId
  */
-export const checkRentalStatus = async (rentalId: string): Promise<{ rental: SmsRental }> => {
-  const response = await apiClient.get<{ rental: SmsRental }>(`/sms/rent/${rentalId}`);
+export const checkRentalStatus = async (
+  rentalId: string,
+): Promise<{ rental: SmsRental }> => {
+  const response = await apiClient.get<{ rental: SmsRental }>(
+    API_ENDPOINTS.SMS.RENT_DETAIL(rentalId),
+  );
   return response.data;
 };
 
@@ -513,8 +551,12 @@ export const checkRentalStatus = async (rentalId: string): Promise<{ rental: Sms
  * Cancel rental (partial refund)
  * POST /api/v1/sms/rent/:rentalId/cancel
  */
-export const cancelRental = async (rentalId: string): Promise<CancelResponse> => {
-  const response = await apiClient.post<CancelResponse>(`/sms/rent/${rentalId}/cancel`);
+export const cancelRental = async (
+  rentalId: string,
+): Promise<CancelResponse> => {
+  const response = await apiClient.post<CancelResponse>(
+    API_ENDPOINTS.SMS.RENT_CANCEL(rentalId),
+  );
   return response.data;
 };
 
@@ -522,8 +564,13 @@ export const cancelRental = async (rentalId: string): Promise<CancelResponse> =>
  * Get user's rental history
  * GET /api/v1/sms/rent/history
  */
-export const getRentalHistory = async (params?: RentalQueryParams): Promise<PaginatedResponse<SmsRental>> => {
-  const response = await apiClient.get<PaginatedResponse<SmsRental>>('/sms/rent/history', { params });
+export const getRentalHistory = async (
+  params?: RentalQueryParams,
+): Promise<PaginatedResponse<SmsRental>> => {
+  const response = await apiClient.get<PaginatedResponse<SmsRental>>(
+    API_ENDPOINTS.SMS.RENT_HISTORY,
+    { params },
+  );
   return response.data;
 };
 
@@ -533,8 +580,13 @@ export const getRentalHistory = async (params?: RentalQueryParams): Promise<Pagi
  * Get user's favorites
  * GET /api/v1/sms/favorites
  */
-export const getFavorites = async (params?: PaginationParams): Promise<PaginatedResponse<SmsFavorite>> => {
-  const response = await apiClient.get<PaginatedResponse<SmsFavorite>>('/sms/favorites', { params });
+export const getFavorites = async (
+  params?: PaginationParams,
+): Promise<PaginatedResponse<SmsFavorite>> => {
+  const response = await apiClient.get<PaginatedResponse<SmsFavorite>>(
+    API_ENDPOINTS.SMS.FAVORITES,
+    { params },
+  );
   return response.data;
 };
 
@@ -545,9 +597,12 @@ export const getFavorites = async (params?: PaginationParams): Promise<Paginated
 export const addFavorite = async (
   serviceId: string,
   countryId: string,
-  providerId: string
+  providerId: string,
 ): Promise<{ favorite: SmsFavorite; message: string }> => {
-  const response = await apiClient.post<{ favorite: SmsFavorite; message: string }>('/sms/favorites', {
+  const response = await apiClient.post<{
+    favorite: SmsFavorite;
+    message: string;
+  }>(API_ENDPOINTS.SMS.FAVORITES, {
     serviceId,
     countryId,
     providerId,
@@ -559,8 +614,12 @@ export const addFavorite = async (
  * Remove from favorites
  * DELETE /api/v1/sms/favorites/:id
  */
-export const removeFavorite = async (id: string): Promise<{ message: string }> => {
-  const response = await apiClient.delete<{ message: string }>(`/sms/favorites/${id}`);
+export const removeFavorite = async (
+  id: string,
+): Promise<{ message: string }> => {
+  const response = await apiClient.delete<{ message: string }>(
+    API_ENDPOINTS.SMS.FAVORITE_DETAIL(id),
+  );
   return response.data;
 };
 
@@ -575,7 +634,9 @@ export const removeFavorite = async (id: string): Promise<{ message: string }> =
  * GET /api/v1/admin/sms/providers
  */
 export const adminGetProviders = async (): Promise<ProvidersResponse> => {
-  const response = await apiClient.get<ProvidersResponse>('/admin/sms/providers');
+  const response = await apiClient.get<ProvidersResponse>(
+    API_ENDPOINTS.ADMIN.SMS.PROVIDERS,
+  );
   return response.data;
 };
 
@@ -591,12 +652,12 @@ export const adminUpdateProvider = async (
     priority?: number;
     markup?: number;
     settings?: Record<string, unknown>;
-  }
+  },
 ): Promise<{ provider: SmsProvider; message: string }> => {
-  const response = await apiClient.patch<{ provider: SmsProvider; message: string }>(
-    `/admin/sms/providers/${id}`,
-    data
-  );
+  const response = await apiClient.patch<{
+    provider: SmsProvider;
+    message: string;
+  }>(API_ENDPOINTS.ADMIN.SMS.PROVIDER_DETAIL(id), data);
   return response.data;
 };
 
@@ -605,7 +666,9 @@ export const adminUpdateProvider = async (
  * POST /api/v1/admin/sms/providers/:id/sync
  */
 export const adminSyncProvider = async (id: string): Promise<SyncResponse> => {
-  const response = await apiClient.post<SyncResponse>(`/admin/sms/providers/${id}/sync`);
+  const response = await apiClient.post<SyncResponse>(
+    API_ENDPOINTS.ADMIN.SMS.PROVIDER_SYNC(id),
+  );
   return response.data;
 };
 
@@ -615,8 +678,13 @@ export const adminSyncProvider = async (id: string): Promise<SyncResponse> => {
  * Get all services (admin view)
  * GET /api/v1/admin/sms/services
  */
-export const adminGetServices = async (params?: AdminServiceQueryParams): Promise<PaginatedResponse<SmsService>> => {
-  const response = await apiClient.get<PaginatedResponse<SmsService>>('/admin/sms/services', { params });
+export const adminGetServices = async (
+  params?: AdminServiceQueryParams,
+): Promise<PaginatedResponse<SmsService>> => {
+  const response = await apiClient.get<PaginatedResponse<SmsService>>(
+    API_ENDPOINTS.ADMIN.SMS.SERVICES,
+    { params },
+  );
   return response.data;
 };
 
@@ -631,12 +699,12 @@ export const adminUpdateService = async (
     category?: string;
     iconUrl?: string;
     isActive?: boolean;
-  }
+  },
 ): Promise<{ service: SmsService; message: string }> => {
-  const response = await apiClient.patch<{ service: SmsService; message: string }>(
-    `/admin/sms/services/${id}`,
-    data
-  );
+  const response = await apiClient.patch<{
+    service: SmsService;
+    message: string;
+  }>(API_ENDPOINTS.ADMIN.SMS.SERVICE_DETAIL(id), data);
   return response.data;
 };
 
@@ -644,10 +712,12 @@ export const adminUpdateService = async (
  * Bulk disable services
  * POST /api/v1/admin/sms/services/bulk-disable
  */
-export const adminBulkDisableServices = async (serviceIds: string[]): Promise<{ count: number; message: string }> => {
+export const adminBulkDisableServices = async (
+  serviceIds: string[],
+): Promise<{ count: number; message: string }> => {
   const response = await apiClient.post<{ count: number; message: string }>(
-    '/admin/sms/services/bulk-disable',
-    { serviceIds }
+    API_ENDPOINTS.ADMIN.SMS.SERVICES_BULK_DISABLE,
+    { serviceIds },
   );
   return response.data;
 };
@@ -658,8 +728,13 @@ export const adminBulkDisableServices = async (serviceIds: string[]): Promise<{ 
  * Get all countries (admin view)
  * GET /api/v1/admin/sms/countries
  */
-export const adminGetCountries = async (params?: AdminCountryQueryParams): Promise<PaginatedResponse<SmsCountry>> => {
-  const response = await apiClient.get<PaginatedResponse<SmsCountry>>('/admin/sms/countries', { params });
+export const adminGetCountries = async (
+  params?: AdminCountryQueryParams,
+): Promise<PaginatedResponse<SmsCountry>> => {
+  const response = await apiClient.get<PaginatedResponse<SmsCountry>>(
+    API_ENDPOINTS.ADMIN.SMS.COUNTRIES,
+    { params },
+  );
   return response.data;
 };
 
@@ -674,12 +749,12 @@ export const adminUpdateCountry = async (
     code?: string;
     iconUrl?: string;
     isActive?: boolean;
-  }
+  },
 ): Promise<{ country: SmsCountry; message: string }> => {
-  const response = await apiClient.patch<{ country: SmsCountry; message: string }>(
-    `/admin/sms/countries/${id}`,
-    data
-  );
+  const response = await apiClient.patch<{
+    country: SmsCountry;
+    message: string;
+  }>(API_ENDPOINTS.ADMIN.SMS.COUNTRY_DETAIL(id), data);
   return response.data;
 };
 
@@ -689,8 +764,13 @@ export const adminUpdateCountry = async (
  * Get all orders (admin view)
  * GET /api/v1/admin/sms/orders
  */
-export const adminGetOrders = async (params?: AdminOrderQueryParams): Promise<PaginatedResponse<SmsOrder>> => {
-  const response = await apiClient.get<PaginatedResponse<SmsOrder>>('/admin/sms/orders', { params });
+export const adminGetOrders = async (
+  params?: AdminOrderQueryParams,
+): Promise<PaginatedResponse<SmsOrder>> => {
+  const response = await apiClient.get<PaginatedResponse<SmsOrder>>(
+    API_ENDPOINTS.ADMIN.SMS.ORDERS,
+    { params },
+  );
   return response.data;
 };
 
@@ -698,8 +778,12 @@ export const adminGetOrders = async (params?: AdminOrderQueryParams): Promise<Pa
  * Get order detail (admin)
  * GET /api/v1/admin/sms/orders/:id
  */
-export const adminGetOrder = async (id: string): Promise<{ order: SmsOrder }> => {
-  const response = await apiClient.get<{ order: SmsOrder }>(`/admin/sms/orders/${id}`);
+export const adminGetOrder = async (
+  id: string,
+): Promise<{ order: SmsOrder }> => {
+  const response = await apiClient.get<{ order: SmsOrder }>(
+    API_ENDPOINTS.ADMIN.SMS.ORDER_DETAIL(id),
+  );
   return response.data;
 };
 
@@ -709,12 +793,13 @@ export const adminGetOrder = async (id: string): Promise<{ order: SmsOrder }> =>
  */
 export const adminRefundOrder = async (
   id: string,
-  reason?: string
+  reason?: string,
 ): Promise<{ order: SmsOrder; refundAmount: string; message: string }> => {
-  const response = await apiClient.post<{ order: SmsOrder; refundAmount: string; message: string }>(
-    `/admin/sms/orders/${id}/refund`,
-    { reason }
-  );
+  const response = await apiClient.post<{
+    order: SmsOrder;
+    refundAmount: string;
+    message: string;
+  }>(API_ENDPOINTS.ADMIN.SMS.ORDER_REFUND(id), { reason });
   return response.data;
 };
 
@@ -724,8 +809,13 @@ export const adminRefundOrder = async (
  * Get all rentals (admin view)
  * GET /api/v1/admin/sms/rentals
  */
-export const adminGetRentals = async (params?: AdminRentalQueryParams): Promise<PaginatedResponse<SmsRental>> => {
-  const response = await apiClient.get<PaginatedResponse<SmsRental>>('/admin/sms/rentals', { params });
+export const adminGetRentals = async (
+  params?: AdminRentalQueryParams,
+): Promise<PaginatedResponse<SmsRental>> => {
+  const response = await apiClient.get<PaginatedResponse<SmsRental>>(
+    API_ENDPOINTS.ADMIN.SMS.RENTALS,
+    { params },
+  );
   return response.data;
 };
 
@@ -736,7 +826,9 @@ export const adminGetRentals = async (params?: AdminRentalQueryParams): Promise<
  * GET /api/v1/admin/sms/statistics
  */
 export const adminGetStatistics = async (): Promise<SmsStatistics> => {
-  const response = await apiClient.get<SmsStatistics>('/admin/sms/statistics');
+  const response = await apiClient.get<SmsStatistics>(
+    API_ENDPOINTS.ADMIN.SMS.STATISTICS,
+  );
   return response.data;
 };
 
@@ -746,8 +838,13 @@ export const adminGetStatistics = async (): Promise<SmsStatistics> => {
  * Get VIP numbers list
  * GET /api/v1/admin/sms/vip
  */
-export const adminGetVipNumbers = async (params?: PaginationParams): Promise<PaginatedResponse<VipNumber>> => {
-  const response = await apiClient.get<PaginatedResponse<VipNumber>>('/admin/sms/vip', { params });
+export const adminGetVipNumbers = async (
+  params?: PaginationParams,
+): Promise<PaginatedResponse<VipNumber>> => {
+  const response = await apiClient.get<PaginatedResponse<VipNumber>>(
+    API_ENDPOINTS.ADMIN.SMS.VIP,
+    { params },
+  );
   return response.data;
 };
 
@@ -759,9 +856,12 @@ export const adminAddVipNumber = async (
   serviceId: string,
   countryId: string,
   providerId: string,
-  rating?: number
+  rating?: number,
 ): Promise<{ vipNumber: VipNumber; message: string }> => {
-  const response = await apiClient.post<{ vipNumber: VipNumber; message: string }>('/admin/sms/vip', {
+  const response = await apiClient.post<{
+    vipNumber: VipNumber;
+    message: string;
+  }>(API_ENDPOINTS.ADMIN.SMS.VIP, {
     serviceId,
     countryId,
     providerId,
@@ -774,8 +874,12 @@ export const adminAddVipNumber = async (
  * Remove VIP number
  * DELETE /api/v1/admin/sms/vip/:id
  */
-export const adminRemoveVipNumber = async (id: string): Promise<{ message: string }> => {
-  const response = await apiClient.delete<{ message: string }>(`/admin/sms/vip/${id}`);
+export const adminRemoveVipNumber = async (
+  id: string,
+): Promise<{ message: string }> => {
+  const response = await apiClient.delete<{ message: string }>(
+    API_ENDPOINTS.ADMIN.SMS.VIP_DETAIL(id),
+  );
   return response.data;
 };
 
@@ -795,7 +899,9 @@ export const adminAutoDetectVip = async (): Promise<{
   }>;
   message: string;
 }> => {
-  const response = await apiClient.post('/admin/sms/vip/auto-detect');
+  const response = await apiClient.post(
+    API_ENDPOINTS.ADMIN.SMS.VIP_AUTO_DETECT,
+  );
   return response.data;
 };
 
@@ -862,7 +968,10 @@ export const getRentalStatusColor = (status: SmsRentalStatus): string => {
 /**
  * Format price for display
  */
-export const formatPrice = (price: string, currency: string = 'USD'): string => {
+export const formatPrice = (
+  price: string,
+  currency: string = 'USD',
+): string => {
   const num = parseFloat(price);
   return new Intl.NumberFormat('en-US', {
     style: 'currency',
@@ -887,12 +996,15 @@ export const getCountryFlag = (code: string): string => {
 /**
  * Get provider display badge
  */
-export const getProviderBadge = (slug: string): { label: string; color: string; icon: string } => {
-  const badges: Record<string, { label: string; color: string; icon: string }> = {
-    fivesim: { label: 'V1', color: '#C6A75E', icon: '💰' },
-    smsman: { label: 'V2', color: '#00D4FF', icon: '💎' },
-    herosms: { label: 'V3', color: '#10B981', icon: '🛡️' },
-  };
+export const getProviderBadge = (
+  slug: string,
+): { label: string; color: string; icon: string } => {
+  const badges: Record<string, { label: string; color: string; icon: string }> =
+    {
+      fivesim: { label: 'V1', color: '#C6A75E', icon: '💰' },
+      smsman: { label: 'V2', color: '#00D4FF', icon: '💎' },
+      herosms: { label: 'V3', color: '#10B981', icon: '🛡️' },
+    };
   return badges[slug] || { label: 'V?', color: '#666', icon: '📱' };
 };
 
@@ -913,7 +1025,9 @@ export const canCancelRental = (status: SmsRentalStatus): boolean => {
 /**
  * Calculate time remaining for order/rental
  */
-export const getTimeRemaining = (expiresAt: string): { minutes: number; seconds: number; expired: boolean } => {
+export const getTimeRemaining = (
+  expiresAt: string,
+): { minutes: number; seconds: number; expired: boolean } => {
   const now = new Date().getTime();
   const expiry = new Date(expiresAt).getTime();
   const diff = expiry - now;
@@ -969,4 +1083,3 @@ export const RENTAL_DURATIONS = [
   { value: 48, label: '2 Days', price: 'high' },
   { value: 72, label: '3 Days', price: 'highest' },
 ] as const;
-

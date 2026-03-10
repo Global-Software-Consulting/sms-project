@@ -1,6 +1,6 @@
 /**
  * Centralized Error Handling Utilities
- * 
+ *
  * This module provides consistent error handling across the application:
  * - Error message extraction from various error types
  * - User-friendly error messages for HTTP status codes
@@ -42,31 +42,31 @@ export const ErrorCodes = {
   // Network errors
   NETWORK_ERROR: 'NETWORK_ERROR',
   TIMEOUT: 'TIMEOUT',
-  
+
   // Auth errors
   INVALID_CREDENTIALS: 'INVALID_CREDENTIALS',
   UNAUTHORIZED: 'UNAUTHORIZED',
   SESSION_EXPIRED: 'SESSION_EXPIRED',
-  
+
   // Validation errors
   VALIDATION_ERROR: 'VALIDATION_ERROR',
   INVALID_INPUT: 'INVALID_INPUT',
-  
+
   // Resource errors
   NOT_FOUND: 'NOT_FOUND',
   CONFLICT: 'CONFLICT',
-  
+
   // Rate limiting
   RATE_LIMITED: 'RATE_LIMITED',
-  
+
   // Server errors
   SERVER_ERROR: 'SERVER_ERROR',
-  
+
   // Unknown
   UNKNOWN: 'UNKNOWN',
 } as const;
 
-export type ErrorCode = typeof ErrorCodes[keyof typeof ErrorCodes];
+export type ErrorCode = (typeof ErrorCodes)[keyof typeof ErrorCodes];
 
 // ============================================
 // User-Friendly Error Messages
@@ -103,48 +103,48 @@ export const ErrorMessages = {
     409: 'This email is already registered. Please use a different email or try logging in.',
     422: 'Please check your registration details and try again.',
   },
-  
+
   // Wallet
   wallet: {
     400: 'Invalid transaction. Please check the amount and try again.',
     402: 'Insufficient balance for this transaction.',
     404: 'Wallet not found. Please contact support.',
   },
-  
+
   // Payments
   payment: {
     400: 'Invalid payment details. Please check and try again.',
     402: 'Payment failed. Please try a different payment method.',
     409: 'This payment has already been processed.',
   },
-  
+
   // API Keys
   apiKeys: {
     400: 'Invalid API key configuration.',
     403: 'You have reached the maximum number of API keys (3).',
     404: 'API key not found.',
   },
-  
+
   // Membership
   membership: {
     400: 'Invalid membership operation.',
     402: 'Insufficient balance to purchase this plan.',
     409: 'You already have an active subscription to this plan.',
   },
-  
+
   // Users
   users: {
     404: 'User not found.',
     409: 'This username or email is already taken.',
   },
-  
+
   // Network
   network: {
     offline: 'You appear to be offline. Please check your internet connection.',
     timeout: 'The request timed out. Please try again.',
     serverDown: 'Unable to connect to the server. Please try again later.',
   },
-  
+
   // Generic
   generic: {
     unknown: 'An unexpected error occurred. Please try again.',
@@ -161,67 +161,75 @@ export const ErrorMessages = {
  * @param error - The error object
  * @param context - Optional context for more specific error messages (e.g., 'login', 'payment')
  */
-export function getErrorMessage(error: unknown, context?: keyof typeof ErrorMessages): string {
+export function getErrorMessage(
+  error: unknown,
+  context?: keyof typeof ErrorMessages,
+): string {
   // Handle Axios errors (API responses)
   if (error instanceof AxiosError) {
     return extractAxiosError(error, context);
   }
-  
+
   // Handle standard Error objects
   if (error instanceof Error) {
     return error.message || ErrorMessages.generic.unknown;
   }
-  
+
   // Handle string errors
   if (typeof error === 'string') {
     return error;
   }
-  
+
   // Handle AppError objects
   if (isAppError(error)) {
     return error.message;
   }
-  
+
   return ErrorMessages.generic.unknown;
 }
 
 /**
  * Extract error from Axios error response
  */
-function extractAxiosError(error: AxiosError, context?: keyof typeof ErrorMessages): string {
+function extractAxiosError(
+  error: AxiosError,
+  context?: keyof typeof ErrorMessages,
+): string {
   const status = error.response?.status;
   const apiError = error.response?.data as ApiError | undefined;
-  
+
   // First, try to get the message from the API response
   if (apiError?.message) {
-    const message = Array.isArray(apiError.message) 
-      ? apiError.message[0] 
+    const message = Array.isArray(apiError.message)
+      ? apiError.message[0]
       : apiError.message;
     return message;
   }
-  
+
   // Check for context-specific messages
   if (context && status) {
-    const contextMessages = ErrorMessages[context] as Record<number, string> | undefined;
+    const contextMessages = ErrorMessages[context] as
+      | Record<number, string>
+      | undefined;
     if (contextMessages && contextMessages[status]) {
       return contextMessages[status];
     }
   }
-  
+
   // Fall back to generic HTTP status messages
   if (status && HTTP_STATUS_MESSAGES[status]) {
     return HTTP_STATUS_MESSAGES[status];
   }
-  
+
   // Handle network errors
   if (error.code === 'ERR_NETWORK' || error.message === 'Network Error') {
     return ErrorMessages.network.serverDown;
   }
-  
+
   if (error.code === 'ECONNABORTED') {
     return ErrorMessages.network.timeout;
   }
-  
+
   return error.message || ErrorMessages.generic.unknown;
 }
 
@@ -231,18 +239,25 @@ function extractAxiosError(error: AxiosError, context?: keyof typeof ErrorMessag
 export function getErrorCode(error: unknown): ErrorCode {
   if (error instanceof AxiosError) {
     const status = error.response?.status;
-    
+
     if (error.code === 'ERR_NETWORK') return ErrorCodes.NETWORK_ERROR;
     if (error.code === 'ECONNABORTED') return ErrorCodes.TIMEOUT;
-    
+
     switch (status) {
-      case 400: return ErrorCodes.VALIDATION_ERROR;
-      case 401: return ErrorCodes.UNAUTHORIZED;
-      case 403: return ErrorCodes.UNAUTHORIZED;
-      case 404: return ErrorCodes.NOT_FOUND;
-      case 409: return ErrorCodes.CONFLICT;
-      case 422: return ErrorCodes.VALIDATION_ERROR;
-      case 429: return ErrorCodes.RATE_LIMITED;
+      case 400:
+        return ErrorCodes.VALIDATION_ERROR;
+      case 401:
+        return ErrorCodes.UNAUTHORIZED;
+      case 403:
+        return ErrorCodes.UNAUTHORIZED;
+      case 404:
+        return ErrorCodes.NOT_FOUND;
+      case 409:
+        return ErrorCodes.CONFLICT;
+      case 422:
+        return ErrorCodes.VALIDATION_ERROR;
+      case 429:
+        return ErrorCodes.RATE_LIMITED;
       case 500:
       case 502:
       case 503:
@@ -252,7 +267,7 @@ export function getErrorCode(error: unknown): ErrorCode {
         return ErrorCodes.UNKNOWN;
     }
   }
-  
+
   return ErrorCodes.UNKNOWN;
 }
 
@@ -328,12 +343,14 @@ export function isServerError(error: unknown): boolean {
  * Extract validation errors from API response
  * Returns a map of field names to error messages
  */
-export function extractValidationErrors(error: unknown): Record<string, string> {
+export function extractValidationErrors(
+  error: unknown,
+): Record<string, string> {
   const errors: Record<string, string> = {};
-  
+
   if (error instanceof AxiosError) {
     const apiError = error.response?.data as ApiError | undefined;
-    
+
     if (apiError?.message) {
       if (Array.isArray(apiError.message)) {
         // Parse validation messages like "email must be an email"
@@ -350,22 +367,25 @@ export function extractValidationErrors(error: unknown): Record<string, string> 
       }
     }
   }
-  
+
   return errors;
 }
 
 /**
  * Create a user-friendly error message for display
  */
-export function createUserFriendlyError(error: unknown, context?: keyof typeof ErrorMessages): AppError {
+export function createUserFriendlyError(
+  error: unknown,
+  context?: keyof typeof ErrorMessages,
+): AppError {
   const message = getErrorMessage(error, context);
   const code = getErrorCode(error);
-  
+
   let statusCode: number | undefined;
   if (error instanceof AxiosError) {
     statusCode = error.response?.status;
   }
-  
+
   return {
     message,
     code,
@@ -383,7 +403,7 @@ export function createUserFriendlyError(error: unknown, context?: keyof typeof E
 export function logError(error: unknown, context?: string): void {
   if (process.env.NODE_ENV === 'development') {
     console.group(`🔴 Error${context ? ` [${context}]` : ''}`);
-    
+
     if (error instanceof AxiosError) {
       console.log('Status:', error.response?.status);
       console.log('URL:', error.config?.url);
@@ -395,8 +415,7 @@ export function logError(error: unknown, context?: string): void {
     } else {
       console.log('Error:', error);
     }
-    
+
     console.groupEnd();
   }
 }
-

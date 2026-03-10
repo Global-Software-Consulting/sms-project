@@ -1,8 +1,10 @@
 import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios';
-import { getTokens, setTokens, clearTokens } from './tokenStorage';
+import { getTokens, setTokens, clearTokens } from '@/lib/api/tokenStorage';
+import { API_ENDPOINTS } from '@/config/server.config';
 
 // API Base URL
-export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api/v1';
+export const API_BASE_URL =
+  process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api/v1';
 
 // Create axios instance
 export const apiClient = axios.create({
@@ -40,24 +42,31 @@ apiClient.interceptors.request.use(
     }
     return config;
   },
-  (error) => Promise.reject(error)
+  (error) => Promise.reject(error),
 );
 
 // Auth endpoints that should NOT trigger token refresh on 401
 // These endpoints are expected to return 401 for invalid credentials
-const AUTH_ENDPOINTS = ['/auth/login', '/auth/register', '/auth/guest', '/auth/verify-otp'];
+const AUTH_ENDPOINT_LIST = [
+  API_ENDPOINTS.AUTH.LOGIN,
+  API_ENDPOINTS.AUTH.REGISTER,
+  API_ENDPOINTS.AUTH.GUEST,
+  API_ENDPOINTS.AUTH.VERIFY_OTP,
+];
 
 // Check if the request URL is an auth endpoint
 const isAuthEndpoint = (url: string | undefined): boolean => {
   if (!url) return false;
-  return AUTH_ENDPOINTS.some(endpoint => url.includes(endpoint));
+  return AUTH_ENDPOINT_LIST.some((endpoint) => url.includes(endpoint));
 };
 
 // Response interceptor - Handle token refresh
 apiClient.interceptors.response.use(
   (response) => response,
   async (error: AxiosError) => {
-    const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean };
+    const originalRequest = error.config as InternalAxiosRequestConfig & {
+      _retry?: boolean;
+    };
 
     // Skip token refresh for auth endpoints - they handle their own 401 errors
     if (isAuthEndpoint(originalRequest?.url)) {
@@ -94,9 +103,12 @@ apiClient.interceptors.response.use(
 
       try {
         // Attempt to refresh token
-        const response = await axios.post(`${API_BASE_URL}/auth/refresh`, {
-          refreshToken: tokens.refreshToken,
-        });
+        const response = await axios.post(
+          `${API_BASE_URL}${API_ENDPOINTS.AUTH.REFRESH}`,
+          {
+            refreshToken: tokens.refreshToken,
+          },
+        );
 
         const { accessToken, refreshToken } = response.data;
         setTokens(accessToken, refreshToken);
@@ -117,8 +129,7 @@ apiClient.interceptors.response.use(
     }
 
     return Promise.reject(error);
-  }
+  },
 );
 
 export default apiClient;
-

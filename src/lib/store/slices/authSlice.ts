@@ -50,57 +50,60 @@ const initialState: AuthState = {
 /**
  * Initialize auth state - check for existing session
  */
-export const initializeAuth = createAsyncThunk<User | null, void, { rejectValue: string }>(
-  'auth/initialize',
-  async (_, { rejectWithValue }) => {
-    try {
-      // Check if tokens exist
-      if (!hasTokens()) {
-        return null;
-      }
-      // Try to get current user
-      const user = await getCurrentUser();
-      return user;
-    } catch (error) {
-      logError(error, 'auth/initialize');
-      // Clear invalid tokens
-      clearTokens();
-      return rejectWithValue(getErrorMessage(error));
+export const initializeAuth = createAsyncThunk<
+  User | null,
+  void,
+  { rejectValue: string }
+>('auth/initialize', async (_, { rejectWithValue }) => {
+  try {
+    // Check if tokens exist
+    if (!hasTokens()) {
+      return null;
     }
+    // Try to get current user
+    const user = await getCurrentUser();
+    return user;
+  } catch (error) {
+    logError(error, 'auth/initialize');
+    // Clear invalid tokens
+    clearTokens();
+    return rejectWithValue(getErrorMessage(error));
   }
-);
+});
 
 /**
  * Login user
  */
-export const login = createAsyncThunk<AuthResponse, LoginRequest, { rejectValue: string }>(
-  'auth/login',
-  async (credentials, { rejectWithValue }) => {
-    try {
-      const response = await loginUser(credentials);
-      return response;
-    } catch (error) {
-      logError(error, 'auth/login');
-      return rejectWithValue(getErrorMessage(error, 'login'));
-    }
+export const login = createAsyncThunk<
+  AuthResponse,
+  LoginRequest,
+  { rejectValue: string }
+>('auth/login', async (credentials, { rejectWithValue }) => {
+  try {
+    const response = await loginUser(credentials);
+    return response;
+  } catch (error) {
+    logError(error, 'auth/login');
+    return rejectWithValue(getErrorMessage(error, 'login'));
   }
-);
+});
 
 /**
  * Register user
  */
-export const register = createAsyncThunk<AuthResponse, RegisterRequest, { rejectValue: string }>(
-  'auth/register',
-  async (data, { rejectWithValue }) => {
-    try {
-      const response = await registerUser(data);
-      return response;
-    } catch (error) {
-      logError(error, 'auth/register');
-      return rejectWithValue(getErrorMessage(error, 'register'));
-    }
+export const register = createAsyncThunk<
+  AuthResponse,
+  RegisterRequest,
+  { rejectValue: string }
+>('auth/register', async (data, { rejectWithValue }) => {
+  try {
+    const response = await registerUser(data);
+    return response;
+  } catch (error) {
+    logError(error, 'auth/register');
+    return rejectWithValue(getErrorMessage(error, 'register'));
   }
-);
+});
 
 /**
  * Logout user
@@ -116,38 +119,40 @@ export const logout = createAsyncThunk<void, void, { rejectValue: string }>(
       clearTokens();
       return rejectWithValue(getErrorMessage(error));
     }
-  }
+  },
 );
 
 /**
  * Request email verification OTP
  */
-export const sendEmailVerification = createAsyncThunk<void, void, { rejectValue: string }>(
-  'auth/sendEmailVerification',
-  async (_, { rejectWithValue }) => {
-    try {
-      await requestEmailVerification();
-    } catch (error) {
-      logError(error, 'auth/sendEmailVerification');
-      return rejectWithValue(getErrorMessage(error));
-    }
+export const sendEmailVerification = createAsyncThunk<
+  void,
+  void,
+  { rejectValue: string }
+>('auth/sendEmailVerification', async (_, { rejectWithValue }) => {
+  try {
+    await requestEmailVerification();
+  } catch (error) {
+    logError(error, 'auth/sendEmailVerification');
+    return rejectWithValue(getErrorMessage(error));
   }
-);
+});
 
 /**
  * Verify email with OTP
  */
-export const verifyEmailOtp = createAsyncThunk<void, string, { rejectValue: string }>(
-  'auth/verifyEmail',
-  async (code, { rejectWithValue }) => {
-    try {
-      await verifyEmail(code);
-    } catch (error) {
-      logError(error, 'auth/verifyEmail');
-      return rejectWithValue(getErrorMessage(error));
-    }
+export const verifyEmailOtp = createAsyncThunk<
+  void,
+  string,
+  { rejectValue: string }
+>('auth/verifyEmail', async (code, { rejectWithValue }) => {
+  try {
+    await verifyEmail(code);
+  } catch (error) {
+    logError(error, 'auth/verifyEmail');
+    return rejectWithValue(getErrorMessage(error));
   }
-);
+});
 
 // ============================================
 // Auth Slice
@@ -164,7 +169,10 @@ const authSlice = createSlice({
       state.error = null;
     },
     // Set tokens from OAuth callback
-    setAuthTokens: (_, action: PayloadAction<{ accessToken: string; refreshToken: string }>) => {
+    setAuthTokens: (
+      _,
+      action: PayloadAction<{ accessToken: string; refreshToken: string }>,
+    ) => {
       setTokens(action.payload.accessToken, action.payload.refreshToken);
     },
     // Clear error
@@ -299,21 +307,31 @@ export const {
 // ============================================
 
 export const selectUser = (state: { auth: AuthState }) => state.auth.user;
-export const selectIsAuthenticated = (state: { auth: AuthState }) => state.auth.isAuthenticated;
-export const selectIsLoading = (state: { auth: AuthState }) => state.auth.isLoading;
-export const selectIsInitialized = (state: { auth: AuthState }) => state.auth.isInitialized;
+export const selectIsAuthenticated = (state: { auth: AuthState }) =>
+  state.auth.isAuthenticated;
+export const selectIsLoading = (state: { auth: AuthState }) =>
+  state.auth.isLoading;
+export const selectIsInitialized = (state: { auth: AuthState }) =>
+  state.auth.isInitialized;
 export const selectAuthError = (state: { auth: AuthState }) => state.auth.error;
-export const selectEmailVerificationSent = (state: { auth: AuthState }) => state.auth.emailVerificationSent;
+export const selectEmailVerificationSent = (state: { auth: AuthState }) =>
+  state.auth.emailVerificationSent;
 
 // Role-based selectors (updated for 6 admin roles)
-export const selectUserRole = (state: { auth: AuthState }): UserRole | null => state.auth.user?.role ?? null;
+export const selectUserRole = (state: { auth: AuthState }): UserRole | null =>
+  state.auth.user?.role ?? null;
 export const selectIsAdmin = (state: { auth: AuthState }): boolean => {
   const role = state.auth.user?.role;
   return role ? isAdmin(role) : false;
 };
-export const selectIsUser = (state: { auth: AuthState }): boolean => state.auth.user?.role === 'USER';
-export const selectIsOwner = (state: { auth: AuthState }): boolean => state.auth.user?.role === 'OWNER';
-export const selectHasAdminRole = (state: { auth: AuthState }, requiredRole: UserRole): boolean => {
+export const selectIsUser = (state: { auth: AuthState }): boolean =>
+  state.auth.user?.role === 'USER';
+export const selectIsOwner = (state: { auth: AuthState }): boolean =>
+  state.auth.user?.role === 'OWNER';
+export const selectHasAdminRole = (
+  state: { auth: AuthState },
+  requiredRole: UserRole,
+): boolean => {
   const userRole = state.auth.user?.role;
   if (!userRole) return false;
   const userRoleIndex = ADMIN_ROLES.indexOf(userRole);

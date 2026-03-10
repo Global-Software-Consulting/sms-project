@@ -51,13 +51,16 @@ const uiSlice = createSlice({
     setTheme: (state, action: PayloadAction<'light' | 'dark' | 'system'>) => {
       state.theme = action.payload;
     },
-    addNotification: (state, action: PayloadAction<Omit<Notification, 'id'>>) => {
+    addNotification: (
+      state,
+      action: PayloadAction<Omit<Notification, 'id'>>,
+    ) => {
       const id = Date.now().toString();
       state.notifications.push({ ...action.payload, id });
     },
     removeNotification: (state, action: PayloadAction<string>) => {
       state.notifications = state.notifications.filter(
-        (notification) => notification.id !== action.payload
+        (notification) => notification.id !== action.payload,
       );
     },
     clearAllNotifications: (state) => {
@@ -65,7 +68,10 @@ const uiSlice = createSlice({
     },
     openModal: (
       state,
-      action: PayloadAction<{ modalType: string; modalProps?: Record<string, unknown> }>
+      action: PayloadAction<{
+        modalType: string;
+        modalProps?: Record<string, unknown>;
+      }>,
     ) => {
       state.modal.isOpen = true;
       state.modal.modalType = action.payload.modalType;
@@ -96,12 +102,14 @@ export const {
 } = uiSlice.actions;
 
 // Export selectors
-export const selectSidebarOpen = (state: { ui: UIState }) => state.ui.sidebarOpen;
+export const selectSidebarOpen = (state: { ui: UIState }) =>
+  state.ui.sidebarOpen;
 export const selectTheme = (state: { ui: UIState }) => state.ui.theme;
-export const selectNotifications = (state: { ui: UIState }) => state.ui.notifications;
+export const selectNotifications = (state: { ui: UIState }) =>
+  state.ui.notifications;
 export const selectModal = (state: { ui: UIState }) => state.ui.modal;
-export const selectIsPageLoading = (state: { ui: UIState }) => state.ui.isPageLoading;
+export const selectIsPageLoading = (state: { ui: UIState }) =>
+  state.ui.isPageLoading;
 
 // Export reducer
 export default uiSlice.reducer;
-

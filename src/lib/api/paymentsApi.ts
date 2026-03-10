@@ -1,11 +1,25 @@
-import { apiClient } from './config';
+import { apiClient } from '@/config/client.config';
+import { API_ENDPOINTS } from '@/config/server.config';
 
 // ============================================
 // Enums matching backend
 // ============================================
 
-export type PaymentGateway = 'STRIPE' | 'PAYGATE' | 'PLISIO' | 'CRYPTOMUS' | 'NOWPAYMENTS' | 'VOLET' | 'BINANCE';
-export type PaymentStatus = 'PENDING' | 'COMPLETED' | 'FAILED' | 'CANCELLED' | 'EXPIRED' | 'REFUNDED';
+export type PaymentGateway =
+  | 'STRIPE'
+  | 'PAYGATE'
+  | 'PLISIO'
+  | 'CRYPTOMUS'
+  | 'NOWPAYMENTS'
+  | 'VOLET'
+  | 'BINANCE';
+export type PaymentStatus =
+  | 'PENDING'
+  | 'COMPLETED'
+  | 'FAILED'
+  | 'CANCELLED'
+  | 'EXPIRED'
+  | 'REFUNDED';
 
 // ============================================
 // Types matching backend DTOs
@@ -19,7 +33,7 @@ export interface Payment {
   userId: string;
   gateway: PaymentGateway;
   status: PaymentStatus;
-  amount: string;           // Decimal as string
+  amount: string; // Decimal as string
   currency: string;
   checkoutUrl?: string | null;
   stripeSessionId?: string;
@@ -75,7 +89,13 @@ export interface GatewaysResponse {
 // PayGate.to Provider Types (like CheapStreamTV)
 // ============================================
 
-export type PaygateProvider = 'multi' | 'bitnovo' | 'mercuryo' | 'unlimit' | 'guardarian' | 'wert';
+export type PaygateProvider =
+  | 'multi'
+  | 'bitnovo'
+  | 'mercuryo'
+  | 'unlimit'
+  | 'guardarian'
+  | 'wert';
 
 export interface PaygateProviderConfig {
   id: PaygateProvider;
@@ -92,14 +112,16 @@ export const PAYGATE_PROVIDERS: PaygateProviderConfig[] = [
   {
     id: 'multi',
     name: 'Multi Provider',
-    description: 'Automatically selects the best payment provider for your region',
+    description:
+      'Automatically selects the best payment provider for your region',
     minAmount: 1,
     recommended: true,
   },
   {
     id: 'bitnovo',
     name: 'Bitnovo',
-    description: 'Credit/Debit Card - Europe, Latin America (Spain, Portugal, Italy, France, Mexico)',
+    description:
+      'Credit/Debit Card - Europe, Latin America (Spain, Portugal, Italy, France, Mexico)',
     minAmount: 10,
     regions: ['Europe', 'Latin America'],
   },
@@ -119,7 +141,8 @@ export const PAYGATE_PROVIDERS: PaygateProviderConfig[] = [
   {
     id: 'guardarian',
     name: 'Guardarian',
-    description: 'Credit/Debit Card - 170+ countries, 50+ payment methods, high limits',
+    description:
+      'Credit/Debit Card - 170+ countries, 50+ payment methods, high limits',
     minAmount: 20,
   },
   {
@@ -135,7 +158,7 @@ export const PAYGATE_PROVIDERS: PaygateProviderConfig[] = [
 // ============================================
 
 export interface CreatePaymentRequest {
-  amount: number;           // 3 - 100000 (per CLIENT_DECISIONS.md)
+  amount: number; // 3 - 100000 (per CLIENT_DECISIONS.md)
   gateway?: PaymentGateway; // Optional: specify gateway (default: STRIPE)
   successUrl?: string;
   cancelUrl?: string;
@@ -160,8 +183,13 @@ export interface PaymentQueryParams {
  * Initialize a new payment (Stripe Checkout)
  * POST /api/v1/payments
  */
-export const createPayment = async (data: CreatePaymentRequest): Promise<PaymentInitResponse> => {
-  const response = await apiClient.post<PaymentInitResponse>('/payments', data);
+export const createPayment = async (
+  data: CreatePaymentRequest,
+): Promise<PaymentInitResponse> => {
+  const response = await apiClient.post<PaymentInitResponse>(
+    API_ENDPOINTS.PAYMENTS.ROOT,
+    data,
+  );
   return response.data;
 };
 
@@ -169,8 +197,13 @@ export const createPayment = async (data: CreatePaymentRequest): Promise<Payment
  * Get user's payment history
  * GET /api/v1/payments
  */
-export const getPayments = async (params?: PaymentQueryParams): Promise<PaymentsListResponse> => {
-  const response = await apiClient.get<PaymentsListResponse>('/payments', { params });
+export const getPayments = async (
+  params?: PaymentQueryParams,
+): Promise<PaymentsListResponse> => {
+  const response = await apiClient.get<PaymentsListResponse>(
+    API_ENDPOINTS.PAYMENTS.ROOT,
+    { params },
+  );
   return response.data;
 };
 
@@ -179,7 +212,9 @@ export const getPayments = async (params?: PaymentQueryParams): Promise<Payments
  * GET /api/v1/payments/gateways
  */
 export const getGateways = async (): Promise<GatewayInfo[]> => {
-  const response = await apiClient.get<GatewaysResponse>('/payments/gateways');
+  const response = await apiClient.get<GatewaysResponse>(
+    API_ENDPOINTS.PAYMENTS.GATEWAYS,
+  );
   return response.data.gateways || [];
 };
 
@@ -188,7 +223,9 @@ export const getGateways = async (): Promise<GatewayInfo[]> => {
  * GET /api/v1/payments/:id
  */
 export const getPayment = async (id: string): Promise<Payment> => {
-  const response = await apiClient.get<Payment>(`/payments/${id}`);
+  const response = await apiClient.get<Payment>(
+    API_ENDPOINTS.PAYMENTS.DETAIL(id),
+  );
   return response.data;
 };
 
@@ -197,7 +234,9 @@ export const getPayment = async (id: string): Promise<Payment> => {
  * POST /api/v1/payments/:id/cancel
  */
 export const cancelPayment = async (id: string): Promise<Payment> => {
-  const response = await apiClient.post<Payment>(`/payments/${id}/cancel`);
+  const response = await apiClient.post<Payment>(
+    API_ENDPOINTS.PAYMENTS.CANCEL(id),
+  );
   return response.data;
 };
 
@@ -208,7 +247,10 @@ export const cancelPayment = async (id: string): Promise<Payment> => {
 /**
  * Format amount for display
  */
-export const formatAmount = (amount: string | number, currency: string = 'USD'): string => {
+export const formatAmount = (
+  amount: string | number,
+  currency: string = 'USD',
+): string => {
   const num = typeof amount === 'string' ? parseFloat(amount) : amount;
   return new Intl.NumberFormat('en-US', {
     style: 'currency',
@@ -219,7 +261,9 @@ export const formatAmount = (amount: string | number, currency: string = 'USD'):
 /**
  * Get status color for UI
  */
-export const getPaymentStatusColor = (status: PaymentStatus): { bg: string; text: string } => {
+export const getPaymentStatusColor = (
+  status: PaymentStatus,
+): { bg: string; text: string } => {
   const colors: Record<PaymentStatus, { bg: string; text: string }> = {
     PENDING: { bg: 'rgba(245, 158, 11, 0.1)', text: 'var(--warning)' },
     COMPLETED: { bg: 'rgba(34, 197, 94, 0.1)', text: 'var(--success)' },
@@ -289,4 +333,3 @@ export const PAYMENT_EXPIRY_MINUTES = 60;
 export const isValidAmount = (amount: number): boolean => {
   return amount >= MIN_AMOUNT && amount <= MAX_AMOUNT;
 };
-
