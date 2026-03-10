@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAppDispatch, useAppSelector } from '@/lib/store/hooks';
+import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import {
   login,
   register,
@@ -21,7 +21,7 @@ import {
   selectUserRole,
   selectIsAdmin,
   selectIsUser,
-} from '@/lib/store/slices/authSlice';
+} from '@/store/slices/authSlice';
 import type { LoginRequest, RegisterRequest } from '@/lib/api';
 import {
   getGoogleOAuthUrl,

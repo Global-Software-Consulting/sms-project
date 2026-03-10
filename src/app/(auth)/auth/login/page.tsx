@@ -16,14 +16,14 @@ import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Eye, EyeOff, Lock, Mail, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
-import { useAppDispatch, useAppSelector } from '@/lib/store/hooks';
+import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import {
   login,
   selectIsLoading,
   selectAuthError,
   selectIsAuthenticated,
   clearError,
-} from '@/lib/store/slices/authSlice';
+} from '@/store/slices/authSlice';
 import { getGoogleOAuthUrl, getGithubOAuthUrl } from '@/lib/api';
 
 export default function Login() {

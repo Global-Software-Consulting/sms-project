@@ -2,8 +2,8 @@
 
 import { useRef, useEffect } from 'react';
 import { Provider } from 'react-redux';
-import { makeStore, AppStore } from '@/lib/store';
-import { initializeAuth } from '@/lib/store/slices/authSlice';
+import { makeStore, AppStore } from '@/store';
+import { initializeAuth } from '@/store/slices/authSlice';
 
 interface StoreProviderProps {
   children: React.ReactNode;

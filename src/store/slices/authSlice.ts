@@ -15,7 +15,7 @@ import {
   ADMIN_ROLES,
 } from '@/lib/api';
 import { hasTokens, clearTokens, setTokens } from '@/lib/api/tokenStorage';
-import { getErrorMessage, logError } from '@/lib/errors';
+import { getErrorMessage, logError } from '@/config/errors.config';
 
 // ============================================
 // Types

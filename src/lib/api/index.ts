@@ -1,4 +1,4 @@
-export { apiClient, API_BASE_URL } from '@/config/client.config';
+export { apiClient, API_BASE_URL } from '@/config/api-client.config';
 export * from './tokenStorage';
 export * from './authApi';
 export * from './usersApi';

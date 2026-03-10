@@ -1,4 +1,4 @@
-import { apiClient } from '@/config/client.config';
+import { apiClient } from '@/config/api-client.config';
 import { setTokens, clearTokens, getRefreshToken } from './tokenStorage';
 import { API_ENDPOINTS } from '@/config/server.config';
 
