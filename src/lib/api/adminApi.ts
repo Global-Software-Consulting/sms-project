@@ -850,7 +850,7 @@ export const getLogLevelColor = (
 // Admin Membership Types
 // ============================================
 
-export type SubscriptionStatus = 'ACTIVE' | 'EXPIRED' | 'CANCELLED' | 'PENDING';
+export type SubscriptionStatus = 'ACTIVE' | 'EXPIRED' | 'CANCELLED' | 'PENDING'; 
 
 export interface AdminSubscription {
   id: string;
