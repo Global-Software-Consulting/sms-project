@@ -98,6 +98,32 @@ export const API_ENDPOINTS = {
   },
 
   // ========================
+  // Referrals
+  // ========================
+  REFERRALS: {
+    PROFILE: '/referrals/profile',
+    LINK: '/referrals/link',
+    STATS: '/referrals/stats',
+    LIST: '/referrals/list',
+    COMMISSIONS: '/referrals/commissions',
+    PAYOUTS: '/referrals/payouts',
+    REQUEST_PAYOUT: '/referrals/payouts/request',
+    VALIDATE: (code: string) => `/referrals/validate/${code}`,
+  },
+
+  // ========================
+  // Reviews
+  // ========================
+  REVIEWS: {
+    PUBLIC: '/reviews',
+    FEATURED: '/reviews/featured',
+    RATING: '/reviews/rating',
+    MY_SLOTS: '/reviews/my-slots',
+    MY_REVIEWS: '/reviews/my-reviews',
+    SUBMIT: '/reviews',
+  },
+
+  // ========================
   // Admin
   // ========================
   ADMIN: {

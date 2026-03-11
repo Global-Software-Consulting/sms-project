@@ -37,7 +37,9 @@ export interface MembershipPlan {
   name: string;
   description: string | null;
   price: string; // Decimal as string (e.g., "99.00")
+  currency?: string; // Currency code (default: USD)
   discount: number; // 0-100 percentage (0/5/10/20/40)
+  discountPercent?: number; // Alias for discount (backend may use either)
   orderLimit: number; // Max orders per checkout (25 default)
   apiRateLimit: number; // Requests per minute (30/60/120/240/600)
   activeNumberLimit: number; // Max active numbers (10/25/50/75/100)
@@ -82,6 +84,8 @@ export interface CurrentMembershipResponse {
   currentPlan: MembershipPlan | null;
   discount: number; // Current discount percentage
   orderLimit: number; // Current order limit
+  daysRemaining?: number; // Days until subscription expires
+  totalSaved?: number; // Total amount saved with membership
 }
 
 /**

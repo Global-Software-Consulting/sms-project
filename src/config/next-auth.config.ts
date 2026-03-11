@@ -13,11 +13,11 @@ const credentialsSchema = z.object({
 // NextAuth configuration
 export const authOptions: NextAuthOptions = {
   pages: {
-    signIn: '/login',
-    signOut: '/login',
-    error: '/login',
-    verifyRequest: '/verify-email',
-    newUser: '/register',
+    signIn: '/auth/login',
+    signOut: '/auth/login',
+    error: '/auth/login',
+    verifyRequest: '/auth/verify-email',
+    newUser: '/auth/signup',
   },
   callbacks: {
     jwt({ token, user, trigger, session }) {

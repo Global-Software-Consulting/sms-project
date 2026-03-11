@@ -6,6 +6,8 @@ export * from './walletApi';
 export * from './membershipApi';
 export * from './paymentsApi';
 export * from './apiKeysApi';
+export * from './referralsApi';
+export * from './reviewsApi';
 
 // adminApi re-declares types from paymentsApi/membershipApi, so exclude duplicates
 export {

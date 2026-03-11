@@ -1,6 +1,6 @@
 'use client';
 import { useTheme } from 'next-themes';
-import { Moon, Sun, Bell, User, Check, X, Menu } from 'lucide-react';
+import { Moon, Sun, Bell, User, Check, X, Menu, Loader2 } from 'lucide-react';
 import { Button } from './ui/button';
 import {
   DropdownMenu,
@@ -13,8 +13,12 @@ import {
 import { Badge } from './ui/badge';
 import { ScrollArea } from './ui/scroll-area';
 import Link from 'next/link';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { toast } from 'sonner';
+import { useRouter } from 'next/navigation';
+import { useAuth } from '@/hooks';
+import { getWalletBalance, formatBalance, WalletBalance } from '@/lib/api/walletApi';
+import { getCurrentMembership, CurrentMembershipResponse } from '@/lib/api/membershipApi';
 
 interface Notification {
   id: string;
@@ -31,7 +35,12 @@ interface DashboardHeaderProps {
 
 export function DashboardHeader({ onMenuClick }: DashboardHeaderProps = {}) {
   const { theme, setTheme } = useTheme();
+  const router = useRouter();
+  const { user, logout, isAuthenticated } = useAuth();
   const [mounted, setMounted] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [walletBalance, setWalletBalance] = useState<WalletBalance | null>(null);
+  const [membership, setMembership] = useState<CurrentMembershipResponse | null>(null);
   const [notifications, setNotifications] = useState<Notification[]>([
     {
       id: '1',
@@ -83,9 +92,46 @@ export function DashboardHeader({ onMenuClick }: DashboardHeaderProps = {}) {
     },
   ]);
 
+  // Fetch wallet balance and membership on mount
+  const fetchHeaderData = useCallback(async () => {
+    try {
+      const [walletRes, membershipRes] = await Promise.allSettled([
+        getWalletBalance(),
+        getCurrentMembership(),
+      ]);
+
+      if (walletRes.status === 'fulfilled') {
+        setWalletBalance(walletRes.value);
+      }
+      if (membershipRes.status === 'fulfilled') {
+        setMembership(membershipRes.value);
+      }
+    } catch (error) {
+      console.error('Failed to fetch header data:', error);
+    }
+  }, []);
+
   useEffect(() => {
     setMounted(true);
-  }, []);
+    if (isAuthenticated) {
+      fetchHeaderData();
+    }
+  }, [isAuthenticated, fetchHeaderData]);
+
+  // Handle sign out
+  const handleSignOut = async () => {
+    try {
+      setIsLoggingOut(true);
+      await logout();
+      toast.success('Signed out successfully');
+      router.push('/auth/login');
+    } catch (error) {
+      console.error('Logout failed:', error);
+      toast.error('Failed to sign out. Please try again.');
+    } finally {
+      setIsLoggingOut(false);
+    }
+  };
 
   const unreadCount = notifications.filter((n) => !n.read).length;
 
@@ -147,7 +193,9 @@ export function DashboardHeader({ onMenuClick }: DashboardHeaderProps = {}) {
               Balance:
             </span>
             <span className="text-primary text-xs font-semibold sm:text-sm">
-              $127.45
+              {walletBalance 
+                ? formatBalance(walletBalance.balance, walletBalance.currency)
+                : '$0.00'}
             </span>
           </div>
 
@@ -291,12 +339,16 @@ export function DashboardHeader({ onMenuClick }: DashboardHeaderProps = {}) {
             <DropdownMenuContent align="end" className="w-56">
               <DropdownMenuLabel>
                 <div className="flex flex-col space-y-1">
-                  <p className="text-sm font-medium">John Doe</p>
+                  <p className="text-sm font-medium">
+                    {user?.firstName && user?.lastName 
+                      ? `${user.firstName} ${user.lastName}`
+                      : user?.email?.split('@')[0] || 'User'}
+                  </p>
                   <p className="text-muted-foreground text-xs">
-                    john@example.com
+                    {user?.email || 'No email'}
                   </p>
                   <Badge variant="secondary" className="mt-1 w-fit">
-                    Pro Member
+                    {membership?.currentPlan?.name || 'Free'} Member
                   </Badge>
                 </div>
               </DropdownMenuLabel>
@@ -314,8 +366,19 @@ export function DashboardHeader({ onMenuClick }: DashboardHeaderProps = {}) {
               <DropdownMenuItem asChild>
                 <Link href="/">Back to Home</Link>
               </DropdownMenuItem>
-              <DropdownMenuItem className="text-destructive">
-                Sign Out
+              <DropdownMenuItem 
+                className="text-destructive cursor-pointer"
+                onClick={handleSignOut}
+                disabled={isLoggingOut}
+              >
+                {isLoggingOut ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Signing out...
+                  </>
+                ) : (
+                  'Sign Out'
+                )}
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>

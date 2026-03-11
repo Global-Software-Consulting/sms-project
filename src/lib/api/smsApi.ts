@@ -302,8 +302,6 @@ export interface ProductQueryParams {
   countryId?: string;
   category?: string;
   search?: string;
-  available?: boolean; // Only show available (count > 0)
-  sortBy?: 'price_asc' | 'price_desc' | 'popular' | 'available';
   page?: number;
   limit?: number;
 }

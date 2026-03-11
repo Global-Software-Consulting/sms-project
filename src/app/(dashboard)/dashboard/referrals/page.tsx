@@ -1,4 +1,5 @@
 'use client';
+import { useState, useEffect, useCallback } from 'react';
 import {
   Card,
   CardContent,
@@ -20,7 +21,6 @@ import {
   Gift,
   ExternalLink,
   Check,
-  MousePointerClick,
   UserPlus,
   Percent,
   Wallet,
@@ -28,6 +28,8 @@ import {
   Clock,
   CheckCircle2,
   XCircle,
+  Loader2,
+  AlertCircle,
 } from 'lucide-react';
 import {
   Table,
@@ -38,7 +40,6 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { toast } from 'sonner';
-import { useState } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -54,14 +55,44 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import {
+  getReferralProfile,
+  getReferralLink,
+  getReferralStats,
+  getReferrals,
+  getCommissions,
+  getPayouts,
+  requestPayout,
+  formatAmount,
+  getTierInfo,
+  getReferralStatusLabel,
+  getCommissionStatusLabel,
+  getPayoutStatusLabel,
+  getPayoutStatusColor,
+  maskEmail,
+  type ReferralProfile,
+  type ReferralLink as ReferralLinkType,
+  type ReferralStats,
+  type Referral,
+  type Commission,
+  type Payout,
+} from '@/lib/api/referralsApi';
 
 export default function ReferralDashboard() {
   const [copied, setCopied] = useState(false);
   const [withdrawModal, setWithdrawModal] = useState(false);
   const [withdrawAmount, setWithdrawAmount] = useState('');
-  const [withdrawMethod, setWithdrawMethod] = useState('wallet');
-  const referralCode = 'JOHN2026';
-  const referralLink = `https://smspro.com/ref/${referralCode}`;
+  const [isLoading, setIsLoading] = useState(true);
+  const [isWithdrawing, setIsWithdrawing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // API data
+  const [profile, setProfile] = useState<ReferralProfile | null>(null);
+  const [referralLink, setReferralLink] = useState<ReferralLinkType | null>(null);
+  const [stats, setStats] = useState<ReferralStats | null>(null);
+  const [referrals, setReferrals] = useState<Referral[]>([]);
+  const [commissions, setCommissions] = useState<Commission[]>([]);
+  const [payouts, setPayouts] = useState<Payout[]>([]);
 
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
@@ -70,251 +101,98 @@ export default function ReferralDashboard() {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  // Main stats
-  const mainStats = {
-    totalEarned: 387.5,
-    availableBalance: 327.5,
-    pendingBalance: 60.0,
-    thisMonth: 45.0,
-    commissionRate: 10,
-  };
+  // Fetch all referral data
+  const fetchData = useCallback(async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
 
-  // Activity stats
-  const activityStats = [
-    {
-      label: 'Total Clicks',
-      value: '1,247',
-      icon: MousePointerClick,
-      color: 'text-blue-500',
-      bgColor: 'bg-blue-500/10',
-    },
-    {
-      label: 'Total Signups',
-      value: '24',
-      icon: UserPlus,
-      color: 'text-primary',
-      bgColor: 'bg-primary/10',
-    },
-    {
-      label: 'Conversion Rate',
-      value: '1.93%',
-      icon: TrendingUp,
-      color: 'text-warning',
-      bgColor: 'bg-warning/10',
-    },
-    {
-      label: 'Active Referrals',
-      value: '21',
-      icon: Users,
-      color: 'text-success',
-      bgColor: 'bg-success/10',
-    },
-  ];
+      const [profileRes, linkRes, statsRes, referralsRes, commissionsRes, payoutsRes] =
+        await Promise.allSettled([
+          getReferralProfile(),
+          getReferralLink(),
+          getReferralStats(),
+          getReferrals({ limit: 20 }),
+          getCommissions({ limit: 20 }),
+          getPayouts({ limit: 20 }),
+        ]);
 
-  const tierProgress = {
-    current: 'Bronze',
-    next: 'Silver',
-    currentReferrals: 24,
-    nextTierReferrals: 50,
-    currentRate: 10,
-    nextRate: 12,
-    tiers: [
-      { name: 'Bronze', range: '0-49', rate: 10, active: true },
-      { name: 'Silver', range: '50-99', rate: 12, active: false, isNext: true },
-      { name: 'Gold', range: '100-249', rate: 15, active: false },
-      { name: 'Platinum', range: '250+', rate: 20, active: false },
-    ],
-  };
+      if (profileRes.status === 'fulfilled') {
+        setProfile(profileRes.value);
+      }
 
-  const referrals = [
-    {
-      id: 1,
-      user: 'user_8273',
-      joined: 'Feb 12, 2026',
-      status: 'Active',
-      spent: '$250.00',
-      earned: '$25.00',
-      lastActivity: '2 hours ago',
-    },
-    {
-      id: 2,
-      user: 'user_8192',
-      joined: 'Feb 10, 2026',
-      status: 'Active',
-      spent: '$155.00',
-      earned: '$15.50',
-      lastActivity: '1 day ago',
-    },
-    {
-      id: 3,
-      user: 'user_8145',
-      joined: 'Feb 8, 2026',
-      status: 'Active',
-      spent: '$45.00',
-      earned: '$4.50',
-      lastActivity: '3 days ago',
-    },
-    {
-      id: 4,
-      user: 'user_8089',
-      joined: 'Feb 5, 2026',
-      status: 'Pending',
-      spent: '$0.00',
-      earned: '$0.00',
-      lastActivity: 'Never',
-    },
-    {
-      id: 5,
-      user: 'user_8056',
-      joined: 'Feb 3, 2026',
-      status: 'Active',
-      spent: '$320.00',
-      earned: '$32.00',
-      lastActivity: '5 hours ago',
-    },
-  ];
+      if (linkRes.status === 'fulfilled') {
+        setReferralLink(linkRes.value);
+      }
 
-  const commissionHistory = [
-    {
-      date: 'Feb 13, 2026',
-      time: '14:23',
-      user: 'user_8273',
-      transaction: 'SMS Activation - WhatsApp',
-      amount: 15.0,
-      status: 'Paid',
-    },
-    {
-      date: 'Feb 13, 2026',
-      time: '11:45',
-      user: 'user_8056',
-      transaction: 'Wallet Top-up',
-      amount: 20.0,
-      status: 'Paid',
-    },
-    {
-      date: 'Feb 12, 2026',
-      time: '16:30',
-      user: 'user_8192',
-      transaction: 'Wallet Top-up',
-      amount: 10.0,
-      status: 'Paid',
-    },
-    {
-      date: 'Feb 11, 2026',
-      time: '09:15',
-      user: 'user_8273',
-      transaction: 'Number Rental - 30 Days',
-      amount: 10.0,
-      status: 'Paid',
-    },
-    {
-      date: 'Feb 10, 2026',
-      time: '13:20',
-      user: 'user_8192',
-      transaction: 'SMS Activation - Telegram',
-      amount: 5.5,
-      status: 'Paid',
-    },
-    {
-      date: 'Feb 9, 2026',
-      time: '18:45',
-      user: 'user_8145',
-      transaction: 'Membership Upgrade',
-      amount: 2.0,
-      status: 'Paid',
-    },
-    {
-      date: 'Feb 8, 2026',
-      time: '10:30',
-      user: 'user_8056',
-      transaction: 'SMS Activation - Instagram',
-      amount: 12.0,
-      status: 'Paid',
-    },
-    {
-      date: 'Feb 7, 2026',
-      time: '15:10',
-      user: 'user_8273',
-      transaction: 'Wallet Top-up',
-      amount: 5.0,
-      status: 'Pending',
-    },
-  ];
+      if (statsRes.status === 'fulfilled') {
+        setStats(statsRes.value);
+      }
 
-  const withdrawalHistory = [
-    {
-      id: 'WD-001',
-      date: 'Feb 10, 2026',
-      amount: 50.0,
-      method: 'Wallet Balance',
-      status: 'Completed',
-    },
-    {
-      id: 'WD-002',
-      date: 'Jan 28, 2026',
-      amount: 100.0,
-      method: 'PayPal',
-      status: 'Completed',
-    },
-    {
-      id: 'WD-003',
-      date: 'Jan 15, 2026',
-      amount: 75.0,
-      method: 'Wallet Balance',
-      status: 'Completed',
-    },
-    {
-      id: 'WD-004',
-      date: 'Jan 5, 2026',
-      amount: 200.0,
-      method: 'Bank Transfer',
-      status: 'Rejected',
-    },
-    {
-      id: 'WD-005',
-      date: 'Dec 20, 2025',
-      amount: 25.0,
-      method: 'Wallet Balance',
-      status: 'Pending',
-    },
-    {
-      id: 'WD-006',
-      date: 'Dec 8, 2025',
-      amount: 150.0,
-      method: 'PayPal',
-      status: 'Completed',
-    },
-  ];
+      if (referralsRes.status === 'fulfilled') {
+        setReferrals(referralsRes.value.data || []);
+      }
 
-  const handleWithdraw = () => {
+      if (commissionsRes.status === 'fulfilled') {
+        setCommissions(commissionsRes.value.data || []);
+      }
+
+      if (payoutsRes.status === 'fulfilled') {
+        setPayouts(payoutsRes.value.data || []);
+      }
+    } catch (err) {
+      console.error('Failed to fetch referral data:', err);
+      setError('Failed to load referral data. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  const handleWithdraw = async () => {
     const amount = parseFloat(withdrawAmount);
     if (!amount || amount <= 0) {
       toast.error('Please enter a valid amount');
       return;
     }
-    if (amount > mainStats.availableBalance) {
+    if (!profile || amount > profile.pendingEarnings) {
       toast.error('Insufficient balance');
       return;
     }
-    if (amount < 10) {
-      toast.error('Minimum withdrawal amount is $10.00');
+    if (amount < (profile?.minPayoutAmount || 10)) {
+      toast.error(`Minimum withdrawal amount is ${formatAmount(profile?.minPayoutAmount || 10)}`);
       return;
     }
-    setWithdrawModal(false);
-    setWithdrawAmount('');
-    toast.success('Withdrawal request submitted!', {
-      description: `$${amount.toFixed(2)} withdrawal to ${withdrawMethod === 'wallet' ? 'Wallet Balance' : withdrawMethod === 'paypal' ? 'PayPal' : 'Bank Transfer'} is being processed.`,
-    });
+
+    try {
+      setIsWithdrawing(true);
+      const payout = await requestPayout({ amount });
+      setPayouts((prev) => [payout, ...prev]);
+      setWithdrawModal(false);
+      setWithdrawAmount('');
+      toast.success('Withdrawal request submitted!', {
+        description: `${formatAmount(amount)} withdrawal is being processed.`,
+      });
+      // Refresh data
+      fetchData();
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || 'Failed to request payout');
+    } finally {
+      setIsWithdrawing(false);
+    }
   };
 
   const getWithdrawalStatusBadge = (status: string) => {
-    if (status === 'Completed')
+    if (status === 'COMPLETED')
       return {
         variant: 'default' as const,
         icon: CheckCircle2,
         color: 'text-success',
       };
-    if (status === 'Pending')
+    if (status === 'PENDING' || status === 'PROCESSING')
       return {
         variant: 'secondary' as const,
         icon: Clock,
@@ -326,6 +204,57 @@ export default function ReferralDashboard() {
       color: 'text-destructive',
     };
   };
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+    });
+  };
+
+  const formatDateTime = (dateString: string) => {
+    const date = new Date(dateString);
+    return {
+      date: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+      time: date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
+    };
+  };
+
+  // Loading state
+  if (isLoading) {
+    return (
+      <div className="flex min-h-[400px] items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="text-primary mx-auto h-8 w-8 animate-spin" />
+          <p className="text-muted-foreground mt-2">Loading referral data...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <div className="flex min-h-[400px] items-center justify-center">
+        <div className="text-center">
+          <AlertCircle className="text-destructive mx-auto h-8 w-8" />
+          <p className="text-destructive mt-2">{error}</p>
+          <Button onClick={fetchData} className="mt-4">
+            Try Again
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  const tierInfo = stats ? getTierInfo(stats.currentTier) : null;
+  const commissionRate = stats?.currentCommissionRate || profile?.commissionRate || 10;
+  const availableBalance = profile?.pendingEarnings || 0;
+  const totalEarnings = stats?.totalEarnings || profile?.totalEarnings || 0;
+  const pendingEarnings = stats?.pendingEarnings || 0;
+  const paidEarnings = stats?.paidEarnings || profile?.paidEarnings || 0;
+  const minPayoutAmount = profile?.minPayoutAmount || 10;
 
   return (
     <div className="space-y-6">
@@ -353,7 +282,7 @@ export default function ReferralDashboard() {
           </CardHeader>
           <CardContent>
             <div className="text-primary animate-count-up text-3xl font-bold">
-              ${mainStats.totalEarned.toFixed(2)}
+              {formatAmount(totalEarnings)}
             </div>
             <p className="text-muted-foreground mt-1 text-xs">
               All-time earnings
@@ -375,7 +304,7 @@ export default function ReferralDashboard() {
           </CardHeader>
           <CardContent>
             <div className="text-success animate-count-up text-3xl font-bold">
-              ${mainStats.availableBalance.toFixed(2)}
+              {formatAmount(availableBalance)}
             </div>
             <p className="text-muted-foreground mt-1 text-xs">
               Ready to withdraw
@@ -397,7 +326,7 @@ export default function ReferralDashboard() {
           </CardHeader>
           <CardContent>
             <div className="text-warning animate-count-up text-3xl font-bold">
-              ${mainStats.pendingBalance.toFixed(2)}
+              {formatAmount(pendingEarnings)}
             </div>
             <p className="text-muted-foreground mt-1 text-xs">
               Pending clearance
@@ -405,12 +334,12 @@ export default function ReferralDashboard() {
           </CardContent>
         </Card>
 
-        {/* This Month */}
+        {/* Paid Out */}
         <Card className="card-hover-lift">
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
               <CardTitle className="text-muted-foreground text-sm font-medium">
-                This Month
+                Paid Out
               </CardTitle>
               <div className="rounded-lg bg-blue-500/10 p-2">
                 <TrendingUp className="h-4 w-4 text-blue-500" />
@@ -419,10 +348,10 @@ export default function ReferralDashboard() {
           </CardHeader>
           <CardContent>
             <div className="animate-count-up text-3xl font-bold">
-              ${mainStats.thisMonth.toFixed(2)}
+              {formatAmount(paidEarnings)}
             </div>
             <p className="text-muted-foreground mt-1 text-xs">
-              February earnings
+              Total withdrawn
             </p>
           </CardContent>
         </Card>
@@ -441,15 +370,17 @@ export default function ReferralDashboard() {
                   Current Commission Rate
                 </p>
                 <p className="text-primary text-2xl font-bold">
-                  {mainStats.commissionRate}%
+                  {commissionRate}%
                 </p>
               </div>
             </div>
             <div className="flex items-center gap-2">
-              <Badge variant="default" className="px-3 py-1.5 text-sm">
-                <Award className="mr-1 h-3 w-3" />
-                {tierProgress.current} Tier
-              </Badge>
+              {tierInfo && (
+                <Badge variant="default" className="px-3 py-1.5 text-sm">
+                  <Award className="mr-1 h-3 w-3" />
+                  {tierInfo.icon} {tierInfo.name} Tier
+                </Badge>
+              )}
               <Button variant="outline" size="sm">
                 View Tier Benefits
                 <ExternalLink className="ml-2 h-3 w-3" />
@@ -464,7 +395,7 @@ export default function ReferralDashboard() {
         <CardHeader>
           <CardTitle>Your Referral Link</CardTitle>
           <CardDescription>
-            Share this link to earn {mainStats.commissionRate}% commission on
+            Share this link to earn {commissionRate}% commission on
             all purchases made by referred users
           </CardDescription>
         </CardHeader>
@@ -474,13 +405,13 @@ export default function ReferralDashboard() {
             <label className="text-sm font-medium">Referral Code</label>
             <div className="flex gap-2">
               <Input
-                value={referralCode}
+                value={referralLink?.customCode || referralLink?.code || profile?.referralCode || ''}
                 readOnly
                 className="bg-muted/50 font-mono text-lg font-semibold"
               />
               <Button
                 variant={copied ? 'default' : 'outline'}
-                onClick={() => copyToClipboard(referralCode)}
+                onClick={() => copyToClipboard(referralLink?.customCode || referralLink?.code || profile?.referralCode || '')}
                 className="min-w-[100px]"
               >
                 {copied ? (
@@ -503,12 +434,12 @@ export default function ReferralDashboard() {
             <label className="text-sm font-medium">Full Referral Link</label>
             <div className="flex gap-2">
               <Input
-                value={referralLink}
+                value={referralLink?.customLink || referralLink?.link || profile?.referralLink || ''}
                 readOnly
                 className="bg-muted/50 text-sm"
               />
               <Button
-                onClick={() => copyToClipboard(referralLink)}
+                onClick={() => copyToClipboard(referralLink?.customLink || referralLink?.link || profile?.referralLink || '')}
                 className="min-w-[120px]"
               >
                 <Copy className="mr-2 h-4 w-4" />
@@ -536,7 +467,7 @@ export default function ReferralDashboard() {
                 <li className="flex items-start gap-2">
                   <span className="text-primary mt-0.5">•</span>
                   <span>
-                    Earn {mainStats.commissionRate}% on all their purchases
+                    Earn {commissionRate}% on all their purchases
                   </span>
                 </li>
                 <li className="flex items-start gap-2">
@@ -562,7 +493,7 @@ export default function ReferralDashboard() {
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="text-success mt-0.5">•</span>
-                  <span>Unlock higher tier rates (up to 20%)</span>
+                  <span>Unlock higher tier rates (up to 5%)</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="text-success mt-0.5">•</span>
@@ -576,111 +507,104 @@ export default function ReferralDashboard() {
 
       {/* Activity Stats Grid */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {activityStats.map((stat) => {
-          const Icon = stat.icon;
-          return (
-            <Card key={stat.label} className="card-hover-lift">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">
-                  {stat.label}
-                </CardTitle>
-                <div className={`rounded-lg p-2 ${stat.bgColor}`}>
-                  <Icon className={`h-4 w-4 ${stat.color}`} />
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className={`text-2xl font-bold ${stat.color}`}>
-                  {stat.value}
-                </div>
-              </CardContent>
-            </Card>
-          );
-        })}
+        <Card className="card-hover-lift">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Referrals</CardTitle>
+            <div className="rounded-lg bg-blue-500/10 p-2">
+              <Users className="h-4 w-4 text-blue-500" />
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-blue-500">
+              {stats?.totalReferrals || profile?.totalReferrals || 0}
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="card-hover-lift">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Qualified</CardTitle>
+            <div className="bg-primary/10 rounded-lg p-2">
+              <UserPlus className="text-primary h-4 w-4" />
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="text-primary text-2xl font-bold">
+              {stats?.qualifiedReferrals || profile?.qualifiedReferrals || 0}
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="card-hover-lift">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Pending</CardTitle>
+            <div className="bg-warning/10 rounded-lg p-2">
+              <Clock className="text-warning h-4 w-4" />
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="text-warning text-2xl font-bold">
+              {stats?.pendingReferrals || 0}
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="card-hover-lift">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Spending</CardTitle>
+            <div className="bg-success/10 rounded-lg p-2">
+              <DollarSign className="text-success h-4 w-4" />
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="text-success text-2xl font-bold">
+              {formatAmount(stats?.totalSpending || 0)}
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Referral Tier Progress */}
-      <Card>
-        <CardHeader>
-          <div className="flex flex-wrap items-center justify-between gap-4">
-            <div>
-              <CardTitle>Referral Tier Progress</CardTitle>
-              <CardDescription>
-                Unlock higher commission rates by referring more users
-              </CardDescription>
-            </div>
-            <Badge variant="default" className="px-3 py-1.5 text-sm">
-              <Award className="mr-1.5 h-3 w-3" />
-              {tierProgress.current} Tier - {tierProgress.currentRate}%
-            </Badge>
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          {/* Progress Bar */}
-          <div className="space-y-2">
-            <div className="flex items-center justify-between text-sm">
-              <span className="text-muted-foreground">
-                {tierProgress.currentReferrals} /{' '}
-                {tierProgress.nextTierReferrals} referrals to unlock{' '}
-                {tierProgress.next}
-              </span>
-              <span className="text-primary font-semibold">
-                {Math.round(
-                  (tierProgress.currentReferrals /
-                    tierProgress.nextTierReferrals) *
-                    100,
-                )}
-                %
-              </span>
-            </div>
-            <Progress
-              value={
-                (tierProgress.currentReferrals /
-                  tierProgress.nextTierReferrals) *
-                100
-              }
-              className="h-3"
-            />
-            <p className="text-muted-foreground text-xs">
-              {tierProgress.nextTierReferrals - tierProgress.currentReferrals}{' '}
-              more referrals needed to increase commission to{' '}
-              {tierProgress.nextRate}%
-            </p>
-          </div>
-
-          {/* Tier Breakdown */}
-          <div className="border-border grid grid-cols-2 gap-3 border-t pt-4 md:grid-cols-4">
-            {tierProgress.tiers.map((tier) => (
-              <div
-                key={tier.name}
-                className={`rounded-lg p-4 text-center transition-all ${
-                  tier.active
-                    ? 'bg-primary/10 border-primary/40 border-2 shadow-sm'
-                    : tier.isNext
-                      ? 'bg-muted/70 border-primary/20 border-2'
-                      : 'bg-muted/50 border-border border'
-                }`}
-              >
-                <div className="mb-1 flex items-center justify-center gap-1">
-                  {tier.active && <Award className="text-primary h-3 w-3" />}
-                  <div
-                    className={`text-xs font-medium ${tier.active ? 'text-primary' : 'text-muted-foreground'}`}
-                  >
-                    {tier.name}
-                  </div>
-                </div>
-                <div className="text-muted-foreground mb-2 text-xs">
-                  ({tier.range} refs)
-                </div>
-                <div
-                  className={`text-xl font-bold ${tier.active ? 'text-primary' : ''}`}
-                >
-                  {tier.rate}%
-                </div>
+      {stats && stats.nextTier && (
+        <Card>
+          <CardHeader>
+            <div className="flex flex-wrap items-center justify-between gap-4">
+              <div>
+                <CardTitle>Referral Tier Progress</CardTitle>
+                <CardDescription>
+                  Unlock higher commission rates by spending more
+                </CardDescription>
               </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
+              {tierInfo && (
+                <Badge variant="default" className="px-3 py-1.5 text-sm">
+                  <Award className="mr-1.5 h-3 w-3" />
+                  {tierInfo.icon} {tierInfo.name} Tier - {commissionRate}%
+                </Badge>
+              )}
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            {/* Progress Bar */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-muted-foreground">
+                  {formatAmount(stats.totalSpending)} spent • {formatAmount(stats.spendingToNextTier || 0)} more to unlock {stats.nextTier}
+                </span>
+                <span className="text-primary font-semibold">
+                  {stats.nextTierCommissionRate}% rate
+                </span>
+              </div>
+              <Progress
+                value={stats.spendingToNextTier ? ((stats.totalSpending / (stats.totalSpending + stats.spendingToNextTier)) * 100) : 100}
+                className="h-3"
+              />
+              <p className="text-muted-foreground text-xs">
+                Spend {formatAmount(stats.spendingToNextTier || 0)} more to increase commission to {stats.nextTierCommissionRate}%
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Referred Users & Commission History */}
       <div className="grid gap-6 lg:grid-cols-2">
@@ -693,41 +617,48 @@ export default function ReferralDashboard() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="max-h-[400px] space-y-2 overflow-y-auto pr-2">
-              {referrals.map((ref) => (
-                <div
-                  key={ref.id}
-                  className="border-border hover:bg-muted/50 flex items-center justify-between rounded-lg border p-3 transition-colors"
-                >
-                  <div className="min-w-0 flex-1">
-                    <div className="mb-1 flex items-center gap-2">
-                      <p className="truncate font-mono text-sm font-medium">
-                        {ref.user}
+            {referrals.length > 0 ? (
+              <div className="max-h-[400px] space-y-2 overflow-y-auto pr-2">
+                {referrals.map((ref) => (
+                  <div
+                    key={ref.id}
+                    className="border-border hover:bg-muted/50 flex items-center justify-between rounded-lg border p-3 transition-colors"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <div className="mb-1 flex items-center gap-2">
+                        <p className="truncate font-mono text-sm font-medium">
+                          {maskEmail(ref.referredEmail)}
+                        </p>
+                        <Badge
+                          variant={ref.status === 'QUALIFIED' ? 'default' : 'secondary'}
+                          className="flex-shrink-0 text-xs"
+                        >
+                          {getReferralStatusLabel(ref.status)}
+                        </Badge>
+                      </div>
+                      <p className="text-muted-foreground text-xs">
+                        Joined {formatDate(ref.createdAt)}
+                        {ref.qualifiedAt && ` • Qualified ${formatDate(ref.qualifiedAt)}`}
                       </p>
-                      <Badge
-                        variant={
-                          ref.status === 'Active' ? 'default' : 'secondary'
-                        }
-                        className="flex-shrink-0 text-xs"
-                      >
-                        {ref.status}
-                      </Badge>
                     </div>
-                    <p className="text-muted-foreground text-xs">
-                      Joined {ref.joined} • Last active: {ref.lastActivity}
-                    </p>
+                    <div className="ml-4 flex-shrink-0 text-right">
+                      <p className="text-success text-sm font-semibold">
+                        +{formatAmount(ref.totalCommission)}
+                      </p>
+                      <p className="text-muted-foreground text-xs">
+                        {formatAmount(ref.totalDeposits)} spent
+                      </p>
+                    </div>
                   </div>
-                  <div className="ml-4 flex-shrink-0 text-right">
-                    <p className="text-success text-sm font-semibold">
-                      +{ref.earned}
-                    </p>
-                    <p className="text-muted-foreground text-xs">
-                      {ref.spent} spent
-                    </p>
-                  </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-muted-foreground py-8 text-center">
+                <Users className="mx-auto mb-2 h-8 w-8 opacity-50" />
+                <p className="text-sm">No referrals yet</p>
+                <p className="text-xs">Share your link to start earning!</p>
+              </div>
+            )}
           </CardContent>
         </Card>
 
@@ -738,114 +669,114 @@ export default function ReferralDashboard() {
             <CardDescription>Latest referral earnings</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="max-h-[400px] space-y-2 overflow-y-auto pr-2">
-              {commissionHistory.slice(0, 8).map((comm, i) => (
-                <div
-                  key={i}
-                  className="border-border hover:bg-muted/50 flex items-center justify-between rounded-lg border p-3 transition-colors"
-                >
-                  <div className="min-w-0 flex-1">
-                    <div className="mb-1 flex items-center gap-2">
-                      <p className="truncate font-mono text-sm font-medium">
-                        {comm.user}
-                      </p>
-                      <Badge
-                        variant="default"
-                        className="flex-shrink-0 text-xs"
-                      >
-                        {comm.status}
-                      </Badge>
+            {commissions.length > 0 ? (
+              <div className="max-h-[400px] space-y-2 overflow-y-auto pr-2">
+                {commissions.slice(0, 8).map((comm) => {
+                  const dateTime = formatDateTime(comm.createdAt);
+                  return (
+                    <div
+                      key={comm.id}
+                      className="border-border hover:bg-muted/50 flex items-center justify-between rounded-lg border p-3 transition-colors"
+                    >
+                      <div className="min-w-0 flex-1">
+                        <div className="mb-1 flex items-center gap-2">
+                          <p className="truncate text-sm font-medium">
+                            {comm.sourceType}
+                          </p>
+                          <Badge
+                            variant={comm.status === 'PAID' ? 'default' : 'secondary'}
+                            className="flex-shrink-0 text-xs"
+                          >
+                            {getCommissionStatusLabel(comm.status)}
+                          </Badge>
+                        </div>
+                        <p className="text-muted-foreground text-xs">
+                          {comm.commissionRate}% of {formatAmount(comm.sourceAmount)}
+                        </p>
+                        <p className="text-muted-foreground mt-0.5 text-xs">
+                          {dateTime.date} • {dateTime.time}
+                        </p>
+                      </div>
+                      <span className="text-success ml-4 flex-shrink-0 font-semibold">
+                        +{formatAmount(comm.commissionAmount)}
+                      </span>
                     </div>
-                    <p className="text-muted-foreground truncate text-xs">
-                      {comm.transaction}
-                    </p>
-                    <p className="text-muted-foreground mt-0.5 text-xs">
-                      {comm.date} • {comm.time}
-                    </p>
-                  </div>
-                  <span className="text-success ml-4 flex-shrink-0 font-semibold">
-                    +${comm.amount.toFixed(2)}
-                  </span>
-                </div>
-              ))}
-            </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="text-muted-foreground py-8 text-center">
+                <DollarSign className="mx-auto mb-2 h-8 w-8 opacity-50" />
+                <p className="text-sm">No commissions yet</p>
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
 
       {/* Full Earnings History Table */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Complete Earnings History</CardTitle>
-          <CardDescription>
-            All commission transactions with detailed information
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="border-border overflow-hidden rounded-lg border">
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Date & Time</TableHead>
-                    <TableHead>User</TableHead>
-                    <TableHead>Transaction</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead className="text-right">Earned</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {commissionHistory.map((comm, i) => (
-                    <TableRow key={i} className="hover:bg-muted/50">
-                      <TableCell className="text-sm">
-                        <div>{comm.date}</div>
-                        <div className="text-muted-foreground text-xs">
-                          {comm.time}
-                        </div>
-                      </TableCell>
-                      <TableCell className="font-mono text-sm">
-                        {comm.user}
-                      </TableCell>
-                      <TableCell className="max-w-[200px] truncate text-sm">
-                        {comm.transaction}
-                      </TableCell>
-                      <TableCell>
-                        <Badge
-                          variant={
-                            comm.status === 'Paid' ? 'default' : 'secondary'
-                          }
-                          className="text-xs"
-                        >
-                          {comm.status}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-success text-right font-semibold">
-                        +${comm.amount.toFixed(2)}
-                      </TableCell>
+      {commissions.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Complete Earnings History</CardTitle>
+            <CardDescription>
+              All commission transactions with detailed information
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="border-border overflow-hidden rounded-lg border">
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Date & Time</TableHead>
+                      <TableHead>Source</TableHead>
+                      <TableHead>Rate</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead className="text-right">Earned</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {commissions.map((comm) => {
+                      const dateTime = formatDateTime(comm.createdAt);
+                      return (
+                        <TableRow key={comm.id} className="hover:bg-muted/50">
+                          <TableCell className="text-sm">
+                            <div>{dateTime.date}</div>
+                            <div className="text-muted-foreground text-xs">
+                              {dateTime.time}
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-sm">
+                            <div>{comm.sourceType}</div>
+                            <div className="text-muted-foreground text-xs">
+                              {formatAmount(comm.sourceAmount)}
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-sm">
+                            {comm.commissionRate}%
+                          </TableCell>
+                          <TableCell>
+                            <Badge
+                              variant={comm.status === 'PAID' ? 'default' : 'secondary'}
+                              className="text-xs"
+                            >
+                              {getCommissionStatusLabel(comm.status)}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-success text-right font-semibold">
+                            +{formatAmount(comm.commissionAmount)}
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </div>
             </div>
-          </div>
-
-          {/* Pagination Placeholder */}
-          <div className="mt-4 flex items-center justify-between">
-            <p className="text-muted-foreground text-sm">
-              Showing 1-{commissionHistory.length} of {commissionHistory.length}{' '}
-              transactions
-            </p>
-            <div className="flex gap-2">
-              <Button variant="outline" size="sm" disabled>
-                Previous
-              </Button>
-              <Button variant="outline" size="sm" disabled>
-                Next
-              </Button>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      )}
 
       {/* ===== WITHDRAWALS SECTION ===== */}
       <Card className="border-success/30">
@@ -857,14 +788,13 @@ export default function ReferralDashboard() {
                 Withdraw Referral Earnings
               </CardTitle>
               <CardDescription>
-                Transfer your referral balance to your wallet or external
-                payment method
+                Transfer your referral balance to your wallet
               </CardDescription>
             </div>
             <Button
               onClick={() => setWithdrawModal(true)}
               className="bg-success hover:bg-success/90 text-success-foreground"
-              disabled={mainStats.availableBalance < 10}
+              disabled={availableBalance < minPayoutAmount}
             >
               <Wallet className="mr-2 h-4 w-4" />
               Withdraw Funds
@@ -879,7 +809,7 @@ export default function ReferralDashboard() {
                 Available to Withdraw
               </p>
               <p className="text-success text-2xl font-bold">
-                ${mainStats.availableBalance.toFixed(2)}
+                {formatAmount(availableBalance)}
               </p>
             </div>
             <div className="bg-warning/5 border-warning/20 rounded-lg border p-4 text-center">
@@ -887,65 +817,64 @@ export default function ReferralDashboard() {
                 Pending (not withdrawable)
               </p>
               <p className="text-warning text-2xl font-bold">
-                ${mainStats.pendingBalance.toFixed(2)}
+                {formatAmount(pendingEarnings)}
               </p>
             </div>
             <div className="bg-muted/50 border-border rounded-lg border p-4 text-center">
               <p className="text-muted-foreground mb-1 text-xs">
                 Minimum Withdrawal
               </p>
-              <p className="text-2xl font-bold">$10.00</p>
+              <p className="text-2xl font-bold">{formatAmount(minPayoutAmount)}</p>
             </div>
           </div>
 
           {/* Withdrawal History Table */}
           <div>
             <h4 className="mb-3 font-semibold">Withdrawal History</h4>
-            <div className="border-border overflow-hidden rounded-lg border">
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>ID</TableHead>
-                      <TableHead>Date</TableHead>
-                      <TableHead>Method</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead className="text-right">Amount</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {withdrawalHistory.map((wd) => {
-                      const statusInfo = getWithdrawalStatusBadge(wd.status);
-                      const StatusIcon = statusInfo.icon;
-                      return (
-                        <TableRow key={wd.id} className="hover:bg-muted/50">
-                          <TableCell className="text-muted-foreground font-mono text-xs">
-                            {wd.id}
-                          </TableCell>
-                          <TableCell className="text-sm">{wd.date}</TableCell>
-                          <TableCell className="text-sm">{wd.method}</TableCell>
-                          <TableCell>
-                            <Badge
-                              variant={statusInfo.variant}
-                              className="flex w-fit items-center gap-1 text-xs"
+            {payouts.length > 0 ? (
+              <div className="border-border overflow-hidden rounded-lg border">
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Date</TableHead>
+                        <TableHead>Method</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead className="text-right">Amount</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {payouts.map((payout) => {
+                        const statusInfo = getWithdrawalStatusBadge(payout.status);
+                        const StatusIcon = statusInfo.icon;
+                        return (
+                          <TableRow key={payout.id} className="hover:bg-muted/50">
+                            <TableCell className="text-sm">
+                              {formatDate(payout.createdAt)}
+                            </TableCell>
+                            <TableCell className="text-sm">{payout.method}</TableCell>
+                            <TableCell>
+                              <Badge
+                                variant={statusInfo.variant}
+                                className="flex w-fit items-center gap-1 text-xs"
+                              >
+                                <StatusIcon className="h-3 w-3" />
+                                {getPayoutStatusLabel(payout.status)}
+                              </Badge>
+                            </TableCell>
+                            <TableCell
+                              className={`text-right font-semibold ${payout.status === 'FAILED' || payout.status === 'CANCELLED' ? 'text-destructive line-through' : 'text-foreground'}`}
                             >
-                              <StatusIcon className="h-3 w-3" />
-                              {wd.status}
-                            </Badge>
-                          </TableCell>
-                          <TableCell
-                            className={`text-right font-semibold ${wd.status === 'Rejected' ? 'text-destructive line-through' : 'text-foreground'}`}
-                          >
-                            ${wd.amount.toFixed(2)}
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })}
-                  </TableBody>
-                </Table>
+                              {formatAmount(payout.amount)}
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                </div>
               </div>
-            </div>
-            {withdrawalHistory.length === 0 && (
+            ) : (
               <div className="text-muted-foreground py-8 text-center">
                 <ArrowDownToLine className="mx-auto mb-2 h-8 w-8 opacity-50" />
                 <p className="text-sm">No withdrawals yet</p>
@@ -961,14 +890,14 @@ export default function ReferralDashboard() {
           <DialogHeader>
             <DialogTitle>Withdraw Referral Balance</DialogTitle>
             <DialogDescription>
-              Transfer your earnings to your preferred payment method
+              Transfer your earnings to your wallet balance
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div className="bg-success/10 border-success/20 rounded-lg border p-3">
               <p className="text-muted-foreground text-sm">Available Balance</p>
               <p className="text-success text-2xl font-bold">
-                ${mainStats.availableBalance.toFixed(2)}
+                {formatAmount(availableBalance)}
               </p>
             </div>
 
@@ -984,14 +913,13 @@ export default function ReferralDashboard() {
                   value={withdrawAmount}
                   onChange={(e) => setWithdrawAmount(e.target.value)}
                   className="pl-7"
-                  min="10"
-                  max={mainStats.availableBalance}
+                  min={minPayoutAmount}
+                  max={availableBalance}
                   step="0.01"
                 />
               </div>
               <p className="text-muted-foreground text-xs">
-                Minimum: $10.00 • Maximum: $
-                {mainStats.availableBalance.toFixed(2)}
+                Minimum: {formatAmount(minPayoutAmount)} • Maximum: {formatAmount(availableBalance)}
               </p>
               <div className="flex gap-2">
                 {[10, 25, 50, 100].map((amt) => (
@@ -999,44 +927,24 @@ export default function ReferralDashboard() {
                     key={amt}
                     onClick={() =>
                       setWithdrawAmount(
-                        Math.min(amt, mainStats.availableBalance).toString(),
+                        Math.min(amt, availableBalance).toString(),
                       )
                     }
-                    className="border-border bg-muted/50 hover:bg-muted rounded border px-2 py-1 text-xs transition-colors"
+                    disabled={amt > availableBalance}
+                    className="border-border bg-muted/50 hover:bg-muted disabled:opacity-50 rounded border px-2 py-1 text-xs transition-colors"
                   >
                     ${amt}
                   </button>
                 ))}
                 <button
                   onClick={() =>
-                    setWithdrawAmount(mainStats.availableBalance.toString())
+                    setWithdrawAmount(availableBalance.toString())
                   }
                   className="border-success/50 bg-success/10 text-success hover:bg-success/20 rounded border px-2 py-1 text-xs transition-colors"
                 >
                   Max
                 </button>
               </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label>Withdrawal Method</Label>
-              <Select value={withdrawMethod} onValueChange={setWithdrawMethod}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="wallet">
-                    💳 Add to Wallet Balance
-                  </SelectItem>
-                  <SelectItem value="paypal">🅿️ PayPal</SelectItem>
-                  <SelectItem value="bank">🏦 Bank Transfer</SelectItem>
-                </SelectContent>
-              </Select>
-              <p className="text-muted-foreground text-xs">
-                {withdrawMethod === 'wallet'
-                  ? 'Instantly credited to your account wallet'
-                  : 'Processing time: 1-3 business days'}
-              </p>
             </div>
 
             <div className="flex gap-2 pt-2">
@@ -1050,9 +958,13 @@ export default function ReferralDashboard() {
               <Button
                 className="bg-success hover:bg-success/90 text-success-foreground flex-1"
                 onClick={handleWithdraw}
-                disabled={!withdrawAmount || parseFloat(withdrawAmount) < 10}
+                disabled={!withdrawAmount || parseFloat(withdrawAmount) < minPayoutAmount || isWithdrawing}
               >
-                <ArrowDownToLine className="mr-2 h-4 w-4" />
+                {isWithdrawing ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <ArrowDownToLine className="mr-2 h-4 w-4" />
+                )}
                 Confirm Withdrawal
               </Button>
             </div>

@@ -41,8 +41,12 @@ import {
 import {
   getOrderHistory,
   getRentalHistory,
+  getServices,
+  getCountries,
   SmsOrder,
   SmsRental,
+  SmsService,
+  SmsCountry,
 } from '@/lib/api/smsApi';
 import { useAuth } from '@/hooks';
 
@@ -52,6 +56,8 @@ interface DashboardData {
   membership: CurrentMembershipResponse | null;
   recentOrders: SmsOrder[];
   activeRentals: SmsRental[];
+  services: SmsService[];
+  countries: SmsCountry[];
   stats: {
     activeNumbers: number;
     successRate: string;
@@ -71,6 +77,8 @@ export default function Dashboard() {
     membership: null,
     recentOrders: [],
     activeRentals: [],
+    services: [],
+    countries: [],
     stats: {
       activeNumbers: 0,
       successRate: '--',
@@ -87,12 +95,14 @@ export default function Dashboard() {
       setError(null);
 
       // Fetch all data in parallel
-      const [walletRes, membershipRes, ordersRes, rentalsRes] =
+      const [walletRes, membershipRes, ordersRes, rentalsRes, servicesRes, countriesRes] =
         await Promise.allSettled([
           getWalletBalance(),
           getCurrentMembership(),
           getOrderHistory({ limit: 5 }),
           getRentalHistory({ status: 'ACTIVE', limit: 10 }),
+          getServices({ limit: 100 }),
+          getCountries({ limit: 100 }),
         ]);
 
       // Process wallet
@@ -109,6 +119,14 @@ export default function Dashboard() {
       // Process rentals
       const rentals =
         rentalsRes.status === 'fulfilled' ? rentalsRes.value.data : [];
+
+      // Process services
+      const services =
+        servicesRes.status === 'fulfilled' ? servicesRes.value.data : [];
+
+      // Process countries
+      const countries =
+        countriesRes.status === 'fulfilled' ? countriesRes.value.data : [];
 
       // Calculate stats
       const activeNumbers =
@@ -134,6 +152,8 @@ export default function Dashboard() {
         membership,
         recentOrders: orders,
         activeRentals: rentals,
+        services,
+        countries,
         stats: {
           activeNumbers,
           successRate,
@@ -348,11 +368,15 @@ export default function Dashboard() {
                     <SelectValue placeholder="Select country" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="us">🇺🇸 United States</SelectItem>
-                    <SelectItem value="uk">🇬🇧 United Kingdom</SelectItem>
-                    <SelectItem value="ca">🇨🇦 Canada</SelectItem>
-                    <SelectItem value="de">🇩🇪 Germany</SelectItem>
-                    <SelectItem value="fr">🇫🇷 France</SelectItem>
+                    {data.countries.length > 0 ? (
+                      data.countries.slice(0, 20).map((country) => (
+                        <SelectItem key={country.id} value={country.code.toLowerCase()}>
+                          {getCountryFlag(country.code)} {country.name}
+                        </SelectItem>
+                      ))
+                    ) : (
+                      <SelectItem value="" disabled>No countries available</SelectItem>
+                    )}
                   </SelectContent>
                 </Select>
               </div>
@@ -364,11 +388,15 @@ export default function Dashboard() {
                     <SelectValue placeholder="Select service" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="whatsapp">WhatsApp</SelectItem>
-                    <SelectItem value="telegram">Telegram</SelectItem>
-                    <SelectItem value="instagram">Instagram</SelectItem>
-                    <SelectItem value="facebook">Facebook</SelectItem>
-                    <SelectItem value="google">Google</SelectItem>
+                    {data.services.length > 0 ? (
+                      data.services.slice(0, 20).map((service) => (
+                        <SelectItem key={service.id} value={service.code}>
+                          {service.name}
+                        </SelectItem>
+                      ))
+                    ) : (
+                      <SelectItem value="" disabled>No services available</SelectItem>
+                    )}
                   </SelectContent>
                 </Select>
               </div>

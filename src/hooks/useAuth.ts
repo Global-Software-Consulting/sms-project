@@ -98,7 +98,7 @@ export const useAuth = () => {
   // Logout handler
   const handleLogout = useCallback(async () => {
     await dispatch(logout());
-    router.push('/login');
+    router.push('/auth/login');
   }, [dispatch, router]);
 
   // Email verification handlers

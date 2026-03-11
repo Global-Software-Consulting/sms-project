@@ -67,7 +67,26 @@ export interface PaymentsListResponse {
 }
 
 /**
- * Available gateway info
+ * Backend gateway response structure
+ */
+interface BackendGatewayInfo {
+  id?: string;
+  gateway?: string;
+  name: string;
+  description?: string;
+  type?: string;
+  minAmount: number;
+  maxAmount: number;
+  currencies: string[];
+  icon?: string;
+  feeFixed?: number;
+  feePercent?: number;
+  feePassToUser?: boolean;
+  enabled?: boolean;
+}
+
+/**
+ * Available gateway info (normalized for frontend)
  */
 export interface GatewayInfo {
   gateway: PaymentGateway;
@@ -76,6 +95,9 @@ export interface GatewayInfo {
   minAmount: number;
   maxAmount: number;
   currencies: string[];
+  description?: string;
+  type?: string;
+  icon?: string;
 }
 
 /**
@@ -208,14 +230,53 @@ export const getPayments = async (
 };
 
 /**
+ * Normalize backend gateway response to frontend format
+ */
+const normalizeGateway = (backendGateway: BackendGatewayInfo): GatewayInfo => {
+  // Backend uses 'id' field, but might also have 'gateway' field
+  const gatewayId = backendGateway.id || backendGateway.gateway || '';
+  
+  return {
+    gateway: gatewayId as PaymentGateway,
+    name: backendGateway.name,
+    // Backend only returns enabled gateways, but check if enabled field exists
+    enabled: backendGateway.enabled !== false,
+    minAmount: backendGateway.minAmount || 0,
+    maxAmount: backendGateway.maxAmount || 100000,
+    currencies: backendGateway.currencies || ['USD'],
+    description: backendGateway.description,
+    type: backendGateway.type,
+    icon: backendGateway.icon,
+  };
+};
+
+/**
  * Get available payment gateways
  * GET /api/v1/payments/gateways
  */
 export const getGateways = async (): Promise<GatewayInfo[]> => {
-  const response = await apiClient.get<GatewaysResponse>(
+  const response = await apiClient.get<BackendGatewayInfo[] | { gateways: BackendGatewayInfo[] } | { data: BackendGatewayInfo[] }>(
     API_ENDPOINTS.PAYMENTS.GATEWAYS,
   );
-  return response.data.gateways || [];
+  
+  let rawGateways: BackendGatewayInfo[] = [];
+  
+  // Handle different response structures
+  if (Array.isArray(response.data)) {
+    rawGateways = response.data;
+  } else if (response.data && 'gateways' in response.data) {
+    rawGateways = (response.data as { gateways: BackendGatewayInfo[] }).gateways || [];
+  } else if (response.data && 'data' in response.data) {
+    const data = (response.data as { data: BackendGatewayInfo[] | { gateways: BackendGatewayInfo[] } }).data;
+    if (Array.isArray(data)) {
+      rawGateways = data;
+    } else if (data && 'gateways' in data) {
+      rawGateways = data.gateways || [];
+    }
+  }
+  
+  // Normalize all gateways to frontend format
+  return rawGateways.map(normalizeGateway);
 };
 
 /**
