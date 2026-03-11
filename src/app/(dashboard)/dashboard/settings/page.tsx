@@ -76,12 +76,16 @@ export default function Settings() {
       setIsLoading(true);
       const response = await getUserProfile();
       setProfile(response);
-      setFullName(response.fullName || '');
+      // Combine firstName and lastName into fullName for display
+      const displayName = [response.firstName, response.lastName].filter(Boolean).join(' ');
+      setFullName(displayName || '');
       setEmail(response.email);
-      setPhone(response.phone && !response.phone.includes('@') ? response.phone : '');
-      setEmailNotifications(response.preferences?.emailNotifications ?? true);
-      setSmsNotifications(response.preferences?.smsNotifications ?? true);
-      setMarketingEmails(response.preferences?.marketingEmails ?? false);
+      setPhone(response.phone || '');
+      // Note: Notification preferences are not yet supported by backend
+      // Using default values for now
+      setEmailNotifications(true);
+      setSmsNotifications(true);
+      setMarketingEmails(false);
     } catch (err) {
       console.error('Failed to fetch profile:', err);
       toast.error('Failed to load profile');
@@ -99,21 +103,22 @@ export default function Settings() {
   const handleSaveProfile = async () => {
     // Validate phone if provided
     if (phone && !isValidPhone(phone)) {
-      toast.error('Please enter a valid phone number');
+      toast.error('Please enter a valid phone number (e.g., +1234567890)');
       return;
     }
 
     try {
       setIsSavingProfile(true);
 
+      // Split fullName into firstName and lastName
+      const nameParts = fullName.trim().split(/\s+/);
+      const firstName = nameParts[0] || undefined;
+      const lastName = nameParts.length > 1 ? nameParts.slice(1).join(' ') : undefined;
+
       const updateData: UpdateProfileRequest = {
-        fullName: fullName || undefined,
+        firstName,
+        lastName,
         phone: phone || undefined,
-        preferences: {
-          emailNotifications,
-          smsNotifications,
-          marketingEmails,
-        },
       };
 
       const response = await updateUserProfile(updateData);
@@ -251,8 +256,11 @@ export default function Settings() {
                 type="tel"
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
-                placeholder="+1 (555) 123-4567"
+                placeholder="+1234567890"
               />
+              <p className="text-muted-foreground text-xs">
+                Format: +1234567890 (7-15 digits)
+              </p>
             </div>
             <div className="space-y-2">
               <Label>Account Status</Label>
