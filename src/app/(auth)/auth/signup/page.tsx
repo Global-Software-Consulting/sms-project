@@ -16,9 +16,13 @@ import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Eye, EyeOff, Lock, Mail, User, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
+import { useAppDispatch, useAppSelector } from '@/store/hooks';
+import { register, selectIsLoading, clearError } from '@/store/slices/authSlice';
 
 export default function Signup() {
   const router = useRouter();
+  const dispatch = useAppDispatch();
+  const isLoading = useAppSelector(selectIsLoading);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [formData, setFormData] = useState({
@@ -28,7 +32,6 @@ export default function Signup() {
     confirmPassword: '',
   });
   const [agreeToTerms, setAgreeToTerms] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -47,19 +50,26 @@ export default function Signup() {
       return;
     }
 
-    setIsLoading(true);
+    dispatch(clearError());
 
-    // Simulate API call
-    setTimeout(() => {
-      setIsLoading(false);
-      toast.success('🎉 Account created successfully!', {
+    const result = await dispatch(
+      register({
+        name: formData.name,
+        email: formData.email,
+        password: formData.password,
+      }),
+    );
+
+    if (register.fulfilled.match(result)) {
+      toast.success('Account created successfully!', {
         description: 'Welcome to SMSPro! Redirecting to your dashboard...',
       });
-      // Navigate to dashboard after successful signup
-      setTimeout(() => {
-        router.push('/dashboard');
-      }, 500);
-    }, 1500);
+      router.push('/dashboard');
+    } else {
+      toast.error('Registration failed', {
+        description: (result.payload as string) || 'Something went wrong. Please try again.',
+      });
+    }
   };
 
   return (

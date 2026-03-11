@@ -14,6 +14,8 @@ import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, CheckCircle2, Mail } from 'lucide-react';
 import { toast } from 'sonner';
+import { forgotPassword } from '@/lib/api';
+import { getErrorMessage } from '@/config/errors.config';
 
 export default function ForgotPassword() {
   const [email, setEmail] = useState('');
@@ -23,15 +25,20 @@ export default function ForgotPassword() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-
-    // Simulate API call
-    setTimeout(() => {
-      setIsLoading(false);
+   console.log(email, "email")
+    try {
+      await forgotPassword(email);
       setEmailSent(true);
-      toast.success('Reset link sent!', {
-        description: 'Check your email for the password reset link',
+      toast.success('OTP sent!', {
+        description: 'Check your email for the password reset OTP',
       });
-    }, 1500);
+    } catch (error) {
+      toast.error('Failed to send OTP', {
+        description: getErrorMessage(error),
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
