@@ -78,7 +78,7 @@ export default function Settings() {
       setProfile(response);
       setFullName(response.fullName || '');
       setEmail(response.email);
-      setPhone(response.phone || '');
+      setPhone(response.phone && !response.phone.includes('@') ? response.phone : '');
       setEmailNotifications(response.preferences?.emailNotifications ?? true);
       setSmsNotifications(response.preferences?.smsNotifications ?? true);
       setMarketingEmails(response.preferences?.marketingEmails ?? false);
@@ -355,6 +355,7 @@ export default function Settings() {
                 value={currentPassword}
                 onChange={(e) => setCurrentPassword(e.target.value)}
                 className="pr-10"
+                autoComplete="new-password"
               />
               <Button
                 type="button"
@@ -380,6 +381,7 @@ export default function Settings() {
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
                 className="pr-10"
+                autoComplete="new-password"
               />
               <Button
                 type="button"
@@ -406,6 +408,7 @@ export default function Settings() {
               placeholder="••••••••"
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
+              autoComplete="new-password"
             />
           </div>
           <Button
