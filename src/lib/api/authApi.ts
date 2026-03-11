@@ -108,11 +108,10 @@ export interface LoginRequest {
 }
 
 export interface RegisterRequest {
-  firstName: string;
-  lastName: string;
+  name: string;
   email: string;
   username?: string; // Optional - 3-24 chars, letters/numbers/._ only
-  country: string;
+  country?: string;
   password: string;
 }
 
@@ -229,6 +228,18 @@ export const verifyEmail = async (code: string): Promise<MessageResponse> => {
   const response = await apiClient.post<MessageResponse>(
     API_ENDPOINTS.AUTH.VERIFY_EMAIL,
     { code },
+  );
+  return response.data;
+};
+
+/**
+ * Request password reset OTP
+ * POST /api/v1/auth/forgot-password
+ */
+export const forgotPassword = async (email: string): Promise<OtpResponse> => {
+  const response = await apiClient.post<OtpResponse>(
+    API_ENDPOINTS.AUTH.FORGOT_PASSWORD,
+    { email },
   );
   return response.data;
 };

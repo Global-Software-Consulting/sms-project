@@ -375,7 +375,7 @@ export default function Dashboard() {
                         </SelectItem>
                       ))
                     ) : (
-                      <SelectItem value="" disabled>No countries available</SelectItem>
+                      <SelectItem value="__empty" disabled>No countries available</SelectItem>
                     )}
                   </SelectContent>
                 </Select>
@@ -395,7 +395,7 @@ export default function Dashboard() {
                         </SelectItem>
                       ))
                     ) : (
-                      <SelectItem value="" disabled>No services available</SelectItem>
+                      <SelectItem value="__empty" disabled>No services available</SelectItem>
                     )}
                   </SelectContent>
                 </Select>
