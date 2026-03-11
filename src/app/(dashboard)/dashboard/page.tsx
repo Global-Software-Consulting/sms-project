@@ -168,12 +168,14 @@ export default function Dashboard() {
     }
   }, []);
 
-  // Fetch data on mount
+  // Fetch data on mount (only once when initialized)
+  const [hasFetched, setHasFetched] = useState(false);
   useEffect(() => {
-    if (isInitialized) {
+    if (isInitialized && !hasFetched) {
+      setHasFetched(true);
       fetchDashboardData();
     }
-  }, [isInitialized, fetchDashboardData]);
+  }, [isInitialized, hasFetched, fetchDashboardData]);
 
   // Format time ago
   const formatTimeAgo = (dateString: string): string => {

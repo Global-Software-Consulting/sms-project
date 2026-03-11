@@ -13,7 +13,7 @@ import {
 import { Badge } from './ui/badge';
 import { ScrollArea } from './ui/scroll-area';
 import Link from 'next/link';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks';
@@ -111,9 +111,11 @@ export function DashboardHeader({ onMenuClick }: DashboardHeaderProps = {}) {
     }
   }, []);
 
+  const hasFetchedRef = useRef(false);
   useEffect(() => {
     setMounted(true);
-    if (isAuthenticated) {
+    if (isAuthenticated && !hasFetchedRef.current) {
+      hasFetchedRef.current = true;
       fetchHeaderData();
     }
   }, [isAuthenticated, fetchHeaderData]);

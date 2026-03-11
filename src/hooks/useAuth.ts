@@ -56,12 +56,7 @@ export const useAuth = () => {
   const isAdmin = useAppSelector(selectIsAdmin);
   const isUser = useAppSelector(selectIsUser);
 
-  // Initialize auth on mount
-  useEffect(() => {
-    if (!isInitialized) {
-      dispatch(initializeAuth());
-    }
-  }, [dispatch, isInitialized]);
+  // Auth initialization is handled by StoreProvider
 
   // Login handler
   const handleLogin = useCallback(
