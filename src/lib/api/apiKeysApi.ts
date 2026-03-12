@@ -6,17 +6,13 @@ import { API_ENDPOINTS } from '@/config/server.config';
 // ============================================
 
 /**
- * API Key Scopes (per CLIENT_DECISIONS.md)
- * - read: countries/services/prices
- * - order: buy number
- * - manage: set status
- * - wallet: balance operations
+ * API Key Permissions (flat structure matching backend)
  */
 export interface ApiKeyPermissions {
-  canRead: boolean;
-  canOrder: boolean;
-  canManage: boolean;
-  canWallet: boolean;
+  canActivate: boolean;  // Can place SMS activation orders
+  canRent: boolean;      // Can rent numbers
+  canViewBalance: boolean; // Can view wallet balance
+  canViewHistory: boolean; // Can view order history
 }
 
 /**
@@ -28,23 +24,44 @@ export interface ApiKey {
   userId: string;
   name: string;
   keyPrefix: string; // First 12 chars (e.g., "bshq_live_abc...")
+  environment: 'live' | 'test';
   isActive: boolean;
-  isTestMode: boolean; // true = bshq_test_, false = bshq_live_
-  permissions: ApiKeyPermissions;
-  ipWhitelist: string[]; // Optional IP/CIDR whitelist
-  expiresAt?: string; // Optional expiration date
+  canRead: boolean;
+  canOrder: boolean;
+  canManage: boolean;
+  canWallet: boolean;
+  ipWhitelist: string[];
+  expiresAt?: string;
   lastUsedAt?: string;
   usageCount: number;
   revokedAt?: string;
   revokedReason?: string;
   createdAt: string;
+  // Computed permissions for UI
+  permissions: ApiKeyPermissions;
+  status: 'ACTIVE' | 'REVOKED' | 'EXPIRED';
 }
 
 /**
  * API Key with full key (only returned at creation)
  */
-export interface ApiKeyCreated extends ApiKey {
+export interface ApiKeyCreated {
+  id: string;
+  userId: string;
+  name: string;
+  keyPrefix: string;
+  environment: 'live' | 'test';
   key: string; // Full key - ONLY SHOWN ONCE!
+  isActive: boolean;
+  canRead: boolean;
+  canOrder: boolean;
+  canManage: boolean;
+  canWallet: boolean;
+  ipWhitelist: string[];
+  usageCount: number;
+  createdAt: string;
+  // For UI compatibility
+  apiKey: ApiKey;
 }
 
 /**
@@ -54,7 +71,7 @@ export interface ApiKeysListResponse {
   data: ApiKey[];
   meta: {
     total: number;
-    limit: number; // Max keys per user (5)
+    limit: number;
   };
 }
 
@@ -67,7 +84,7 @@ export interface ApiKeyUsage {
   totalRequests: number;
   lastUsedAt?: string;
   createdAt: string;
-  rateLimit: number; // Based on membership
+  rateLimit: number;
 }
 
 // ============================================
@@ -86,7 +103,13 @@ export interface CreateApiKeyRequest {
 }
 
 export interface UpdateApiKeyRequest {
-  name: string; // New name
+  name?: string;
+  canRead?: boolean;
+  canOrder?: boolean;
+  canManage?: boolean;
+  canWallet?: boolean;
+  ipWhitelist?: string[];
+  expiresAt?: string;
 }
 
 export interface ApiKeyQueryParams {
@@ -98,6 +121,22 @@ export interface ApiKeyQueryParams {
 // ============================================
 
 /**
+ * Transform backend response to frontend ApiKey format
+ */
+const transformApiKey = (data: any): ApiKey => {
+  return {
+    ...data,
+    permissions: {
+      canActivate: data.canOrder ?? true,
+      canRent: data.canManage ?? false,
+      canViewBalance: data.canWallet ?? true,
+      canViewHistory: data.canRead ?? true,
+    },
+    status: data.revokedAt ? 'REVOKED' : (data.expiresAt && new Date(data.expiresAt) < new Date() ? 'EXPIRED' : 'ACTIVE'),
+  };
+};
+
+/**
  * Create a new API key
  * POST /api/v1/api-keys
  *
@@ -106,11 +145,15 @@ export interface ApiKeyQueryParams {
 export const createApiKey = async (
   data: CreateApiKeyRequest,
 ): Promise<ApiKeyCreated> => {
-  const response = await apiClient.post<ApiKeyCreated>(
+  const response = await apiClient.post<any>(
     API_ENDPOINTS.API_KEYS.ROOT,
     data,
   );
-  return response.data;
+  const apiKey = transformApiKey(response.data);
+  return {
+    ...response.data,
+    apiKey,
+  };
 };
 
 /**
@@ -120,11 +163,14 @@ export const createApiKey = async (
 export const getApiKeys = async (
   params?: ApiKeyQueryParams,
 ): Promise<ApiKeysListResponse> => {
-  const response = await apiClient.get<ApiKeysListResponse>(
+  const response = await apiClient.get<any>(
     API_ENDPOINTS.API_KEYS.ROOT,
     { params },
   );
-  return response.data;
+  return {
+    data: (response.data.data || []).map(transformApiKey),
+    meta: response.data.meta || { total: 0, limit: 5 },
+  };
 };
 
 /**
@@ -132,25 +178,25 @@ export const getApiKeys = async (
  * GET /api/v1/api-keys/:id
  */
 export const getApiKey = async (id: string): Promise<ApiKey> => {
-  const response = await apiClient.get<ApiKey>(
+  const response = await apiClient.get<any>(
     API_ENDPOINTS.API_KEYS.DETAIL(id),
   );
-  return response.data;
+  return transformApiKey(response.data);
 };
 
 /**
- * Update API key name
+ * Update API key
  * PATCH /api/v1/api-keys/:id
  */
 export const updateApiKey = async (
   id: string,
   data: UpdateApiKeyRequest,
 ): Promise<ApiKey> => {
-  const response = await apiClient.patch<ApiKey>(
+  const response = await apiClient.patch<any>(
     API_ENDPOINTS.API_KEYS.DETAIL(id),
     data,
   );
-  return response.data;
+  return transformApiKey(response.data);
 };
 
 /**
