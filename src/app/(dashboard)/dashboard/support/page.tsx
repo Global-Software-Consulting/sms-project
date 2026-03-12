@@ -17,55 +17,87 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Plus, MessageSquare } from 'lucide-react';
-import { useState } from 'react';
+import { Plus, MessageSquare, Loader2, AlertCircle, ChevronLeft, ChevronRight } from 'lucide-react';
+import { useState, useEffect, useCallback } from 'react';
+import {
+  getTickets,
+  createTicket,
+  Ticket,
+  TicketPriority,
+  getTicketStatusLabel,
+  getTicketStatusVariant,
+  getTicketPriorityVariant,
+} from '@/lib/api/ticketsApi';
+import { formatDistanceToNow } from 'date-fns';
 
 export default function Support() {
   const [subject, setSubject] = useState('');
-  const [priority, setPriority] = useState('normal');
+  const [priority, setPriority] = useState('NORMAL');
   const [message, setMessage] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const tickets = [
-    {
-      id: 'TICKET-5678',
-      subject: 'Unable to receive SMS',
-      status: 'Open',
-      priority: 'High',
-      date: 'Feb 13, 2026',
-      responses: 2,
-    },
-    {
-      id: 'TICKET-5677',
-      subject: 'Wallet refund inquiry',
-      status: 'Resolved',
-      priority: 'Normal',
-      date: 'Feb 12, 2026',
-      responses: 5,
-    },
-    {
-      id: 'TICKET-5676',
-      subject: 'API rate limit question',
-      status: 'Closed',
-      priority: 'Low',
-      date: 'Feb 10, 2026',
-      responses: 3,
-    },
-  ];
+  // Tickets state
+  const [tickets, setTickets] = useState<Ticket[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
 
-  const getStatusBadge = (status: string) => {
-    const variants: Record<string, any> = {
-      Open: 'default',
-      Resolved: 'secondary',
-      Closed: 'secondary',
-    };
-    return <Badge variant={variants[status] || 'secondary'}>{status}</Badge>;
+  // Fetch tickets
+  const fetchTickets = useCallback(async (overridePage?: number) => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      const response = await getTickets({ page: overridePage ?? page, limit: 20 });
+      setTickets(response.tickets);
+      setTotalPages(response.totalPages);
+    } catch {
+      setError('Failed to load tickets');
+    } finally {
+      setIsLoading(false);
+    }
+  }, [page]);
+
+  useEffect(() => {
+    fetchTickets();
+  }, [fetchTickets]);
+
+  // Create ticket handler
+  const handleCreateTicket = async () => {
+    console.log('handleCreateTicket called', { subject, priority, message });
+    if (!subject.trim() || !message.trim()) return;
+    try {
+      setIsSubmitting(true);
+      setError(null);
+      await createTicket({ subject: subject.charAt(0).toUpperCase() + subject.slice(1), priority, message });
+      setSubject('');
+      setPriority('NORMAL');
+      setMessage('');
+      setPage(1);
+      await fetchTickets(1);
+    } catch {
+      setError('Failed to create ticket');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
-  const getPriorityBadge = (priority: string) => {
-    if (priority === 'High')
-      return <Badge className="bg-destructive">High</Badge>;
-    if (priority === 'Normal') return <Badge variant="secondary">Normal</Badge>;
-    return <Badge variant="outline">Low</Badge>;
+  const getPriorityLabel = (p: TicketPriority): string => {
+    const labels: Record<TicketPriority, string> = {
+      LOW: 'Low',
+      NORMAL: 'Normal',
+      HIGH: 'High',
+      URGENT: 'Urgent',
+    };
+    return labels[p] || p;
+  };
+
+  const formatDate = (dateString: string): string => {
+    try {
+      return formatDistanceToNow(new Date(dateString), { addSuffix: true });
+    } catch {
+      return dateString;
+    }
   };
 
   return (
@@ -117,9 +149,9 @@ export default function Support() {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="low">Low</SelectItem>
-                <SelectItem value="normal">Normal</SelectItem>
-                <SelectItem value="high">High</SelectItem>
+                <SelectItem value="LOW">Low</SelectItem>
+                <SelectItem value="NORMAL">Normal</SelectItem>
+                <SelectItem value="HIGH">High</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -134,9 +166,17 @@ export default function Support() {
             />
           </div>
 
-          <Button size="lg">
-            <Plus className="mr-2 h-4 w-4" />
-            Create Ticket
+          <Button
+            size="lg"
+            onClick={handleCreateTicket}
+            disabled={isSubmitting || !subject.trim() || !message.trim()}
+          >
+            {isSubmitting ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <Plus className="mr-2 h-4 w-4" />
+            )}
+            {isSubmitting ? 'Creating...' : 'Create Ticket'}
           </Button>
         </CardContent>
       </Card>
@@ -149,37 +189,87 @@ export default function Support() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="space-y-4">
-            {tickets.map((ticket) => (
-              <div
-                key={ticket.id}
-                className="border-border rounded-lg border p-4 transition-shadow hover:shadow-md"
-              >
-                <div className="mb-2 flex items-start justify-between">
-                  <div className="flex-1">
-                    <div className="mb-1 flex items-center gap-2">
-                      <h4 className="font-semibold">{ticket.subject}</h4>
-                      {getStatusBadge(ticket.status)}
-                      {getPriorityBadge(ticket.priority)}
+          {isLoading ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="text-muted-foreground h-8 w-8 animate-spin" />
+            </div>
+          ) : error ? (
+            <div className="flex flex-col items-center justify-center gap-2 py-12">
+              <AlertCircle className="text-destructive h-8 w-8" />
+              <p className="text-muted-foreground text-sm">{error}</p>
+              <Button variant="outline" size="sm" onClick={() => fetchTickets()}>
+                Retry
+              </Button>
+            </div>
+          ) : tickets.length === 0 ? (
+            <div className="text-muted-foreground py-12 text-center text-sm">
+              No tickets yet. Create one above if you need help.
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {tickets.map((ticket) => (
+                <div
+                  key={ticket.id}
+                  className="border-border rounded-lg border p-4 transition-shadow hover:shadow-md"
+                >
+                  <div className="mb-2 flex items-start justify-between">
+                    <div className="flex-1">
+                      <div className="mb-1 flex items-center gap-2">
+                        <h4 className="font-semibold capitalize">{ticket.subject}</h4>
+                        <Badge variant={getTicketStatusVariant(ticket.status)}>
+                          {getTicketStatusLabel(ticket.status)}
+                        </Badge>
+                        <Badge variant={getTicketPriorityVariant(ticket.priority)}>
+                          {getPriorityLabel(ticket.priority)}
+                        </Badge>
+                      </div>
+                      <div className="text-muted-foreground flex items-center gap-2 text-sm">
+                        <span>{ticket.ticketNumber}</span>
+                        <span>·</span>
+                        <span>{formatDate(ticket.createdAt)}</span>
+                        <span>·</span>
+                        <span className="flex items-center">
+                          <MessageSquare className="mr-1 h-3 w-3" />
+                          {ticket.responses} responses
+                        </span>
+                      </div>
                     </div>
-                    <div className="text-muted-foreground flex items-center gap-2 text-sm">
-                      <span>{ticket.id}</span>
-                      <span>•</span>
-                      <span>{ticket.date}</span>
-                      <span>•</span>
-                      <span className="flex items-center">
-                        <MessageSquare className="mr-1 h-3 w-3" />
-                        {ticket.responses} responses
-                      </span>
-                    </div>
+                    <Button variant="outline" size="sm">
+                      View Details
+                    </Button>
                   </div>
-                  <Button variant="outline" size="sm">
-                    View Details
-                  </Button>
                 </div>
+              ))}
+            </div>
+          )}
+
+          {!isLoading && !error && totalPages > 1 && (
+            <div className="mt-4 flex items-center justify-between">
+              <p className="text-muted-foreground text-sm">
+                Page {page} of {totalPages}
+              </p>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  disabled={page <= 1}
+                >
+                  <ChevronLeft className="mr-1 h-4 w-4" />
+                  Previous
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                  disabled={page >= totalPages}
+                >
+                  Next
+                  <ChevronRight className="ml-1 h-4 w-4" />
+                </Button>
               </div>
-            ))}
-          </div>
+            </div>
+          )}
         </CardContent>
       </Card>
 
