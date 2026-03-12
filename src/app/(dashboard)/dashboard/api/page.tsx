@@ -54,10 +54,10 @@ import {
 type ProviderType = 'v1' | 'v2' | 'v3';
 
 const DEFAULT_PERMISSIONS: ApiKeyPermissions = {
-  canActivate: true,
-  canRent: false,
-  canViewBalance: true,
-  canViewHistory: true,
+  canActivate: true,   // maps to canOrder
+  canRent: false,      // maps to canManage
+  canViewBalance: true, // maps to canWallet
+  canViewHistory: true, // maps to canRead
 };
 
 export default function APIAccess() {
@@ -128,9 +128,13 @@ export default function APIAccess() {
 
     try {
       setIsCreating(true);
+      // Map frontend permissions to backend field names
       const response = await createApiKey({
         name: newKeyName,
-        permissions: newKeyPermissions,
+        canOrder: newKeyPermissions.canActivate,
+        canManage: newKeyPermissions.canRent,
+        canWallet: newKeyPermissions.canViewBalance,
+        canRead: newKeyPermissions.canViewHistory,
       });
       setCreatedKey(response);
       setApiKeys(prev => [response.apiKey, ...prev]);
