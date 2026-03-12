@@ -99,6 +99,14 @@ export const API_ENDPOINTS = {
   },
 
   // ========================
+  // Tickets (Support)
+  // ========================
+  TICKETS: {
+    ROOT: '/tickets',
+    DETAIL: (id: string) => `/tickets/${id}`,
+  },
+
+  // ========================
   // Referrals
   // ========================
   REFERRALS: {

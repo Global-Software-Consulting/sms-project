@@ -75,11 +75,14 @@ export interface ApiKeyUsage {
 // ============================================
 
 export interface CreateApiKeyRequest {
-  name: string; // User-defined label
-  isTestMode?: boolean; // Default: false (live key)
-  permissions?: Partial<ApiKeyPermissions>; // Default: all true
-  ipWhitelist?: string[]; // Optional IP/CIDR whitelist
-  expiresAt?: string; // Optional expiration date (ISO string)
+  name: string;
+  environment?: 'live' | 'test';
+  canRead?: boolean;
+  canOrder?: boolean;
+  canManage?: boolean;
+  canWallet?: boolean;
+  ipWhitelist?: string[];
+  expiresAt?: string;
 }
 
 export interface UpdateApiKeyRequest {
