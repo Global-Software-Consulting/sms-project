@@ -1,7 +1,7 @@
 'use client';
 import { useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import {
   Card,
   CardContent,
@@ -21,8 +21,10 @@ import { register, selectIsLoading, clearError } from '@/store/slices/authSlice'
 
 export default function Signup() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const dispatch = useAppDispatch();
   const isLoading = useAppSelector(selectIsLoading);
+  const referralCode = searchParams.get('ref');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [formData, setFormData] = useState({
@@ -57,6 +59,7 @@ export default function Signup() {
         name: formData.name,
         email: formData.email,
         password: formData.password,
+        ...(referralCode ? { referralCode } : {}),
       }),
     );
 

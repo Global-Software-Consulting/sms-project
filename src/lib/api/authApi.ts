@@ -113,6 +113,7 @@ export interface RegisterRequest {
   username?: string; // Optional - 3-24 chars, letters/numbers/._ only
   country?: string;
   password: string;
+  referralCode?: string;
 }
 
 export interface VerifyEmailRequest {
