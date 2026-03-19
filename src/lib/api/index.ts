@@ -9,6 +9,7 @@ export * from './apiKeysApi';
 export * from './referralsApi';
 export * from './reviewsApi';
 export * from './ticketsApi';
+export * from './notificationsApi';
 
 // adminApi re-declares types from paymentsApi/membershipApi, so exclude duplicates
 export {

@@ -108,6 +108,18 @@ export const API_ENDPOINTS = {
   },
 
   // ========================
+  // Notifications
+  // ========================
+  NOTIFICATIONS: {
+    ROOT: '/notifications',
+    UNREAD_COUNT: '/notifications/unread-count',
+    READ: (id: string) => `/notifications/${id}/read`,
+    READ_ALL: '/notifications/read-all',
+    DELETE: (id: string) => `/notifications/${id}`,
+    DELETE_ALL: '/notifications',
+  },
+
+  // ========================
   // Referrals
   // ========================
   REFERRALS: {

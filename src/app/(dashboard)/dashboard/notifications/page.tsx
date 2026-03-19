@@ -1,163 +1,75 @@
 'use client';
-import { useState } from 'react';
+
 import {
   Card,
   CardContent,
   CardHeader,
   CardTitle,
-  CardDescription,
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Bell, Check, X, Trash2 } from 'lucide-react';
-import { toast } from 'sonner';
-
-interface Notification {
-  id: string;
-  type: 'sms' | 'deposit' | 'membership' | 'referral' | 'cancel' | 'system';
-  title: string;
-  message: string;
-  time: string;
-  read: boolean;
-}
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Bell, Check, X, Trash2, Loader2, ChevronLeft, ChevronRight } from 'lucide-react';
+import { useState } from 'react';
+import { useNotifications } from '@/contexts/NotificationContext';
+import { getNotificationIcon } from '@/lib/api/notificationsApi';
+import { formatDistanceToNow } from 'date-fns';
 
 export default function Notifications() {
-  const [notifications, setNotifications] = useState<Notification[]>([
-    {
-      id: '1',
-      type: 'sms',
-      title: 'SMS Received',
-      message: 'Your verification code has arrived for WhatsApp activation',
-      time: '2 minutes ago',
-      read: false,
-    },
-    {
-      id: '2',
-      type: 'deposit',
-      title: 'Deposit Successful',
-      message: '$50.00 has been added to your wallet balance',
-      time: '1 hour ago',
-      read: false,
-    },
-    {
-      id: '3',
-      type: 'referral',
-      title: 'Referral Earning',
-      message: "You earned $5.00 commission from user_8273's purchase",
-      time: '3 hours ago',
-      read: true,
-    },
-    {
-      id: '4',
-      type: 'cancel',
-      title: 'Number Canceled',
-      message: 'SMS activation for Instagram was auto-canceled due to timeout',
-      time: '5 hours ago',
-      read: true,
-    },
-    {
-      id: '5',
-      type: 'membership',
-      title: 'Membership Upgrade',
-      message: 'Welcome to Pro tier! Enjoy 25% discount on all services',
-      time: '1 day ago',
-      read: true,
-    },
-    {
-      id: '6',
-      type: 'sms',
-      title: 'SMS Received',
-      message: 'Verification code received for Telegram activation',
-      time: '1 day ago',
-      read: true,
-    },
-    {
-      id: '7',
-      type: 'system',
-      title: 'System Maintenance',
-      message: 'Scheduled maintenance on Feb 28, 2026 at 2:00 AM EST',
-      time: '2 days ago',
-      read: true,
-    },
-    {
-      id: '8',
-      type: 'referral',
-      title: 'New Referral Signup',
-      message: 'user_8456 signed up using your referral link',
-      time: '2 days ago',
-      read: true,
-    },
-    {
-      id: '9',
-      type: 'deposit',
-      title: 'Withdrawal Processed',
-      message: '$100.00 withdrawal to your PayPal account has been completed',
-      time: '3 days ago',
-      read: true,
-    },
-    {
-      id: '10',
-      type: 'system',
-      title: 'New Feature Available',
-      message:
-        'Elite V3 provider is now available! Experience the highest success rates',
-      time: '4 days ago',
-      read: true,
-    },
-  ]);
+  const {
+    notifications,
+    unreadCount,
+    totalPages,
+    currentPage,
+    isLoading,
+    fetchNotifications,
+    markAsRead,
+    markAllRead,
+    removeNotification,
+    clearAll,
+    setCurrentPage,
+  } = useNotifications();
 
   const [filter, setFilter] = useState<'all' | 'unread'>('all');
 
-  const unreadCount = notifications.filter((n) => !n.read).length;
-
-  const markAsRead = (id: string) => {
-    setNotifications((prev) =>
-      prev.map((n) => (n.id === id ? { ...n, read: true } : n)),
-    );
+  const handleFilterChange = (value: string) => {
+    const newFilter = value as 'all' | 'unread';
+    setFilter(newFilter);
+    setCurrentPage(1);
+    fetchNotifications({
+      page: 1,
+      limit: 20,
+      isRead: newFilter === 'unread' ? false : undefined,
+    });
   };
 
-  const markAllAsRead = () => {
-    setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
-    toast.success('All notifications marked as read');
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+    fetchNotifications({
+      page,
+      limit: 20,
+      isRead: filter === 'unread' ? false : undefined,
+    });
   };
 
-  const deleteNotification = (id: string) => {
-    setNotifications((prev) => prev.filter((n) => n.id !== id));
-    toast.success('Notification deleted');
+  const getNotificationBgColor = (type: string): string => {
+    if (type.startsWith('PAYMENT_') || type === 'ORDER_REFUNDED') return 'bg-green-500/10 border-green-500/20';
+    if (type.startsWith('ORDER_')) return 'bg-blue-500/10 border-blue-500/20';
+    if (type === 'SMS_RECEIVED') return 'bg-cyan-500/10 border-cyan-500/20';
+    if (type.startsWith('MEMBERSHIP_')) return 'bg-purple-500/10 border-purple-500/20';
+    if (type.startsWith('REFERRAL_')) return 'bg-orange-500/10 border-orange-500/20';
+    if (type === 'SECURITY_ALERT' || type === 'ACCOUNT_WARNING' || type === 'ORDER_CANCELLED') return 'bg-red-500/10 border-red-500/20';
+    if (type === 'PROMO' || type === 'WELCOME') return 'bg-pink-500/10 border-pink-500/20';
+    return 'bg-gray-500/10 border-gray-500/20';
   };
 
-  const clearAll = () => {
-    setNotifications([]);
-    toast.success('All notifications cleared');
+  const formatTime = (dateString: string): string => {
+    try {
+      return formatDistanceToNow(new Date(dateString), { addSuffix: true });
+    } catch {
+      return dateString;
+    }
   };
-
-  const getNotificationIcon = (type: Notification['type']) => {
-    const icons = {
-      sms: '💬',
-      deposit: '💰',
-      membership: '👑',
-      referral: '🎁',
-      cancel: '❌',
-      system: 'ℹ️',
-    };
-    return icons[type];
-  };
-
-  const getNotificationColor = (type: Notification['type']) => {
-    const colors = {
-      sms: 'bg-blue-500/10 border-blue-500/20',
-      deposit: 'bg-green-500/10 border-green-500/20',
-      membership: 'bg-purple-500/10 border-purple-500/20',
-      referral: 'bg-orange-500/10 border-orange-500/20',
-      cancel: 'bg-red-500/10 border-red-500/20',
-      system: 'bg-gray-500/10 border-gray-500/20',
-    };
-    return colors[type];
-  };
-
-  const filteredNotifications =
-    filter === 'all' ? notifications : notifications.filter((n) => !n.read);
 
   return (
     <div className="space-y-6">
@@ -172,7 +84,7 @@ export default function Notifications() {
 
         <div className="flex flex-wrap items-center gap-2">
           {unreadCount > 0 && (
-            <Button variant="outline" size="sm" onClick={markAllAsRead}>
+            <Button variant="outline" size="sm" onClick={markAllRead}>
               <Check className="mr-2 h-4 w-4" />
               Mark all read
             </Button>
@@ -235,19 +147,21 @@ export default function Notifications() {
         <CardHeader>
           <Tabs
             value={filter}
-            onValueChange={(v) => setFilter(v as 'all' | 'unread')}
+            onValueChange={handleFilterChange}
             className="w-full"
           >
             <TabsList className="grid w-full max-w-md grid-cols-2">
-              <TabsTrigger value="all">
-                All ({notifications.length})
-              </TabsTrigger>
+              <TabsTrigger value="all">All</TabsTrigger>
               <TabsTrigger value="unread">Unread ({unreadCount})</TabsTrigger>
             </TabsList>
           </Tabs>
         </CardHeader>
         <CardContent>
-          {filteredNotifications.length === 0 ? (
+          {isLoading ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="text-muted-foreground h-8 w-8 animate-spin" />
+            </div>
+          ) : notifications.length === 0 ? (
             <div className="py-12 text-center">
               <Bell className="text-muted-foreground mx-auto mb-4 h-16 w-16 opacity-20" />
               <h3 className="mb-2 text-lg font-semibold">No notifications</h3>
@@ -259,7 +173,7 @@ export default function Notifications() {
             </div>
           ) : (
             <div className="space-y-3">
-              {filteredNotifications.map((notification) => (
+              {notifications.map((notification) => (
                 <div
                   key={notification.id}
                   className={`group relative flex items-start gap-4 rounded-lg border p-4 transition-all ${
@@ -270,7 +184,7 @@ export default function Notifications() {
                 >
                   {/* Icon */}
                   <div
-                    className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-full border text-2xl ${getNotificationColor(notification.type)}`}
+                    className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-full border text-2xl ${getNotificationBgColor(notification.type)}`}
                   >
                     {getNotificationIcon(notification.type)}
                   </div>
@@ -289,7 +203,7 @@ export default function Notifications() {
                       {notification.message}
                     </p>
                     <p className="text-muted-foreground text-xs">
-                      {notification.time}
+                      {formatTime(notification.createdAt)}
                     </p>
                   </div>
 
@@ -309,13 +223,42 @@ export default function Notifications() {
                       variant="ghost"
                       size="icon"
                       className="text-destructive hover:text-destructive h-8 w-8 opacity-0 transition-opacity group-hover:opacity-100"
-                      onClick={() => deleteNotification(notification.id)}
+                      onClick={() => removeNotification(notification.id)}
                     >
                       <X className="h-4 w-4" />
                     </Button>
                   </div>
                 </div>
               ))}
+            </div>
+          )}
+
+          {/* Pagination */}
+          {!isLoading && totalPages > 1 && (
+            <div className="mt-4 flex items-center justify-between">
+              <p className="text-muted-foreground text-sm">
+                Page {currentPage} of {totalPages}
+              </p>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handlePageChange(currentPage - 1)}
+                  disabled={currentPage <= 1}
+                >
+                  <ChevronLeft className="mr-1 h-4 w-4" />
+                  Previous
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handlePageChange(currentPage + 1)}
+                  disabled={currentPage >= totalPages}
+                >
+                  Next
+                  <ChevronRight className="ml-1 h-4 w-4" />
+                </Button>
+              </div>
             </div>
           )}
         </CardContent>

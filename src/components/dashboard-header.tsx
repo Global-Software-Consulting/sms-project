@@ -19,15 +19,9 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks';
 import { getWalletBalance, formatBalance, WalletBalance } from '@/lib/api/walletApi';
 import { getCurrentMembership, CurrentMembershipResponse } from '@/lib/api/membershipApi';
-
-interface Notification {
-  id: string;
-  type: 'sms' | 'deposit' | 'membership' | 'referral' | 'cancel' | 'system';
-  title: string;
-  message: string;
-  time: string;
-  read: boolean;
-}
+import { useNotifications } from '@/contexts/NotificationContext';
+import { getNotificationIcon } from '@/lib/api/notificationsApi';
+import { formatDistanceToNow } from 'date-fns';
 
 interface DashboardHeaderProps {
   onMenuClick?: () => void;
@@ -41,56 +35,15 @@ export function DashboardHeader({ onMenuClick }: DashboardHeaderProps = {}) {
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [walletBalance, setWalletBalance] = useState<WalletBalance | null>(null);
   const [membership, setMembership] = useState<CurrentMembershipResponse | null>(null);
-  const [notifications, setNotifications] = useState<Notification[]>([
-    {
-      id: '1',
-      type: 'sms',
-      title: 'SMS Received',
-      message: 'Your verification code has arrived for WhatsApp',
-      time: '2 minutes ago',
-      read: false,
-    },
-    {
-      id: '2',
-      type: 'deposit',
-      title: 'Deposit Successful',
-      message: '$50.00 added to your wallet balance',
-      time: '1 hour ago',
-      read: false,
-    },
-    {
-      id: '3',
-      type: 'referral',
-      title: 'Referral Earning',
-      message: "You earned $5.00 from user_8273's purchase",
-      time: '3 hours ago',
-      read: true,
-    },
-    {
-      id: '4',
-      type: 'cancel',
-      title: 'Number Canceled',
-      message: 'SMS activation for Instagram was auto-canceled',
-      time: '5 hours ago',
-      read: true,
-    },
-    {
-      id: '5',
-      type: 'membership',
-      title: 'Membership Upgrade',
-      message: 'Welcome to Pro tier! Enjoy 10% discount',
-      time: '1 day ago',
-      read: true,
-    },
-    {
-      id: '6',
-      type: 'system',
-      title: 'System Maintenance',
-      message: 'Scheduled maintenance on Feb 28, 2026 at 2:00 AM EST',
-      time: '2 days ago',
-      read: true,
-    },
-  ]);
+
+  const {
+    notifications,
+    unreadCount,
+    markAsRead,
+    markAllRead,
+    removeNotification,
+    clearAll,
+  } = useNotifications();
 
   // Fetch wallet balance and membership on mount
   const fetchHeaderData = useCallback(async () => {
@@ -135,38 +88,12 @@ export function DashboardHeader({ onMenuClick }: DashboardHeaderProps = {}) {
     }
   };
 
-  const unreadCount = notifications.filter((n) => !n.read).length;
-
-  const markAsRead = (id: string) => {
-    setNotifications((prev) =>
-      prev.map((n) => (n.id === id ? { ...n, read: true } : n)),
-    );
-  };
-
-  const markAllAsRead = () => {
-    setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
-    toast.success('All notifications marked as read');
-  };
-
-  const clearAll = () => {
-    setNotifications([]);
-    toast.success('All notifications cleared');
-  };
-
-  const removeNotification = (id: string) => {
-    setNotifications((prev) => prev.filter((n) => n.id !== id));
-  };
-
-  const getNotificationIcon = (type: Notification['type']) => {
-    const icons = {
-      sms: '💬',
-      deposit: '💰',
-      membership: '👑',
-      referral: '🎁',
-      cancel: '❌',
-      system: 'ℹ️',
-    };
-    return icons[type];
+  const formatTime = (dateString: string): string => {
+    try {
+      return formatDistanceToNow(new Date(dateString), { addSuffix: true });
+    } catch {
+      return dateString;
+    }
   };
 
   return (
@@ -195,7 +122,7 @@ export function DashboardHeader({ onMenuClick }: DashboardHeaderProps = {}) {
               Balance:
             </span>
             <span className="text-primary text-xs font-semibold sm:text-sm">
-              {walletBalance 
+              {walletBalance
                 ? formatBalance(walletBalance.balance, walletBalance.currency)
                 : '$0.00'}
             </span>
@@ -222,7 +149,7 @@ export function DashboardHeader({ onMenuClick }: DashboardHeaderProps = {}) {
                 <Bell className="h-4 w-4" />
                 {unreadCount > 0 && (
                   <span className="bg-destructive text-destructive-foreground absolute -top-0.5 -right-0.5 flex h-4 w-4 items-center justify-center rounded-full text-[10px] font-semibold">
-                    {unreadCount}
+                    {unreadCount > 9 ? '9+' : unreadCount}
                   </span>
                 )}
               </Button>
@@ -242,7 +169,7 @@ export function DashboardHeader({ onMenuClick }: DashboardHeaderProps = {}) {
                         variant="ghost"
                         size="sm"
                         className="h-7 text-xs"
-                        onClick={markAllAsRead}
+                        onClick={markAllRead}
                       >
                         <Check className="mr-1 h-3 w-3" />
                         Mark all read
@@ -280,7 +207,7 @@ export function DashboardHeader({ onMenuClick }: DashboardHeaderProps = {}) {
                               ? 'bg-primary/5 hover:bg-primary/10'
                               : 'hover:bg-muted/50'
                           }`}
-                          onClick={() => markAsRead(notification.id)}
+                          onClick={() => !notification.read && markAsRead(notification.id)}
                         >
                           <div className="mt-0.5 shrink-0 text-xl sm:text-2xl">
                             {getNotificationIcon(notification.type)}
@@ -298,7 +225,7 @@ export function DashboardHeader({ onMenuClick }: DashboardHeaderProps = {}) {
                               {notification.message}
                             </p>
                             <p className="text-muted-foreground text-xs">
-                              {notification.time}
+                              {formatTime(notification.createdAt)}
                             </p>
                           </div>
                           <Button
@@ -342,7 +269,7 @@ export function DashboardHeader({ onMenuClick }: DashboardHeaderProps = {}) {
               <DropdownMenuLabel>
                 <div className="flex flex-col space-y-1">
                   <p className="text-sm font-medium">
-                    {user?.firstName && user?.lastName 
+                    {user?.firstName && user?.lastName
                       ? `${user.firstName} ${user.lastName}`
                       : user?.email?.split('@')[0] || 'User'}
                   </p>
@@ -368,7 +295,7 @@ export function DashboardHeader({ onMenuClick }: DashboardHeaderProps = {}) {
               <DropdownMenuItem asChild>
                 <Link href="/">Back to Home</Link>
               </DropdownMenuItem>
-              <DropdownMenuItem 
+              <DropdownMenuItem
                 className="text-destructive cursor-pointer"
                 onClick={handleSignOut}
                 disabled={isLoggingOut}
