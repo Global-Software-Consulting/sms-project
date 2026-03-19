@@ -25,7 +25,7 @@ import {
   AlertCircle,
   Calendar,
   RefreshCw,
-  XCircle,
+  HelpCircle,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import {
@@ -34,7 +34,6 @@ import {
   subscribeToPlan,
   renewSubscription,
   upgradePlan,
-  cancelSubscription,
   MembershipPlan,
   CurrentMembershipResponse,
   formatPrice,
@@ -42,6 +41,7 @@ import {
   getDaysRemainingText,
   isPlanUpgrade,
 } from '@/lib/api/membershipApi';
+import Link from 'next/link';
 
 export default function MembershipDashboard() {
   // Data state
@@ -53,12 +53,11 @@ export default function MembershipDashboard() {
   // Action states
   const [isSubscribing, setIsSubscribing] = useState<string | null>(null);
   const [isRenewing, setIsRenewing] = useState(false);
-  const [isCancelling, setIsCancelling] = useState(false);
 
   // Dialog states
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [confirmAction, setConfirmAction] = useState<{
-    type: 'subscribe' | 'upgrade' | 'cancel' | 'renew';
+    type: 'subscribe' | 'upgrade' | 'renew';
     plan?: MembershipPlan;
   } | null>(null);
 
@@ -164,50 +163,28 @@ export default function MembershipDashboard() {
     }
   };
 
-  // Handle cancel
-  const handleCancel = async () => {
-    if (!membership?.subscription) return;
-
-    try {
-      setIsCancelling(true);
-      await cancelSubscription(membership.subscription.id);
-      setMembership(prev => prev ? {
-        ...prev,
-        subscription: prev.subscription ? {
-          ...prev.subscription,
-          status: 'CANCELLED',
-          cancelledAt: new Date().toISOString(),
-        } : null,
-      } : null);
-      toast.success('Subscription cancelled', {
-        description: 'Your subscription will end at the current billing period.',
-      });
-    } catch (err: any) {
-      console.error('Cancel error:', err);
-      toast.error('Failed to cancel', {
-        description: err.response?.data?.message || 'Please try again.',
-      });
-    } finally {
-      setIsCancelling(false);
-      setShowConfirmDialog(false);
-    }
-  };
-
   // Open confirm dialog
   const openConfirmDialog = (
-    type: 'subscribe' | 'upgrade' | 'cancel' | 'renew',
+    type: 'subscribe' | 'upgrade' | 'renew',
     plan?: MembershipPlan
   ) => {
     setConfirmAction({ type, plan });
     setShowConfirmDialog(true);
   };
 
-  // Get button text for plan
+  // Get button text for plan - only upgrade allowed, no downgrade
   const getPlanButtonText = (plan: MembershipPlan): string => {
     if (!membership?.currentPlan) return 'Subscribe';
     if (membership.currentPlan.id === plan.id) return 'Current Plan';
     if (isPlanUpgrade(membership.currentPlan.slug, plan.slug)) return 'Upgrade';
-    return 'Downgrade';
+    return 'Current Plan'; // Lower plans show as unavailable (no downgrade)
+  };
+
+  // Check if plan can be selected (only upgrade or new subscription)
+  const canSelectPlan = (plan: MembershipPlan): boolean => {
+    if (!membership?.currentPlan) return true; // No current plan, can subscribe
+    if (membership.currentPlan.id === plan.id) return false; // Current plan
+    return isPlanUpgrade(membership.currentPlan.slug, plan.slug); // Only upgrades allowed
   };
 
   // Check if plan is current
@@ -309,36 +286,31 @@ export default function MembershipDashboard() {
                     <p className="text-xs">Total saved</p>
                   </div>
                 )}
-                <div className="flex gap-2">
+                <div className="flex flex-col gap-2">
                   {membership.subscription.status === 'ACTIVE' && (
-                    <>
-                      <Button
-                        variant="outline"
-                        onClick={() => openConfirmDialog('renew')}
-                        disabled={isRenewing}
-                      >
-                        {isRenewing ? (
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        ) : (
-                          <RefreshCw className="mr-2 h-4 w-4" />
-                        )}
-                        Renew
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        className="text-destructive hover:text-destructive"
-                        onClick={() => openConfirmDialog('cancel')}
-                        disabled={isCancelling}
-                      >
-                        {isCancelling ? (
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        ) : (
-                          <XCircle className="mr-2 h-4 w-4" />
-                        )}
-                        Cancel
-                      </Button>
-                    </>
+                    <Button
+                      variant="outline"
+                      onClick={() => openConfirmDialog('renew')}
+                      disabled={isRenewing}
+                    >
+                      {isRenewing ? (
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      ) : (
+                        <RefreshCw className="mr-2 h-4 w-4" />
+                      )}
+                      Renew Early
+                    </Button>
                   )}
+                  <Link href="/dashboard/support" className="w-full">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-muted-foreground hover:text-foreground w-full"
+                    >
+                      <HelpCircle className="mr-2 h-4 w-4" />
+                      Need to cancel? Contact Support
+                    </Button>
+                  </Link>
                 </div>
               </div>
             </div>
@@ -410,7 +382,7 @@ export default function MembershipDashboard() {
                     <Button className="w-full" disabled>
                       Current Plan
                     </Button>
-                  ) : (
+                  ) : canSelectPlan(plan) ? (
                     <Button
                       className="w-full"
                       variant={isVIP ? 'default' : 'outline'}
@@ -427,6 +399,10 @@ export default function MembershipDashboard() {
                           <ArrowRight className="ml-2 h-4 w-4" />
                         </>
                       )}
+                    </Button>
+                  ) : (
+                    <Button className="w-full" variant="outline" disabled>
+                      {getPlanButtonText(plan)}
                     </Button>
                   )}
                 </CardContent>
@@ -487,7 +463,6 @@ export default function MembershipDashboard() {
               {confirmAction?.type === 'subscribe' && 'Subscribe to Plan'}
               {confirmAction?.type === 'upgrade' && 'Upgrade Plan'}
               {confirmAction?.type === 'renew' && 'Renew Subscription'}
-              {confirmAction?.type === 'cancel' && 'Cancel Subscription'}
             </DialogTitle>
             <DialogDescription>
               {confirmAction?.type === 'subscribe' && (
@@ -499,27 +474,21 @@ export default function MembershipDashboard() {
                       formatPrice(confirmAction.plan.price, confirmAction.plan.currency)}
                     /month
                   </strong>
-                  .
+                  . The amount will be deducted from your wallet.
                 </>
               )}
               {confirmAction?.type === 'upgrade' && (
                 <>
                   You are about to upgrade to the{' '}
                   <strong>{confirmAction.plan?.name}</strong> plan. The price
-                  difference will be prorated.
+                  difference will be prorated based on your remaining days.
                 </>
               )}
               {confirmAction?.type === 'renew' && (
                 <>
                   You are about to renew your{' '}
                   <strong>{membership?.currentPlan?.name}</strong> subscription for
-                  another month.
-                </>
-              )}
-              {confirmAction?.type === 'cancel' && (
-                <>
-                  Are you sure you want to cancel your subscription? You will lose
-                  access to premium features at the end of your billing period.
+                  another month. The amount will be deducted from your wallet.
                 </>
               )}
             </DialogDescription>
@@ -529,10 +498,9 @@ export default function MembershipDashboard() {
               variant="outline"
               onClick={() => setShowConfirmDialog(false)}
             >
-              Cancel
+              Go Back
             </Button>
             <Button
-              variant={confirmAction?.type === 'cancel' ? 'destructive' : 'default'}
               onClick={() => {
                 if (confirmAction?.type === 'subscribe' && confirmAction.plan) {
                   handleSubscribe(confirmAction.plan);
@@ -540,12 +508,10 @@ export default function MembershipDashboard() {
                   handleSubscribe(confirmAction.plan);
                 } else if (confirmAction?.type === 'renew') {
                   handleRenew();
-                } else if (confirmAction?.type === 'cancel') {
-                  handleCancel();
                 }
               }}
             >
-              {confirmAction?.type === 'cancel' ? 'Yes, Cancel' : 'Confirm'}
+              Confirm
             </Button>
           </DialogFooter>
         </DialogContent>
