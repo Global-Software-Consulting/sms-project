@@ -42,12 +42,27 @@ export interface Ticket {
   user: Record<string, unknown>;
 }
 
+export interface TicketMessage {
+  id: string;
+  ticketId: string;
+  message: string;
+  imageUrl: string | null;
+  isStaff: boolean;
+  senderName: string;
+  createdAt: string;
+}
+
 export interface TicketsResponse {
   tickets: Ticket[];
   total: number;
   page: number;
   limit: number;
   totalPages: number;
+}
+
+export interface TicketDetailResponse {
+  ticket: Ticket;
+  messages: TicketMessage[];
 }
 
 export interface TicketQueryParams {
@@ -83,15 +98,69 @@ export const getTickets = async (
 };
 
 /**
- * Create a new support ticket
+ * Create a new support ticket (with optional image)
  * POST /api/v1/tickets
  */
 export const createTicket = async (
   data: CreateTicketRequest,
+  image?: File,
 ): Promise<Ticket> => {
+  if (image) {
+    const formData = new FormData();
+    formData.append('subject', data.subject);
+    formData.append('priority', data.priority);
+    formData.append('message', data.message);
+    formData.append('image', image);
+    const response = await apiClient.post<Ticket>(
+      API_ENDPOINTS.TICKETS.ROOT,
+      formData,
+      { headers: { 'Content-Type': 'multipart/form-data' } },
+    );
+    return response.data;
+  }
   const response = await apiClient.post<Ticket>(
     API_ENDPOINTS.TICKETS.ROOT,
     data,
+  );
+  return response.data;
+};
+
+/**
+ * Get ticket detail with messages
+ * GET /api/v1/tickets/:id
+ */
+export const getTicketDetail = async (
+  id: string,
+): Promise<TicketDetailResponse> => {
+  const response = await apiClient.get<TicketDetailResponse>(
+    API_ENDPOINTS.TICKETS.DETAIL(id),
+  );
+  return response.data;
+};
+
+/**
+ * Send a message on a ticket
+ * POST /api/v1/tickets/:id/messages
+ */
+export const sendTicketMessage = async (
+  ticketId: string,
+  message: string,
+  image?: File,
+): Promise<TicketMessage> => {
+  if (image) {
+    const formData = new FormData();
+    formData.append('message', message);
+    formData.append('image', image);
+    const response = await apiClient.post<TicketMessage>(
+      API_ENDPOINTS.TICKETS.MESSAGES(ticketId),
+      formData,
+      { headers: { 'Content-Type': 'multipart/form-data' } },
+    );
+    return response.data;
+  }
+  const response = await apiClient.post<TicketMessage>(
+    API_ENDPOINTS.TICKETS.MESSAGES(ticketId),
+    { message },
   );
   return response.data;
 };

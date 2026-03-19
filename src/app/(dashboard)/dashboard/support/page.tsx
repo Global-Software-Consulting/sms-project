@@ -1,47 +1,60 @@
 'use client';
+
 import {
   Card,
   CardContent,
   CardHeader,
   CardTitle,
-  CardDescription,
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import { Plus, MessageSquare, Loader2, AlertCircle, ChevronLeft, ChevronRight } from 'lucide-react';
-import { useState, useEffect, useCallback } from 'react';
+import { Upload, MessageSquare, Loader2, Send, Clock, X } from 'lucide-react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   getTickets,
   createTicket,
+  getTicketDetail,
+  sendTicketMessage,
   Ticket,
-  TicketPriority,
+  TicketMessage,
   getTicketStatusLabel,
-  getTicketStatusVariant,
-  getTicketPriorityVariant,
 } from '@/lib/api/ticketsApi';
-import { formatDistanceToNow } from 'date-fns';
+
+const MAX_OPEN_TICKETS = 3;
+const MAX_IMAGE_SIZE = 5 * 1024 * 1024; // 5MB
+const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 
 export default function Support() {
-  const [subject, setSubject] = useState('');
-  const [priority, setPriority] = useState('NORMAL');
-  const [message, setMessage] = useState('');
+  const [title, setTitle] = useState('');
+  const [description, setDescription] = useState('');
+  const [image, setImage] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Tickets state
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+
+  // Inline chat state — keyed by ticket ID
+  const [openChatId, setOpenChatId] = useState<string | null>(null);
+  const [chatMessages, setChatMessages] = useState<TicketMessage[]>([]);
+  const [chatLoading, setChatLoading] = useState(false);
+  const [chatMessage, setChatMessage] = useState('');
+  const [chatSending, setChatSending] = useState(false);
+  const [chatImage, setChatImage] = useState<File | null>(null);
+  const [chatImagePreview, setChatImagePreview] = useState<string | null>(null);
+  const chatFileInputRef = useRef<HTMLInputElement>(null);
+  const chatEndRef = useRef<HTMLDivElement>(null);
+
+  const openTicketCount = tickets.filter(
+    (t) => t.status === 'OPEN' || t.status === 'PENDING' || t.status === 'IN_PROGRESS' || t.status === 'WAITING_CUSTOMER',
+  ).length;
 
   // Fetch tickets
   const fetchTickets = useCallback(async (overridePage?: number) => {
@@ -62,17 +75,74 @@ export default function Support() {
     fetchTickets();
   }, [fetchTickets]);
 
+  // Image handling for create ticket form
+  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
+      setError('Only JPG, PNG, and WEBP images are supported.');
+      return;
+    }
+    if (file.size > MAX_IMAGE_SIZE) {
+      setError('Image must be less than 5MB.');
+      return;
+    }
+
+    setImage(file);
+    setError(null);
+    const reader = new FileReader();
+    reader.onload = (ev) => setImagePreview(ev.target?.result as string);
+    reader.readAsDataURL(file);
+  };
+
+  const removeImage = () => {
+    setImage(null);
+    setImagePreview(null);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  // Image handling for chat
+  const handleChatImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!ALLOWED_IMAGE_TYPES.includes(file.type)) return;
+    if (file.size > MAX_IMAGE_SIZE) return;
+
+    setChatImage(file);
+    const reader = new FileReader();
+    reader.onload = (ev) => setChatImagePreview(ev.target?.result as string);
+    reader.readAsDataURL(file);
+  };
+
+  const removeChatImage = () => {
+    setChatImage(null);
+    setChatImagePreview(null);
+    if (chatFileInputRef.current) chatFileInputRef.current.value = '';
+  };
+
   // Create ticket handler
-  const handleCreateTicket = async () => {
-    console.log('handleCreateTicket called', { subject, priority, message });
-    if (!subject.trim() || !message.trim()) return;
+  const handleSubmitTicket = async () => {
+    if (!title.trim() || !description.trim()) return;
+    if (openTicketCount >= MAX_OPEN_TICKETS) {
+      setError(`You can only have ${MAX_OPEN_TICKETS} open tickets at a time.`);
+      return;
+    }
     try {
       setIsSubmitting(true);
       setError(null);
-      await createTicket({ subject: subject.charAt(0).toUpperCase() + subject.slice(1), priority, message });
-      setSubject('');
-      setPriority('NORMAL');
-      setMessage('');
+      await createTicket(
+        {
+          subject: title.charAt(0).toUpperCase() + title.slice(1),
+          priority: 'NORMAL',
+          message: description,
+        },
+        image || undefined,
+      );
+      setTitle('');
+      setDescription('');
+      removeImage();
       setPage(1);
       await fetchTickets(1);
     } catch {
@@ -82,19 +152,74 @@ export default function Support() {
     }
   };
 
-  const getPriorityLabel = (p: TicketPriority): string => {
-    const labels: Record<TicketPriority, string> = {
-      LOW: 'Low',
-      NORMAL: 'Normal',
-      HIGH: 'High',
-      URGENT: 'Urgent',
-    };
-    return labels[p] || p;
+  // Toggle inline chat
+  const handleToggleChat = async (ticket: Ticket) => {
+    if (openChatId === ticket.id) {
+      // Hide chat
+      setOpenChatId(null);
+      setChatMessages([]);
+      setChatMessage('');
+      removeChatImage();
+      return;
+    }
+
+    // Open chat for this ticket
+    setOpenChatId(ticket.id);
+    setChatLoading(true);
+    setChatMessages([]);
+    setChatMessage('');
+    removeChatImage();
+    try {
+      const detail = await getTicketDetail(ticket.id);
+      setChatMessages(detail.messages || []);
+    } catch {
+      setChatMessages([]);
+    } finally {
+      setChatLoading(false);
+    }
   };
 
-  const formatDate = (dateString: string): string => {
+  // Send chat message
+  const handleSendMessage = async () => {
+    if ((!chatMessage.trim() && !chatImage) || !openChatId) return;
     try {
-      return formatDistanceToNow(new Date(dateString), { addSuffix: true });
+      setChatSending(true);
+      const newMsg = await sendTicketMessage(openChatId, chatMessage, chatImage || undefined);
+      setChatMessages((prev) => [...prev, newMsg]);
+      setChatMessage('');
+      removeChatImage();
+      setTickets((prev) =>
+        prev.map((t) =>
+          t.id === openChatId ? { ...t, responses: t.responses + 1 } : t,
+        ),
+      );
+    } catch {
+      // silently fail
+    } finally {
+      setChatSending(false);
+    }
+  };
+
+  // Auto-scroll chat
+  useEffect(() => {
+    if (chatEndRef.current) {
+      chatEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [chatMessages]);
+
+  const formatDateTime = (dateString: string): string => {
+    try {
+      const date = new Date(dateString);
+      return date.toLocaleDateString('en-US', {
+        month: 'numeric',
+        day: 'numeric',
+        year: 'numeric',
+      }) + ', ' + date.toLocaleTimeString('en-US', {
+        hour: 'numeric',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: true,
+      });
     } catch {
       return dateString;
     }
@@ -109,141 +234,252 @@ export default function Support() {
         </p>
       </div>
 
-      <Card className="border-primary">
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle>Pro Member Support</CardTitle>
-              <CardDescription>24/7 priority support access</CardDescription>
-            </div>
-            <Badge variant="default">Pro Priority</Badge>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <p className="text-muted-foreground text-sm">
-            As a Pro member, your tickets receive priority handling with faster
-            response times. Average response time: <strong>30 minutes</strong>
-          </p>
-        </CardContent>
-      </Card>
-
+      {/* Create Support Ticket */}
       <Card>
         <CardHeader>
-          <CardTitle>Create New Ticket</CardTitle>
-          <CardDescription>Submit a support request</CardDescription>
+          <CardTitle>Create Support Ticket</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Subject</label>
-            <Input
-              placeholder="Brief description of your issue..."
-              value={subject}
-              onChange={(e) => setSubject(e.target.value)}
-            />
-          </div>
+          <Input
+            placeholder="Title"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+          />
 
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Priority</label>
-            <Select value={priority} onValueChange={setPriority}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="LOW">Low</SelectItem>
-                <SelectItem value="NORMAL">Normal</SelectItem>
-                <SelectItem value="HIGH">High</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+          <Textarea
+            placeholder="Describe your issue"
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            rows={5}
+          />
 
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Message</label>
-            <Textarea
-              placeholder="Describe your issue in detail..."
-              value={message}
-              onChange={(e) => setMessage(e.target.value)}
-              rows={6}
-            />
-          </div>
-
-          <Button
-            size="lg"
-            onClick={handleCreateTicket}
-            disabled={isSubmitting || !subject.trim() || !message.trim()}
-          >
-            {isSubmitting ? (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+          {/* Image attachment */}
+          <div>
+            <p className="text-sm text-muted-foreground mb-2">Attach Image (optional)</p>
+            {imagePreview ? (
+              <div className="relative inline-block">
+                <img
+                  src={imagePreview}
+                  alt="Preview"
+                  className="h-20 w-20 rounded-md object-cover border"
+                />
+                <button
+                  onClick={removeImage}
+                  className="absolute -top-2 -right-2 bg-destructive text-destructive-foreground rounded-full p-0.5"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              </div>
             ) : (
-              <Plus className="mr-2 h-4 w-4" />
+              <Button
+                variant="outline"
+                onClick={() => fileInputRef.current?.click()}
+              >
+                <Upload className="mr-2 h-4 w-4" />
+                Choose File
+              </Button>
             )}
-            {isSubmitting ? 'Creating...' : 'Create Ticket'}
-          </Button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".jpg,.jpeg,.png,.webp"
+              onChange={handleImageSelect}
+              className="hidden"
+            />
+            <p className="text-xs text-muted-foreground mt-1">
+              Max file size: 5MB. Supported formats: JPG, PNG, WEBP
+            </p>
+          </div>
+
+          {error && (
+            <p className="text-sm text-destructive">{error}</p>
+          )}
+
+          <div className="flex items-center justify-between">
+            <p className="text-sm text-muted-foreground">
+              Open tickets: {openTicketCount} / {MAX_OPEN_TICKETS}
+            </p>
+            <Button
+              onClick={handleSubmitTicket}
+              disabled={isSubmitting || !title.trim() || !description.trim() || openTicketCount >= MAX_OPEN_TICKETS}
+              className="bg-primary"
+            >
+              {isSubmitting ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : null}
+              {isSubmitting ? 'Submitting...' : 'Submit Ticket'}
+            </Button>
+          </div>
         </CardContent>
       </Card>
 
+      {/* My Tickets */}
       <Card>
         <CardHeader>
-          <CardTitle>Your Tickets</CardTitle>
-          <CardDescription>
-            View and manage your support tickets
-          </CardDescription>
+          <CardTitle>My Tickets</CardTitle>
         </CardHeader>
         <CardContent>
           {isLoading ? (
             <div className="flex items-center justify-center py-12">
               <Loader2 className="text-muted-foreground h-8 w-8 animate-spin" />
             </div>
-          ) : error ? (
-            <div className="flex flex-col items-center justify-center gap-2 py-12">
-              <AlertCircle className="text-destructive h-8 w-8" />
-              <p className="text-muted-foreground text-sm">{error}</p>
-              <Button variant="outline" size="sm" onClick={() => fetchTickets()}>
-                Retry
-              </Button>
-            </div>
           ) : tickets.length === 0 ? (
             <div className="text-muted-foreground py-12 text-center text-sm">
               No tickets yet. Create one above if you need help.
             </div>
           ) : (
-            <div className="space-y-4">
+            <div className="space-y-3">
               {tickets.map((ticket) => (
                 <div
                   key={ticket.id}
-                  className="border-border rounded-lg border p-4 transition-shadow hover:shadow-md"
+                  className="border-border rounded-lg border overflow-hidden"
                 >
-                  <div className="mb-2 flex items-start justify-between">
-                    <div className="flex-1">
-                      <div className="mb-1 flex items-center gap-2">
-                        <h4 className="font-semibold capitalize">{ticket.subject}</h4>
-                        <Badge variant={getTicketStatusVariant(ticket.status)}>
+                  {/* Ticket header row */}
+                  <div className="p-4 flex items-center justify-between">
+                    <div>
+                      <h4 className="font-semibold text-base">{ticket.subject}</h4>
+                      <div className="flex items-center gap-3 mt-1 text-sm text-muted-foreground">
+                        <Badge
+                          variant={ticket.status === 'OPEN' ? 'default' : 'outline'}
+                          className="text-xs"
+                        >
+                          <Clock className="mr-1 h-3 w-3" />
                           {getTicketStatusLabel(ticket.status)}
                         </Badge>
-                        <Badge variant={getTicketPriorityVariant(ticket.priority)}>
-                          {getPriorityLabel(ticket.priority)}
-                        </Badge>
-                      </div>
-                      <div className="text-muted-foreground flex items-center gap-2 text-sm">
-                        <span>{ticket.ticketNumber}</span>
-                        <span>·</span>
-                        <span>{formatDate(ticket.createdAt)}</span>
-                        <span>·</span>
+                        <span>{formatDateTime(ticket.createdAt)}</span>
                         <span className="flex items-center">
                           <MessageSquare className="mr-1 h-3 w-3" />
-                          {ticket.responses} responses
+                          {ticket.responses} {ticket.responses === 1 ? 'message' : 'messages'}
                         </span>
                       </div>
                     </div>
-                    <Button variant="outline" size="sm">
-                      View Details
+                    <Button
+                      variant="default"
+                      size="sm"
+                      onClick={() => handleToggleChat(ticket)}
+                    >
+                      {openChatId === ticket.id ? 'Hide Chat' : 'Open Chat'}
                     </Button>
                   </div>
+
+                  {/* Inline chat area */}
+                  {openChatId === ticket.id && (
+                    <div className="border-t border-border">
+                      {/* Messages area */}
+                      <div className="h-[400px] overflow-y-auto bg-background/50 p-4">
+                        {chatLoading ? (
+                          <div className="flex items-center justify-center h-full">
+                            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                          </div>
+                        ) : chatMessages.length === 0 ? (
+                          <div className="flex items-center justify-center h-full text-muted-foreground text-sm">
+                            No messages yet.
+                          </div>
+                        ) : (
+                          <div className="space-y-4">
+                            {chatMessages.map((msg) => (
+                              <div
+                                key={msg.id}
+                                className={`flex ${msg.isStaff ? 'justify-start' : 'justify-end'}`}
+                              >
+                                <div
+                                  className={`max-w-[80%] rounded-lg px-4 py-2 text-sm ${
+                                    msg.isStaff
+                                      ? 'bg-muted text-foreground'
+                                      : 'bg-primary text-primary-foreground'
+                                  }`}
+                                >
+                                  <p className="text-xs font-medium mb-1 opacity-70">
+                                    {msg.isStaff ? msg.senderName || 'Support' : 'You'} &bull; {formatDateTime(msg.createdAt)}
+                                  </p>
+                                  <p className="whitespace-pre-wrap">{msg.message}</p>
+                                  {msg.imageUrl && (
+                                    <img
+                                      src={msg.imageUrl}
+                                      alt="Attachment"
+                                      className="mt-2 max-w-full rounded-md max-h-48 object-contain"
+                                    />
+                                  )}
+                                </div>
+                              </div>
+                            ))}
+                            <div ref={chatEndRef} />
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Chat input area */}
+                      {ticket.status !== 'CLOSED' && ticket.status !== 'RESOLVED' && (
+                        <div className="border-t border-border p-4">
+                          {chatImagePreview && (
+                            <div className="relative inline-block mb-2">
+                              <img
+                                src={chatImagePreview}
+                                alt="Preview"
+                                className="h-16 w-16 rounded-md object-cover border"
+                              />
+                              <button
+                                onClick={removeChatImage}
+                                className="absolute -top-2 -right-2 bg-destructive text-destructive-foreground rounded-full p-0.5"
+                              >
+                                <X className="h-3 w-3" />
+                              </button>
+                            </div>
+                          )}
+                          <div className="flex items-center gap-2">
+                            <Button
+                              variant="outline"
+                              size="icon"
+                              onClick={() => chatFileInputRef.current?.click()}
+                              disabled={chatSending}
+                            >
+                              <Upload className="h-4 w-4" />
+                            </Button>
+                            <input
+                              ref={chatFileInputRef}
+                              type="file"
+                              accept=".jpg,.jpeg,.png,.webp"
+                              onChange={handleChatImageSelect}
+                              className="hidden"
+                            />
+                            <Input
+                              placeholder="Type your message..."
+                              value={chatMessage}
+                              onChange={(e) => setChatMessage(e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter' && !e.shiftKey) {
+                                  e.preventDefault();
+                                  handleSendMessage();
+                                }
+                              }}
+                              disabled={chatSending}
+                              className="flex-1"
+                            />
+                            <Button
+                              onClick={handleSendMessage}
+                              disabled={chatSending || (!chatMessage.trim() && !chatImage)}
+                            >
+                              {chatSending ? (
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                              ) : (
+                                <Send className="mr-2 h-4 w-4" />
+                              )}
+                              Send
+                            </Button>
+                          </div>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            Max 5MB. Supported: JPG, PNG, WEBP (1 image only)
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
           )}
 
-          {!isLoading && !error && totalPages > 1 && (
+          {!isLoading && totalPages > 1 && (
             <div className="mt-4 flex items-center justify-between">
               <p className="text-muted-foreground text-sm">
                 Page {page} of {totalPages}
@@ -255,7 +491,6 @@ export default function Support() {
                   onClick={() => setPage((p) => Math.max(1, p - 1))}
                   disabled={page <= 1}
                 >
-                  <ChevronLeft className="mr-1 h-4 w-4" />
                   Previous
                 </Button>
                 <Button
@@ -265,50 +500,10 @@ export default function Support() {
                   disabled={page >= totalPages}
                 >
                   Next
-                  <ChevronRight className="ml-1 h-4 w-4" />
                 </Button>
               </div>
             </div>
           )}
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Quick Links</CardTitle>
-          <CardDescription>Find answers faster</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid gap-4 md:grid-cols-2">
-            <Button
-              variant="outline"
-              className="h-auto justify-start py-4"
-              asChild
-            >
-              <a href="/help">
-                <div className="text-left">
-                  <p className="font-semibold">Help Center</p>
-                  <p className="text-muted-foreground text-sm">
-                    Browse articles and guides
-                  </p>
-                </div>
-              </a>
-            </Button>
-            <Button
-              variant="outline"
-              className="h-auto justify-start py-4"
-              asChild
-            >
-              <a href="/faq">
-                <div className="text-left">
-                  <p className="font-semibold">FAQ</p>
-                  <p className="text-muted-foreground text-sm">
-                    Frequently asked questions
-                  </p>
-                </div>
-              </a>
-            </Button>
-          </div>
         </CardContent>
       </Card>
     </div>

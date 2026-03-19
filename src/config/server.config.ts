@@ -104,6 +104,7 @@ export const API_ENDPOINTS = {
   TICKETS: {
     ROOT: '/tickets',
     DETAIL: (id: string) => `/tickets/${id}`,
+    MESSAGES: (id: string) => `/tickets/${id}/messages`,
   },
 
   // ========================

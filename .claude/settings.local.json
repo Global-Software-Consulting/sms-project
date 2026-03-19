@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm install:*)",
+      "WebFetch(domain:cheapstreamtv.com)",
+      "Bash(find /c/Users/UCP/Desktop/sms-project/src -type f \\\\\\(-name *support* -o -name *ticket* \\\\\\))",
+      "Bash(find /c/Users/UCP/Desktop/sms-project/src/app -type f -path *api*)",
+      "Bash(ls -la /c/Users/UCP/Desktop/sms-project/src/app/\\\\\\(dashboard\\\\\\)/dashboard/support/)",
+      "Bash(find /c/Users/UCP/Desktop/sms-project/src -type f \\\\\\(-path *api* -o -path *service* \\\\\\) -name *.ts -o -name *.tsx)",
+      "Bash(ls -la /c/Users/UCP/Desktop/sms-project/src/app/\\\\\\(dashboard\\\\\\)/dashboard/api/)"
+    ]
+  }
+}
