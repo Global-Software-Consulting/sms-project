@@ -48,7 +48,7 @@ export function useNotifications() {
   return ctx;
 }
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api';
 // Socket URL is the base server URL (without /api path)
 const SOCKET_URL = API_URL.replace(/\/api\/?$/, '');
 
@@ -148,8 +148,9 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     const tokens = getTokens();
     if (!tokens?.accessToken) return;
 
-    console.log('[Socket] Connecting to:', SOCKET_URL);
-    console.log('[Socket] Token:', tokens.accessToken.substring(0, 20) + '...');
+    // Track connection attempts to avoid spamming logs
+    let connectionAttempts = 0;
+    const MAX_LOG_ATTEMPTS = 3;
 
     const socket = io(SOCKET_URL, {
       auth: { token: tokens.accessToken },
@@ -161,18 +162,13 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     });
 
     socket.on('connect', () => {
+      connectionAttempts = 0; // Reset on successful connection
       console.log('[Socket] Connected! Socket ID:', socket.id);
       if (mountedRef.current) setIsSocketConnected(true);
     });
 
-    // Listen to ALL events for debugging
-    socket.onAny((eventName, ...args) => {
-      console.log('[Socket] Event received:', eventName, args);
-    });
-
     // New notification pushed from server
     socket.on('notification', (notification: AppNotification) => {
-      console.log('[Socket] notification event:', notification);
       if (!mountedRef.current) return;
       setNotifications((prev) => [notification, ...prev]);
       setUnreadCount((prev) => prev + 1);
@@ -183,17 +179,22 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
 
     // Server can push updated unread count
     socket.on('unreadCount', (data: { count: number }) => {
-      console.log('[Socket] unreadCount event:', data);
       if (mountedRef.current) setUnreadCount(data.count);
     });
 
     socket.on('disconnect', (reason) => {
-      console.log('[Socket] Disconnected. Reason:', reason);
       if (mountedRef.current) setIsSocketConnected(false);
     });
 
     socket.on('connect_error', (err) => {
-      console.error('[Socket] Connection error:', err.message);
+      connectionAttempts++;
+      // Only log first few attempts to avoid console spam
+      if (connectionAttempts <= MAX_LOG_ATTEMPTS) {
+        console.warn(`[Socket] Connection failed (attempt ${connectionAttempts}): ${err.message}`);
+      }
+      if (connectionAttempts === MAX_LOG_ATTEMPTS) {
+        console.warn('[Socket] Suppressing further connection error logs. Real-time notifications unavailable.');
+      }
       if (mountedRef.current) setIsSocketConnected(false);
     });
 
