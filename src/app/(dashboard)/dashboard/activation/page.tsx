@@ -321,12 +321,19 @@ export default function Activation() {
       setActivatingProductId(product.id); // Track which specific product is being activated
       const response = await activateNumber(product.id);
 
-      setActiveOrders(prev => [response.order, ...prev]);
-      setWalletBalance(prev => (parseFloat(prev) - price).toFixed(2));
+      if (response.order) {
+        setActiveOrders(prev => [response.order, ...prev]);
+        setWalletBalance(prev => (parseFloat(prev) - price).toFixed(2));
 
-      toast.success('Number activated!', {
-        description: `${selectedService.name} / ${product.country.name} - Waiting for SMS...`,
-      });
+        toast.success('Number activated!', {
+          description: `${selectedService.name} / ${product.country.name} - Waiting for SMS...`,
+        });
+      } else {
+        console.error('No order in response:', response);
+        toast.error('Activation failed', {
+          description: 'Invalid response from server',
+        });
+      }
     } catch (err: any) {
       console.error('Activation error:', err);
       toast.error('Failed to activate number', {
@@ -512,8 +519,8 @@ export default function Activation() {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
-            {activeOrders.map(order => {
-              const timeRemaining = getTimeRemaining(order.expiresAt);
+            {activeOrders.filter(order => order && order.id).map(order => {
+              const timeRemaining = order.expiresAt ? getTimeRemaining(order.expiresAt) : null;
               const statusColor = getOrderStatusColor(order.status);
 
               return (
@@ -577,7 +584,7 @@ export default function Activation() {
 
                     {/* Timer */}
                     {(order.status === 'PENDING' ||
-                      order.status === 'WAITING_SMS') && (
+                      order.status === 'WAITING_SMS') && timeRemaining && (
                       <div className="text-muted-foreground flex shrink-0 items-center gap-1.5 text-sm">
                         <Clock className="h-3.5 w-3.5" />
                         <span className="font-mono tabular-nums">
@@ -654,7 +661,7 @@ export default function Activation() {
                   )}
 
                   {(order.status === 'PENDING' ||
-                    order.status === 'WAITING_SMS') && (
+                    order.status === 'WAITING_SMS') && order.expiresAt && (
                     <div className="mt-3">
                       <Progress
                         value={Math.max(

@@ -95,14 +95,18 @@ export interface SmsProduct {
   };
   provider: {
     id: string;
-    displayName: string;
+    name?: string;
+    displayName?: string;
     slug: string;
   };
   price: string; // Our price (before membership discount)
   yourPrice: string; // Price after membership discount
-  providerPrice: string; // Original provider price
+  providerPrice?: string; // Original provider price (optional for real-time)
+  discount?: string; // Discount amount
+  discountPercent?: number; // Discount percentage
   availableCount: number;
-  lastSyncAt: string | null;
+  lastSyncAt?: string | null;
+  isRealtime?: boolean; // Flag for real-time data
 }
 
 /**
@@ -110,22 +114,24 @@ export interface SmsProduct {
  */
 export interface SmsOrder {
   id: string;
-  userId: string;
-  provider: {
-    id: string;
-    displayName: string;
+  userId?: string;
+  provider?: {
+    id?: string;
+    name?: string;
+    displayName?: string;
     slug: string;
   };
-  service: {
-    id: string;
+  service?: {
+    id?: string;
     name: string;
-    iconUrl: string | null;
+    slug?: string;
+    iconUrl?: string | null;
   };
-  country: {
-    id: string;
+  country?: {
+    id?: string;
     name: string;
     code: string;
-    iconUrl: string | null;
+    iconUrl?: string | null;
   };
   phoneNumber: string | null;
   status: SmsOrderStatus;
@@ -135,9 +141,9 @@ export interface SmsOrder {
   discount: string;
   finalCost: string;
   membershipDiscount: number;
-  expiresAt: string;
-  completedAt: string | null;
-  cancelledAt: string | null;
+  expiresAt?: string | null;
+  completedAt?: string | null;
+  cancelledAt?: string | null;
   createdAt: string;
   updatedAt: string;
   // Admin fields
