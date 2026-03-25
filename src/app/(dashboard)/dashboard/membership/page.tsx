@@ -96,16 +96,24 @@ export default function MembershipDashboard() {
   }, [fetchData]);
 
   // Handle subscribe/upgrade
+  // IMPORTANT: Use hasActiveSubscription to determine if user has a PAID subscription
+  // FREE users have hasActiveSubscription=false, so they should use subscribeToPlan
+  // Only users with an active PAID subscription should use upgradePlan
   const handleSubscribe = async (plan: MembershipPlan) => {
-    const isUpgrade = membership?.currentPlan && isPlanUpgrade(membership.currentPlan.slug, plan.slug);
+    const hasActivePaidSubscription = membership?.hasActiveSubscription === true;
+    const isUpgrade = hasActivePaidSubscription && 
+      membership?.currentPlan && 
+      isPlanUpgrade(membership.currentPlan.slug, plan.slug);
 
     try {
+      setIsSubscribing(plan.id);
+      
       if (isUpgrade) {
-        setIsSubscribing(plan.id);
-        const response = await upgradePlan(plan.id);
+        const response = await upgradePlan(plan.slug);
         const planData = response.subscription?.plan;
         setMembership(prev => prev ? {
           ...prev,
+          hasActiveSubscription: true,
           currentPlan: planData || null,
           subscription: response.subscription,
           discount: planData?.discountPercent ?? planData?.discount ?? 0,
@@ -114,11 +122,11 @@ export default function MembershipDashboard() {
           description: `You are now on the ${plan.name} plan.`,
         });
       } else {
-        setIsSubscribing(plan.id);
-        const response = await subscribeToPlan(plan.id);
+        const response = await subscribeToPlan(plan.slug);
         const planData = response.subscription?.plan;
         setMembership(prev => prev ? {
           ...prev,
+          hasActiveSubscription: true,
           currentPlan: planData || null,
           subscription: response.subscription,
           discount: planData?.discountPercent ?? planData?.discount ?? 0,
@@ -144,7 +152,7 @@ export default function MembershipDashboard() {
 
     try {
       setIsRenewing(true);
-      const response = await renewSubscription(membership.subscription.id);
+      const response = await renewSubscription();
       setMembership(prev => prev ? {
         ...prev,
         subscription: response.subscription,
@@ -325,7 +333,8 @@ export default function MembershipDashboard() {
           {plans.map((plan) => {
             const isCurrent = isCurrentPlan(plan);
             const planColor = getPlanColor(plan.slug);
-            const isVIP = plan.slug === 'VIP';
+            const isVIP = plan.slug === 'vip';
+            const isPopular = plan.isPopular && !isCurrent && !isVIP;
             const isUpgrade = membership?.currentPlan && isPlanUpgrade(membership.currentPlan.slug, plan.slug);
 
             return (
@@ -333,11 +342,17 @@ export default function MembershipDashboard() {
                 key={plan.id}
                 className={`relative transition-all ${
                   isCurrent ? 'border-primary' : ''
-                } ${isVIP ? 'border-primary border-2 [box-shadow:var(--glow-accent-active)]' : ''}`}
+                } ${isVIP ? 'border-primary border-2 [box-shadow:var(--glow-accent-active)]' : ''}
+                ${isPopular ? 'border-success border-2' : ''}`}
               >
                 {isCurrent && (
                   <div className="bg-primary text-primary-foreground absolute top-0 right-0 rounded-tr-lg rounded-bl-lg px-3 py-1 text-xs font-semibold">
                     CURRENT
+                  </div>
+                )}
+                {isPopular && (
+                  <div className="bg-success text-success-foreground absolute top-0 right-0 rounded-tr-lg rounded-bl-lg px-3 py-1 text-xs font-semibold">
+                    POPULAR
                   </div>
                 )}
                 {isVIP && !isCurrent && (
@@ -359,8 +374,8 @@ export default function MembershipDashboard() {
                       variant={isVIP ? 'default' : 'secondary'}
                       className="w-fit"
                       style={{
-                        backgroundColor: isVIP ? undefined : `${planColor}20`,
-                        color: isVIP ? undefined : planColor,
+                        backgroundColor: isVIP ? undefined : planColor.bg,
+                        color: isVIP ? undefined : planColor.text,
                       }}
                     >
                       {plan.discountPercent ?? plan.discount ?? 0}% Discount
@@ -428,7 +443,7 @@ export default function MembershipDashboard() {
                     const discountValue = plan.discountPercent ?? plan.discount ?? 0;
                     const savings = (spend * discountValue) / 100;
                     const afterDiscount = spend - savings;
-                    const isBest = plan.slug === 'VIP';
+                    const isBest = plan.slug === 'vip';
                     const isCurrent = isCurrentPlan(plan);
 
                     return (

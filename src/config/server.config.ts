@@ -56,7 +56,8 @@ export const API_ENDPOINTS = {
     SUBSCRIBE: '/membership/subscribe',
     RENEW: '/membership/renew',
     UPGRADE: '/membership/upgrade',
-    CANCEL: '/membership/cancel',
+    AUTO_RENEW: '/membership/auto-renew',
+    // NOTE: CANCEL removed - users must open support ticket to cancel
   },
 
   // ========================
@@ -86,6 +87,7 @@ export const API_ENDPOINTS = {
     SERVICES: '/sms/services',
     COUNTRIES: '/sms/countries',
     PRODUCTS: '/sms/products',
+    PRODUCTS_REALTIME: '/sms/products/realtime',
     ACTIVATE: '/sms/activate',
     ACTIVATE_ORDER: (orderId: string) => `/sms/activate/${orderId}`,
     ACTIVATE_CANCEL: (orderId: string) => `/sms/activate/${orderId}/cancel`,

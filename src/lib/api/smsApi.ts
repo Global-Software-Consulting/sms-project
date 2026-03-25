@@ -44,16 +44,15 @@ export interface SmsProvider {
  */
 export interface SmsService {
   id: string;
-  providerId: string;
-  externalServiceId: string;
+  providerId?: string;
+  externalServiceId?: string;
   name: string;
   slug: string;
   iconUrl: string | null;
   category: string | null;
-  isActive: boolean;
+  isActive?: boolean;
   provider?: {
-    id: string;
-    displayName: string;
+    name: string;
     slug: string;
   };
 }
@@ -455,6 +454,22 @@ export const getProducts = async (
   const response = await apiClient.get<PaginatedResponse<SmsProduct>>(
     API_ENDPOINTS.SMS.PRODUCTS,
     { params },
+  );
+  return response.data;
+};
+
+/**
+ * Get products with REAL-TIME prices from provider API
+ * GET /api/v1/sms/products/realtime
+ * Fetches fresh prices directly from provider, cached for 5 minutes
+ */
+export const getProductsRealtime = async (
+  providerId: string,
+  serviceId: string,
+): Promise<PaginatedResponse<SmsProduct>> => {
+  const response = await apiClient.get<PaginatedResponse<SmsProduct>>(
+    API_ENDPOINTS.SMS.PRODUCTS_REALTIME,
+    { params: { providerId, serviceId } },
   );
   return response.data;
 };

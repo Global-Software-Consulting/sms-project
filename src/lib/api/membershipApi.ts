@@ -68,6 +68,7 @@ export interface Subscription {
   cancelledAt: string | null;
   cancelReason: string | null;
   walletTransactionId: string | null;
+  autoRenew?: boolean; // Auto-renewal toggle
   createdAt: string;
   updatedAt: string;
   plan: MembershipPlan; // Nested plan details
@@ -200,18 +201,22 @@ export const upgradePlan = async (
 };
 
 /**
- * Cancel subscription
- * POST /api/v1/membership/cancel
+ * Toggle auto-renew for current subscription
+ * PATCH /api/v1/membership/auto-renew
  */
-export const cancelSubscription = async (
-  reason?: string,
-): Promise<CancelResponse> => {
-  const response = await apiClient.post<CancelResponse>(
-    API_ENDPOINTS.MEMBERSHIP.CANCEL,
-    { reason },
+export const toggleAutoRenew = async (
+  autoRenew: boolean,
+): Promise<{ message: string; autoRenew: boolean }> => {
+  const response = await apiClient.patch<{ message: string; autoRenew: boolean }>(
+    API_ENDPOINTS.MEMBERSHIP.AUTO_RENEW,
+    { autoRenew },
   );
   return response.data;
 };
+
+// NOTE: cancelSubscription removed per client requirement (March 2026)
+// Users cannot cancel subscriptions directly - they must open a support ticket
+// Admin can cancel via admin panel
 
 // ============================================
 // Helper Functions
@@ -220,10 +225,11 @@ export const cancelSubscription = async (
 /**
  * Format price for display
  */
-export const formatPrice = (price: string): string => {
+export const formatPrice = (price: string, currency?: string): string => {
   const num = parseFloat(price);
   if (num === 0) return 'Free';
-  return `$${num.toFixed(0)}`;
+  const symbol = currency === 'EUR' ? '€' : '$';
+  return `${symbol}${num.toFixed(0)}`;
 };
 
 /**

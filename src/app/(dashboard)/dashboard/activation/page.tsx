@@ -26,6 +26,7 @@ import {
   getServices,
   getCountries,
   getProducts,
+  getProductsRealtime,
   activateNumber,
   checkOrderStatus,
   cancelOrder,
@@ -63,7 +64,7 @@ export default function Activation() {
   // Loading states
   const [isLoading, setIsLoading] = useState(true);
   const [isLoadingProducts, setIsLoadingProducts] = useState(false);
-  const [isActivating, setIsActivating] = useState(false);
+  const [activatingProductId, setActivatingProductId] = useState<string | null>(null);
 
   // Selection state
   const [selectedProvider, setSelectedProvider] = useState<SmsProvider | null>(null);
@@ -85,11 +86,10 @@ export default function Activation() {
     try {
       setIsLoading(true);
 
-      // Load essential data first (providers, services, balance)
-      const [providersRes, servicesRes, balanceRes] =
+      // Load essential data first (providers, balance)
+      const [providersRes, balanceRes] =
         await Promise.allSettled([
           getProviders(),
-          getServices({ limit: 100 }),
           getWalletBalance(),
         ]);
 
@@ -99,10 +99,6 @@ export default function Activation() {
         if (activeProviders.length > 0) {
           setSelectedProvider(activeProviders[0]);
         }
-      }
-
-      if (servicesRes.status === 'fulfilled') {
-        setServices(servicesRes.value.data || []);
       }
 
       if (balanceRes.status === 'fulfilled') {
@@ -128,34 +124,67 @@ export default function Activation() {
     }
   }, []);
 
-  // Fetch products when service/country/provider changes
+  // Fetch products when service/provider changes - uses REAL-TIME API
   const fetchProducts = useCallback(async () => {
     if (!selectedService || !selectedProvider) return;
 
     try {
       setIsLoadingProducts(true);
-      const response = await getProducts({
-        providerId: selectedProvider.id,
-        serviceId: selectedService.id,
-        countryId: selectedCountry?.id,
-        limit: 100,
-      });
+      // Use real-time API to get fresh prices from provider
+      const response = await getProductsRealtime(
+        selectedProvider.id,
+        selectedService.id,
+      );
       setProducts(response.data || []);
     } catch (err) {
       console.error('Failed to fetch products:', err);
-      // Don't show toast for every failed request - just set empty products
-      setProducts([]);
+      // Fallback to cached products if real-time fails
+      try {
+        const fallbackResponse = await getProducts({
+          providerId: selectedProvider.id,
+          serviceId: selectedService.id,
+          limit: 100,
+        });
+        setProducts(fallbackResponse.data || []);
+      } catch {
+        setProducts([]);
+      }
     } finally {
       setIsLoadingProducts(false);
     }
-  }, [selectedProvider, selectedService, selectedCountry]);
+  }, [selectedProvider, selectedService]);
 
   // Initial load
   useEffect(() => {
     fetchInitialData();
   }, [fetchInitialData]);
 
-  // Fetch products when selection changes (with debounce)
+  // Fetch services when provider changes
+  useEffect(() => {
+    if (!selectedProvider) return;
+    
+    const fetchServicesForProvider = async () => {
+      try {
+        // Fetch services for the selected provider (up to 200)
+        const response = await getServices({ 
+          providerId: selectedProvider.id,
+          limit: 200 
+        });
+        setServices(response.data || []);
+        // Clear selected service when provider changes
+        setSelectedService(null);
+        setProducts([]);
+      } catch (err) {
+        console.error('Failed to fetch services for provider:', err);
+        setServices([]);
+      }
+    };
+    
+    fetchServicesForProvider();
+  }, [selectedProvider]);
+
+  // Fetch products when service/provider changes (with debounce)
+  // Real-time API fetches all countries at once, so no need for countryId
   useEffect(() => {
     if (!selectedService || !selectedProvider) return;
     
@@ -211,10 +240,11 @@ export default function Activation() {
     return () => clearInterval(iv);
   }, []);
 
-  // Filter services
+  // Filter services by search (provider filtering is done in API call)
   const filteredServices = useMemo(() => {
     const q = serviceSearch.toLowerCase();
-    return services.filter(s => !q || s.name.toLowerCase().includes(q));
+    if (!q) return services;
+    return services.filter(s => s.name.toLowerCase().includes(q));
   }, [services, serviceSearch]);
 
   // Get products grouped by country
@@ -275,6 +305,7 @@ export default function Activation() {
   // Handle buy SMS
   const handleBuySMS = async (product: SmsProduct) => {
     if (!selectedService || !selectedProvider) return;
+    if (activatingProductId) return; // Prevent double-click
 
     const price = parseFloat(product.yourPrice);
     const balance = parseFloat(walletBalance);
@@ -287,7 +318,7 @@ export default function Activation() {
     }
 
     try {
-      setIsActivating(true);
+      setActivatingProductId(product.id); // Track which specific product is being activated
       const response = await activateNumber(product.id);
 
       setActiveOrders(prev => [response.order, ...prev]);
@@ -302,7 +333,7 @@ export default function Activation() {
         description: err.response?.data?.message || 'Please try again.',
       });
     } finally {
-      setIsActivating(false);
+      setActivatingProductId(null);
     }
   };
 
@@ -929,10 +960,10 @@ export default function Activation() {
                         {/* Buy button */}
                         <Button
                           className="h-9 w-full rounded-none rounded-b-xl text-sm font-semibold"
-                          disabled={isOut || isActivating}
+                          disabled={isOut || activatingProductId !== null}
                           onClick={() => handleBuySMS(bestProduct)}
                         >
-                          {isActivating ? (
+                          {activatingProductId === bestProduct.id ? (
                             <>
                               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                               Activating...

@@ -199,8 +199,8 @@ export default function Pricing() {
           : `${formatPrice(plan.price, plan.currency)}/mo`,
         discount: `${plan.discountPercent}%`,
         description: plan.description || `Save ${plan.discountPercent}% on every activation`,
-        isVIP: plan.slug === 'VIP',
-        color: getPlanColor(plan.slug),
+        isVIP: plan.slug === 'vip',
+        color: getPlanColor(plan.slug).text,
       }))
     : [
         {
@@ -238,7 +238,7 @@ export default function Pricing() {
       ];
 
   // Get VIP plan for calculation example
-  const vipPlan = plans.find(p => p.slug === 'VIP');
+  const vipPlan = plans.find(p => p.slug === 'vip');
   const vipDiscount = vipPlan?.discountPercent || 40;
   const vipPrice = vipPlan ? parseFloat(vipPlan.price) : 199;
 
@@ -319,7 +319,7 @@ export default function Pricing() {
 
                   <CardContent>
                     <ul className="mb-6 space-y-3">
-                      {tier.features.map((feature, i) => (
+                      {tier.features.map((feature: string, i: number) => (
                         <li key={i} className="flex items-start space-x-3">
                           <CheckCircle2
                             className={`mt-0.5 h-5 w-5 flex-shrink-0 ${tier.color === 'warning' ? 'text-warning' : tier.color === 'primary' ? 'text-primary' : 'text-blue-500'}`}
