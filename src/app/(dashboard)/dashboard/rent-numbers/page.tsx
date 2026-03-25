@@ -86,41 +86,49 @@ export default function RentNumbers() {
     try {
       setIsLoading(true);
 
-      // Load essential data first
-      const [providersRes, servicesRes, balanceRes] =
+      // Load providers and balance first
+      const [providersRes, balanceRes] =
         await Promise.allSettled([
           getProviders(),
-          getServices({ limit: 100 }),
           getWalletBalance(),
         ]);
 
+      let rentalProviderId = '';
       if (providersRes.status === 'fulfilled') {
         const rentalProviders = providersRes.value.providers?.filter(
           p => p.isActive && p.supportsRental
         ) || [];
         setProviders(rentalProviders);
         if (rentalProviders.length > 0) {
-          setSelectedProvider(rentalProviders[0].id);
+          rentalProviderId = rentalProviders[0].id;
+          setSelectedProvider(rentalProviderId);
         }
-      }
-
-      if (servicesRes.status === 'fulfilled') {
-        setServices(servicesRes.value.data || []);
       }
 
       if (balanceRes.status === 'fulfilled') {
         setWalletBalance(balanceRes.value.balance);
       }
 
-      // Load secondary data in background (don't block UI)
-      Promise.allSettled([
-        getCountries({ limit: 100 }),
-        getRentalHistory({ status: 'ACTIVE', limit: 50 }),
-        getRentalHistory({ limit: 20 }),
-      ]).then(([countriesRes, activeRes, historyRes]) => {
+      // Load services and countries for the rental provider specifically
+      if (rentalProviderId) {
+        const [servicesRes, countriesRes] = await Promise.allSettled([
+          getServices({ providerId: rentalProviderId, limit: 200 }),
+          getCountries({ providerId: rentalProviderId, limit: 300 }),
+        ]);
+
+        if (servicesRes.status === 'fulfilled') {
+          setServices(servicesRes.value.data || []);
+        }
         if (countriesRes.status === 'fulfilled') {
           setCountries(countriesRes.value.data || []);
         }
+      }
+
+      // Load rental history in background
+      Promise.allSettled([
+        getRentalHistory({ status: 'ACTIVE', limit: 50 }),
+        getRentalHistory({ limit: 20 }),
+      ]).then(([activeRes, historyRes]) => {
         if (activeRes.status === 'fulfilled') {
           setActiveRentals((activeRes.value.data || []).filter(r => r.status === 'ACTIVE'));
         }
