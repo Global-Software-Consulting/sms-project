@@ -259,14 +259,14 @@ export default function Dashboard() {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-bold">Dashboard</h1>
+        <h1 className="text-2xl font-bold sm:text-3xl">Dashboard</h1>
         <p className="text-muted-foreground mt-1">
           Welcome back! Here's your overview.
         </p>
       </div>
 
       {/* Summary Cards */}
-      <div className="stagger-fade-in grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="stagger-fade-in grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Card className="card-hover-lift">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
@@ -352,9 +352,9 @@ export default function Dashboard() {
         </Card>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-3">
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         {/* Quick Order Box */}
-        <Card className="lg:col-span-2">
+        <Card className="md:col-span-1 lg:col-span-2">
           <CardHeader>
             <CardTitle>Quick Order</CardTitle>
             <CardDescription>

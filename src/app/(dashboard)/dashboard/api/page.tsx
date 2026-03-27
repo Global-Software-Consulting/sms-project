@@ -253,14 +253,14 @@ export default function APIAccess() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-3xl font-bold">API Access</h1>
+          <h1 className="text-2xl font-bold sm:text-3xl">API Access</h1>
           <p className="text-muted-foreground mt-1">
             Integrate SMS services into your applications
           </p>
         </div>
-        <Button onClick={() => setShowCreateDialog(true)}>
+        <Button onClick={() => setShowCreateDialog(true)} className="shrink-0">
           <Plus className="mr-2 h-4 w-4" />
           Create API Key
         </Button>
@@ -368,15 +368,21 @@ export default function APIAccess() {
             value={activeTab}
             onValueChange={(v) => setActiveTab(v as ProviderType)}
           >
-            <TabsList className="grid w-full max-w-2xl grid-cols-3">
-              <TabsTrigger value="v1" className="space-x-2">
-                <span>💰 V1 Standard</span>
+            <TabsList className="grid w-full grid-cols-3 sm:max-w-2xl">
+              <TabsTrigger value="v1" className="space-x-1 text-xs sm:space-x-2 sm:text-sm">
+                <span>💰</span>
+                <span className="hidden sm:inline">V1 Standard</span>
+                <span className="sm:hidden">Standard</span>
               </TabsTrigger>
-              <TabsTrigger value="v2" className="space-x-2">
-                <span>💎 V2 Premium</span>
+              <TabsTrigger value="v2" className="space-x-1 text-xs sm:space-x-2 sm:text-sm">
+                <span>💎</span>
+                <span className="hidden sm:inline">V2 Premium</span>
+                <span className="sm:hidden">Premium</span>
               </TabsTrigger>
-              <TabsTrigger value="v3" className="space-x-2">
-                <span>👑 V3 Elite</span>
+              <TabsTrigger value="v3" className="space-x-1 text-xs sm:space-x-2 sm:text-sm">
+                <span>👑</span>
+                <span className="hidden sm:inline">V3 Elite</span>
+                <span className="sm:hidden">Elite</span>
               </TabsTrigger>
             </TabsList>
 

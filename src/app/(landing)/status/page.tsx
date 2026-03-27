@@ -11,12 +11,12 @@ export default function Status() {
   ];
 
   return (
-    <div className="container mx-auto px-4 py-20">
+    <div className="container mx-auto px-4 py-12 sm:py-20">
       <div className="mx-auto max-w-4xl space-y-8">
         <div className="space-y-4 text-center">
-          <div className="flex items-center justify-center space-x-3">
-            <CheckCircle2 className="text-success h-12 w-12" />
-            <h1 className="text-4xl font-bold md:text-5xl">
+          <div className="flex flex-wrap items-center justify-center gap-3">
+            <CheckCircle2 className="text-success h-10 w-10 sm:h-12 sm:w-12" />
+            <h1 className="text-2xl font-bold sm:text-4xl md:text-5xl">
               All Systems Operational
             </h1>
           </div>

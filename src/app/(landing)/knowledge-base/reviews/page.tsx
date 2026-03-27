@@ -32,7 +32,7 @@ export default function ReviewsArticle() {
   ];
 
   return (
-    <div className="container mx-auto px-4 py-20">
+    <div className="container mx-auto px-4 py-12 sm:py-16 md:py-20">
       <div className="mx-auto max-w-4xl space-y-8">
         <Link
           href="/knowledge-base"
@@ -44,7 +44,7 @@ export default function ReviewsArticle() {
 
         <div>
           <Badge className="mb-4">Reviews & Limits</Badge>
-          <h1 className="mb-4 text-4xl font-bold">Reviews & Limits</h1>
+          <h1 className="mb-4 text-3xl font-bold sm:text-4xl">Reviews & Limits</h1>
           <p className="text-muted-foreground text-xl">
             Understanding the review system and service usage limits.
           </p>

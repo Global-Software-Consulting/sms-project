@@ -14,7 +14,7 @@ export default function NotFound() {
       <div className="relative w-full max-w-md space-y-8 text-center">
         {/* 404 Illustration */}
         <div className="relative">
-          <div className="text-primary/10 text-[150px] leading-none font-bold">
+          <div className="text-primary/10 text-[100px] leading-none font-bold sm:text-[150px]">
             404
           </div>
           <div className="absolute inset-0 flex items-center justify-center">

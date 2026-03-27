@@ -220,21 +220,21 @@ export default function Referral() {
   return (
     <div className="w-full">
       {/* Hero Section */}
-      <section className="container mx-auto px-4 py-20 md:py-28">
+      <section className="container mx-auto px-4 py-12 sm:py-20 md:py-28">
         <div className="mx-auto max-w-4xl space-y-8 text-center">
           <Badge variant="secondary" className="px-4 py-2">
             <Sparkles className="mr-2 inline h-4 w-4" />
             Referral Program
           </Badge>
 
-          <h1 className="text-4xl font-bold tracking-tight md:text-6xl">
+          <h1 className="text-3xl font-bold tracking-tight sm:text-4xl md:text-6xl">
             Earn Money by
             <span className="from-primary to-accent mt-2 block bg-gradient-to-r bg-clip-text text-transparent">
               Sharing Our Platform
             </span>
           </h1>
 
-          <p className="text-muted-foreground mx-auto max-w-2xl text-xl">
+          <p className="text-muted-foreground mx-auto max-w-2xl text-base sm:text-xl">
             Get up to 20% lifetime commission on every purchase made by users
             you refer. Start earning today with our simple and lucrative
             referral program.
@@ -264,10 +264,10 @@ export default function Referral() {
       </section>
 
       {/* Commission Tiers Section */}
-      <section className="border-border container mx-auto border-t px-4 py-20">
+      <section className="border-border container mx-auto border-t px-4 py-12 sm:py-16 md:py-20">
         <div className="mx-auto max-w-6xl">
           <div className="mb-12 space-y-4 text-center">
-            <h2 className="text-3xl font-bold md:text-4xl">Commission Tiers</h2>
+            <h2 className="text-2xl font-bold sm:text-3xl md:text-4xl">Commission Tiers</h2>
             <p className="text-muted-foreground text-lg">
               Unlock higher commission rates as you grow your referrals
             </p>
@@ -347,10 +347,10 @@ export default function Referral() {
       </section>
 
       {/* How It Works Section */}
-      <section className="border-border container mx-auto border-t px-4 py-20">
+      <section className="border-border container mx-auto border-t px-4 py-12 sm:py-16 md:py-20">
         <div className="mx-auto max-w-6xl">
           <div className="mb-12 space-y-4 text-center">
-            <h2 className="text-3xl font-bold md:text-4xl">How It Works</h2>
+            <h2 className="text-2xl font-bold sm:text-3xl md:text-4xl">How It Works</h2>
             <p className="text-muted-foreground text-lg">
               Start earning in 4 simple steps
             </p>
@@ -383,10 +383,10 @@ export default function Referral() {
       </section>
 
       {/* Benefits Section */}
-      <section className="border-border container mx-auto border-t px-4 py-20">
+      <section className="border-border container mx-auto border-t px-4 py-12 sm:py-16 md:py-20">
         <div className="mx-auto max-w-6xl">
           <div className="mb-12 space-y-4 text-center">
-            <h2 className="text-3xl font-bold md:text-4xl">
+            <h2 className="text-2xl font-bold sm:text-3xl md:text-4xl">
               Why Join Our Program
             </h2>
             <p className="text-muted-foreground text-lg">
@@ -418,10 +418,10 @@ export default function Referral() {
       </section>
 
       {/* Earnings Calculator Section */}
-      <section className="border-border container mx-auto border-t px-4 py-20">
+      <section className="border-border container mx-auto border-t px-4 py-12 sm:py-16 md:py-20">
         <div className="mx-auto max-w-6xl">
           <div className="mb-12 space-y-4 text-center">
-            <h2 className="text-3xl font-bold md:text-4xl">
+            <h2 className="text-2xl font-bold sm:text-3xl md:text-4xl">
               Potential Earnings
             </h2>
             <p className="text-muted-foreground text-lg">
@@ -497,7 +497,7 @@ export default function Referral() {
       </section>
 
       {/* Features Highlight */}
-      <section className="border-border container mx-auto border-t px-4 py-20">
+      <section className="border-border container mx-auto border-t px-4 py-12 sm:py-16 md:py-20">
         <div className="mx-auto max-w-6xl">
           <div className="grid gap-6 md:grid-cols-3">
             <Card className="border-success/30 bg-success/5 border-2">
@@ -549,10 +549,10 @@ export default function Referral() {
       </section>
 
       {/* FAQ Section */}
-      <section className="border-border container mx-auto border-t px-4 py-20">
+      <section className="border-border container mx-auto border-t px-4 py-12 sm:py-16 md:py-20">
         <div className="mx-auto max-w-4xl">
           <div className="mb-12 space-y-4 text-center">
-            <h2 className="text-3xl font-bold md:text-4xl">
+            <h2 className="text-2xl font-bold sm:text-3xl md:text-4xl">
               Frequently Asked Questions
             </h2>
             <p className="text-muted-foreground text-lg">
@@ -579,12 +579,12 @@ export default function Referral() {
       </section>
 
       {/* CTA Section */}
-      <section className="border-border container mx-auto border-t px-4 py-20">
+      <section className="border-border container mx-auto border-t px-4 py-12 sm:py-16 md:py-20">
         <div className="mx-auto max-w-4xl">
           <Card className="border-primary from-primary/10 to-accent/10 border-2 bg-gradient-to-r">
             <CardContent className="space-y-6 py-12 text-center">
               <div className="space-y-2">
-                <h2 className="text-3xl font-bold md:text-4xl">
+                <h2 className="text-2xl font-bold sm:text-3xl md:text-4xl">
                   Ready to Start Earning?
                 </h2>
                 <p className="text-muted-foreground mx-auto max-w-2xl text-lg">

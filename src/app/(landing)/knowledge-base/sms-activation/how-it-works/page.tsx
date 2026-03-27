@@ -46,7 +46,7 @@ export default function HowActivationWorks() {
   ];
 
   return (
-    <div className="container mx-auto px-4 py-20">
+    <div className="container mx-auto px-4 py-12 sm:py-16 md:py-20">
       <div className="mx-auto max-w-4xl">
         {/* Breadcrumb */}
         <div className="text-muted-foreground mb-8 flex items-center gap-2 text-sm">
@@ -70,7 +70,7 @@ export default function HowActivationWorks() {
         {/* Article Header */}
         <div className="mb-8">
           <Badge className="mb-4">SMS Activation</Badge>
-          <h1 className="mb-4 text-4xl font-bold">How SMS Activation Works</h1>
+          <h1 className="mb-4 text-3xl font-bold sm:text-4xl">How SMS Activation Works</h1>
           <p className="text-muted-foreground">
             Published on February 15, 2026 · 4 min read
           </p>

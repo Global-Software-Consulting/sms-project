@@ -12,7 +12,7 @@ import Link from 'next/link';
 
 export default function ReviewUnlockSystem() {
   return (
-    <div className="container mx-auto px-4 py-20">
+    <div className="container mx-auto px-4 py-12 sm:py-16 md:py-20">
       <div className="mx-auto max-w-4xl">
         {/* Breadcrumb */}
         <div className="text-muted-foreground mb-8 flex items-center gap-2 text-sm">
@@ -36,7 +36,7 @@ export default function ReviewUnlockSystem() {
         {/* Article Header */}
         <div className="mb-8">
           <Badge className="mb-4">Reviews & Limits</Badge>
-          <h1 className="mb-4 text-4xl font-bold">Review Unlock System</h1>
+          <h1 className="mb-4 text-3xl font-bold sm:text-4xl">Review Unlock System</h1>
           <p className="text-muted-foreground">
             Published on February 17, 2026 · 3 min read
           </p>

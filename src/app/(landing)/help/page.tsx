@@ -110,12 +110,12 @@ export default function Help() {
   };
 
   return (
-    <div className="container mx-auto px-4 py-20">
+    <div className="container mx-auto px-4 py-12 sm:py-16 md:py-20">
       <div className="mx-auto max-w-6xl space-y-8">
         {/* Hero Section */}
         <div className="space-y-6 text-center">
-          <h1 className="text-4xl font-bold md:text-5xl">Help & Support</h1>
-          <p className="text-muted-foreground mx-auto max-w-2xl text-xl">
+          <h1 className="text-3xl font-bold sm:text-4xl md:text-5xl">Help & Support</h1>
+          <p className="text-muted-foreground mx-auto max-w-2xl text-base sm:text-xl">
             We're here to help. Search for answers or create a support ticket.
           </p>
 

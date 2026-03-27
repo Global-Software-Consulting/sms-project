@@ -116,9 +116,9 @@ export function DashboardHeader({ onMenuClick }: DashboardHeaderProps = {}) {
 
         {/* Right side - Actions */}
         <div className="flex flex-shrink-0 items-center gap-1.5 sm:gap-2 sm:space-x-1">
-          {/* Wallet Balance — hidden on very small screens */}
-          <div className="bg-card border-border hidden items-center space-x-2 rounded-lg border px-3 py-1.5 sm:flex">
-            <span className="text-muted-foreground text-xs sm:text-sm">
+          {/* Wallet Balance */}
+          <div className="bg-card border-border flex items-center space-x-1 rounded-lg border px-2 py-1.5 sm:space-x-2 sm:px-3">
+            <span className="text-muted-foreground hidden text-xs sm:inline sm:text-sm">
               Balance:
             </span>
             <span className="text-primary text-xs font-semibold sm:text-sm">
@@ -135,6 +135,7 @@ export function DashboardHeader({ onMenuClick }: DashboardHeaderProps = {}) {
               size="icon"
               className="h-9 w-9"
               onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+              aria-label="Toggle theme"
             >
               <Sun className="h-4 w-4 scale-100 rotate-0 transition-all dark:scale-0 dark:-rotate-90" />
               <Moon className="absolute h-4 w-4 scale-0 rotate-90 transition-all dark:scale-100 dark:rotate-0" />
@@ -145,7 +146,7 @@ export function DashboardHeader({ onMenuClick }: DashboardHeaderProps = {}) {
           {/* Notifications */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="relative h-9 w-9">
+              <Button variant="ghost" size="icon" className="relative h-9 w-9" aria-label="Notifications">
                 <Bell className="h-4 w-4" />
                 {unreadCount > 0 && (
                   <span className="bg-destructive text-destructive-foreground absolute -top-0.5 -right-0.5 flex h-4 w-4 items-center justify-center rounded-full text-[10px] font-semibold">
@@ -259,7 +260,7 @@ export function DashboardHeader({ onMenuClick }: DashboardHeaderProps = {}) {
           {/* Profile */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="relative h-9 w-9">
+              <Button variant="ghost" size="icon" className="relative h-9 w-9" aria-label="User menu">
                 <div className="bg-primary text-primary-foreground flex h-8 w-8 items-center justify-center rounded-full">
                   <User className="h-4 w-4" />
                 </div>

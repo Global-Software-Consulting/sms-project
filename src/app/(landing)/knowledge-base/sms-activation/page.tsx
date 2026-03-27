@@ -38,7 +38,7 @@ export default function SMSActivationArticle() {
   ];
 
   return (
-    <div className="container mx-auto px-4 py-20">
+    <div className="container mx-auto px-4 py-12 sm:py-16 md:py-20">
       <div className="mx-auto max-w-4xl space-y-8">
         <Link
           href="/knowledge-base"
@@ -50,7 +50,7 @@ export default function SMSActivationArticle() {
 
         <div>
           <Badge className="mb-4">SMS Activation</Badge>
-          <h1 className="mb-4 text-4xl font-bold">SMS Activation Guide</h1>
+          <h1 className="mb-4 text-3xl font-bold sm:text-4xl">SMS Activation Guide</h1>
           <p className="text-muted-foreground text-xl">
             Learn how SMS activation works step by step and how to maximize
             success rates.

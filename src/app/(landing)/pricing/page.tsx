@@ -245,18 +245,18 @@ export default function Pricing() {
   return (
     <div className="w-full">
       {/* Hero Section */}
-      <section className="container mx-auto px-4 py-20">
+      <section className="container mx-auto px-4 py-12 sm:py-20">
         <div className="mx-auto max-w-4xl space-y-6 text-center">
           <Badge variant="secondary" className="px-4 py-2">
             <Sparkles className="mr-2 inline h-4 w-4" />
             Transparent Pricing
           </Badge>
 
-          <h1 className="text-4xl font-bold tracking-tight md:text-5xl">
+          <h1 className="text-3xl font-bold tracking-tight sm:text-4xl md:text-5xl">
             Simple, Flexible Pricing
           </h1>
 
-          <p className="text-muted-foreground mx-auto max-w-2xl text-xl">
+          <p className="text-muted-foreground mx-auto max-w-2xl text-base sm:text-xl">
             Choose the provider tier that matches your needs. No hidden fees, no
             surprises.
           </p>
@@ -264,11 +264,11 @@ export default function Pricing() {
       </section>
 
       {/* Provider Tiers */}
-      <section className="border-border container mx-auto border-t px-4 py-12">
+      <section className="border-border container mx-auto border-t px-4 py-8 sm:py-12">
         <div className="mx-auto max-w-6xl">
-          <div className="mb-12 space-y-4 text-center">
-            <h2 className="text-3xl font-bold md:text-4xl">Provider Tiers</h2>
-            <p className="text-muted-foreground text-lg">
+          <div className="mb-8 space-y-4 text-center sm:mb-12">
+            <h2 className="text-2xl font-bold sm:text-3xl md:text-4xl">Provider Tiers</h2>
+            <p className="text-muted-foreground text-base sm:text-lg">
               Three tiers to match your speed and reliability needs
             </p>
           </div>
@@ -347,11 +347,11 @@ export default function Pricing() {
       </section>
 
       {/* Sample Pricing Table */}
-      <section className="border-border container mx-auto border-t px-4 py-20">
+      <section className="border-border container mx-auto border-t px-4 py-12 sm:py-16 md:py-20">
         <div className="mx-auto max-w-5xl">
-          <div className="mb-12 space-y-4 text-center">
-            <h2 className="text-3xl font-bold md:text-4xl">Sample Pricing</h2>
-            <p className="text-muted-foreground text-lg">
+          <div className="mb-8 space-y-4 text-center sm:mb-12">
+            <h2 className="text-2xl font-bold sm:text-3xl md:text-4xl">Sample Pricing</h2>
+            <p className="text-muted-foreground text-base sm:text-lg">
               Popular services across different provider tiers
             </p>
           </div>
@@ -429,13 +429,13 @@ export default function Pricing() {
       </section>
 
       {/* Membership Discounts */}
-      <section className="border-border container mx-auto border-t px-4 py-20">
+      <section className="border-border container mx-auto border-t px-4 py-12 sm:py-16 md:py-20">
         <div className="mx-auto max-w-5xl">
-          <div className="mb-12 space-y-4 text-center">
-            <h2 className="text-3xl font-bold md:text-4xl">
+          <div className="mb-8 space-y-4 text-center sm:mb-12">
+            <h2 className="text-2xl font-bold sm:text-3xl md:text-4xl">
               Save More with Membership
             </h2>
-            <p className="text-muted-foreground text-lg">
+            <p className="text-muted-foreground text-base sm:text-lg">
               Apply discount on top of any provider tier pricing
             </p>
           </div>
@@ -504,7 +504,7 @@ export default function Pricing() {
       </section>
 
       {/* Example Calculation */}
-      <section className="border-border bg-muted/30 container mx-auto border-t px-4 py-20">
+      <section className="border-border bg-muted/30 container mx-auto border-t px-4 py-12 sm:py-16 md:py-20">
         <div className="mx-auto max-w-3xl">
           <div className="mb-8 space-y-4 text-center">
             <h2 className="text-2xl font-bold md:text-3xl">Pricing Example</h2>
@@ -568,7 +568,7 @@ export default function Pricing() {
       </section>
 
       {/* FAQ Quick */}
-      <section className="border-border container mx-auto border-t px-4 py-20">
+      <section className="border-border container mx-auto border-t px-4 py-12 sm:py-16 md:py-20">
         <div className="mx-auto max-w-3xl">
           <h2 className="mb-8 text-center text-2xl font-bold">Pricing FAQs</h2>
 
@@ -622,10 +622,10 @@ export default function Pricing() {
       </section>
 
       {/* CTA */}
-      <section className="border-border container mx-auto border-t px-4 py-20">
+      <section className="border-border container mx-auto border-t px-4 py-12 sm:py-16 md:py-20">
         <div className="mx-auto max-w-3xl space-y-6 text-center">
-          <h2 className="text-3xl font-bold">Ready to Get Started?</h2>
-          <p className="text-muted-foreground text-lg">
+          <h2 className="text-2xl font-bold sm:text-3xl">Ready to Get Started?</h2>
+          <p className="text-muted-foreground text-base sm:text-lg">
             Create your account and start using our service today
           </p>
           <div className="flex flex-col items-center justify-center gap-4 sm:flex-row">

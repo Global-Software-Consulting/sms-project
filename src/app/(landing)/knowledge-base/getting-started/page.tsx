@@ -61,7 +61,7 @@ export default function GettingStartedArticle() {
   ];
 
   return (
-    <div className="container mx-auto px-4 py-20">
+    <div className="container mx-auto px-4 py-12 sm:py-16 md:py-20">
       <div className="mx-auto max-w-4xl space-y-8">
         {/* Back Button */}
         <Link
@@ -75,7 +75,7 @@ export default function GettingStartedArticle() {
         {/* Category Header */}
         <div>
           <Badge className="mb-4">Getting Started</Badge>
-          <h1 className="mb-4 text-4xl font-bold">Getting Started</h1>
+          <h1 className="mb-4 text-3xl font-bold sm:text-4xl">Getting Started</h1>
           <p className="text-muted-foreground text-xl">
             Learn the basics and set up your account to start using the
             platform.

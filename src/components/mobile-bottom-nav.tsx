@@ -83,14 +83,14 @@ export function MobileBottomNav() {
                   href={item.href}
                   onClick={() => setShowMore(false)}
                   className={cn(
-                    'flex flex-col items-center gap-1.5 rounded-xl p-3 transition-colors',
+                    'flex flex-col items-center gap-1.5 overflow-hidden rounded-xl p-3 transition-colors',
                     active
                       ? 'bg-primary/10 text-primary'
                       : 'text-muted-foreground hover:bg-muted hover:text-foreground',
                   )}
                 >
-                  <Icon className="h-5 w-5" />
-                  <span className="text-center text-[10px] leading-tight font-medium">
+                  <Icon className="h-5 w-5 shrink-0" />
+                  <span className="w-full truncate text-center text-[10px] leading-tight font-medium">
                     {item.name}
                   </span>
                 </Link>
@@ -130,7 +130,7 @@ export function MobileBottomNav() {
                 </div>
                 <span
                   className={cn(
-                    'mt-0.5 text-[10px] font-medium transition-colors',
+                    'mt-0.5 w-full truncate text-center text-[10px] font-medium transition-colors',
                     active ? 'text-primary' : 'text-muted-foreground',
                   )}
                 >
@@ -144,7 +144,7 @@ export function MobileBottomNav() {
                 <button
                   key={item.name}
                   onClick={() => setShowMore(!showMore)}
-                  className="flex flex-col items-center justify-center gap-0 pt-1"
+                  className="flex flex-col items-center justify-center gap-0 overflow-hidden pt-1"
                 >
                   {content}
                 </button>
@@ -155,7 +155,7 @@ export function MobileBottomNav() {
               <Link
                 key={item.name}
                 href={item.href}
-                className="flex flex-col items-center justify-center gap-0 pt-1"
+                className="flex flex-col items-center justify-center gap-0 overflow-hidden pt-1"
               >
                 {content}
               </Link>

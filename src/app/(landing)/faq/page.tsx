@@ -21,9 +21,9 @@ export default function FAQ() {
   ];
 
   return (
-    <div className="container mx-auto px-4 py-20">
+    <div className="container mx-auto px-4 py-12 sm:py-20">
       <div className="mx-auto max-w-4xl space-y-6">
-        <h1 className="text-4xl font-bold md:text-5xl">
+        <h1 className="text-3xl font-bold sm:text-4xl md:text-5xl">
           Frequently Asked Questions
         </h1>
         {faqs.map((faq, i) => (

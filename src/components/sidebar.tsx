@@ -92,6 +92,7 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
                 !isOpen && 'w-full',
               )}
               title={isOpen ? 'Collapse sidebar' : 'Expand sidebar'}
+              aria-label={isOpen ? 'Collapse sidebar' : 'Expand sidebar'}
             >
               {isOpen ? (
                 <ChevronLeft className="h-4 w-4" />

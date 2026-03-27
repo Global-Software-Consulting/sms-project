@@ -76,7 +76,7 @@ export default function Notifications() {
       {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Notifications</h1>
+          <h1 className="text-2xl font-bold sm:text-3xl">Notifications</h1>
           <p className="text-muted-foreground mt-1">
             Stay updated with all your activities
           </p>

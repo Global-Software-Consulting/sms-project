@@ -6,11 +6,11 @@ import { Mail, MessageSquare } from 'lucide-react';
 
 export default function Contact() {
   return (
-    <div className="container mx-auto px-4 py-20">
+    <div className="container mx-auto px-4 py-12 sm:py-20">
       <div className="mx-auto max-w-4xl space-y-8">
         <div className="space-y-4 text-center">
-          <h1 className="text-4xl font-bold md:text-5xl">Contact Us</h1>
-          <p className="text-muted-foreground text-xl">
+          <h1 className="text-3xl font-bold sm:text-4xl md:text-5xl">Contact Us</h1>
+          <p className="text-muted-foreground text-base sm:text-xl">
             Get in touch with our team
           </p>
         </div>

@@ -63,11 +63,11 @@ export default function Features() {
   ];
 
   return (
-    <div className="container mx-auto px-4 py-20">
+    <div className="container mx-auto px-4 py-12 sm:py-16 md:py-20">
       <div className="mx-auto max-w-6xl">
-        <div className="mb-16 space-y-4 text-center">
-          <h1 className="text-4xl font-bold md:text-5xl">Powerful Features</h1>
-          <p className="text-muted-foreground mx-auto max-w-2xl text-xl">
+        <div className="mb-10 space-y-4 text-center sm:mb-16">
+          <h1 className="text-3xl font-bold sm:text-4xl md:text-5xl">Powerful Features</h1>
+          <p className="text-muted-foreground mx-auto max-w-2xl text-base sm:text-xl">
             Everything you need for seamless SMS verification
           </p>
         </div>
