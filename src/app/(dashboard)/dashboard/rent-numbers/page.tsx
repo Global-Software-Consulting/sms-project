@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   Card,
   CardContent,
@@ -26,6 +26,19 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from '@/components/ui/command';
+import {
   Clock,
   RefreshCw,
   X,
@@ -34,8 +47,12 @@ import {
   AlertCircle,
   MessageSquare,
   Phone,
+  Check,
+  ChevronsUpDown,
+  Search,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { cn } from '@/components/ui/utils';
 import {
   getProviders,
   getServices,
@@ -76,10 +93,52 @@ export default function RentNumbers() {
   const [selectedService, setSelectedService] = useState<string>('');
   const [selectedCountry, setSelectedCountry] = useState<string>('');
   const [selectedDuration, setSelectedDuration] = useState<string>('4');
+  const [serviceSearchOpen, setServiceSearchOpen] = useState(false);
+  const [serviceSearchQuery, setServiceSearchQuery] = useState('');
 
   // Messages dialog
   const [showMessagesDialog, setShowMessagesDialog] = useState(false);
   const [selectedRental, setSelectedRental] = useState<SmsRental | null>(null);
+
+  // Popular service names to prioritize (case-insensitive matching)
+  const POPULAR_SERVICE_NAMES = [
+    'whatsapp', 'telegram', 'facebook', 'instagram', 'twitter', 'tiktok',
+    'google', 'discord', 'steam', 'paypal', 'amazon', 'netflix', 'spotify',
+    'uber', 'binance', 'coinbase', 'tinder', 'snapchat', 'linkedin', 'youtube',
+    'gmail', 'microsoft', 'apple', 'yahoo', 'outlook', 'signal', 'viber',
+  ];
+
+  // Filter and sort services - popular first, then alphabetically
+  const filteredServices = useMemo(() => {
+    let filtered = services;
+    
+    // Filter by search query
+    if (serviceSearchQuery) {
+      const query = serviceSearchQuery.toLowerCase();
+      filtered = services.filter(s => 
+        s.name.toLowerCase().includes(query) ||
+        s.slug?.toLowerCase().includes(query)
+      );
+    }
+    
+    // Sort: popular services first, then alphabetically
+    return filtered.sort((a, b) => {
+      const aName = a.name.toLowerCase();
+      const bName = b.name.toLowerCase();
+      const aIsPopular = POPULAR_SERVICE_NAMES.some(p => aName.includes(p));
+      const bIsPopular = POPULAR_SERVICE_NAMES.some(p => bName.includes(p));
+      
+      if (aIsPopular && !bIsPopular) return -1;
+      if (!aIsPopular && bIsPopular) return 1;
+      return a.name.localeCompare(b.name);
+    });
+  }, [services, serviceSearchQuery]);
+
+  // Get selected service name for display
+  const selectedServiceName = useMemo(() => {
+    const service = services.find(s => s.id === selectedService);
+    return service?.name || '';
+  }, [services, selectedService]);
 
   // Fetch initial data - optimized to load essential data first
   const fetchInitialData = useCallback(async () => {
@@ -163,8 +222,10 @@ export default function RentNumbers() {
           );
 
           // Check for new messages
-          if (response.rental.messages.length > rental.messages.length) {
-            const newMessages = response.rental.messages.slice(rental.messages.length);
+          const newMsgCount = response.rental?.messages?.length || 0;
+          const oldMsgCount = rental.messages?.length || 0;
+          if (newMsgCount > oldMsgCount) {
+            const newMessages = (response.rental?.messages || []).slice(oldMsgCount);
             newMessages.forEach(msg => {
               toast.success('New SMS received!', {
                 description: msg.text.slice(0, 50) + (msg.text.length > 50 ? '...' : ''),
@@ -192,13 +253,16 @@ export default function RentNumbers() {
       const duration = parseInt(selectedDuration) as 1 | 4 | 12 | 24 | 48 | 72;
       const response = await rentNumber(selectedService, selectedCountry, duration);
 
-      setActiveRentals(prev => [response.rental, ...prev]);
+      // Handle both response formats: { rental: ... } or direct rental object
+      const rental = response.rental || response;
+
+      setActiveRentals(prev => [rental as SmsRental, ...prev]);
       setWalletBalance(prev =>
-        (parseFloat(prev) - parseFloat(response.rental.finalCost)).toFixed(2)
+        (parseFloat(prev) - parseFloat(rental.finalCost || '0')).toFixed(2)
       );
 
       toast.success('Number rented successfully!', {
-        description: `${response.rental.phoneNumber} - ${formatDuration(duration)}`,
+        description: `${rental.phoneNumber || 'Number assigned'} - ${formatDuration(duration)}`,
       });
 
       // Reset form
@@ -206,9 +270,23 @@ export default function RentNumbers() {
       setSelectedCountry('');
     } catch (err: any) {
       console.error('Rent error:', err);
-      toast.error('Failed to rent number', {
-        description: err.response?.data?.message || 'Please try again.',
-      });
+      const errorMessage = err.response?.data?.message || '';
+      
+      // Provide user-friendly error messages
+      let description = 'Please try again.';
+      if (errorMessage.includes('No numbers') || errorMessage.includes('not available')) {
+        description = 'No numbers available for this service/country combination. Try a different country or service.';
+      } else if (errorMessage.includes('Insufficient')) {
+        description = 'Insufficient wallet balance. Please add funds to continue.';
+      } else if (errorMessage.includes('Service not found')) {
+        description = 'This service is not available for rental. Please select a different service.';
+      } else if (errorMessage.includes('Country not found')) {
+        description = 'This country is not available. Please select a different country.';
+      } else if (errorMessage) {
+        description = errorMessage;
+      }
+      
+      toast.error('Failed to rent number', { description });
     } finally {
       setIsRenting(false);
     }
@@ -355,24 +433,68 @@ export default function RentNumbers() {
               </div>
             )}
 
-            {/* Service */}
+            {/* Service - Searchable Combobox */}
             <div className="space-y-2">
               <Label>Service</Label>
-              <Select
-                value={selectedService}
-                onValueChange={setSelectedService}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select service" />
-                </SelectTrigger>
-                <SelectContent>
-                  {services.map(service => (
-                    <SelectItem key={service.id} value={service.id}>
-                      {service.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Popover open={serviceSearchOpen} onOpenChange={setServiceSearchOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    role="combobox"
+                    aria-expanded={serviceSearchOpen}
+                    className="w-full justify-between font-normal"
+                  >
+                    {selectedServiceName || "Search services..."}
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[300px] p-0" align="start">
+                  <Command shouldFilter={false}>
+                    <CommandInput 
+                      placeholder="Search WhatsApp, Telegram, etc..." 
+                      value={serviceSearchQuery}
+                      onValueChange={setServiceSearchQuery}
+                    />
+                    <CommandList>
+                      <CommandEmpty>No service found.</CommandEmpty>
+                      <CommandGroup heading="Popular Services">
+                        {filteredServices.slice(0, 50).map(service => (
+                          <CommandItem
+                            key={service.id}
+                            value={service.id}
+                            onSelect={() => {
+                              setSelectedService(service.id);
+                              setServiceSearchOpen(false);
+                              setServiceSearchQuery('');
+                            }}
+                          >
+                            <Check
+                              className={cn(
+                                "mr-2 h-4 w-4",
+                                selectedService === service.id ? "opacity-100" : "opacity-0"
+                              )}
+                            />
+                            <span className="truncate">{service.name}</span>
+                            {service.iconUrl && (
+                              <img 
+                                src={service.iconUrl} 
+                                alt="" 
+                                className="ml-auto h-4 w-4"
+                                onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                              />
+                            )}
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                      {filteredServices.length > 50 && (
+                        <p className="text-muted-foreground px-2 py-2 text-xs text-center">
+                          Type to search {filteredServices.length - 50} more services...
+                        </p>
+                      )}
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
             </div>
 
             {/* Country */}
@@ -422,21 +544,26 @@ export default function RentNumbers() {
             </div>
           </div>
 
-          <Button
-            size="lg"
-            className="w-full sm:w-auto"
-            onClick={handleRentNumber}
-            disabled={isRenting || !selectedService || !selectedCountry}
-          >
-            {isRenting ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Renting...
-              </>
-            ) : (
-              'Rent Number Now'
-            )}
-          </Button>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <Button
+              size="lg"
+              className="w-full sm:w-auto"
+              onClick={handleRentNumber}
+              disabled={isRenting || !selectedService || !selectedCountry}
+            >
+              {isRenting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Renting...
+                </>
+              ) : (
+                'Rent Number Now'
+              )}
+            </Button>
+            <p className="text-muted-foreground text-xs">
+              Number availability varies by service and country. If unavailable, try a different combination.
+            </p>
+          </div>
         </CardContent>
       </Card>
 
@@ -484,7 +611,7 @@ export default function RentNumbers() {
                           )}
                         </div>
                         <div className="text-muted-foreground flex flex-wrap gap-x-2 gap-y-1 text-xs sm:text-sm">
-                          <span>{rental.provider?.displayName}</span>
+                          <span>{rental.provider?.displayName || rental.provider?.name}</span>
                           <span>•</span>
                           <span>{formatDuration(rental.rentalDuration)}</span>
                         </div>
@@ -493,10 +620,10 @@ export default function RentNumbers() {
                             <Clock className="mr-1 h-3 w-3" />
                             {formatTimeRemaining(rental.expiresAt)} remaining
                           </Badge>
-                          {rental.messages.length > 0 && (
+                          {(rental.messages?.length || 0) > 0 && (
                             <Badge variant="default" className="text-xs">
                               <MessageSquare className="mr-1 h-3 w-3" />
-                              {rental.messages.length} messages
+                              {rental.messages?.length || 0} messages
                             </Badge>
                           )}
                         </div>
@@ -508,7 +635,7 @@ export default function RentNumbers() {
                         ${parseFloat(rental.finalCost).toFixed(2)}
                       </span>
                       <div className="flex gap-2">
-                        {rental.messages.length > 0 && (
+                        {(rental.messages?.length || 0) > 0 && (
                           <Button
                             size="sm"
                             variant="outline"
@@ -563,9 +690,9 @@ export default function RentNumbers() {
                         {rental.phoneNumber || 'N/A'}
                       </p>
                       <p className="text-muted-foreground text-xs">
-                        {rental.provider?.displayName} •{' '}
+                        {rental.provider?.displayName || rental.provider?.name} •{' '}
                         {formatDuration(rental.rentalDuration)} •{' '}
-                        {rental.messages.length} messages
+                        {rental.messages?.length || 0} messages
                       </p>
                     </div>
                   </div>

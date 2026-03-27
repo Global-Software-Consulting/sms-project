@@ -161,27 +161,28 @@ export interface SmsOrder {
  */
 export interface SmsRental {
   id: string;
-  userId: string;
-  provider: {
-    id: string;
-    displayName: string;
+  userId?: string;
+  provider?: {
+    name?: string;
+    displayName?: string;
     slug: string;
   };
   phoneNumber: string | null;
   status: SmsRentalStatus;
   rentalDuration: number; // Hours
   cost: string;
-  discount: string;
+  discount?: string;
   finalCost: string;
-  membershipDiscount: number;
+  membershipDiscount?: number;
   messages: Array<{
     text: string;
-    sender: string;
+    sender?: string;
+    from?: string;
     receivedAt: string;
   }>;
   startedAt: string;
   expiresAt: string;
-  cancelledAt: string | null;
+  cancelledAt?: string | null;
   createdAt: string;
   // Admin fields
   user?: {
