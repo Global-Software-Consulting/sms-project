@@ -173,7 +173,7 @@ export default function ReviewsDashboard() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold">Reviews</h1>
+        <h1 className="text-2xl font-bold sm:text-3xl">Reviews</h1>
         <p className="text-muted-foreground mt-1">
           Share your experience with our services
         </p>

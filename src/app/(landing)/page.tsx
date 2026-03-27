@@ -175,13 +175,13 @@ export default function Home() {
       </section>
 
       {/* Provider Comparison Section */}
-      <section className="border-border container mx-auto border-t px-4 py-20">
+      <section className="border-border container mx-auto border-t px-4 py-12 sm:py-16 md:py-20">
         <div className="mx-auto max-w-5xl">
-          <div className="mb-12 space-y-4 text-center">
-            <h2 className="text-3xl font-bold md:text-4xl">
+          <div className="mb-8 space-y-4 text-center sm:mb-12">
+            <h2 className="text-2xl font-bold sm:text-3xl md:text-4xl">
               Choose Your Provider Type
             </h2>
-            <p className="text-muted-foreground text-lg">
+            <p className="text-muted-foreground text-base sm:text-lg">
               Select from Standard, Premium, or Elite providers based on your
               needs
             </p>
@@ -329,11 +329,11 @@ export default function Home() {
       </section>
 
       {/* How It Works */}
-      <section className="border-border container mx-auto border-t px-4 py-20">
+      <section className="border-border container mx-auto border-t px-4 py-12 sm:py-16 md:py-20">
         <div className="mx-auto max-w-4xl">
-          <div className="mb-12 space-y-4 text-center">
-            <h2 className="text-3xl font-bold md:text-4xl">How It Works</h2>
-            <p className="text-muted-foreground text-lg">
+          <div className="mb-8 space-y-4 text-center sm:mb-12">
+            <h2 className="text-2xl font-bold sm:text-3xl md:text-4xl">How It Works</h2>
+            <p className="text-muted-foreground text-base sm:text-lg">
               Get started in three simple steps
             </p>
           </div>
@@ -375,11 +375,11 @@ export default function Home() {
       </section>
 
       {/* Features Grid */}
-      <section className="border-border container mx-auto border-t px-4 py-20">
+      <section className="border-border container mx-auto border-t px-4 py-12 sm:py-16 md:py-20">
         <div className="mx-auto max-w-6xl">
-          <div className="mb-12 space-y-4 text-center">
-            <h2 className="text-3xl font-bold md:text-4xl">Key Features</h2>
-            <p className="text-muted-foreground text-lg">
+          <div className="mb-8 space-y-4 text-center sm:mb-12">
+            <h2 className="text-2xl font-bold sm:text-3xl md:text-4xl">Key Features</h2>
+            <p className="text-muted-foreground text-base sm:text-lg">
               Everything you need for SMS verification
             </p>
           </div>
@@ -411,11 +411,11 @@ export default function Home() {
       </section>
 
       {/* Membership Preview */}
-      <section className="border-border container mx-auto border-t px-4 py-20">
+      <section className="border-border container mx-auto border-t px-4 py-12 sm:py-16 md:py-20">
         <div className="mx-auto max-w-6xl">
-          <div className="mb-12 space-y-4 text-center">
-            <h2 className="text-3xl font-bold md:text-4xl">Membership Plans</h2>
-            <p className="text-muted-foreground text-lg">
+          <div className="mb-8 space-y-4 text-center sm:mb-12">
+            <h2 className="text-2xl font-bold sm:text-3xl md:text-4xl">Membership Plans</h2>
+            <p className="text-muted-foreground text-base sm:text-lg">
               Save more with our membership tiers
             </p>
           </div>
@@ -477,13 +477,13 @@ export default function Home() {
       </section>
 
       {/* Trust & Reviews */}
-      <section className="border-border container mx-auto border-t px-4 py-20">
+      <section className="border-border container mx-auto border-t px-4 py-12 sm:py-16 md:py-20">
         <div className="mx-auto max-w-4xl">
-          <div className="mb-12 space-y-4 text-center">
-            <h2 className="text-3xl font-bold md:text-4xl">
+          <div className="mb-8 space-y-4 text-center sm:mb-12">
+            <h2 className="text-2xl font-bold sm:text-3xl md:text-4xl">
               Trusted by Thousands
             </h2>
-            <p className="text-muted-foreground text-lg">
+            <p className="text-muted-foreground text-base sm:text-lg">
               See what our customers have to say
             </p>
           </div>
@@ -534,7 +534,7 @@ export default function Home() {
             ))}
           </div>
 
-          <div className="border-border mt-12 flex justify-center gap-8 border-t pt-12">
+          <div className="border-border mt-12 flex flex-wrap justify-center gap-6 border-t pt-12 sm:gap-8">
             <div className="text-center">
               <Shield className="text-success mx-auto mb-2 h-8 w-8" />
               <p className="font-semibold">Secure</p>
@@ -555,12 +555,12 @@ export default function Home() {
       </section>
 
       {/* CTA Section */}
-      <section className="border-border container mx-auto border-t px-4 py-20">
+      <section className="border-border container mx-auto border-t px-4 py-12 sm:py-16 md:py-20">
         <div className="mx-auto max-w-4xl space-y-6 text-center">
-          <h2 className="text-3xl font-bold md:text-4xl">
+          <h2 className="text-2xl font-bold sm:text-3xl md:text-4xl">
             Ready to Get Started?
           </h2>
-          <p className="text-muted-foreground text-lg">
+          <p className="text-muted-foreground text-base sm:text-lg">
             Join thousands of satisfied customers using SMSPro
           </p>
           <Button asChild size="lg" className="btn-premium text-base">

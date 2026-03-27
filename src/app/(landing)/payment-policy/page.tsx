@@ -3,10 +3,10 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 export default function PaymentPolicy() {
   return (
-    <div className="container max-w-4xl space-y-8 py-12">
+    <div className="container max-w-4xl space-y-8 px-4 py-12">
       <div className="space-y-4">
-        <h1 className="text-4xl font-bold">Payment & Refund Policy</h1>
-        <p className="text-muted-foreground text-lg">
+        <h1 className="text-2xl font-bold sm:text-3xl md:text-4xl">Payment & Refund Policy</h1>
+        <p className="text-muted-foreground text-sm sm:text-lg">
           Last updated: February 25, 2026
         </p>
       </div>

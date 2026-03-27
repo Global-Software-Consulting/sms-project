@@ -682,7 +682,7 @@ export default function Activation() {
       )}
 
       {/* Two-column layout: Step 1 + Step 2 */}
-      <div className="grid gap-5 lg:grid-cols-2">
+      <div className="grid gap-5 md:grid-cols-2">
         {/* STEP 1: Select a Service */}
         <Card className="flex max-h-[560px] flex-col">
           <CardHeader className="shrink-0 pb-3">

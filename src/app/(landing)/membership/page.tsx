@@ -94,13 +94,13 @@ export default function Membership() {
   const savings = calculateSavings(monthlySpend);
 
   return (
-    <div className="container mx-auto px-4 py-20">
-      <div className="mx-auto max-w-7xl space-y-16">
+    <div className="container mx-auto px-4 py-12 sm:py-16 md:py-20">
+      <div className="mx-auto max-w-7xl space-y-10 sm:space-y-16">
         {/* Hero Section */}
         <div className="mx-auto max-w-3xl space-y-6 text-center">
           <Badge className="mx-auto">Membership Plans</Badge>
-          <h1 className="text-4xl font-bold md:text-5xl">Choose Your Plan</h1>
-          <p className="text-muted-foreground text-xl">
+          <h1 className="text-3xl font-bold sm:text-4xl md:text-5xl">Choose Your Plan</h1>
+          <p className="text-muted-foreground text-base sm:text-xl">
             Save more, get priority access, and unlock premium features with our
             flexible membership tiers
           </p>
@@ -173,7 +173,7 @@ export default function Membership() {
         {/* How Membership Works */}
         <Card>
           <CardHeader>
-            <CardTitle className="text-3xl">How Membership Works</CardTitle>
+            <CardTitle className="text-xl sm:text-2xl md:text-3xl">How Membership Works</CardTitle>
             <CardDescription>
               Understanding the benefits and how they apply to your account
             </CardDescription>

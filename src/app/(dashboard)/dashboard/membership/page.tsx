@@ -228,7 +228,7 @@ export default function MembershipDashboard() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold">Membership</h1>
+        <h1 className="text-2xl font-bold sm:text-3xl">Membership</h1>
         <p className="text-muted-foreground mt-1">
           Upgrade your plan to save more
         </p>
@@ -329,7 +329,7 @@ export default function MembershipDashboard() {
       {/* Available Plans */}
       <div>
         <h2 className="mb-4 text-2xl font-semibold">Available Plans</h2>
-        <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-4">
+        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4 [&>*:last-child:nth-child(2n+1)]:sm:col-span-2 [&>*:last-child:nth-child(2n+1)]:lg:col-span-1">
           {plans.map((plan) => {
             const isCurrent = isCurrentPlan(plan);
             const planColor = getPlanColor(plan.slug);

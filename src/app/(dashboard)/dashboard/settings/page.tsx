@@ -214,7 +214,7 @@ export default function Settings() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold">Settings</h1>
+        <h1 className="text-2xl font-bold sm:text-3xl">Settings</h1>
         <p className="text-muted-foreground mt-1">
           Manage your account preferences
         </p>
@@ -455,8 +455,8 @@ export default function Settings() {
           <CardTitle className="text-destructive">Danger Zone</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="flex items-center justify-between">
-            <div>
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div className="min-w-0">
               <Label>Delete Account</Label>
               <p className="text-muted-foreground text-sm">
                 Permanently delete your account and all data
@@ -465,6 +465,7 @@ export default function Settings() {
             <Button
               variant="destructive"
               onClick={() => setShowDeleteDialog(true)}
+              className="shrink-0"
             >
               Delete Account
             </Button>

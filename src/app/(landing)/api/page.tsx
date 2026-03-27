@@ -68,18 +68,18 @@ export default function API() {
   return (
     <div className="w-full">
       {/* Hero Section */}
-      <section className="container mx-auto px-4 py-20">
+      <section className="container mx-auto px-4 py-12 sm:py-20">
         <div className="mx-auto max-w-4xl space-y-6 text-center">
           <Badge variant="secondary" className="px-4 py-2">
             <Code className="mr-2 inline h-4 w-4" />
             RESTful API
           </Badge>
 
-          <h1 className="text-4xl font-bold tracking-tight md:text-5xl">
+          <h1 className="text-3xl font-bold tracking-tight sm:text-4xl md:text-5xl">
             Developer API
           </h1>
 
-          <p className="text-muted-foreground mx-auto max-w-2xl text-xl">
+          <p className="text-muted-foreground mx-auto max-w-2xl text-base sm:text-xl">
             Integrate SMS verification into your applications with our simple,
             powerful API
           </p>
@@ -143,10 +143,10 @@ export default function API() {
       </section>
 
       {/* Quick Start */}
-      <section className="border-border container mx-auto border-t px-4 py-20">
+      <section className="border-border container mx-auto border-t px-4 py-12 sm:py-16 md:py-20">
         <div className="mx-auto max-w-5xl">
           <div className="mb-12 space-y-4 text-center">
-            <h2 className="text-3xl font-bold md:text-4xl">Quick Start</h2>
+            <h2 className="text-2xl font-bold sm:text-3xl md:text-4xl">Quick Start</h2>
             <p className="text-muted-foreground text-lg">
               Get up and running in minutes
             </p>
@@ -381,10 +381,10 @@ print(response.json())`}</code>
       </section>
 
       {/* Provider Tiers */}
-      <section className="border-border container mx-auto border-t px-4 py-20">
+      <section className="border-border container mx-auto border-t px-4 py-12 sm:py-16 md:py-20">
         <div className="mx-auto max-w-5xl">
           <div className="mb-12 space-y-4 text-center">
-            <h2 className="text-3xl font-bold md:text-4xl">
+            <h2 className="text-2xl font-bold sm:text-3xl md:text-4xl">
               Provider Tiers via API
             </h2>
             <p className="text-muted-foreground text-lg">
@@ -468,10 +468,10 @@ print(response.json())`}</code>
       </section>
 
       {/* API Endpoints */}
-      <section className="border-border container mx-auto border-t px-4 py-20">
+      <section className="border-border container mx-auto border-t px-4 py-12 sm:py-16 md:py-20">
         <div className="mx-auto max-w-5xl">
           <div className="mb-12 space-y-4 text-center">
-            <h2 className="text-3xl font-bold md:text-4xl">API Endpoints</h2>
+            <h2 className="text-2xl font-bold sm:text-3xl md:text-4xl">API Endpoints</h2>
             <p className="text-muted-foreground text-lg">
               Complete reference of available endpoints
             </p>
@@ -515,7 +515,7 @@ print(response.json())`}</code>
       </section>
 
       {/* Rate Limits */}
-      <section className="border-border bg-muted/30 container mx-auto border-t px-4 py-20">
+      <section className="border-border bg-muted/30 container mx-auto border-t px-4 py-12 sm:py-16 md:py-20">
         <div className="mx-auto max-w-4xl">
           <div className="mb-12 space-y-4 text-center">
             <h2 className="text-2xl font-bold md:text-3xl">
@@ -582,7 +582,7 @@ print(response.json())`}</code>
       </section>
 
       {/* CTA */}
-      <section className="border-border container mx-auto border-t px-4 py-20">
+      <section className="border-border container mx-auto border-t px-4 py-12 sm:py-16 md:py-20">
         <div className="mx-auto max-w-3xl space-y-6 text-center">
           <h2 className="text-3xl font-bold">Ready to Integrate?</h2>
           <p className="text-muted-foreground text-lg">

@@ -50,7 +50,7 @@ export default function StandardVsPremium() {
   ];
 
   return (
-    <div className="container mx-auto px-4 py-20">
+    <div className="container mx-auto px-4 py-12 sm:py-16 md:py-20">
       <div className="mx-auto max-w-4xl">
         {/* Breadcrumb */}
         <div className="text-muted-foreground mb-8 flex items-center gap-2 text-sm">
@@ -74,7 +74,7 @@ export default function StandardVsPremium() {
         {/* Article Header */}
         <div className="mb-8">
           <Badge className="mb-4">SMS Activation</Badge>
-          <h1 className="mb-4 text-4xl font-bold">
+          <h1 className="mb-4 text-3xl font-bold sm:text-4xl">
             Provider Differences: V1 vs V2 vs V3
           </h1>
           <p className="text-muted-foreground">

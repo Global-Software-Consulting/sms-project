@@ -305,9 +305,9 @@ export default function WalletPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
-          <h1 className="text-3xl font-bold">Wallet</h1>
+          <h1 className="text-2xl font-bold sm:text-3xl">Wallet</h1>
           <p className="text-muted-foreground mt-1">
             Manage your balance and transactions
           </p>
@@ -530,12 +530,12 @@ export default function WalletPage() {
                 {totalTransactions} total transactions
               </CardDescription>
             </div>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               <Select
                 value={typeFilter}
                 onValueChange={(v) => setTypeFilter(v as TransactionType | 'all')}
               >
-                <SelectTrigger className="w-[140px]">
+                <SelectTrigger className="w-[130px] sm:w-[140px]">
                   <SelectValue placeholder="Type" />
                 </SelectTrigger>
                 <SelectContent>
@@ -552,7 +552,7 @@ export default function WalletPage() {
                 value={statusFilter}
                 onValueChange={(v) => setStatusFilter(v as TransactionStatus | 'all')}
               >
-                <SelectTrigger className="w-[140px]">
+                <SelectTrigger className="w-[130px] sm:w-[140px]">
                   <SelectValue placeholder="Status" />
                 </SelectTrigger>
                 <SelectContent>
