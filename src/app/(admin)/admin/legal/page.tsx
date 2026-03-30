@@ -1,6 +1,6 @@
 'use client';
 
-import { AdminGlassCard } from "@/components/admin/glass-card";
+import { AdminGlassCard } from '@/components/admin/glass-card';
 import { FileText, Edit, Eye } from "lucide-react";
 
 const pages = [
@@ -59,7 +59,7 @@ export default function AdminLegalPage() {
             <option>Draft</option>
           </select>
         </div>
-        <button className="px-4 py-2.5 rounded-xl bg-[#3B82F6] hover:bg-[#2563EB] text-white text-sm font-medium transition-colors flex items-center gap-2">
+        <button className="flex items-center gap-2 px-4 py-3 rounded-xl bg-[#3B82F6] hover:bg-[#2563EB] text-white text-sm font-medium transition-colors">
           <FileText className="w-5 h-5" />
           Create New Page
         </button>
@@ -146,10 +146,10 @@ export default function AdminLegalPage() {
             </div>
 
             <div className="flex items-center gap-3">
-              <button className="px-4 py-2.5 rounded-xl bg-[#3B82F6] hover:bg-[#2563EB] text-white text-sm font-medium transition-colors">
+              <button className="px-4 py-3 rounded-xl bg-[#3B82F6] hover:bg-[#2563EB] text-white text-sm font-medium transition-colors">
                 Publish
               </button>
-              <button className="px-4 py-2.5 rounded-xl bg-[rgba(255,255,255,0.08)] border border-[rgba(255,255,255,0.18)] text-white hover:bg-[rgba(255,255,255,0.12)] transition-colors text-sm font-medium">
+              <button className="px-4 py-3 rounded-xl bg-[rgba(255,255,255,0.08)] border border-[rgba(255,255,255,0.18)] text-white hover:bg-[rgba(255,255,255,0.12)] text-sm font-medium transition-colors">
                 Save as Draft
               </button>
               <button className="flex items-center gap-2 px-4 py-3 rounded-xl text-[#94A3B8] hover:text-white transition-colors">

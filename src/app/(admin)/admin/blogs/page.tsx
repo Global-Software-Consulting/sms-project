@@ -1,11 +1,11 @@
 'use client';
 
 import { useState } from "react";
-import { AdminPageHeader } from "@/components/admin/page-header";
-import { AdminGlassCard } from "@/components/admin/glass-card";
-import { AdminFormInput } from "@/components/admin/form-input";
-import { AdminModal } from "@/components/admin/modal";
-import { toast } from "sonner";
+import { AdminPageHeader } from '@/components/admin/page-header';
+import { AdminGlassCard } from '@/components/admin/glass-card';
+import { AdminFormInput } from '@/components/admin/form-input';
+import { AdminModal } from '@/components/admin/modal';
+import { toast } from 'sonner';
 import { Plus, Edit, Trash2, Upload, Copy } from "lucide-react";
 
 // Mock data
@@ -254,12 +254,14 @@ export default function AdminBlogsPage() {
                 className="p-6 rounded-xl bg-[rgba(0,0,0,0.3)] border border-[rgba(255,255,255,0.18)]"
               >
                 <div className="flex items-start gap-4">
+                  {/* Blog Image */}
                   <img
                     src={blog.image}
                     alt={blog.title}
                     className="w-20 h-20 rounded-lg object-cover flex-shrink-0"
                   />
 
+                  {/* Blog Content */}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-start justify-between mb-2">
                       <div>
@@ -276,6 +278,7 @@ export default function AdminBlogsPage() {
 
                     <p className="text-[#3B82F6] text-sm mb-3">📺 {blog.category}</p>
 
+                    {/* Tags */}
                     <div className="flex items-center gap-2 mb-4">
                       {blog.tags.map((tag, index) => (
                         <span
@@ -287,6 +290,7 @@ export default function AdminBlogsPage() {
                       ))}
                     </div>
 
+                    {/* Actions */}
                     <div className="flex items-center gap-2">
                       <button
                         onClick={() => handleUnpublish(blog)}
@@ -311,6 +315,7 @@ export default function AdminBlogsPage() {
                     </div>
                   </div>
 
+                  {/* Slug Info */}
                   <div className="text-right">
                     <p className="text-[#64748B] text-xs mb-1">Slug: {blog.slug}</p>
                     <p className="text-[#64748B] text-xs">Created: {blog.createdDate}</p>
@@ -325,6 +330,7 @@ export default function AdminBlogsPage() {
       {/* Auto Blog Upload Tab */}
       {activeTab === "auto" && (
         <div className="space-y-6">
+          {/* Blog Configuration */}
           <div className="p-6 rounded-xl bg-[rgba(0,0,0,0.3)] border border-[rgba(255,255,255,0.18)]">
             <h3 className="text-white text-base font-semibold mb-4">📋 Blog Configuration</h3>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -362,6 +368,7 @@ export default function AdminBlogsPage() {
             </div>
           </div>
 
+          {/* Blog Posts */}
           <div className="p-6 rounded-xl bg-[rgba(0,0,0,0.3)] border border-[rgba(255,255,255,0.18)]">
             <div className="flex items-center justify-between mb-4">
               <div>
@@ -438,6 +445,7 @@ export default function AdminBlogsPage() {
             </div>
           </div>
 
+          {/* Scheduling Options */}
           <div className="p-6 rounded-xl bg-[rgba(0,0,0,0.3)] border border-[rgba(255,255,255,0.18)]">
             <h3 className="text-white text-base font-semibold mb-4">⏰ Scheduling Options</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
@@ -480,6 +488,7 @@ export default function AdminBlogsPage() {
             </p>
           </div>
 
+          {/* Create Button */}
           <button
             onClick={handleCreateBulkBlogs}
             disabled={isLoading}
@@ -493,6 +502,7 @@ export default function AdminBlogsPage() {
       {/* Category Management Tab */}
       {activeTab === "category" && (
         <AdminGlassCard>
+          {/* Sub-tabs */}
           <div className="flex items-center gap-6 mb-6 border-b border-[rgba(255,255,255,0.18)]">
             <button
               onClick={() => setGategorySubTab("category")}
@@ -600,6 +610,7 @@ export default function AdminBlogsPage() {
       {/* Image Auto Editor Tab */}
       {activeTab === "image" && (
         <div className="space-y-6">
+          {/* Upload Images */}
           <div className="p-6 rounded-xl bg-[rgba(0,0,0,0.3)] border border-[rgba(255,255,255,0.18)]">
             <h3 className="text-white text-base font-semibold mb-4">Upload Images</h3>
             <button className="px-6 py-3 rounded-lg bg-[#06B6D4] hover:bg-[#0891B2] text-white text-sm font-medium transition-colors flex items-center gap-2">
@@ -608,6 +619,7 @@ export default function AdminBlogsPage() {
             </button>
           </div>
 
+          {/* Search Name */}
           <div className="p-6 rounded-xl bg-[rgba(0,0,0,0.3)] border border-[rgba(255,255,255,0.18)]">
             <h3 className="text-white text-base font-semibold mb-4">Search Name for Images</h3>
             <input
@@ -620,6 +632,7 @@ export default function AdminBlogsPage() {
             <p className="text-[#64748B] text-xs mt-2">Images will be named: base-name-index</p>
           </div>
 
+          {/* Processing Settings */}
           <div className="p-6 rounded-xl bg-[rgba(0,0,0,0.3)] border border-[rgba(255,255,255,0.18)]">
             <h3 className="text-white text-base font-semibold mb-4">Processing Settings</h3>
 
@@ -746,6 +759,7 @@ export default function AdminBlogsPage() {
             </div>
           </div>
 
+          {/* Bypass Mode */}
           <div className="p-6 rounded-xl bg-[rgba(245,158,11,0.1)] border border-[rgba(245,158,11,0.3)]">
             <div className="flex items-start gap-3">
               <input
@@ -762,10 +776,21 @@ export default function AdminBlogsPage() {
                 <p className="text-[#F59E0B] text-xs leading-relaxed">
                   When hidden backdrop is centralized on top of your Processing Settings for SEO dominance:
                 </p>
+                <ul className="text-[#F59E0B] text-xs mt-2 space-y-1 list-disc list-inside">
+                  <li>Images are auto-processed with hidden HTML-level CSS element, title, description, and alt.</li>
+                  <li>Alt extraction is ONLY allowed for NON-fetch without limitation for SEO.</li>
+                  <li>Left auto-rotate for ONLY allowed for NON-fetch without limitation for SEO.</li>
+                  <li>CSS auto-rotation with image margin/drag like visual separation.</li>
+                  <li>ALT alt-auto-rotate for ONLY allowed for NON-fetch without limitation for SEO.</li>
+                  <li>ALT alt-auto-generated (NO to SEO-in-text-visual-pics).</li>
+                  <li>LEFT auto-random-title for ONLY randomized (NO to 100% SEO).</li>
+                  <li>Optimized for 100X+ daily traffic and automated CPR.</li>
+                </ul>
               </div>
             </div>
           </div>
 
+          {/* Process Button */}
           <button
             onClick={handleProcessImages}
             disabled={isLoading}
@@ -797,13 +822,13 @@ export default function AdminBlogsPage() {
             label="Category Name"
             required
             value={newCategory.name}
-            onChange={(v) => setNewCategory({ ...newCategory, name: v })}
+            onChange={(e) => setNewCategory({ ...newCategory, name: e.target.value })}
             placeholder="Enter category name"
           />
           <AdminFormInput
             label="Slug"
             value={newCategory.slug}
-            onChange={(v) => setNewCategory({ ...newCategory, slug: v })}
+            onChange={(e) => setNewCategory({ ...newCategory, slug: e.target.value })}
             placeholder="category-slug"
           />
         </div>
@@ -830,13 +855,13 @@ export default function AdminBlogsPage() {
             label="Author Name"
             required
             value={newAuthor.name}
-            onChange={(v) => setNewAuthor({ ...newAuthor, name: v })}
+            onChange={(e) => setNewAuthor({ ...newAuthor, name: e.target.value })}
             placeholder="Enter author name"
           />
           <AdminFormInput
             label="Description"
             value={newAuthor.description}
-            onChange={(v) => setNewAuthor({ ...newAuthor, description: v })}
+            onChange={(e) => setNewAuthor({ ...newAuthor, description: e.target.value })}
             placeholder="Author description"
           />
         </div>

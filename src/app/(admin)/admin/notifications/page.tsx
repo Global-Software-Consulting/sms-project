@@ -1,10 +1,10 @@
 'use client';
 
 import { useState } from "react";
-import { AdminPageHeader } from "@/components/admin/page-header";
-import { AdminGlassCard } from "@/components/admin/glass-card";
-import { AdminFormInput } from "@/components/admin/form-input";
-import { toast } from "sonner";
+import { AdminPageHeader } from '@/components/admin/page-header';
+import { AdminGlassCard } from '@/components/admin/glass-card';
+import { AdminFormInput } from '@/components/admin/form-input';
+import { toast } from 'sonner';
 import { Send, Eye, Mail, Bell } from "lucide-react";
 
 export default function AdminNotificationsPage() {
@@ -36,7 +36,7 @@ export default function AdminNotificationsPage() {
   const handleSend = async () => {
     const formData = notificationType === "email" ? emailFormData : websiteFormData;
 
-    if (notificationType === "email" && (!(formData as any).subject || !formData.message)) {
+    if (notificationType === "email" && (!formData.subject || !formData.message)) {
       toast.error("Please fill in subject and message");
       return;
     }
@@ -242,11 +242,11 @@ export default function AdminNotificationsPage() {
                 type="number"
                 placeholder="0.00"
                 value={notificationType === "email" ? emailFormData.minSpent : websiteFormData.minSpent}
-                onChange={(value) => {
+                onChange={(e) => {
                   if (notificationType === "email") {
-                    setEmailFormData({ ...emailFormData, minSpent: value });
+                    setEmailFormData({ ...emailFormData, minSpent: e.target.value });
                   } else {
-                    setWebsiteFormData({ ...websiteFormData, minSpent: value });
+                    setWebsiteFormData({ ...websiteFormData, minSpent: e.target.value });
                   }
                 }}
                 helpText="Only users who spent at least this amount"
@@ -262,7 +262,7 @@ export default function AdminNotificationsPage() {
                 required
                 placeholder="Enter email subject"
                 value={emailFormData.subject}
-                onChange={(value) => setEmailFormData({ ...emailFormData, subject: value })}
+                onChange={(e) => setEmailFormData({ ...emailFormData, subject: e.target.value })}
               />
 
               <div>
@@ -288,7 +288,7 @@ export default function AdminNotificationsPage() {
                 required
                 placeholder="Enter notification title"
                 value={websiteFormData.title}
-                onChange={(value) => setWebsiteFormData({ ...websiteFormData, title: value })}
+                onChange={(e) => setWebsiteFormData({ ...websiteFormData, title: e.target.value })}
               />
 
               <div>

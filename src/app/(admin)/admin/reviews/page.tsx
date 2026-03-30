@@ -1,13 +1,13 @@
 'use client';
 
 import { useState } from "react";
-import { AdminDataTable } from "@/components/admin/data-table";
-import { AdminPageHeader } from "@/components/admin/page-header";
-import { AdminFilterBar } from "@/components/admin/filter-bar";
-import { AdminModal } from "@/components/admin/modal";
-import { AdminSlideOver } from "@/components/admin/slide-over";
-import { AdminFormInput } from "@/components/admin/form-input";
-import { toast } from "sonner";
+import { AdminDataTable } from '@/components/admin/data-table';
+import { AdminPageHeader } from '@/components/admin/page-header';
+import { AdminFilterBar } from '@/components/admin/filter-bar';
+import { AdminModal } from '@/components/admin/modal';
+import { AdminSlideOver } from '@/components/admin/slide-over';
+import { AdminFormInput } from '@/components/admin/form-input';
+import { toast } from 'sonner';
 import { Star, Check, X, Edit, Trash2 } from "lucide-react";
 
 const reviewsData = [

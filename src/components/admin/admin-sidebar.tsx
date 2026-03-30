@@ -3,10 +3,36 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useState } from 'react';
 import {
-  LayoutDashboard, Users, Briefcase, Globe, MessageSquare, Server, CreditCard,
-  Gift, Bell, FileText, BookOpen, Code, Settings, Menu, X, BarChart3,
-  ShoppingCart, Ticket, Award, HeadphonesIcon, Mail, HelpCircle, Star,
-  Newspaper, Scale, Wallet, MonitorPlay, KeyRound, ExternalLink,
+  LayoutDashboard,
+  Users,
+  Briefcase,
+  Globe,
+  MessageSquare,
+  Server,
+  CreditCard,
+  Gift,
+  Bell,
+  FileText,
+  BookOpen,
+  Code,
+  Settings,
+  Menu,
+  X,
+  BarChart3,
+  ShoppingCart,
+  Ticket,
+  Award,
+  HeadphonesIcon,
+  Mail,
+  HelpCircle,
+  Star,
+  Newspaper,
+  Scale,
+  Wallet,
+  MonitorPlay,
+  KeyRound,
+  ExternalLink,
+  SearchCheck,
 } from 'lucide-react';
 
 const menuItems = [
@@ -30,7 +56,7 @@ const menuItems = [
   { path: '/admin/ads', label: 'Ad Management', icon: MonitorPlay },
   { path: '/admin/login-api', label: 'Login & API Management', icon: KeyRound },
   { path: '/admin/settings', label: 'System Settings', icon: Settings },
-  { path: '/admin/url-tracking', label: 'URL Tracking', icon: ExternalLink },
+  { path: '/admin/seo', label: 'SEO Management', icon: SearchCheck },
 ];
 
 export function AdminSidebar() {

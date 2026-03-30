@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from "react";
-import { toast } from "sonner";
+import { toast } from 'sonner';
 import {
   Edit2,
   Trash2,
@@ -52,6 +52,7 @@ export default function AdminPaymentsPage() {
     "methods" | "paygate" | "card" | "guide" | "balances"
   >("methods");
 
+  // Payment Methods State
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([
     {
       id: "1",
@@ -158,6 +159,7 @@ export default function AdminPaymentsPage() {
     serviceFee: "",
   });
 
+  // PayGate Providers State
   const [payGateProviders, setPayGateProviders] = useState<PayGateProvider[]>([
     {
       id: "1",
@@ -260,13 +262,16 @@ export default function AdminPaymentsPage() {
     },
   ]);
 
+  // Card Payment State
   const [cardPaymentEnabled, setCardPaymentEnabled] = useState(false);
 
+  // User Guide State
   const [guideTitle, setGuideTitle] = useState("Payment Information from backend");
   const [guideContent, setGuideContent] = useState(
     `<ul>\n<li><strong>Card:</strong> Pay Instantly with a credit/debit card via Stripe</li>\n<li><strong>Crypto:</strong> Pay with Bitcoin, Ethereum, USDT and more</li>\n<li><strong>New to Crypto?</strong> Use Coinbase or Binance to buy</li>\n<li>* Payment will show in open in a new tab</li>\n<li>from backend</li>\n</ul>`
   );
 
+  // User Balances State
   const [userBalances, setUserBalances] = useState<UserBalance[]>([
     { id: "1", username: "Babra Latif", email: "babralalatif35@gmail.com", balance: 0 },
     { id: "2", username: "Hina Khalid", email: "gondaliahm112@gmail.com", balance: 0 },
@@ -283,6 +288,7 @@ export default function AdminPaymentsPage() {
   const [selectedUser, setSelectedUser] = useState<UserBalance | null>(null);
   const [newBalance, setNewBalance] = useState("");
 
+  // Payment Method Handlers
   const handleAddMethod = () => {
     setMethodFormData({
       name: "",
@@ -356,6 +362,7 @@ export default function AdminPaymentsPage() {
     setSelectedMethod(null);
   };
 
+  // PayGate Provider Handlers
   const handleToggleProvider = (id: string) => {
     setPayGateProviders(
       payGateProviders.map((p) => (p.id === id ? { ...p, enabled: !p.enabled } : p))
@@ -363,6 +370,7 @@ export default function AdminPaymentsPage() {
     toast.success("Provider status updated!");
   };
 
+  // User Balance Handlers
   const handleUpdateBalance = (user: UserBalance) => {
     setSelectedUser(user);
     setNewBalance(user.balance.toString());
@@ -395,6 +403,7 @@ export default function AdminPaymentsPage() {
 
   return (
     <div className="p-4 lg:p-8">
+      {/* Header */}
       <div className="mb-8">
         <div className="flex items-center gap-3 mb-2">
           <span className="text-4xl">👋</span>
@@ -405,33 +414,62 @@ export default function AdminPaymentsPage() {
 
       {/* Tabs */}
       <div className="flex items-center gap-1 mb-6 overflow-x-auto pb-2">
-        {(["methods", "paygate", "card", "guide", "balances"] as const).map((tab) => {
-          const labels: Record<string, string> = {
-            methods: "Payment Methods",
-            paygate: "PayGate Providers",
-            card: "Card Payment",
-            guide: "User Guide",
-            balances: "Users Balances",
-          };
-          return (
-            <button
-              key={tab}
-              onClick={() => setActiveTab(tab)}
-              className={`px-5 py-2.5 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${
-                activeTab === tab
-                  ? "bg-[rgba(59,130,246,0.2)] text-[#3B82F6]"
-                  : "text-[#94A3B8] hover:bg-[rgba(255,255,255,0.05)]"
-              }`}
-            >
-              {labels[tab]}
-            </button>
-          );
-        })}
+        <button
+          onClick={() => setActiveTab("methods")}
+          className={`px-5 py-2.5 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${
+            activeTab === "methods"
+              ? "bg-[rgba(59,130,246,0.2)] text-[#3B82F6]"
+              : "text-[#94A3B8] hover:bg-[rgba(255,255,255,0.05)]"
+          }`}
+        >
+          Payment Methods
+        </button>
+        <button
+          onClick={() => setActiveTab("paygate")}
+          className={`px-5 py-2.5 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${
+            activeTab === "paygate"
+              ? "bg-[rgba(59,130,246,0.2)] text-[#3B82F6]"
+              : "text-[#94A3B8] hover:bg-[rgba(255,255,255,0.05)]"
+          }`}
+        >
+          PayGate Providers
+        </button>
+        <button
+          onClick={() => setActiveTab("card")}
+          className={`px-5 py-2.5 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${
+            activeTab === "card"
+              ? "bg-[rgba(59,130,246,0.2)] text-[#3B82F6]"
+              : "text-[#94A3B8] hover:bg-[rgba(255,255,255,0.05)]"
+          }`}
+        >
+          Card Payment
+        </button>
+        <button
+          onClick={() => setActiveTab("guide")}
+          className={`px-5 py-2.5 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${
+            activeTab === "guide"
+              ? "bg-[rgba(59,130,246,0.2)] text-[#3B82F6]"
+              : "text-[#94A3B8] hover:bg-[rgba(255,255,255,0.05)]"
+          }`}
+        >
+          User Guide
+        </button>
+        <button
+          onClick={() => setActiveTab("balances")}
+          className={`px-5 py-2.5 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${
+            activeTab === "balances"
+              ? "bg-[rgba(59,130,246,0.2)] text-[#3B82F6]"
+              : "text-[#94A3B8] hover:bg-[rgba(255,255,255,0.05)]"
+          }`}
+        >
+          Users Balances
+        </button>
       </div>
 
       {/* Payment Methods Tab */}
       {activeTab === "methods" && (
         <div>
+          {/* Header */}
           <div className="p-6 rounded-xl bg-[rgba(15,23,42,0.6)] border border-[rgba(255,255,255,0.1)] backdrop-blur-xl mb-6">
             <div className="flex items-center justify-between">
               <h2 className="text-white text-xl font-semibold">Payment Methods Management</h2>
@@ -445,6 +483,7 @@ export default function AdminPaymentsPage() {
             </div>
           </div>
 
+          {/* Payment Method Cards */}
           <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
             {paymentMethods.map((method) => (
               <div
@@ -540,6 +579,7 @@ export default function AdminPaymentsPage() {
       {/* PayGate Providers Tab */}
       {activeTab === "paygate" && (
         <div>
+          {/* Header */}
           <div className="p-6 rounded-xl bg-[rgba(15,23,42,0.6)] border border-[rgba(255,255,255,0.1)] backdrop-blur-xl mb-6">
             <h2 className="text-white text-xl font-semibold mb-2">PayGate Provider Configuration</h2>
             <div className="flex items-center gap-4 text-xs text-[#94A3B8]">
@@ -558,6 +598,7 @@ export default function AdminPaymentsPage() {
             </div>
           </div>
 
+          {/* Providers List */}
           <div className="space-y-4">
             {payGateProviders
               .sort((a, b) => a.order - b.order)
@@ -567,14 +608,17 @@ export default function AdminPaymentsPage() {
                   className="p-6 rounded-xl bg-[rgba(15,23,42,0.6)] border border-[rgba(255,255,255,0.1)] backdrop-blur-xl hover:border-[rgba(59,130,246,0.5)] transition-all"
                 >
                   <div className="flex items-center gap-4">
+                    {/* Drag Handle */}
                     <button className="p-2 text-[#64748B] hover:text-white cursor-move transition-colors">
                       <Grip className="w-5 h-5" />
                     </button>
 
+                    {/* Icon */}
                     <div className="p-3 rounded-lg bg-[rgba(245,158,11,0.1)] border border-[rgba(245,158,11,0.3)]">
                       <CreditCard className="w-5 h-5 text-[#F59E0B]" />
                     </div>
 
+                    {/* Content */}
                     <div className="flex-1">
                       <div className="flex items-center gap-3 mb-1">
                         <h3 className="text-white text-base font-semibold">{provider.name}</h3>
@@ -593,10 +637,12 @@ export default function AdminPaymentsPage() {
                       </div>
                     </div>
 
+                    {/* Order Badge */}
                     <div className="px-3 py-1.5 rounded-lg bg-[rgba(59,130,246,0.1)] border border-[rgba(59,130,246,0.3)]">
                       <span className="text-[#3B82F6] text-sm font-semibold">#{provider.order}</span>
                     </div>
 
+                    {/* Toggle */}
                     <label className="relative inline-flex items-center cursor-pointer">
                       <input
                         type="checkbox"
@@ -607,6 +653,7 @@ export default function AdminPaymentsPage() {
                       <div className="w-11 h-6 bg-[#64748B] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#3B82F6]"></div>
                     </label>
 
+                    {/* Edit Button */}
                     <button className="p-2 hover:bg-[rgba(59,130,246,0.2)] rounded-lg text-[#3B82F6] transition-colors">
                       <Edit2 className="w-5 h-5" />
                     </button>
@@ -675,6 +722,7 @@ export default function AdminPaymentsPage() {
             </p>
 
             <div className="space-y-6">
+              {/* Guide Title */}
               <div>
                 <label className="text-white text-sm font-medium mb-2 block">Guide Title</label>
                 <input
@@ -686,16 +734,28 @@ export default function AdminPaymentsPage() {
                 />
               </div>
 
+              {/* Guide Content */}
               <div>
                 <label className="text-white text-sm font-medium mb-2 block">Guide Content</label>
                 <div className="border border-[rgba(255,255,255,0.18)] rounded-lg overflow-hidden bg-[rgba(30,41,59,0.8)]">
+                  {/* Toolbar */}
                   <div className="flex items-center gap-1 p-2 border-b border-[rgba(255,255,255,0.1)] bg-[rgba(0,0,0,0.2)]">
-                    <button className="p-2 hover:bg-[rgba(255,255,255,0.1)] rounded text-[#94A3B8] text-xs font-semibold">B</button>
-                    <button className="p-2 hover:bg-[rgba(255,255,255,0.1)] rounded text-[#94A3B8] text-xs italic">I</button>
+                    <button className="p-2 hover:bg-[rgba(255,255,255,0.1)] rounded text-[#94A3B8] text-xs font-semibold">
+                      B
+                    </button>
+                    <button className="p-2 hover:bg-[rgba(255,255,255,0.1)] rounded text-[#94A3B8] text-xs italic">
+                      I
+                    </button>
                     <div className="w-px h-6 bg-[rgba(255,255,255,0.1)] mx-1"></div>
-                    <button className="p-2 hover:bg-[rgba(255,255,255,0.1)] rounded text-[#94A3B8]">• List</button>
-                    <button className="p-2 hover:bg-[rgba(255,255,255,0.1)] rounded text-[#94A3B8]">1. List</button>
+                    <button className="p-2 hover:bg-[rgba(255,255,255,0.1)] rounded text-[#94A3B8]">
+                      • List
+                    </button>
+                    <button className="p-2 hover:bg-[rgba(255,255,255,0.1)] rounded text-[#94A3B8]">
+                      1. List
+                    </button>
                   </div>
+
+                  {/* Content Editor */}
                   <textarea
                     value={guideContent}
                     onChange={(e) => setGuideContent(e.target.value)}
@@ -705,6 +765,7 @@ export default function AdminPaymentsPage() {
                 </div>
               </div>
 
+              {/* Actions */}
               <div className="flex items-center justify-between pt-4 border-t border-[rgba(255,255,255,0.1)]">
                 <p className="text-[#64748B] text-xs">Last updated: 9/30/2025, 7:11:41 PM</p>
                 <div className="flex items-center gap-3">
@@ -737,6 +798,7 @@ export default function AdminPaymentsPage() {
       {/* Users Balances Tab */}
       {activeTab === "balances" && (
         <div>
+          {/* Header */}
           <div className="p-6 rounded-xl bg-[rgba(15,23,42,0.6)] border border-[rgba(255,255,255,0.1)] backdrop-blur-xl mb-6">
             <h2 className="text-white text-xl font-semibold mb-4">User Balances</h2>
             <div className="flex items-center gap-3">
@@ -762,15 +824,24 @@ export default function AdminPaymentsPage() {
             </div>
           </div>
 
+          {/* Users Table */}
           <div className="rounded-xl bg-[rgba(15,23,42,0.6)] border border-[rgba(255,255,255,0.1)] backdrop-blur-xl overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead>
                   <tr className="border-b border-[rgba(255,255,255,0.1)] bg-[rgba(0,0,0,0.2)]">
-                    <th className="px-6 py-4 text-left text-xs font-medium text-[#94A3B8] uppercase tracking-wider">User</th>
-                    <th className="px-6 py-4 text-left text-xs font-medium text-[#94A3B8] uppercase tracking-wider">Email</th>
-                    <th className="px-6 py-4 text-left text-xs font-medium text-[#94A3B8] uppercase tracking-wider">Balance</th>
-                    <th className="px-6 py-4 text-left text-xs font-medium text-[#94A3B8] uppercase tracking-wider">Actions</th>
+                    <th className="px-6 py-4 text-left text-xs font-medium text-[#94A3B8] uppercase tracking-wider">
+                      User
+                    </th>
+                    <th className="px-6 py-4 text-left text-xs font-medium text-[#94A3B8] uppercase tracking-wider">
+                      Email
+                    </th>
+                    <th className="px-6 py-4 text-left text-xs font-medium text-[#94A3B8] uppercase tracking-wider">
+                      Balance
+                    </th>
+                    <th className="px-6 py-4 text-left text-xs font-medium text-[#94A3B8] uppercase tracking-wider">
+                      Actions
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[rgba(255,255,255,0.05)]">
@@ -784,7 +855,9 @@ export default function AdminPaymentsPage() {
                         <div className="text-[#94A3B8] text-sm">{user.email}</div>
                       </td>
                       <td className="px-6 py-4">
-                        <div className="text-white text-sm font-semibold">${user.balance.toFixed(2)}</div>
+                        <div className="text-white text-sm font-semibold">
+                          ${user.balance.toFixed(2)}
+                        </div>
                       </td>
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-2">

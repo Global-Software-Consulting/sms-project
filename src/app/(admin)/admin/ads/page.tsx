@@ -155,18 +155,11 @@ export default function AdminAdsPage() {
                 <tr key={ad.id} className="hover:bg-[rgba(255,255,255,0.02)] transition-colors">
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-4">
-                      {ad.image && (
-                        <img
-                          src={ad.image}
-                          alt={ad.title}
-                          className="w-12 h-12 rounded-lg object-cover border border-[rgba(255,255,255,0.1)]"
-                        />
-                      )}
-                      {!ad.image && (
-                        <div className="w-12 h-12 rounded-lg bg-[rgba(255,255,255,0.08)] border border-[rgba(255,255,255,0.1)] flex items-center justify-center">
-                          <span className="text-[#64748B] text-xs">No img</span>
-                        </div>
-                      )}
+                      <img
+                        src={ad.image || ""}
+                        alt={ad.title}
+                        className="w-12 h-12 rounded-lg object-cover border border-[rgba(255,255,255,0.1)]"
+                      />
                       <div>
                         <div className="text-white text-sm font-medium">{ad.title}</div>
                         <div className="text-[#64748B] text-xs">{ad.description}</div>

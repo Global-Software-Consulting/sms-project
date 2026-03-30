@@ -21,6 +21,7 @@ import {
   Plus,
 } from "lucide-react";
 
+// Mock data for languages
 const languagesData = [
   { code: "GB", name: "English", langCode: "EN", isDefault: true },
   { code: "SE", name: "Swedish", langCode: "SV", isDefault: false },
@@ -45,6 +46,7 @@ export default function AdminSettingsPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [activePage, setActivePage] = useState("home");
 
+  // Social Media State
   const [socialMedia, setSocialMedia] = useState({
     twitter: { url: "https://x.com/VipStoreHQ", visible: true },
     facebook: { url: "", visible: false },
@@ -55,10 +57,44 @@ export default function AdminSettingsPage() {
     telegram: { url: "", visible: false },
   });
 
+  // Email Content State
   const [emailContent, setEmailContent] = useState(
-    `Welcome to CheapStreamTV IPTV Setup Guide\n\nThank you for your order! Here a quick setup guide to get your IPTV service up and running smoothly.`
+    `Welcome to CheapStreamTV IPTV Setup Guide
+
+Thank you for your order! Here a quick setup guide to get your IPTV service up and running smoothly.
+
+Step-by-Step Setup:
+Our IPTV works on:
+Android (TV/Box/Phone/Tablet)
+IOS/iPadOS (iPhone/iPad)
+Smart TV (Samsung/LG)
+Firestick / FireTV
+Windows/macOS (via VLC or IPTV Players)
+
+2. Use Our Recommended App:
+We recommend using MyTvOnline+, Xtream IPTV, Vu IPTV Player, for the best experience. You can also use Smart IPTV (SIPTV) or IBO Player if you prefer.
+
+3. Login Credentials:
+You'll receive your IPTV credentials shortly. Use the following formats:
+
+M3U URL
+Username + Password + Portal URL (for Xtream Codes apps)
+
+4. Enter Your Details:
+Open your selected app and input the credentials provided. Make sure your internet is stable and VPN is off (unless instructed otherwise).
+
+5. for MAG or Enigma2 devices No setup is needed on your side the system will connect directly once the order is processed.
+
+✅ Need Help?
+Our support team is available 24/7 to assist you.
+Feel free to contact us via your dashboard ticket or Telegram.
+
+Enjoy your streaming!
+CheapStreamTV Team
+www.cheapstreamtv.com`
   );
 
+  // Contact Information State
   const [contactInfo, setContactInfo] = useState({
     phone: "+447727751217",
     email: "help@cheapstreamtv.com",
@@ -70,6 +106,7 @@ export default function AdminSettingsPage() {
       "Thank you for choosing Cheap Streamwhere great entertainment meets unbeatable value. We look forward to assisting you!",
   });
 
+  // Free Trial State
   const [freeTrial, setFreeTrial] = useState({
     mainTitle: "Start Your Free Trial",
     description:
@@ -87,11 +124,13 @@ export default function AdminSettingsPage() {
     ],
   });
 
+  // Site Status State
   const [siteStatus, setSiteStatus] = useState({
     isActive: true,
     maintenanceMessage: "We're currently performing maintenance. Please check back later.",
   });
 
+  // Page Edit State
   const [pageContent, setPageContent] = useState({
     headingPart1: "Best IPTV Subscription Service 2026",
     headingPart2: "CheapStreamTV",
@@ -106,6 +145,7 @@ export default function AdminSettingsPage() {
     ogDescription: "best Stream thousands of movies, TV shows, and live channels",
   });
 
+  // Addons State
   const [addons, setAddons] = useState({
     recaptcha: {
       enabled: true,
@@ -123,6 +163,7 @@ export default function AdminSettingsPage() {
     tawkto: { enabled: false },
   });
 
+  // Languages State
   const [languages, setLanguages] = useState(languagesData);
 
   const handleSave = async (type: string) => {
@@ -209,7 +250,9 @@ export default function AdminSettingsPage() {
   return (
     <div className="p-4 lg:p-8">
       <div className="mb-8">
-        <h1 className="text-white text-3xl font-semibold mb-2">System Settings</h1>
+        <h1 className="text-white text-3xl font-semibold mb-2">
+          System Settings
+        </h1>
         <p className="text-[#94A3B8] text-sm">
           Manage your system configuration, social media, content, and integrations
         </p>
@@ -246,7 +289,7 @@ export default function AdminSettingsPage() {
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
               {Object.entries(socialMedia).map(([key, value]) => {
-                const icons: Record<string, React.ReactNode> = {
+                const icons = {
                   twitter: <Twitter className="w-5 h-5 text-[#1DA1F2]" />,
                   facebook: <Facebook className="w-5 h-5 text-[#1877F2]" />,
                   instagram: <Instagram className="w-5 h-5 text-[#E4405F]" />,
@@ -256,7 +299,7 @@ export default function AdminSettingsPage() {
                   telegram: <Send className="w-5 h-5 text-[#26A5E4]" />,
                 };
 
-                const names: Record<string, string> = {
+                const names = {
                   twitter: "Twitter",
                   facebook: "Facebook",
                   instagram: "Instagram",
@@ -270,8 +313,10 @@ export default function AdminSettingsPage() {
                   <div key={key}>
                     <div className="flex items-center justify-between mb-3">
                       <div className="flex items-center gap-2">
-                        {icons[key]}
-                        <span className="text-white text-sm font-medium">{names[key]}</span>
+                        {icons[key as keyof typeof icons]}
+                        <span className="text-white text-sm font-medium">
+                          {names[key as keyof typeof names]}
+                        </span>
                       </div>
                       <div className="flex items-center gap-2">
                         <span
@@ -310,7 +355,7 @@ export default function AdminSettingsPage() {
                           [key]: { ...value, url: e.target.value },
                         })
                       }
-                      placeholder={`Enter ${names[key]} URL`}
+                      placeholder={`Enter ${names[key as keyof typeof names]} URL`}
                       className="w-full bg-[rgba(0,0,0,0.4)] border border-[rgba(255,255,255,0.18)] rounded-lg px-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#3B82F6] placeholder:text-[#64748B]"
                     />
                   </div>
@@ -348,11 +393,14 @@ export default function AdminSettingsPage() {
           </div>
 
           <div className="space-y-6">
+            {/* Contact Details */}
             <div className="p-6 rounded-xl bg-[rgba(15,23,42,0.6)] border border-[rgba(255,255,255,0.1)] backdrop-blur-xl">
               <h3 className="text-white text-base font-semibold mb-4">Contact Details</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="text-white text-sm font-medium mb-2 block">Phone Number</label>
+                  <label className="text-white text-sm font-medium mb-2 block">
+                    Phone Number
+                  </label>
                   <input
                     type="text"
                     value={contactInfo.phone}
@@ -361,7 +409,9 @@ export default function AdminSettingsPage() {
                   />
                 </div>
                 <div>
-                  <label className="text-white text-sm font-medium mb-2 block">Email Address</label>
+                  <label className="text-white text-sm font-medium mb-2 block">
+                    Email Address
+                  </label>
                   <input
                     type="email"
                     value={contactInfo.email}
@@ -372,9 +422,12 @@ export default function AdminSettingsPage() {
               </div>
             </div>
 
+            {/* Business Hours */}
             <div className="p-6 rounded-xl bg-[rgba(15,23,42,0.6)] border border-[rgba(255,255,255,0.1)] backdrop-blur-xl">
               <h3 className="text-white text-base font-semibold mb-4">Business Hours</h3>
-              <label className="text-white text-sm font-medium mb-2 block">Business Hours</label>
+              <label className="text-white text-sm font-medium mb-2 block">
+                Business Hours
+              </label>
               <input
                 type="text"
                 value={contactInfo.businessHours}
@@ -384,9 +437,12 @@ export default function AdminSettingsPage() {
               <p className="text-[#64748B] text-xs mt-2">This will be displayed in the footer</p>
             </div>
 
+            {/* Support Message */}
             <div className="p-6 rounded-xl bg-[rgba(15,23,42,0.6)] border border-[rgba(255,255,255,0.1)] backdrop-blur-xl">
               <h3 className="text-white text-base font-semibold mb-4">Support Message</h3>
-              <label className="text-white text-sm font-medium mb-2 block">Help Message</label>
+              <label className="text-white text-sm font-medium mb-2 block">
+                Help Message
+              </label>
               <textarea
                 value={contactInfo.helpMessage}
                 onChange={(e) => setContactInfo({ ...contactInfo, helpMessage: e.target.value })}
@@ -396,6 +452,7 @@ export default function AdminSettingsPage() {
               <p className="text-[#64748B] text-xs mt-2">This message will be shown above the contact form</p>
             </div>
 
+            {/* Support Ticket Settings */}
             <div className="p-6 rounded-xl bg-[rgba(15,23,42,0.6)] border border-[rgba(255,255,255,0.1)] backdrop-blur-xl">
               <h3 className="text-white text-base font-semibold mb-4">Support Ticket Settings</h3>
               <div className="space-y-4">
@@ -423,6 +480,7 @@ export default function AdminSettingsPage() {
               </div>
             </div>
 
+            {/* Action Buttons */}
             <div className="flex items-center justify-start gap-4">
               <button
                 onClick={handleRefresh}
@@ -499,6 +557,7 @@ export default function AdminSettingsPage() {
           </div>
 
           <div className="space-y-6">
+            {/* Main Title & Description */}
             <div className="p-6 rounded-xl bg-[rgba(15,23,42,0.6)] border border-[rgba(255,255,255,0.1)] backdrop-blur-xl">
               <h3 className="text-white text-base font-semibold mb-4">Main Title</h3>
               <input
@@ -517,6 +576,7 @@ export default function AdminSettingsPage() {
               />
             </div>
 
+            {/* Features Section */}
             <div className="p-6 rounded-xl bg-[rgba(15,23,42,0.6)] border border-[rgba(255,255,255,0.1)] backdrop-blur-xl">
               <h3 className="text-white text-base font-semibold mb-4">Features</h3>
 
@@ -559,6 +619,7 @@ export default function AdminSettingsPage() {
               </button>
             </div>
 
+            {/* Action Buttons */}
             <div className="flex items-center justify-start gap-4">
               <button
                 onClick={handleRefresh}
@@ -586,6 +647,7 @@ export default function AdminSettingsPage() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+            {/* Main Logo */}
             <div className="p-6 rounded-xl bg-[rgba(15,23,42,0.6)] border border-[rgba(255,255,255,0.1)] backdrop-blur-xl">
               <h3 className="text-white text-base font-semibold mb-2">Main Logo</h3>
               <p className="text-[#64748B] text-sm mb-4">
@@ -610,6 +672,7 @@ export default function AdminSettingsPage() {
               </button>
             </div>
 
+            {/* Favicon */}
             <div className="p-6 rounded-xl bg-[rgba(15,23,42,0.6)] border border-[rgba(255,255,255,0.1)] backdrop-blur-xl">
               <h3 className="text-white text-base font-semibold mb-2">Favicon</h3>
               <p className="text-[#64748B] text-sm mb-4">
@@ -630,6 +693,7 @@ export default function AdminSettingsPage() {
             </div>
           </div>
 
+          {/* Important Notes */}
           <div className="p-6 rounded-xl bg-[rgba(59,130,246,0.1)] border border-[rgba(59,130,246,0.3)]">
             <h4 className="text-[#3B82F6] text-sm font-semibold mb-3">Important Notes:</h4>
             <ul className="text-[#3B82F6] text-sm space-y-1.5 list-disc list-inside">
@@ -661,6 +725,7 @@ export default function AdminSettingsPage() {
           </div>
 
           <div className="space-y-6">
+            {/* Current Status */}
             <div className="p-6 rounded-xl bg-[rgba(15,23,42,0.6)] border border-[rgba(255,255,255,0.1)] backdrop-blur-xl">
               <div className="flex items-center justify-between">
                 <div>
@@ -675,6 +740,7 @@ export default function AdminSettingsPage() {
               </div>
             </div>
 
+            {/* Toggle Site Status */}
             <div className="p-6 rounded-xl bg-[rgba(15,23,42,0.6)] border border-[rgba(255,255,255,0.1)] backdrop-blur-xl">
               <h3 className="text-white text-base font-semibold mb-4">Toggle Site Status</h3>
               <div className="flex items-start justify-between">
@@ -697,6 +763,7 @@ export default function AdminSettingsPage() {
               </div>
             </div>
 
+            {/* Maintenance Message */}
             <div className="p-6 rounded-xl bg-[rgba(15,23,42,0.6)] border border-[rgba(255,255,255,0.1)] backdrop-blur-xl">
               <h3 className="text-white text-base font-semibold mb-4">Maintenance Message</h3>
               <label className="text-white text-sm font-medium mb-2 block">
@@ -892,7 +959,8 @@ export default function AdminSettingsPage() {
           <div className="p-8 rounded-xl bg-[rgba(15,23,42,0.6)] border border-[rgba(255,255,255,0.1)] backdrop-blur-xl mb-6">
             <h2 className="text-white text-2xl font-semibold mb-2">Language Management</h2>
             <p className="text-[#94A3B8] text-sm">
-              Manage available languages for your website. Users will only see active languages in the language selector.
+              Manage available languages for your website. Users will only see active languages in the language
+              selector.
             </p>
           </div>
 
@@ -955,7 +1023,8 @@ export default function AdminSettingsPage() {
           <div className="p-8 rounded-xl bg-[rgba(15,23,42,0.6)] border border-[rgba(255,255,255,0.1)] backdrop-blur-xl mb-6">
             <h2 className="text-white text-2xl font-semibold mb-2">Addons Management</h2>
             <p className="text-[#94A3B8] text-sm">
-              Enable or disable various third-party services and integrations for your website. Configure API keys for enabled services.
+              Enable or disable various third-party services and integrations for your website. Configure API keys for
+              enabled services.
             </p>
           </div>
 
@@ -994,7 +1063,10 @@ export default function AdminSettingsPage() {
                       type="text"
                       value={addons.recaptcha.siteKey}
                       onChange={(e) =>
-                        setAddons({ ...addons, recaptcha: { ...addons.recaptcha, siteKey: e.target.value } })
+                        setAddons({
+                          ...addons,
+                          recaptcha: { ...addons.recaptcha, siteKey: e.target.value },
+                        })
                       }
                       className="w-full bg-[rgba(0,0,0,0.4)] border border-[rgba(255,255,255,0.18)] rounded-lg px-3 py-2 text-white text-xs focus:outline-none focus:ring-2 focus:ring-[#3B82F6]"
                     />
@@ -1005,7 +1077,13 @@ export default function AdminSettingsPage() {
                       type="text"
                       value={addons.recaptcha.secretKey}
                       onChange={(e) =>
-                        setAddons({ ...addons, recaptcha: { ...addons.recaptcha, secretKey: e.target.value } })
+                        setAddons({
+                          ...addons,
+                          recaptcha: {
+                            ...addons.recaptcha,
+                            secretKey: e.target.value,
+                          },
+                        })
                       }
                       className="w-full bg-[rgba(0,0,0,0.4)] border border-[rgba(255,255,255,0.18)] rounded-lg px-3 py-2 text-white text-xs focus:outline-none focus:ring-2 focus:ring-[#3B82F6]"
                     />
@@ -1074,7 +1152,13 @@ export default function AdminSettingsPage() {
                     type="text"
                     value={addons.googleAnalytics.measurementId}
                     onChange={(e) =>
-                      setAddons({ ...addons, googleAnalytics: { ...addons.googleAnalytics, measurementId: e.target.value } })
+                      setAddons({
+                        ...addons,
+                        googleAnalytics: {
+                          ...addons.googleAnalytics,
+                          measurementId: e.target.value,
+                        },
+                      })
                     }
                     className="w-full bg-[rgba(0,0,0,0.4)] border border-[rgba(255,255,255,0.18)] rounded-lg px-3 py-2 text-white text-xs focus:outline-none focus:ring-2 focus:ring-[#3B82F6]"
                   />
