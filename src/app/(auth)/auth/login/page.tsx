@@ -22,6 +22,7 @@ import {
   selectIsLoading,
   selectAuthError,
   selectIsAuthenticated,
+  selectUserRole,
   clearError,
 } from '@/store/slices/authSlice';
 import { getGoogleOAuthUrl, getGithubOAuthUrl } from '@/lib/api';
@@ -32,6 +33,7 @@ export default function Login() {
   const isLoading = useAppSelector(selectIsLoading);
   const authError = useAppSelector(selectAuthError);
   const isAuthenticated = useAppSelector(selectIsAuthenticated);
+  const userRole = useAppSelector(selectUserRole);
 
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState('');
@@ -41,9 +43,9 @@ export default function Login() {
   // Redirect if already authenticated
   useEffect(() => {
     if (isAuthenticated) {
-      router.push('/dashboard');
+      router.push(userRole === 'OWNER' ? '/admin/dashboard' : '/dashboard');
     }
-  }, [isAuthenticated, router]);
+  }, [isAuthenticated, userRole, router]);
 
   // Show error toast
   useEffect(() => {
@@ -64,7 +66,8 @@ export default function Login() {
       toast.success('Welcome back!', {
         description: 'Redirecting to your dashboard...',
       });
-      router.push('/dashboard');
+      const role = result.payload.user.role;
+      router.push(role === 'OWNER' ? '/admin/dashboard' : '/dashboard');
     }
   };
 

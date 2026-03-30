@@ -30,7 +30,7 @@ import {
   getTwitterOAuthUrl,
   requestGuestLogin,
   verifyOtpAndLogin,
-  isAdmin as checkIsAdmin,
+  isOwner as checkIsOwner,
 } from '@/lib/api';
 
 export const useAuth = () => {
@@ -65,7 +65,7 @@ export const useAuth = () => {
       if (login.fulfilled.match(result)) {
         // Redirect based on user role (supports 6 admin roles)
         const userRole = result.payload.user.role;
-        if (checkIsAdmin(userRole)) {
+        if (checkIsOwner(userRole)) {
           router.push('/admin');
         } else {
           router.push('/dashboard');
@@ -161,7 +161,7 @@ export const useAuth = () => {
         // Update Redux state with user
         dispatch(setUser(response.user));
         // Redirect based on role
-        if (checkIsAdmin(response.user.role)) {
+        if (checkIsOwner(response.user.role)) {
           router.push('/admin');
         } else {
           router.push('/dashboard');
