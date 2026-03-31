@@ -51,6 +51,9 @@ export interface SmsService {
   iconUrl: string | null;
   category: string | null;
   isActive?: boolean;
+  defaultPrice?: string | number | null;
+  successRate?: number | null;
+  createdAt?: string;
   provider?: {
     name: string;
     slug: string;
@@ -671,6 +674,7 @@ export const adminUpdateProvider = async (
     isActive?: boolean;
     priority?: number;
     markup?: number;
+    version?: string;
     settings?: Record<string, unknown>;
   },
 ): Promise<{ provider: SmsProvider; message: string }> => {
@@ -705,6 +709,30 @@ export const adminGetServices = async (
     API_ENDPOINTS.ADMIN.SMS.SERVICES,
     { params },
   );
+  return response.data;
+};
+
+/**
+ * Create new service (admin)
+ * POST /api/v1/admin/sms/services
+ */
+export const adminCreateService = async (
+  data: {
+    name: string;
+    serviceCode: string;
+    providerId: string;
+    defaultPrice: number;
+    successRate?: number;
+    iconUrl?: string;
+    category?: string;
+    countryIds?: string[];
+    isActive?: boolean;
+  },
+): Promise<{ service: SmsService; message: string }> => {
+  const response = await apiClient.post<{
+    service: SmsService;
+    message: string;
+  }>(API_ENDPOINTS.ADMIN.SMS.SERVICES, data);
   return response.data;
 };
 
@@ -820,6 +848,35 @@ export const adminRefundOrder = async (
     refundAmount: string;
     message: string;
   }>(API_ENDPOINTS.ADMIN.SMS.ORDER_REFUND(id), { reason });
+  return response.data;
+};
+
+/**
+ * Extend order expiry (admin) - extends by 10 minutes
+ * POST /api/v1/admin/sms/orders/:id/extend
+ */
+export const adminExtendOrder = async (
+  id: string,
+): Promise<{ order: SmsOrder; message: string }> => {
+  const response = await apiClient.post<{
+    order: SmsOrder;
+    message: string;
+  }>(API_ENDPOINTS.ADMIN.SMS.ORDER_EXTEND(id));
+  return response.data;
+};
+
+/**
+ * Cancel order (admin) - cancels on provider and refunds wallet
+ * POST /api/v1/admin/sms/orders/:id/cancel
+ */
+export const adminCancelOrder = async (
+  id: string,
+): Promise<{ order: SmsOrder; refundAmount: string; message: string }> => {
+  const response = await apiClient.post<{
+    order: SmsOrder;
+    refundAmount: string;
+    message: string;
+  }>(API_ENDPOINTS.ADMIN.SMS.ORDER_CANCEL(id));
   return response.data;
 };
 

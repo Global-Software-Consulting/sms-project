@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { toast } from 'sonner';
 import {
   Edit2,
@@ -18,7 +18,15 @@ import {
   Percent,
   Save,
   Crown,
+  Loader2,
+  RefreshCw,
 } from "lucide-react";
+import {
+  adminGetProviders,
+  adminUpdateProvider,
+  adminSyncProvider,
+  type SmsProvider,
+} from '@/lib/api/smsApi';
 
 interface Service {
   id: string;
@@ -156,50 +164,37 @@ export default function AdminSmsServicesPage() {
     color: "#3B82F6",
   });
 
-  const [providers, setProviders] = useState<Provider[]>([
-    {
-      id: "1",
-      name: "SMS-Activate",
-      version: "V1 Standard",
-      countries: ["USA", "UK", "Canada", "Germany", "France", "Spain", "Italy"],
-      services: [
-        { id: "s1", name: "Facebook", country: "USA", successRate: 95, orders: 1250, price: 2.5 },
-        { id: "s2", name: "WhatsApp", country: "USA", successRate: 92, orders: 980, price: 2.0 },
-        { id: "s3", name: "Telegram", country: "UK", successRate: 88, orders: 750, price: 1.8 },
-        { id: "s4", name: "Instagram", country: "Canada", successRate: 90, orders: 820, price: 2.2 },
-        { id: "s5", name: "Twitter", country: "Germany", successRate: 85, orders: 650, price: 1.5 },
-      ],
-      totalServices: 5,
-      avgSuccessRate: 90,
-    },
-    {
-      id: "2",
-      name: "5SIM",
-      version: "V2",
-      countries: ["USA", "UK", "India", "Brazil", "Australia"],
-      services: [
-        { id: "s6", name: "Facebook", country: "USA", successRate: 93, orders: 1100, price: 2.3 },
-        { id: "s7", name: "Google", country: "UK", successRate: 91, orders: 890, price: 2.1 },
-        { id: "s8", name: "TikTok", country: "India", successRate: 87, orders: 720, price: 1.9 },
-        { id: "s9", name: "Snapchat", country: "Brazil", successRate: 89, orders: 680, price: 1.7 },
-      ],
-      totalServices: 4,
-      avgSuccessRate: 90,
-    },
-    {
-      id: "3",
-      name: "GetSMSCode",
-      version: "V3",
-      countries: ["USA", "Netherlands", "Poland", "Sweden"],
-      services: [
-        { id: "s10", name: "Discord", country: "USA", successRate: 94, orders: 950, price: 2.4 },
-        { id: "s11", name: "LinkedIn", country: "Netherlands", successRate: 88, orders: 620, price: 2.0 },
-        { id: "s12", name: "Amazon", country: "Poland", successRate: 86, orders: 580, price: 1.8 },
-      ],
-      totalServices: 3,
-      avgSuccessRate: 89,
-    },
-  ]);
+  // API providers
+  const [apiProviders, setApiProviders] = useState<SmsProvider[]>([]);
+  const [isProvidersLoading, setIsProvidersLoading] = useState(true);
+  const [isSyncing, setIsSyncing] = useState<string | null>(null);
+
+  const fetchProviders = useCallback(async () => {
+    setIsProvidersLoading(true);
+    try {
+      const response = await adminGetProviders();
+      setApiProviders(response.providers);
+    } catch (error: any) {
+      toast.error(error?.response?.data?.message || "Failed to fetch providers");
+    } finally {
+      setIsProvidersLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchProviders();
+  }, [fetchProviders]);
+
+  // Map API providers to local Provider type for backward compat with other tabs
+  const providers: Provider[] = apiProviders.map(p => ({
+    id: p.id,
+    name: p.displayName || p.name,
+    version: (p as any).version || "V1 Standard",
+    countries: [],
+    services: [],
+    totalServices: 0,
+    avgSuccessRate: 0,
+  }));
 
   const [vipCategories, setVipCategories] = useState<VIPCategory[]>([
     {
@@ -247,23 +242,36 @@ export default function AdminSmsServicesPage() {
   };
 
   const handleSaveProvider = async () => {
+    if (!selectedProvider) return;
     setIsLoading(true);
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-
-    if (selectedProvider) {
-      setProviders(
-        providers.map((p) =>
-          p.id === selectedProvider.id
-            ? { ...p, name: providerFormData.name, version: providerFormData.version }
-            : p
-        )
-      );
+    try {
+      await adminUpdateProvider(selectedProvider.id, {
+        displayName: providerFormData.name,
+        version: providerFormData.version,
+      });
       toast.success("Provider updated successfully!");
+      setShowEditProviderModal(false);
+      setSelectedProvider(null);
+      fetchProviders();
+    } catch (error: any) {
+      toast.error(error?.response?.data?.message || "Failed to update provider");
+    } finally {
+      setIsLoading(false);
     }
+  };
 
-    setIsLoading(false);
-    setShowEditProviderModal(false);
-    setSelectedProvider(null);
+  // Sync provider
+  const handleSyncProvider = async (providerId: string) => {
+    setIsSyncing(providerId);
+    try {
+      const result = await adminSyncProvider(providerId);
+      toast.success(`Synced! ${result.services} services, ${result.countries} countries, ${result.products} products`);
+      fetchProviders();
+    } catch (error: any) {
+      toast.error(error?.response?.data?.message || "Failed to sync provider");
+    } finally {
+      setIsSyncing(null);
+    }
   };
 
   const handleConfirmDelete = async () => {
@@ -559,70 +567,116 @@ export default function AdminSmsServicesPage() {
           </div>
 
           {/* Providers Grid */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-            {filteredProviders.map((provider) => (
-              <div
-                key={provider.id}
-                className="p-6 rounded-xl bg-[rgba(15,23,42,0.6)] border border-[rgba(255,255,255,0.1)] backdrop-blur-xl hover:border-[rgba(59,130,246,0.5)] transition-all"
-              >
-                <div className="flex items-start justify-between mb-4">
-                  <div>
-                    <h3 className="text-white text-lg font-semibold mb-1">{provider.name}</h3>
-                    <span className="inline-block px-3 py-1 rounded-full bg-[#3B82F6]/20 text-[#3B82F6] text-xs font-medium">
-                      {provider.version}
-                    </span>
+          {isProvidersLoading ? (
+            <div className="flex items-center justify-center py-20">
+              <Loader2 className="w-8 h-8 text-[#3B82F6] animate-spin" />
+              <span className="ml-3 text-[#94A3B8]">Loading providers...</span>
+            </div>
+          ) : apiProviders.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-20 text-center">
+              <Globe className="w-12 h-12 text-[#64748B] mb-4" />
+              <p className="text-white text-lg font-medium">No providers found</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+              {apiProviders
+                .filter(p => p.displayName.toLowerCase().includes(searchQuery.toLowerCase()) || p.name.toLowerCase().includes(searchQuery.toLowerCase()) || p.slug.toLowerCase().includes(searchQuery.toLowerCase()))
+                .map((provider) => (
+                <div
+                  key={provider.id}
+                  className="p-6 rounded-xl bg-[rgba(15,23,42,0.6)] border border-[rgba(255,255,255,0.1)] backdrop-blur-xl hover:border-[rgba(59,130,246,0.5)] transition-all"
+                >
+                  <div className="flex items-start justify-between mb-4">
+                    <div>
+                      <div className="flex items-center gap-2 mb-1">
+                        <h3 className="text-white text-lg font-semibold">{provider.displayName || provider.name}</h3>
+                        <span className={`w-2.5 h-2.5 rounded-full ${provider.isActive ? 'bg-[#22C55E]' : 'bg-[#64748B]'}`} title={provider.isActive ? 'Active' : 'Inactive'} />
+                      </div>
+                      <span className="inline-block px-3 py-1 rounded-full bg-[#3B82F6]/20 text-[#3B82F6] text-xs font-medium">
+                        {provider.slug}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <button
+                        onClick={() => {
+                          const mapped = providers.find(p => p.id === provider.id);
+                          if (mapped) handleEditProvider(mapped);
+                        }}
+                        className="p-2 hover:bg-[rgba(59,130,246,0.2)] rounded-lg text-[#3B82F6] transition-colors"
+                        title="Edit Provider"
+                      >
+                        <Edit2 className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => handleSyncProvider(provider.id)}
+                        disabled={isSyncing === provider.id}
+                        className="p-2 hover:bg-[rgba(34,197,94,0.2)] rounded-lg text-[#22C55E] transition-colors disabled:opacity-50"
+                        title="Sync Provider"
+                      >
+                        <RefreshCw className={`w-4 h-4 ${isSyncing === provider.id ? 'animate-spin' : ''}`} />
+                      </button>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-1">
-                    <button
-                      onClick={() => handleEditProvider(provider)}
-                      className="p-2 hover:bg-[rgba(59,130,246,0.2)] rounded-lg text-[#3B82F6] transition-colors"
-                      title="Edit Provider"
-                    >
-                      <Edit2 className="w-4 h-4" />
-                    </button>
-                    <button
-                      onClick={() => handleDeleteProvider(provider)}
-                      className="p-2 hover:bg-[rgba(239,68,68,0.2)] rounded-lg text-[#EF4444] transition-colors"
-                      title="Delete Provider"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </div>
-                </div>
 
-                <div className="space-y-3 mb-4">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[#64748B] text-sm flex items-center gap-2">
-                      <Globe className="w-4 h-4" />
-                      Countries
-                    </span>
-                    <span className="text-white text-sm font-medium">{provider.countries.length}</span>
+                  <div className="space-y-3 mb-4">
+                    {provider.balance && (
+                      <div className="flex items-center justify-between">
+                        <span className="text-[#64748B] text-sm flex items-center gap-2">
+                          <DollarSign className="w-4 h-4" />
+                          Balance
+                        </span>
+                        <span className="text-white text-sm font-medium">${provider.balance}</span>
+                      </div>
+                    )}
+                    <div className="flex items-center justify-between">
+                      <span className="text-[#64748B] text-sm">Priority</span>
+                      <span className="text-white text-sm font-medium">{provider.priority}</span>
+                    </div>
+                    {provider.markup != null && (
+                      <div className="flex items-center justify-between">
+                        <span className="text-[#64748B] text-sm flex items-center gap-2">
+                          <Percent className="w-4 h-4" />
+                          Markup
+                        </span>
+                        <span className="text-[#F59E0B] text-sm font-medium">{provider.markup}%</span>
+                      </div>
+                    )}
+                    <div className="flex items-center justify-between">
+                      <span className="text-[#64748B] text-sm">Supports Rental</span>
+                      <span className={`text-sm font-medium ${provider.supportsRental ? 'text-[#22C55E]' : 'text-[#64748B]'}`}>
+                        {provider.supportsRental ? 'Yes' : 'No'}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-[#64748B] text-sm">Status</span>
+                      <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${provider.isActive ? 'bg-[#22C55E]/20 text-[#22C55E]' : 'bg-[#64748B]/20 text-[#64748B]'}`}>
+                        {provider.isActive ? 'Active' : 'Inactive'}
+                      </span>
+                    </div>
+                    {provider.lastSyncAt && (
+                      <div className="flex items-center justify-between">
+                        <span className="text-[#64748B] text-sm">Last Sync</span>
+                        <span className="text-[#94A3B8] text-xs">{new Date(provider.lastSyncAt).toLocaleString()}</span>
+                      </div>
+                    )}
                   </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-[#64748B] text-sm">Total Services</span>
-                    <span className="text-white text-sm font-medium">{provider.totalServices}</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-[#64748B] text-sm flex items-center gap-2">
-                      <TrendingUp className="w-4 h-4" />
-                      Avg. Success Rate
-                    </span>
-                    <span className="text-[#22C55E] text-sm font-medium">{provider.avgSuccessRate}%</span>
-                  </div>
-                </div>
 
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => handleViewProvider(provider)}
-                    className="flex-1 px-4 py-2.5 rounded-lg bg-[#3B82F6] hover:bg-[#2563EB] text-white text-sm font-medium transition-colors flex items-center justify-center gap-2"
-                  >
-                    View Details
-                    <ChevronRight className="w-4 h-4" />
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => {
+                        const mapped = providers.find(p => p.id === provider.id);
+                        if (mapped) handleViewProvider(mapped);
+                      }}
+                      className="flex-1 px-4 py-2.5 rounded-lg bg-[#3B82F6] hover:bg-[#2563EB] text-white text-sm font-medium transition-colors flex items-center justify-center gap-2"
+                    >
+                      View Details
+                      <ChevronRight className="w-4 h-4" />
+                    </button>
+                  </div>
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
 

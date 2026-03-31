@@ -3,9 +3,11 @@
 import { Search, Bell, Settings, User, Plus, Download, LogOut, UserCircle, Key, Shield, ShoppingCart, DollarSign, Globe, Home, Package, Gift } from "lucide-react";
 import { AdminDropdown } from './dropdown';
 import { useRouter } from 'next/navigation';
+import { useAuth } from '@/hooks/useAuth';
 
 export function AdminTopNav() {
   const router = useRouter();
+  const { logout } = useAuth();
 
   const notificationItems = [
     {
@@ -44,7 +46,10 @@ export function AdminTopNav() {
     {
       label: "Logout",
       icon: <LogOut className="w-4 h-4" />,
-      onClick: () => console.log("Logout"),
+      onClick: async () => {
+        await logout();
+        router.push('/auth/login');
+      },
       variant: "danger" as const,
     },
   ];

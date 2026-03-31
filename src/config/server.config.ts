@@ -245,6 +245,8 @@ export const API_ENDPOINTS = {
       ORDERS: '/admin/sms/orders',
       ORDER_DETAIL: (id: string) => `/admin/sms/orders/${id}`,
       ORDER_REFUND: (id: string) => `/admin/sms/orders/${id}/refund`,
+      ORDER_CANCEL: (id: string) => `/admin/sms/orders/${id}/cancel`,
+      ORDER_EXTEND: (id: string) => `/admin/sms/orders/${id}/extend`,
       RENTALS: '/admin/sms/rentals',
       STATISTICS: '/admin/sms/statistics',
       VIP: '/admin/sms/vip',
@@ -332,27 +334,11 @@ export const API_ENDPOINTS = {
       REPLY: (id: string) => `/admin/contact/${id}/reply`,
     },
 
-    // Admin Tickets
-    TICKETS: {
-      ROOT: '/admin/tickets',
-      STATS: '/admin/tickets/stats',
-      DETAIL: (id: string) => `/admin/tickets/${id}`,
-      ASSIGN: (id: string) => `/admin/tickets/${id}/assign`,
-      CLOSE: (id: string) => `/admin/tickets/${id}/close`,
-      MESSAGES: (id: string) => `/admin/tickets/${id}/messages`,
-    },
-
-    // Admin Ranks
-    RANKS: {
-      ROOT: '/admin/ranks',
-      DETAIL: (id: string) => `/admin/ranks/${id}`,
-      REORDER: '/admin/ranks/reorder',
-    },
-
     // Admin Referrals
     REFERRALS: {
       ROOT: '/admin/referrals',
       STATS: '/admin/referrals/stats',
+      PROFILES: '/admin/referrals/profiles',
       CONFIG: '/admin/referrals/config',
       PAYOUTS: '/admin/referrals/payouts',
       PAYOUT_DETAIL: (id: string) => `/admin/referrals/payouts/${id}`,
@@ -365,6 +351,24 @@ export const API_ENDPOINTS = {
       ROOT: '/admin/coupons',
       STATS: '/admin/coupons/stats',
       DETAIL: (id: string) => `/admin/coupons/${id}`,
+    },
+
+    // Admin Ranks
+    RANKS: {
+      ROOT: '/admin/ranks',
+      DETAIL: (id: string) => `/admin/ranks/${id}`,
+      REORDER: '/admin/ranks/reorder',
+    },
+
+    // Admin Tickets
+    TICKETS: {
+      ROOT: '/admin/tickets',
+      STATS: '/admin/tickets/stats',
+      DETAIL: (id: string) => `/admin/tickets/${id}`,
+      ASSIGN: (id: string) => `/admin/tickets/${id}/assign`,
+      CLOSE: (id: string) => `/admin/tickets/${id}/close`,
+      MESSAGES: (id: string) => `/admin/tickets/${id}/messages`,
+      REPLY: (id: string) => `/admin/tickets/${id}/reply`,
     },
   },
 } as const;

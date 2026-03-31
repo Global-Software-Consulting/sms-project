@@ -227,3 +227,9 @@ export * from './settingsApi';
 
 // Admin Modules API (Ads, Legal, Blog, Reviews, FAQ, etc.)
 export * from './adminModulesApi';
+
+// Teammate's APIs
+export * from './couponsApi';
+export * from './adminReferralsApi';
+export * from './ranksApi';
+export * from './adminTicketsApi';
