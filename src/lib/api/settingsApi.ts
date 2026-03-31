@@ -2,6 +2,30 @@ import { apiClient } from '@/config/api-client.config';
 import { API_ENDPOINTS } from '@/config/server.config';
 
 // ============================================
+// Public Types (no auth required)
+// ============================================
+
+export interface LoginOptions {
+  google: boolean;
+  twitter: boolean;
+  github: boolean;
+  telegram: boolean;
+}
+
+// ============================================
+// Public API Functions (no auth required)
+// ============================================
+
+/**
+ * Get enabled login options (public - no auth required)
+ * GET /api/v1/settings/login-options
+ */
+export const getLoginOptions = async (): Promise<LoginOptions> => {
+  const response = await apiClient.get<LoginOptions>(API_ENDPOINTS.PUBLIC.LOGIN_OPTIONS);
+  return response.data;
+};
+
+// ============================================
 // Settings Types
 // ============================================
 

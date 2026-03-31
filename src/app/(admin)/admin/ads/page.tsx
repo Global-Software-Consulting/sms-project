@@ -181,6 +181,7 @@ export default function AdminAdsPage() {
             <Loader2 className="w-8 h-8 text-[#3B82F6] animate-spin" />
           </div>
         ) : (
+          <>
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead>
@@ -294,6 +295,7 @@ export default function AdminAdsPage() {
             </button>
           </div>
         </div>
+          </>
         )}
       </div>
 

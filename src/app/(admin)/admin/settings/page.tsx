@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
   Twitter,
@@ -45,13 +46,29 @@ const languagesData = [
   { code: "CN", name: "Chinese", langCode: "ZH", isDefault: false },
 ];
 
+type TabType = "social" | "contact" | "page" | "email" | "addons" | "trial" | "logo" | "status" | "language";
+
+const validTabs: TabType[] = ["social", "contact", "page", "email", "addons", "trial", "logo", "status", "language"];
+
 export default function AdminSettingsPage() {
-  const [activeTab, setActiveTab] = useState<
-    "social" | "contact" | "page" | "email" | "addons" | "trial" | "logo" | "status" | "language"
-  >("social");
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  
+  // Get initial tab from URL or default to "social"
+  const tabFromUrl = searchParams.get('tab') as TabType | null;
+  const initialTab: TabType = tabFromUrl && validTabs.includes(tabFromUrl) ? tabFromUrl : "social";
+  
+  const [activeTab, setActiveTab] = useState<TabType>(initialTab);
   const [isLoading, setIsLoading] = useState(false);
   const [isPageLoading, setIsPageLoading] = useState(true);
   const [activePage, setActivePage] = useState("home");
+
+  // Update URL when tab changes (without full page reload)
+  const handleTabChange = (tab: TabType) => {
+    setActiveTab(tab);
+    const newUrl = `/admin/settings?tab=${tab}`;
+    window.history.replaceState({}, '', newUrl);
+  };
 
   // Social Media State
   const [socialMedia, setSocialMedia] = useState({
@@ -493,6 +510,8 @@ www.cheapstreamtv.com`
 
       if (settings.length > 0) {
         await bulkUpdateSettings({ settings });
+        // Re-fetch settings to confirm save and update UI
+        await fetchSettings();
       }
       
       toast.success(`${type} updated successfully!`);
@@ -609,7 +628,7 @@ www.cheapstreamtv.com`
         {tabs.map((tab) => (
           <button
             key={tab.id}
-            onClick={() => setActiveTab(tab.id as any)}
+            onClick={() => handleTabChange(tab.id as TabType)}
             className={`pb-4 px-2 text-sm font-medium transition-colors whitespace-nowrap relative ${
               activeTab === tab.id ? "text-[#3B82F6]" : "text-[#64748B] hover:text-white"
             }`}
@@ -1077,11 +1096,17 @@ www.cheapstreamtv.com`
                 <div>
                   <h3 className="text-white text-base font-semibold mb-2">Current Status</h3>
                   <p className="text-[#64748B] text-sm">
-                    Your website is currently active and accessible to all users.
+                    {siteStatus.isActive 
+                      ? "Your website is currently active and accessible to all users."
+                      : "Your website is under maintenance and not accessible to users."}
                   </p>
                 </div>
-                <span className="px-4 py-2 rounded-full bg-[#22C55E]/20 text-[#22C55E] text-sm font-medium">
-                  Active
+                <span className={`px-4 py-2 rounded-full text-sm font-medium ${
+                  siteStatus.isActive 
+                    ? "bg-[#22C55E]/20 text-[#22C55E]" 
+                    : "bg-[#EF4444]/20 text-[#EF4444]"
+                }`}>
+                  {siteStatus.isActive ? "Active" : "Maintenance"}
                 </span>
               </div>
             </div>

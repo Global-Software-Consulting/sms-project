@@ -7,6 +7,14 @@
 
 export const API_ENDPOINTS = {
   // ========================
+  // Public Settings (no auth required)
+  // ========================
+  PUBLIC: {
+    LOGIN_OPTIONS: '/settings/login-options',
+    SITE_INFO: '/settings/site-info',
+  },
+
+  // ========================
   // Auth
   // ========================
   AUTH: {

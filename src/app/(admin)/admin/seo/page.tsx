@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from "react";
+import { useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import {
   Save,
@@ -63,12 +64,27 @@ interface StructuredData {
   jsonLd: string;
 }
 
+type SeoTabType = "general" | "pages" | "sitemap" | "opengraph" | "performance" | "schema" | "sms";
+
+const validSeoTabs: SeoTabType[] = ["general", "pages", "sitemap", "opengraph", "performance", "schema", "sms"];
+
 export default function AdminSeoPage() {
-  const [activeTab, setActiveTab] = useState<
-    "general" | "pages" | "sitemap" | "opengraph" | "performance" | "schema" | "sms"
-  >("general");
+  const searchParams = useSearchParams();
+  
+  // Get initial tab from URL or default to "general"
+  const tabFromUrl = searchParams.get('tab') as SeoTabType | null;
+  const initialTab: SeoTabType = tabFromUrl && validSeoTabs.includes(tabFromUrl) ? tabFromUrl : "general";
+  
+  const [activeTab, setActiveTab] = useState<SeoTabType>(initialTab);
   const [isLoading, setIsLoading] = useState(false);
   const [isPageLoading, setIsPageLoading] = useState(true);
+
+  // Update URL when tab changes (without full page reload)
+  const handleTabChange = (tab: SeoTabType) => {
+    setActiveTab(tab);
+    const newUrl = `/admin/seo?tab=${tab}`;
+    window.history.replaceState({}, '', newUrl);
+  };
 
   // General SEO State
   const [generalSEO, setGeneralSEO] = useState({
@@ -265,6 +281,8 @@ export default function AdminSeoPage() {
           { key: 'seo_indexing_enabled', value: String(generalSEO.indexingEnabled) },
         ],
       });
+      // Re-fetch to confirm save
+      await fetchAllSeoSettings();
       toast.success("General SEO settings saved successfully!");
     } catch (error) {
       console.error('Failed to save general SEO settings:', error);
@@ -372,6 +390,7 @@ export default function AdminSeoPage() {
           { key: 'seo_sitemap_url', value: sitemapSettings.sitemapUrl },
         ],
       });
+      await fetchAllSeoSettings();
       toast.success("Sitemap settings saved successfully!");
     } catch (error) {
       console.error('Failed to save sitemap settings:', error);
@@ -414,6 +433,7 @@ export default function AdminSeoPage() {
           { key: 'seo_twitter_card', value: openGraph.twitterCard },
         ],
       });
+      await fetchAllSeoSettings();
       toast.success("Open Graph settings saved successfully!");
     } catch (error) {
       console.error('Failed to save Open Graph settings:', error);
@@ -435,6 +455,7 @@ export default function AdminSeoPage() {
           { key: 'seo_perf_image_optimization', value: String(performance.imageOptimization) },
         ],
       });
+      await fetchAllSeoSettings();
       toast.success("Performance settings saved successfully!");
     } catch (error) {
       console.error('Failed to save performance settings:', error);
@@ -453,6 +474,7 @@ export default function AdminSeoPage() {
           { key: 'seo_schema_jsonld', value: schema.jsonLd },
         ],
       });
+      await fetchAllSeoSettings();
       toast.success("Structured data saved successfully!");
     } catch (error) {
       console.error('Failed to save schema:', error);
@@ -586,7 +608,7 @@ export default function AdminSeoPage() {
       {/* Tabs */}
       <div className="flex items-center gap-2 mb-6 overflow-x-auto pb-2">
         <button
-          onClick={() => setActiveTab("general")}
+          onClick={() => handleTabChange("general")}
           className={`px-5 py-2.5 rounded-lg text-sm font-medium whitespace-nowrap transition-colors flex items-center gap-2 ${
             activeTab === "general"
               ? "bg-[#3B82F6] text-white"
@@ -597,7 +619,7 @@ export default function AdminSeoPage() {
           General SEO
         </button>
         <button
-          onClick={() => setActiveTab("pages")}
+          onClick={() => handleTabChange("pages")}
           className={`px-5 py-2.5 rounded-lg text-sm font-medium whitespace-nowrap transition-colors flex items-center gap-2 ${
             activeTab === "pages"
               ? "bg-[#3B82F6] text-white"
@@ -608,7 +630,7 @@ export default function AdminSeoPage() {
           Page-Level SEO
         </button>
         <button
-          onClick={() => setActiveTab("sitemap")}
+          onClick={() => handleTabChange("sitemap")}
           className={`px-5 py-2.5 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${
             activeTab === "sitemap"
               ? "bg-[#3B82F6] text-white"
@@ -618,7 +640,7 @@ export default function AdminSeoPage() {
           Sitemap
         </button>
         <button
-          onClick={() => setActiveTab("opengraph")}
+          onClick={() => handleTabChange("opengraph")}
           className={`px-5 py-2.5 rounded-lg text-sm font-medium whitespace-nowrap transition-colors flex items-center gap-2 ${
             activeTab === "opengraph"
               ? "bg-[#3B82F6] text-white"
@@ -629,7 +651,7 @@ export default function AdminSeoPage() {
           Open Graph
         </button>
         <button
-          onClick={() => setActiveTab("performance")}
+          onClick={() => handleTabChange("performance")}
           className={`px-5 py-2.5 rounded-lg text-sm font-medium whitespace-nowrap transition-colors flex items-center gap-2 ${
             activeTab === "performance"
               ? "bg-[#3B82F6] text-white"
@@ -640,7 +662,7 @@ export default function AdminSeoPage() {
           Performance
         </button>
         <button
-          onClick={() => setActiveTab("schema")}
+          onClick={() => handleTabChange("schema")}
           className={`px-5 py-2.5 rounded-lg text-sm font-medium whitespace-nowrap transition-colors flex items-center gap-2 ${
             activeTab === "schema"
               ? "bg-[#3B82F6] text-white"
@@ -651,7 +673,7 @@ export default function AdminSeoPage() {
           Schema
         </button>
         <button
-          onClick={() => setActiveTab("sms")}
+          onClick={() => handleTabChange("sms")}
           className={`px-5 py-2.5 rounded-lg text-sm font-medium whitespace-nowrap transition-colors flex items-center gap-2 ${
             activeTab === "sms"
               ? "bg-[#3B82F6] text-white"
