@@ -218,3 +218,8 @@ export {
   SERVICE_CATEGORIES,
   RENTAL_DURATIONS,
 } from './smsApi';
+
+export * from './couponsApi';
+export * from './adminReferralsApi';
+export * from './ranksApi';
+export * from './adminTicketsApi';

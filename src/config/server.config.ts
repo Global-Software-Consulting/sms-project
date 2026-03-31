@@ -245,5 +245,31 @@ export const API_ENDPOINTS = {
       VIP_DETAIL: (id: string) => `/admin/sms/vip/${id}`,
       VIP_AUTO_DETECT: '/admin/sms/vip/auto-detect',
     },
+
+    // Admin Referrals
+    REFERRALS: {
+      STATS: '/admin/referrals/stats',
+      PROFILES: '/admin/referrals/profiles',
+    },
+
+    // Admin Coupons
+    COUPONS: {
+      ROOT: '/admin/coupons',
+      DETAIL: (id: string) => `/admin/coupons/${id}`,
+    },
+
+    // Admin Ranks
+    RANKS: {
+      ROOT: '/admin/ranks',
+      DETAIL: (id: string) => `/admin/ranks/${id}`,
+    },
+
+    // Admin Tickets
+    TICKETS: {
+      ROOT: '/admin/tickets',
+      STATS: '/admin/tickets/stats',
+      DETAIL: (id: string) => `/admin/tickets/${id}`,
+      REPLY: (id: string) => `/admin/tickets/${id}/reply`,
+    },
   },
 } as const;

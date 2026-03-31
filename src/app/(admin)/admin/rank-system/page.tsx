@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { AdminDataTable } from "@/components/admin/data-table";
 import { AdminPageHeader } from "@/components/admin/page-header";
 import { AdminSlideOver } from "@/components/admin/slide-over";
@@ -8,60 +8,14 @@ import { AdminModal } from "@/components/admin/modal";
 import { AdminFormInput } from "@/components/admin/form-input";
 import { AdminToggleSwitch } from "@/components/admin/toggle-switch";
 import { toast } from "sonner";
-import { Plus, Edit, Trash2, Award, TrendingUp, DollarSign } from "lucide-react";
-
-const initialRanksData = [
-  {
-    id: "R-001",
-    level: "1",
-    name: "Bronze",
-    spendingMin: "$0",
-    spendingMax: "$100",
-    discount: "1%",
-    status: "active",
-    users: "1,245",
-  },
-  {
-    id: "R-002",
-    level: "2",
-    name: "Silver",
-    spendingMin: "$100",
-    spendingMax: "$500",
-    discount: "2%",
-    status: "active",
-    users: "856",
-  },
-  {
-    id: "R-003",
-    level: "3",
-    name: "Gold",
-    spendingMin: "$500",
-    spendingMax: "$2,000",
-    discount: "3%",
-    status: "active",
-    users: "342",
-  },
-  {
-    id: "R-004",
-    level: "4",
-    name: "Platinum",
-    spendingMin: "$2,000",
-    spendingMax: "$10,000",
-    discount: "4%",
-    status: "active",
-    users: "128",
-  },
-  {
-    id: "R-005",
-    level: "5",
-    name: "Diamond",
-    spendingMin: "$10,000",
-    spendingMax: "$50,000",
-    discount: "5%",
-    status: "active",
-    users: "23",
-  },
-];
+import { Plus, Edit, Trash2, Award, TrendingUp, DollarSign, Loader2 } from "lucide-react";
+import {
+  getRanks,
+  createRank,
+  updateRank,
+  deleteRank,
+  type Rank,
+} from '@/lib/api/ranksApi';
 
 const columns = [
   { key: "level", label: "Level", width: "8%" },
@@ -74,120 +28,217 @@ const columns = [
   { key: "actions", label: "Actions", width: "10%" },
 ];
 
+const initialFormState = {
+  name: "",
+  slug: "",
+  description: "",
+  minSpending: "",
+  discountPercent: "",
+  orderLimitBonus: "0",
+  prioritySupport: false,
+  badge: "",
+  color: "#FFD700",
+  sortOrder: "",
+  isActive: true,
+};
+
 export default function AdminRankSystemPage() {
-  const [ranksData, setRanksData] = useState(initialRanksData);
+  const [ranks, setRanks] = useState<Rank[]>([]);
+  const [isPageLoading, setIsPageLoading] = useState(true);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-  const [selectedRank, setSelectedRank] = useState<any>(null);
+  const [selectedRank, setSelectedRank] = useState<Rank | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
-  const [newRank, setNewRank] = useState({
-    level: "",
-    name: "",
-    spendingMin: "",
-    spendingMax: "",
-    discount: "",
-    status: true,
-  });
+  const [formData, setFormData] = useState(initialFormState);
+  const [editFormData, setEditFormData] = useState(initialFormState);
+
+  const dummyRanks: Rank[] = [
+    { id: "R-001", name: "Bronze", slug: "bronze", description: "Starter rank", minSpending: 0, discountPercent: 1, orderLimitBonus: 0, prioritySupport: false, badge: "", color: "#CD7F32", sortOrder: 1, isActive: true, createdAt: "", updatedAt: "", _count: { users: 1245 } },
+    { id: "R-002", name: "Silver", slug: "silver", description: "Intermediate rank", minSpending: 100, discountPercent: 2, orderLimitBonus: 5, prioritySupport: false, badge: "", color: "#C0C0C0", sortOrder: 2, isActive: true, createdAt: "", updatedAt: "", _count: { users: 856 } },
+    { id: "R-003", name: "Gold", slug: "gold", description: "Premium tier", minSpending: 500, discountPercent: 3, orderLimitBonus: 10, prioritySupport: false, badge: "", color: "#FFD700", sortOrder: 3, isActive: true, createdAt: "", updatedAt: "", _count: { users: 342 } },
+    { id: "R-004", name: "Platinum", slug: "platinum", description: "Elite tier", minSpending: 2000, discountPercent: 4, orderLimitBonus: 15, prioritySupport: true, badge: "", color: "#E5E4E2", sortOrder: 4, isActive: true, createdAt: "", updatedAt: "", _count: { users: 128 } },
+    { id: "R-005", name: "Diamond", slug: "diamond", description: "Top tier", minSpending: 10000, discountPercent: 5, orderLimitBonus: 20, prioritySupport: true, badge: "", color: "#B9F2FF", sortOrder: 5, isActive: true, createdAt: "", updatedAt: "", _count: { users: 23 } },
+  ];
+
+  const fetchRanks = useCallback(async () => {
+    setIsPageLoading(true);
+    try {
+      const data = await getRanks();
+      const ranksArray = Array.isArray(data) ? data : [];
+      setRanks(ranksArray.length > 0 ? ranksArray.sort((a, b) => a.sortOrder - b.sortOrder) : dummyRanks);
+    } catch (error: any) {
+      setRanks(dummyRanks);
+    } finally {
+      setIsPageLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchRanks();
+  }, [fetchRanks]);
 
   const handleAddRank = async () => {
+    if (!formData.name || !formData.discountPercent) {
+      toast.error("Please fill in all required fields");
+      return;
+    }
     setIsLoading(true);
-    await new Promise((resolve) => setTimeout(resolve, 1000));
+    try {
+      await createRank({
+        name: formData.name,
+        slug: formData.slug || formData.name.toLowerCase().replace(/\s+/g, '-'),
+        description: formData.description,
+        minSpending: Number(formData.minSpending) || 0,
+        discountPercent: Number(formData.discountPercent),
+        orderLimitBonus: Number(formData.orderLimitBonus) || 0,
+        prioritySupport: formData.prioritySupport,
+        badge: formData.badge,
+        color: formData.color,
+        sortOrder: Number(formData.sortOrder) || 0,
+        isActive: formData.isActive,
+      });
+      toast.success("Rank created successfully!");
+      setIsAddModalOpen(false);
+      setFormData(initialFormState);
+      fetchRanks();
+    } catch (error: any) {
+      toast.error(error?.response?.data?.message || "Failed to create rank");
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
-    const newRankData = {
-      id: `R-${String(ranksData.length + 1).padStart(3, "0")}`,
-      level: newRank.level,
-      name: newRank.name,
-      spendingMin: `$${newRank.spendingMin}`,
-      spendingMax: `$${newRank.spendingMax}`,
-      discount: `${newRank.discount}%`,
-      status: newRank.status ? "active" : "inactive",
-      users: "0",
-    };
-
-    setRanksData([...ranksData, newRankData]);
-    setIsAddModalOpen(false);
-    setNewRank({
-      level: "",
-      name: "",
-      spendingMin: "",
-      spendingMax: "",
-      discount: "",
-      status: true,
+  const openEditModal = (rank: Rank) => {
+    setSelectedRank(rank);
+    setEditFormData({
+      name: rank.name,
+      slug: rank.slug,
+      description: rank.description || "",
+      minSpending: String(rank.minSpending),
+      discountPercent: String(rank.discountPercent),
+      orderLimitBonus: String(rank.orderLimitBonus),
+      prioritySupport: rank.prioritySupport,
+      badge: rank.badge || "",
+      color: rank.color || "#FFD700",
+      sortOrder: String(rank.sortOrder),
+      isActive: rank.isActive,
     });
-    setIsLoading(false);
-    toast.success("Rank created successfully!");
+    setIsEditModalOpen(true);
   };
 
   const handleEditRank = async () => {
+    if (!selectedRank) return;
     setIsLoading(true);
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-
-    setRanksData(
-      ranksData.map((rank) =>
-        rank.id === selectedRank.id ? { ...selectedRank } : rank
-      )
-    );
-
-    setIsEditModalOpen(false);
-    setIsLoading(false);
-    toast.success("Rank updated successfully!");
+    try {
+      await updateRank(selectedRank.id, {
+        name: editFormData.name,
+        description: editFormData.description,
+        minSpending: Number(editFormData.minSpending) || 0,
+        discountPercent: Number(editFormData.discountPercent),
+        orderLimitBonus: Number(editFormData.orderLimitBonus) || 0,
+        prioritySupport: editFormData.prioritySupport,
+        badge: editFormData.badge,
+        color: editFormData.color,
+        sortOrder: Number(editFormData.sortOrder) || 0,
+        isActive: editFormData.isActive,
+      });
+      toast.success("Rank updated successfully!");
+      setIsEditModalOpen(false);
+      setSelectedRank(null);
+      fetchRanks();
+    } catch (error: any) {
+      toast.error(error?.response?.data?.message || "Failed to update rank");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleDeleteRank = async () => {
+    if (!selectedRank) return;
     setIsLoading(true);
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-
-    setRanksData(ranksData.filter((rank) => rank.id !== selectedRank.id));
-    setIsDeleteModalOpen(false);
-    setIsLoading(false);
-    toast.success("Rank deleted successfully!");
+    try {
+      await deleteRank(selectedRank.id);
+      toast.success("Rank deleted successfully!");
+      setIsDeleteModalOpen(false);
+      setSelectedRank(null);
+      fetchRanks();
+    } catch (error: any) {
+      toast.error(error?.response?.data?.message || "Failed to delete rank");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const renderCell = (item: any, column: any) => {
+  const getNextRankSpending = (rank: Rank): string => {
+    const sorted = [...ranks].sort((a, b) => a.sortOrder - b.sortOrder);
+    const idx = sorted.findIndex(r => r.id === rank.id);
+    if (idx < sorted.length - 1) {
+      return `$${sorted[idx + 1].minSpending.toLocaleString()}`;
+    }
+    return "∞";
+  };
+
+  const rankColors: Record<string, string> = {
+    Bronze: "text-[#CD7F32]",
+    Silver: "text-[#C0C0C0]",
+    Gold: "text-[#FFD700]",
+    Platinum: "text-[#E5E4E2]",
+    Diamond: "text-[#B9F2FF]",
+  };
+
+  const totalUsers = ranks.reduce((sum, r) => sum + (r._count?.users || 0), 0);
+  const maxDiscount = ranks.length > 0 ? Math.max(...ranks.map(r => r.discountPercent)) : 0;
+
+  const renderCell = (item: Rank, column: any) => {
     if (column.key === "level") {
       return (
         <div className="flex items-center gap-2">
           <Award className="w-5 h-5 text-[#F59E0B]" />
-          <span className="text-white font-semibold">{item.level}</span>
+          <span className="text-white font-semibold">{item.sortOrder}</span>
         </div>
       );
     }
 
     if (column.key === "name") {
-      const colors: Record<string, string> = {
-        Bronze: "text-[#CD7F32]",
-        Silver: "text-[#C0C0C0]",
-        Gold: "text-[#FFD700]",
-        Platinum: "text-[#E5E4E2]",
-        Diamond: "text-[#B9F2FF]",
-      };
       return (
-        <span className={`font-semibold ${colors[item.name] || "text-white"}`}>
+        <span className={`font-semibold ${rankColors[item.name] || "text-white"}`} style={!rankColors[item.name] && item.color ? { color: item.color } : {}}>
           {item.name}
         </span>
       );
     }
 
+    if (column.key === "spendingMin") {
+      return <span className="text-white">${item.minSpending.toLocaleString()}</span>;
+    }
+
+    if (column.key === "spendingMax") {
+      return <span className="text-white">{getNextRankSpending(item)}</span>;
+    }
+
     if (column.key === "discount") {
       return (
         <span className="px-3 py-1 rounded-lg text-xs font-medium bg-[#22C55E]/20 text-[#22C55E]">
-          {item.discount}
+          {item.discountPercent}%
         </span>
       );
+    }
+
+    if (column.key === "users") {
+      return <span className="text-white">{(item._count?.users || 0).toLocaleString()}</span>;
     }
 
     if (column.key === "status") {
       return (
         <span
           className={`px-3 py-1 rounded-lg text-xs font-medium ${
-            item.status === "active"
+            item.isActive
               ? "bg-[#22C55E]/20 text-[#22C55E]"
               : "bg-[#64748B]/20 text-[#64748B]"
           }`}
         >
-          {item.status}
+          {item.isActive ? "active" : "inactive"}
         </span>
       );
     }
@@ -196,10 +247,7 @@ export default function AdminRankSystemPage() {
       return (
         <div className="flex items-center gap-2">
           <button
-            onClick={() => {
-              setSelectedRank(item);
-              setIsEditModalOpen(true);
-            }}
+            onClick={() => openEditModal(item)}
             className="p-2 rounded-lg hover:bg-[rgba(255,255,255,0.08)] transition-colors group"
             title="Edit Rank"
           >
@@ -219,7 +267,7 @@ export default function AdminRankSystemPage() {
       );
     }
 
-    return item[column.key];
+    return (item as any)[column.key];
   };
 
   return (
@@ -229,7 +277,10 @@ export default function AdminRankSystemPage() {
         description="Manage user ranks based on spending levels and rewards"
         primaryAction={{
           label: "Create Rank",
-          onClick: () => setIsAddModalOpen(true),
+          onClick: () => {
+            setFormData(initialFormState);
+            setIsAddModalOpen(true);
+          },
           icon: <Plus className="w-5 h-5" />,
         }}
       />
@@ -241,27 +292,40 @@ export default function AdminRankSystemPage() {
             <span className="text-[#94A3B8] text-sm">Total Ranks</span>
             <Award className="w-5 h-5 text-[#3B82F6]" />
           </div>
-          <p className="text-white text-3xl font-semibold">{ranksData.length}</p>
+          <p className="text-white text-3xl font-semibold">{isPageLoading ? "..." : ranks.length}</p>
         </div>
         <div className="p-6 rounded-2xl bg-[rgba(255,255,255,0.05)] border border-[rgba(255,255,255,0.18)] backdrop-blur-xl">
           <div className="flex items-center justify-between mb-2">
             <span className="text-[#94A3B8] text-sm">Total Users</span>
             <TrendingUp className="w-5 h-5 text-[#22C55E]" />
           </div>
-          <p className="text-white text-3xl font-semibold">
-            {ranksData.reduce((sum, rank) => sum + parseInt(rank.users.replace(/,/g, "")), 0).toLocaleString()}
-          </p>
+          <p className="text-white text-3xl font-semibold">{isPageLoading ? "..." : totalUsers.toLocaleString()}</p>
         </div>
         <div className="p-6 rounded-2xl bg-[rgba(255,255,255,0.05)] border border-[rgba(255,255,255,0.18)] backdrop-blur-xl">
           <div className="flex items-center justify-between mb-2">
             <span className="text-[#94A3B8] text-sm">Max Discount</span>
             <DollarSign className="w-5 h-5 text-[#F59E0B]" />
           </div>
-          <p className="text-white text-3xl font-semibold">5%</p>
+          <p className="text-white text-3xl font-semibold">{isPageLoading ? "..." : `${maxDiscount}%`}</p>
         </div>
       </div>
 
-      <AdminDataTable columns={columns} data={ranksData} renderCell={renderCell} />
+      {isPageLoading ? (
+        <div className="flex items-center justify-center py-20">
+          <Loader2 className="w-8 h-8 text-[#3B82F6] animate-spin" />
+          <span className="ml-3 text-[#94A3B8]">Loading ranks...</span>
+        </div>
+      ) : ranks.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-20 text-center">
+          <div className="w-16 h-16 rounded-full bg-[rgba(255,255,255,0.05)] flex items-center justify-center mb-4">
+            <Award className="w-8 h-8 text-[#64748B]" />
+          </div>
+          <p className="text-white text-lg font-medium">No ranks found</p>
+          <p className="text-[#94A3B8] text-sm mt-1">Create your first rank to get started</p>
+        </div>
+      ) : (
+        <AdminDataTable columns={columns} data={ranks} renderCell={renderCell} />
+      )}
 
       {/* Add Rank Slide-Over */}
       <AdminSlideOver
@@ -279,12 +343,7 @@ export default function AdminRankSystemPage() {
             </button>
             <button
               onClick={handleAddRank}
-              disabled={
-                isLoading ||
-                !newRank.level ||
-                !newRank.name ||
-                !newRank.discount
-              }
+              disabled={isLoading || !formData.name || !formData.discountPercent}
               className="flex-1 px-4 py-2.5 rounded-xl bg-[#3B82F6] hover:bg-[#2563EB] text-white text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isLoading ? (
@@ -300,60 +359,66 @@ export default function AdminRankSystemPage() {
         }
       >
         <div className="space-y-6">
-          {/* Basic Information */}
           <div>
-            <h3 className="text-white text-base font-semibold mb-4">
-              Rank Details
-            </h3>
+            <h3 className="text-white text-base font-semibold mb-4">Rank Details</h3>
             <div className="space-y-4">
-              <AdminFormInput
-                label="Rank Level"
-                name="level"
-                type="number"
-                value={newRank.level}
-                onChange={(value) => setNewRank({ ...newRank, level: value })}
-                placeholder="1"
-                required
-                error={!newRank.level ? "Level is required" : ""}
-              />
               <AdminFormInput
                 label="Rank Name"
                 name="name"
-                value={newRank.name}
-                onChange={(value) => setNewRank({ ...newRank, name: value })}
-                placeholder="e.g., Bronze, Silver, Gold"
+                value={formData.name}
+                onChange={(value) => setFormData({ ...formData, name: value })}
+                placeholder="e.g., Gold"
                 required
-                error={!newRank.name ? "Rank name is required" : ""}
+                error={!formData.name ? "Rank name is required" : ""}
+              />
+              <AdminFormInput
+                label="Slug"
+                name="slug"
+                value={formData.slug}
+                onChange={(value) => setFormData({ ...formData, slug: value })}
+                placeholder="e.g., gold"
+              />
+              <AdminFormInput
+                label="Description"
+                name="description"
+                value={formData.description}
+                onChange={(value) => setFormData({ ...formData, description: value })}
+                placeholder="Premium tier with exclusive benefits"
+              />
+              <AdminFormInput
+                label="Sort Order"
+                name="sortOrder"
+                type="number"
+                value={formData.sortOrder}
+                onChange={(value) => setFormData({ ...formData, sortOrder: value })}
+                placeholder="0"
+              />
+              <AdminFormInput
+                label="Color"
+                name="color"
+                value={formData.color}
+                onChange={(value) => setFormData({ ...formData, color: value })}
+                placeholder="#FFD700"
+              />
+              <AdminFormInput
+                label="Badge URL"
+                name="badge"
+                value={formData.badge}
+                onChange={(value) => setFormData({ ...formData, badge: value })}
+                placeholder="https://example.com/badge.png"
               />
             </div>
           </div>
 
-          {/* Spending Range */}
           <div className="pt-6 border-t border-[rgba(255,255,255,0.18)]">
-            <h3 className="text-white text-base font-semibold mb-4">
-              Spending Requirements
-            </h3>
+            <h3 className="text-white text-base font-semibold mb-4">Spending Requirements</h3>
             <div className="space-y-4">
               <AdminFormInput
                 label="Minimum Spending ($)"
-                name="spendingMin"
+                name="minSpending"
                 type="number"
-                value={newRank.spendingMin}
-                onChange={(value) =>
-                  setNewRank({ ...newRank, spendingMin: value })
-                }
-                placeholder="0"
-                required
-                icon={<DollarSign className="w-5 h-5" />}
-              />
-              <AdminFormInput
-                label="Maximum Spending ($)"
-                name="spendingMax"
-                type="number"
-                value={newRank.spendingMax}
-                onChange={(value) =>
-                  setNewRank({ ...newRank, spendingMax: value })
-                }
+                value={formData.minSpending}
+                onChange={(value) => setFormData({ ...formData, minSpending: value })}
                 placeholder="100"
                 required
                 icon={<DollarSign className="w-5 h-5" />}
@@ -361,30 +426,40 @@ export default function AdminRankSystemPage() {
             </div>
           </div>
 
-          {/* Rewards */}
           <div className="pt-6 border-t border-[rgba(255,255,255,0.18)]">
             <h3 className="text-white text-base font-semibold mb-4">Rewards</h3>
             <div className="space-y-4">
               <AdminFormInput
                 label="Discount Percentage"
-                name="discount"
+                name="discountPercent"
                 type="number"
-                value={newRank.discount}
-                onChange={(value) =>
-                  setNewRank({ ...newRank, discount: value })
-                }
+                value={formData.discountPercent}
+                onChange={(value) => setFormData({ ...formData, discountPercent: value })}
                 placeholder="5"
                 required
-                error={!newRank.discount ? "Discount is required" : ""}
+                error={!formData.discountPercent ? "Discount is required" : ""}
                 icon={<span className="text-[#64748B] text-sm">%</span>}
+              />
+              <AdminFormInput
+                label="Order Limit Bonus"
+                name="orderLimitBonus"
+                type="number"
+                value={formData.orderLimitBonus}
+                onChange={(value) => setFormData({ ...formData, orderLimitBonus: value })}
+                placeholder="10"
+              />
+              <AdminToggleSwitch
+                label="Priority Support"
+                name="prioritySupport"
+                checked={formData.prioritySupport}
+                onChange={(checked) => setFormData({ ...formData, prioritySupport: checked })}
+                description="Enable priority support for this rank"
               />
               <AdminToggleSwitch
                 label="Active Status"
-                name="status"
-                checked={newRank.status}
-                onChange={(checked) =>
-                  setNewRank({ ...newRank, status: checked })
-                }
+                name="isActive"
+                checked={formData.isActive}
+                onChange={(checked) => setFormData({ ...formData, isActive: checked })}
                 description="Enable this rank for users"
               />
             </div>
@@ -413,22 +488,79 @@ export default function AdminRankSystemPage() {
             <AdminFormInput
               label="Rank Name"
               name="name"
-              value={selectedRank.name}
-              onChange={(value) =>
-                setSelectedRank({ ...selectedRank, name: value })
-              }
+              value={editFormData.name}
+              onChange={(value) => setEditFormData({ ...editFormData, name: value })}
               placeholder="Enter rank name"
               required
             />
             <AdminFormInput
+              label="Description"
+              name="description"
+              value={editFormData.description}
+              onChange={(value) => setEditFormData({ ...editFormData, description: value })}
+              placeholder="Enter description"
+            />
+            <AdminFormInput
+              label="Minimum Spending ($)"
+              name="minSpending"
+              type="number"
+              value={editFormData.minSpending}
+              onChange={(value) => setEditFormData({ ...editFormData, minSpending: value })}
+              placeholder="100"
+              icon={<DollarSign className="w-5 h-5" />}
+            />
+            <AdminFormInput
               label="Discount Percentage"
-              name="discount"
-              value={selectedRank.discount.replace("%", "")}
-              onChange={(value) =>
-                setSelectedRank({ ...selectedRank, discount: `${value}%` })
-              }
+              name="discountPercent"
+              type="number"
+              value={editFormData.discountPercent}
+              onChange={(value) => setEditFormData({ ...editFormData, discountPercent: value })}
               placeholder="5"
               icon={<span className="text-[#64748B] text-sm">%</span>}
+            />
+            <AdminFormInput
+              label="Order Limit Bonus"
+              name="orderLimitBonus"
+              type="number"
+              value={editFormData.orderLimitBonus}
+              onChange={(value) => setEditFormData({ ...editFormData, orderLimitBonus: value })}
+              placeholder="10"
+            />
+            <AdminFormInput
+              label="Sort Order"
+              name="sortOrder"
+              type="number"
+              value={editFormData.sortOrder}
+              onChange={(value) => setEditFormData({ ...editFormData, sortOrder: value })}
+              placeholder="0"
+            />
+            <AdminFormInput
+              label="Color"
+              name="color"
+              value={editFormData.color}
+              onChange={(value) => setEditFormData({ ...editFormData, color: value })}
+              placeholder="#FFD700"
+            />
+            <AdminFormInput
+              label="Badge URL"
+              name="badge"
+              value={editFormData.badge}
+              onChange={(value) => setEditFormData({ ...editFormData, badge: value })}
+              placeholder="https://example.com/badge.png"
+            />
+            <AdminToggleSwitch
+              label="Priority Support"
+              name="prioritySupport"
+              checked={editFormData.prioritySupport}
+              onChange={(checked) => setEditFormData({ ...editFormData, prioritySupport: checked })}
+              description="Enable priority support"
+            />
+            <AdminToggleSwitch
+              label="Active Status"
+              name="isActive"
+              checked={editFormData.isActive}
+              onChange={(checked) => setEditFormData({ ...editFormData, isActive: checked })}
+              description="Enable this rank"
             />
           </div>
         )}

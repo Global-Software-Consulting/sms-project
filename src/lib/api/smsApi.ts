@@ -674,6 +674,7 @@ export const adminUpdateProvider = async (
     isActive?: boolean;
     priority?: number;
     markup?: number;
+    version?: string;
     settings?: Record<string, unknown>;
   },
 ): Promise<{ provider: SmsProvider; message: string }> => {
