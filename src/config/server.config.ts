@@ -12,6 +12,7 @@ export const API_ENDPOINTS = {
   PUBLIC: {
     LOGIN_OPTIONS: '/settings/login-options',
     SITE_INFO: '/settings/site-info',
+    PAYMENT_GUIDE: '/settings/payment-guide',
   },
 
   // ========================
@@ -74,6 +75,7 @@ export const API_ENDPOINTS = {
   PAYMENTS: {
     ROOT: '/payments',
     GATEWAYS: '/payments/gateways',
+    PAYGATE_PROVIDERS: '/payments/paygate-providers',
     DETAIL: (id: string) => `/payments/${id}`,
     CANCEL: (id: string) => `/payments/${id}/cancel`,
   },
@@ -228,6 +230,23 @@ export const API_ENDPOINTS = {
       MARK_COMPLETED: (id: string) => `/admin/payments/${id}/mark-completed`,
     },
 
+    // Admin Payment Gateways
+    PAYMENT_GATEWAYS: {
+      ROOT: '/admin/payment-gateways',
+      DETAIL: (gateway: string) => `/admin/payment-gateways/${gateway}`,
+      TOGGLE: (gateway: string) => `/admin/payment-gateways/${gateway}/toggle`,
+      SEED: '/admin/payment-gateways/seed-defaults',
+    },
+
+    // Admin PayGate Providers
+    PAYGATE_PROVIDERS: {
+      ROOT: '/admin/paygate-providers',
+      DETAIL: (id: string) => `/admin/paygate-providers/${id}`,
+      TOGGLE: (id: string) => `/admin/paygate-providers/${id}/toggle`,
+      REORDER: '/admin/paygate-providers/reorder',
+      SEED: '/admin/paygate-providers/seed-defaults',
+    },
+
     // Admin Abuse Control
     ABUSE: {
       CONFIG: '/admin/abuse/config',
@@ -333,14 +352,6 @@ export const API_ENDPOINTS = {
       DETAIL: (id: string) => `/admin/faq/${id}`,
       CATEGORY_DETAIL: (id: string) => `/admin/faq/categories/${id}`,
       REORDER: '/admin/faq/reorder',
-    },
-
-    // Admin Contact
-    CONTACT: {
-      ROOT: '/admin/contact',
-      STATS: '/admin/contact/stats',
-      DETAIL: (id: string) => `/admin/contact/${id}`,
-      REPLY: (id: string) => `/admin/contact/${id}/reply`,
     },
 
     // Admin Referrals

@@ -749,3 +749,258 @@ export const updateCoupon = async (id: string, data: Partial<CreateCouponRequest
 export const deleteCoupon = async (id: string): Promise<void> => {
   await apiClient.delete(API_ENDPOINTS.ADMIN.COUPONS.DETAIL(id));
 };
+
+// ============================================
+// PAYMENT GATEWAYS Types & Functions
+// ============================================
+
+export type PaymentGatewayType = 'STRIPE' | 'PAYGATE' | 'PLISIO' | 'CRYPTOMUS' | 'NOWPAYMENTS' | 'VOLET' | 'BINANCE';
+
+export interface PaymentGatewayConfig {
+  id: string;
+  gateway: PaymentGatewayType;
+  displayName: string;
+  description?: string;
+  icon?: string;
+  type: string; // crypto, card, multi, transfer
+  isEnabled: boolean;
+  feeFixed: string;
+  feePercent: string;
+  feePassToUser: boolean;
+  minAmount: string;
+  maxAmount: string;
+  priority: number;
+  currencies: string[];
+  bonusSettings?: string;
+  polygonWallet?: string;
+  serviceFee?: string;
+  settings?: Record<string, unknown>;
+  createdAt?: string;
+  updatedAt?: string;
+  isConfigured?: boolean;
+  isVirtual?: boolean;
+}
+
+export interface UpdateGatewayConfigRequest {
+  displayName?: string;
+  description?: string;
+  icon?: string;
+  type?: string;
+  isEnabled?: boolean;
+  feeFixed?: number;
+  feePercent?: number;
+  feePassToUser?: boolean;
+  minAmount?: number;
+  maxAmount?: number;
+  priority?: number;
+  currencies?: string[];
+  bonusSettings?: string;
+  polygonWallet?: string;
+  serviceFee?: string;
+  settings?: Record<string, unknown>;
+}
+
+export interface GatewayConfigsResponse {
+  data: PaymentGatewayConfig[];
+  meta: {
+    total: number;
+    configured: number;
+    enabled: number;
+  };
+}
+
+export const getPaymentGateways = async (params?: { isEnabled?: boolean; gateway?: PaymentGatewayType }): Promise<GatewayConfigsResponse> => {
+  const response = await apiClient.get<GatewayConfigsResponse>(API_ENDPOINTS.ADMIN.PAYMENT_GATEWAYS.ROOT, { params });
+  return response.data;
+};
+
+export const getPaymentGateway = async (gateway: PaymentGatewayType): Promise<PaymentGatewayConfig> => {
+  const response = await apiClient.get<PaymentGatewayConfig>(API_ENDPOINTS.ADMIN.PAYMENT_GATEWAYS.DETAIL(gateway));
+  return response.data;
+};
+
+export const updatePaymentGateway = async (gateway: PaymentGatewayType, data: UpdateGatewayConfigRequest): Promise<{ message: string; data: PaymentGatewayConfig }> => {
+  const response = await apiClient.patch<{ message: string; data: PaymentGatewayConfig }>(API_ENDPOINTS.ADMIN.PAYMENT_GATEWAYS.DETAIL(gateway), data);
+  return response.data;
+};
+
+export const togglePaymentGateway = async (gateway: PaymentGatewayType, isEnabled: boolean): Promise<{ message: string; data: PaymentGatewayConfig }> => {
+  const response = await apiClient.patch<{ message: string; data: PaymentGatewayConfig }>(API_ENDPOINTS.ADMIN.PAYMENT_GATEWAYS.TOGGLE(gateway), { isEnabled });
+  return response.data;
+};
+
+export const seedPaymentGateways = async (): Promise<{ message: string; created: string[]; skipped: string[] }> => {
+  const response = await apiClient.post<{ message: string; created: string[]; skipped: string[] }>(API_ENDPOINTS.ADMIN.PAYMENT_GATEWAYS.SEED);
+  return response.data;
+};
+
+// ============================================
+// PAYGATE PROVIDERS Types & Functions
+// ============================================
+
+export interface PaygateProvider {
+  id: string;
+  name: string;
+  code: string;
+  description?: string;
+  provider: string;
+  sortOrder: number;
+  isEnabled: boolean;
+  minAmount: string;
+  maxAmount: string;
+  settings?: Record<string, unknown>;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreatePaygateProviderRequest {
+  name: string;
+  code: string;
+  description?: string;
+  provider: string;
+  sortOrder?: number;
+  isEnabled?: boolean;
+  minAmount?: number;
+  maxAmount?: number;
+  settings?: Record<string, unknown>;
+}
+
+export interface UpdatePaygateProviderRequest {
+  name?: string;
+  description?: string;
+  provider?: string;
+  sortOrder?: number;
+  isEnabled?: boolean;
+  minAmount?: number;
+  maxAmount?: number;
+  settings?: Record<string, unknown>;
+}
+
+export interface PaygateProvidersResponse {
+  data: PaygateProvider[];
+  meta: {
+    total: number;
+    enabled: number;
+  };
+}
+
+export const getPaygateProviders = async (params?: { isEnabled?: boolean }): Promise<PaygateProvidersResponse> => {
+  const response = await apiClient.get<PaygateProvidersResponse>(API_ENDPOINTS.ADMIN.PAYGATE_PROVIDERS.ROOT, { params });
+  return response.data;
+};
+
+export const getPaygateProvider = async (id: string): Promise<PaygateProvider> => {
+  const response = await apiClient.get<PaygateProvider>(API_ENDPOINTS.ADMIN.PAYGATE_PROVIDERS.DETAIL(id));
+  return response.data;
+};
+
+export const createPaygateProvider = async (data: CreatePaygateProviderRequest): Promise<{ message: string; data: PaygateProvider }> => {
+  const response = await apiClient.post<{ message: string; data: PaygateProvider }>(API_ENDPOINTS.ADMIN.PAYGATE_PROVIDERS.ROOT, data);
+  return response.data;
+};
+
+export const updatePaygateProvider = async (id: string, data: UpdatePaygateProviderRequest): Promise<{ message: string; data: PaygateProvider }> => {
+  const response = await apiClient.patch<{ message: string; data: PaygateProvider }>(API_ENDPOINTS.ADMIN.PAYGATE_PROVIDERS.DETAIL(id), data);
+  return response.data;
+};
+
+export const togglePaygateProvider = async (id: string, isEnabled: boolean): Promise<{ message: string; data: PaygateProvider }> => {
+  const response = await apiClient.patch<{ message: string; data: PaygateProvider }>(API_ENDPOINTS.ADMIN.PAYGATE_PROVIDERS.TOGGLE(id), { isEnabled });
+  return response.data;
+};
+
+export const deletePaygateProvider = async (id: string): Promise<{ message: string }> => {
+  const response = await apiClient.delete<{ message: string }>(API_ENDPOINTS.ADMIN.PAYGATE_PROVIDERS.DETAIL(id));
+  return response.data;
+};
+
+export const reorderPaygateProviders = async (orderMap: { id: string; sortOrder: number }[]): Promise<{ message: string }> => {
+  const response = await apiClient.post<{ message: string }>(API_ENDPOINTS.ADMIN.PAYGATE_PROVIDERS.REORDER, orderMap);
+  return response.data;
+};
+
+export const seedPaygateProviders = async (): Promise<{ message: string; created: string[]; skipped: string[] }> => {
+  const response = await apiClient.post<{ message: string; created: string[]; skipped: string[] }>(API_ENDPOINTS.ADMIN.PAYGATE_PROVIDERS.SEED);
+  return response.data;
+};
+
+// ============================================
+// ADMIN WALLETS Types & Functions (for User Balances)
+// ============================================
+
+export interface AdminWallet {
+  id: string;
+  userId: string;
+  user?: {
+    id: string;
+    username: string;
+    email: string;
+    firstName?: string;
+    lastName?: string;
+  };
+  balance: string;
+  currency: string;
+  totalDeposited: string;
+  totalSpent: string;
+  totalRefunded: string;
+  totalBonus: string;
+  isLocked: boolean;
+  lockedReason?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AdminWalletsResponse {
+  data: AdminWallet[];
+  meta: {
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  };
+}
+
+export interface CreditDebitRequest {
+  amount: number;
+  description?: string;
+}
+
+export const getAdminWallets = async (params?: {
+  search?: string;
+  page?: number;
+  limit?: number;
+  sortBy?: string;
+  sortOrder?: 'asc' | 'desc';
+}): Promise<AdminWalletsResponse> => {
+  const response = await apiClient.get<AdminWalletsResponse>(API_ENDPOINTS.ADMIN.WALLETS.ROOT, { params });
+  return response.data;
+};
+
+export const creditUserWallet = async (userId: string, data: CreditDebitRequest): Promise<{ message: string; wallet: AdminWallet }> => {
+  const response = await apiClient.post<{ message: string; wallet: AdminWallet }>(API_ENDPOINTS.ADMIN.WALLETS.CREDIT(userId), data);
+  return response.data;
+};
+
+export const debitUserWallet = async (userId: string, data: CreditDebitRequest): Promise<{ message: string; wallet: AdminWallet }> => {
+  const response = await apiClient.post<{ message: string; wallet: AdminWallet }>(API_ENDPOINTS.ADMIN.WALLETS.DEBIT(userId), data);
+  return response.data;
+};
+
+// ============================================
+// SETTINGS Types & Functions (for Payment Guide)
+// ============================================
+
+export interface BulkSettingUpdate {
+  key: string;
+  value: string;
+}
+
+export const bulkUpdateSettings = async (settings: BulkSettingUpdate[]): Promise<{ message: string; updated: number }> => {
+  const response = await apiClient.post<{ message: string; updated: number }>(API_ENDPOINTS.ADMIN.SETTINGS.BULK, { settings });
+  return response.data;
+};
+
+export const getPaymentGuide = async (): Promise<{ title: string; content: string; updatedAt: string }> => {
+  const response = await apiClient.get<{ title: string; content: string; updatedAt: string }>(API_ENDPOINTS.PUBLIC.PAYMENT_GUIDE);
+  return response.data;
+};
