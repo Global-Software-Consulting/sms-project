@@ -69,6 +69,8 @@ export {
   type AuditLog,
   type SystemLog,
   type ChartQueryParams,
+  type TopCountry,
+  type TopService,
   getDashboardOverview,
   getRevenueChart,
   getUserGrowthChart,
@@ -76,6 +78,8 @@ export {
   getMembershipBreakdown,
   getRecentAuditLogs,
   getRecentSystemLogs,
+  getTopCountries,
+  getTopServices,
   formatCurrency,
   formatNumber,
   getGrowthIndicator,
@@ -223,3 +227,4 @@ export * from './couponsApi';
 export * from './adminReferralsApi';
 export * from './ranksApi';
 export * from './adminTicketsApi';
+export * from './adminContactApi';

@@ -110,6 +110,13 @@ export const API_ENDPOINTS = {
   },
 
   // ========================
+  // Contact
+  // ========================
+  CONTACT: {
+    SUBMIT: '/contact',
+  },
+
+  // ========================
   // Notifications
   // ========================
   NOTIFICATIONS: {
@@ -186,6 +193,8 @@ export const API_ENDPOINTS = {
       MEMBERSHIPS_BREAKDOWN: '/admin/analytics/memberships/breakdown',
       RECENT_AUDIT_LOGS: '/admin/analytics/recent/audit-logs',
       RECENT_SYSTEM_LOGS: '/admin/analytics/recent/system-logs',
+      TOP_COUNTRIES: '/admin/analytics/top-countries',
+      TOP_SERVICES: '/admin/analytics/top-services',
     },
 
     // Admin Membership
@@ -270,6 +279,16 @@ export const API_ENDPOINTS = {
       STATS: '/admin/tickets/stats',
       DETAIL: (id: string) => `/admin/tickets/${id}`,
       REPLY: (id: string) => `/admin/tickets/${id}/reply`,
+    },
+
+    // Admin Contact
+    CONTACT: {
+      ROOT: '/admin/contact',
+      STATS: '/admin/contact/stats',
+      DETAIL: (id: string) => `/admin/contact/${id}`,
+      READ: (id: string) => `/admin/contact/${id}/read`,
+      REPLY: (id: string) => `/admin/contact/${id}/reply`,
+      ARCHIVE: (id: string) => `/admin/contact/${id}/archive`,
     },
   },
 } as const;

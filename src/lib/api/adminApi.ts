@@ -689,6 +689,23 @@ export interface ChartQueryParams {
   endDate?: string;
 }
 
+export interface TopCountry {
+  name: string;
+  code: string;
+  flag: string;
+  orderCount: number;
+  revenue: string;
+  percentage: number;
+}
+
+export interface TopService {
+  name: string;
+  slug: string;
+  orderCount: number;
+  revenue: string;
+  percentage: number;
+}
+
 // ============================================
 // Admin Analytics API Functions
 // ============================================
@@ -777,6 +794,26 @@ export const getRecentSystemLogs = async (
   const response = await apiClient.get<SystemLog[]>(
     API_ENDPOINTS.ADMIN.ANALYTICS.RECENT_SYSTEM_LOGS,
     { params: { limit } },
+  );
+  return response.data;
+};
+
+/**
+ * Get top countries by orders
+ */
+export const getTopCountries = async (): Promise<TopCountry[]> => {
+  const response = await apiClient.get<TopCountry[]>(
+    API_ENDPOINTS.ADMIN.ANALYTICS.TOP_COUNTRIES,
+  );
+  return response.data;
+};
+
+/**
+ * Get top services by orders
+ */
+export const getTopServices = async (): Promise<TopService[]> => {
+  const response = await apiClient.get<TopService[]>(
+    API_ENDPOINTS.ADMIN.ANALYTICS.TOP_SERVICES,
   );
   return response.data;
 };

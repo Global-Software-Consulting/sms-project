@@ -155,9 +155,9 @@ export default function AdminSupportPage() {
         priority: (filterPriority as TicketPriority) || undefined,
       };
       const response = await getAdminTickets(params);
-      setTickets(response.data || []);
-      setTotalPages(response.meta?.totalPages || 1);
-      setTotal(response.meta?.total || 0);
+      setTickets(response.tickets || []);
+      setTotalPages(response.totalPages || 1);
+      setTotal(response.total || 0);
     } catch (error: any) {
       toast.error(error?.response?.data?.message || "Failed to fetch tickets");
     } finally {
@@ -241,14 +241,18 @@ export default function AdminSupportPage() {
     );
   });
 
-  // Tab counts from stats
-  const tabCounts = {
-    all: stats?.totalTickets ?? total,
+  // Tab counts from stats — use activeTab total for current tab
+  const tabCounts: Record<string, number> = {
+    all: stats?.totalTickets ?? 0,
     open: stats?.openTickets ?? 0,
     pending: stats?.pendingTickets ?? 0,
     resolved: stats?.resolvedTickets ?? 0,
-    closed: 0,
+    closed: stats ? (stats.totalTickets - stats.openTickets - stats.pendingTickets - stats.resolvedTickets) : 0,
   };
+  // Override current tab count with actual API total
+  if (activeTab && !isPageLoading) {
+    tabCounts[activeTab] = total;
+  }
 
   const tabs = [
     { key: "all", label: "All Tickets", count: tabCounts.all },

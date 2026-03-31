@@ -40,13 +40,11 @@ export interface AdminTicket {
 }
 
 export interface AdminTicketsResponse {
-  data: AdminTicket[];
-  meta: {
-    total: number;
-    page: number;
-    limit: number;
-    totalPages: number;
-  };
+  tickets: AdminTicket[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
 }
 
 export interface AdminTicketQueryParams {
