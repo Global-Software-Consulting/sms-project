@@ -1,12 +1,19 @@
 'use client';
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { AdminPageHeader } from '@/components/admin/page-header';
 import { AdminGlassCard } from '@/components/admin/glass-card';
 import { AdminFormInput } from '@/components/admin/form-input';
 import { AdminModal } from '@/components/admin/modal';
 import { toast } from 'sonner';
-import { Plus, Edit, Trash2, Upload, Copy } from "lucide-react";
+import { Plus, Edit, Trash2, Upload, Copy, Loader2 } from "lucide-react";
+import {
+  getBlogPosts,
+  createBlogPost,
+  updateBlogPost,
+  deleteBlogPost,
+  type BlogPost,
+} from '@/lib/api/adminModulesApi';
 
 // Mock data
 const blogsData = [
@@ -65,6 +72,7 @@ export default function AdminBlogsPage() {
   const [categorySubTab, setGategorySubTab] = useState<"category" | "subcategory">("category");
 
   const [blogs, setBlogs] = useState(blogsData);
+  const [apiBlogPosts, setApiBlogPosts] = useState<BlogPost[]>([]);
   const [categories, setCategories] = useState(categoriesData);
   const [authors, setAuthors] = useState(authorsData);
 
@@ -74,6 +82,38 @@ export default function AdminBlogsPage() {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [isPageLoading, setIsPageLoading] = useState(true);
+
+  const fetchBlogPosts = useCallback(async () => {
+    try {
+      setIsPageLoading(true);
+      const response = await getBlogPosts();
+      setApiBlogPosts(response.data);
+      // Transform API data to match local format
+      const transformedBlogs = response.data.map(post => ({
+        id: post.id,
+        title: post.title,
+        author: post.author?.username || 'Unknown',
+        slug: post.slug,
+        publishedDate: post.publishedAt ? new Date(post.publishedAt).toLocaleString() : 'Not published',
+        createdDate: new Date(post.createdAt).toLocaleString(),
+        category: post.category || 'Uncategorized',
+        tags: post.tags || [],
+        status: post.status,
+        image: post.featuredImage || '',
+      }));
+      setBlogs(transformedBlogs.length > 0 ? transformedBlogs : blogsData);
+    } catch (error) {
+      console.error('Failed to fetch blog posts:', error);
+      // Keep mock data on error
+    } finally {
+      setIsPageLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchBlogPosts();
+  }, [fetchBlogPosts]);
 
   // Auto Blog Upload State
   const [autoBlogConfig, setAutoBlogConfig] = useState({

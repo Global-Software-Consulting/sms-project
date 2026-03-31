@@ -1,8 +1,15 @@
 'use client';
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { toast } from "sonner";
-import { Edit2, Trash2, ExternalLink, Plus } from "lucide-react";
+import { Edit2, Trash2, ExternalLink, Plus, Loader2 } from "lucide-react";
+import {
+  getAds,
+  createAd,
+  updateAd,
+  deleteAd as deleteAdApi,
+  type Ad as ApiAd,
+} from "@/lib/api/adminModulesApi";
 
 interface Ad {
   id: string;
@@ -20,18 +27,36 @@ export default function AdminAdsPage() {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [selectedAd, setSelectedAd] = useState<Ad | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [isPageLoading, setIsPageLoading] = useState(true);
 
-  const [ads, setAds] = useState<Ad[]>([
-    {
-      id: "1",
-      title: "Official VipStore site",
-      description: "VipStore Company Details",
-      image: "",
-      status: "active",
-      sortOrder: 0,
-      url: "https://vipstore.com",
-    },
-  ]);
+  const [ads, setAds] = useState<Ad[]>([]);
+
+  const transformApiAd = (apiAd: ApiAd): Ad => ({
+    id: apiAd.id,
+    title: apiAd.title,
+    description: apiAd.description || '',
+    image: apiAd.imageUrl || '',
+    status: apiAd.isActive ? 'active' : 'inactive',
+    sortOrder: apiAd.sortOrder,
+    url: apiAd.targetUrl,
+  });
+
+  const fetchAds = useCallback(async () => {
+    try {
+      setIsPageLoading(true);
+      const apiAds = await getAds();
+      setAds(apiAds.map(transformApiAd));
+    } catch (error) {
+      console.error('Failed to fetch ads:', error);
+      toast.error('Failed to load ads');
+    } finally {
+      setIsPageLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchAds();
+  }, [fetchAds]);
 
   const [formData, setFormData] = useState({
     title: "",
@@ -74,37 +99,56 @@ export default function AdminAdsPage() {
 
   const handleSaveAd = async () => {
     setIsLoading(true);
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-
-    if (showAddModal) {
-      const newAd: Ad = {
-        id: Date.now().toString(),
-        ...formData,
-      };
-      setAds([...ads, newAd]);
-      toast.success("Ad added successfully!");
-    } else if (showEditModal && selectedAd) {
-      setAds(ads.map((ad) => (ad.id === selectedAd.id ? { ...ad, ...formData } : ad)));
-      toast.success("Ad updated successfully!");
+    try {
+      if (showAddModal) {
+        const newAd = await createAd({
+          title: formData.title,
+          description: formData.description || undefined,
+          imageUrl: formData.image || undefined,
+          targetUrl: formData.url || undefined,
+          isActive: formData.status === 'active',
+          sortOrder: formData.sortOrder,
+        });
+        setAds([...ads, transformApiAd(newAd)]);
+        toast.success("Ad added successfully!");
+      } else if (showEditModal && selectedAd) {
+        const updatedAd = await updateAd(selectedAd.id, {
+          title: formData.title,
+          description: formData.description || undefined,
+          imageUrl: formData.image || undefined,
+          targetUrl: formData.url || undefined,
+          isActive: formData.status === 'active',
+          sortOrder: formData.sortOrder,
+        });
+        setAds(ads.map((ad) => (ad.id === selectedAd.id ? transformApiAd(updatedAd) : ad)));
+        toast.success("Ad updated successfully!");
+      }
+      setShowAddModal(false);
+      setShowEditModal(false);
+    } catch (error) {
+      console.error('Failed to save ad:', error);
+      toast.error("Failed to save ad. Please try again.");
+    } finally {
+      setIsLoading(false);
     }
-
-    setIsLoading(false);
-    setShowAddModal(false);
-    setShowEditModal(false);
   };
 
   const handleConfirmDelete = async () => {
     if (!selectedAd) return;
 
     setIsLoading(true);
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-
-    setAds(ads.filter((ad) => ad.id !== selectedAd.id));
-    toast.success("Ad deleted successfully!");
-
-    setIsLoading(false);
-    setShowDeleteModal(false);
-    setSelectedAd(null);
+    try {
+      await deleteAdApi(selectedAd.id);
+      setAds(ads.filter((ad) => ad.id !== selectedAd.id));
+      toast.success("Ad deleted successfully!");
+      setShowDeleteModal(false);
+      setSelectedAd(null);
+    } catch (error) {
+      console.error('Failed to delete ad:', error);
+      toast.error("Failed to delete ad. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -132,6 +176,12 @@ export default function AdminAdsPage() {
 
       {/* Ads Table */}
       <div className="rounded-xl bg-[rgba(15,23,42,0.6)] border border-[rgba(255,255,255,0.1)] backdrop-blur-xl overflow-hidden">
+        {isPageLoading ? (
+          <div className="flex items-center justify-center py-12">
+            <Loader2 className="w-8 h-8 text-[#3B82F6] animate-spin" />
+          </div>
+        ) : (
+          <>
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead>
@@ -245,6 +295,8 @@ export default function AdminAdsPage() {
             </button>
           </div>
         </div>
+          </>
+        )}
       </div>
 
       {/* Add/Edit Modal */}
