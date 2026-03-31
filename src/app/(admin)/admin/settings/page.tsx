@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { toast } from "sonner";
 import {
   Twitter,
@@ -19,7 +19,13 @@ import {
   Upload,
   X,
   Plus,
+  Loader2,
 } from "lucide-react";
+import {
+  getGroupedSettings,
+  bulkUpdateSettings,
+  type GroupedSettings,
+} from "@/lib/api/settingsApi";
 
 // Mock data for languages
 const languagesData = [
@@ -44,6 +50,7 @@ export default function AdminSettingsPage() {
     "social" | "contact" | "page" | "email" | "addons" | "trial" | "logo" | "status" | "language"
   >("social");
   const [isLoading, setIsLoading] = useState(false);
+  const [isPageLoading, setIsPageLoading] = useState(true);
   const [activePage, setActivePage] = useState("home");
 
   // Social Media State
@@ -166,15 +173,341 @@ www.cheapstreamtv.com`
   // Languages State
   const [languages, setLanguages] = useState(languagesData);
 
+  // Fetch settings from API
+  const fetchSettings = useCallback(async () => {
+    try {
+      setIsPageLoading(true);
+      const grouped = await getGroupedSettings();
+      
+      // Parse social media settings
+      const socialSettings = grouped['social'] || [];
+      const socialMap: Record<string, string> = {};
+      socialSettings.forEach((s) => {
+        socialMap[s.key] = s.value;
+      });
+      
+      if (Object.keys(socialMap).length > 0) {
+        setSocialMedia({
+          twitter: { 
+            url: socialMap['social_twitter_url'] || '', 
+            visible: socialMap['social_twitter_visible'] !== 'false' 
+          },
+          facebook: { 
+            url: socialMap['social_facebook_url'] || '', 
+            visible: socialMap['social_facebook_visible'] === 'true' 
+          },
+          instagram: { 
+            url: socialMap['social_instagram_url'] || '', 
+            visible: socialMap['social_instagram_visible'] !== 'false' 
+          },
+          linkedin: { 
+            url: socialMap['social_linkedin_url'] || '', 
+            visible: socialMap['social_linkedin_visible'] !== 'false' 
+          },
+          youtube: { 
+            url: socialMap['social_youtube_url'] || '', 
+            visible: socialMap['social_youtube_visible'] === 'true' 
+          },
+          tiktok: { 
+            url: socialMap['social_tiktok_url'] || '', 
+            visible: socialMap['social_tiktok_visible'] === 'true' 
+          },
+          telegram: { 
+            url: socialMap['social_telegram_url'] || '', 
+            visible: socialMap['social_telegram_visible'] === 'true' 
+          },
+        });
+      }
+
+      // Parse contact settings
+      const contactSettings = grouped['contact'] || [];
+      const contactMap: Record<string, string> = {};
+      contactSettings.forEach((s) => {
+        contactMap[s.key] = s.value;
+      });
+      
+      if (Object.keys(contactMap).length > 0) {
+        setContactInfo({
+          phone: contactMap['contact_phone'] || contactInfo.phone,
+          email: contactMap['contact_email'] || contactInfo.email,
+          businessHours: contactMap['contact_business_hours'] || contactInfo.businessHours,
+          helpMessage: contactMap['contact_help_message'] || contactInfo.helpMessage,
+          buttonText: contactMap['contact_button_text'] || contactInfo.buttonText,
+          successMessage: contactMap['contact_success_message'] || contactInfo.successMessage,
+        });
+      }
+
+      // Parse maintenance settings
+      const maintenanceSettings = grouped['maintenance'] || [];
+      const maintenanceMap: Record<string, string> = {};
+      maintenanceSettings.forEach((s) => {
+        maintenanceMap[s.key] = s.value;
+      });
+      
+      if (Object.keys(maintenanceMap).length > 0) {
+        setSiteStatus({
+          isActive: maintenanceMap['maintenance_enabled'] !== 'true',
+          maintenanceMessage: maintenanceMap['maintenance_message'] || siteStatus.maintenanceMessage,
+        });
+      }
+
+      // Parse addons settings
+      const addonsSettings = grouped['addons'] || [];
+      const addonsMap: Record<string, string> = {};
+      addonsSettings.forEach((s) => {
+        addonsMap[s.key] = s.value;
+      });
+      
+      if (Object.keys(addonsMap).length > 0) {
+        setAddons({
+          recaptcha: {
+            enabled: addonsMap['addon_recaptcha_enabled'] === 'true',
+            siteKey: addonsMap['addon_recaptcha_site_key'] || addons.recaptcha.siteKey,
+            secretKey: addonsMap['addon_recaptcha_secret_key'] || addons.recaptcha.secretKey,
+          },
+          trustpilot: { enabled: addonsMap['addon_trustpilot_enabled'] === 'true' },
+          googleAnalytics: {
+            enabled: addonsMap['addon_ga_enabled'] === 'true',
+            measurementId: addonsMap['addon_ga_measurement_id'] || addons.googleAnalytics.measurementId,
+          },
+          microsoftClarity: { enabled: addonsMap['addon_clarity_enabled'] === 'true' },
+          cloudflare: { enabled: addonsMap['addon_cloudflare_enabled'] === 'true' },
+          getbutton: { enabled: addonsMap['addon_getbutton_enabled'] === 'true' },
+          tawkto: { enabled: addonsMap['addon_tawkto_enabled'] === 'true' },
+        });
+      }
+
+      // Parse content settings (page content, email content, free trial)
+      const contentSettings = grouped['content'] || [];
+      const generalSettings = grouped['general'] || [];
+      const contentMap: Record<string, string> = {};
+      
+      // Combine content and general categories for backward compatibility
+      contentSettings.forEach((s) => {
+        contentMap[s.key] = s.value;
+      });
+      generalSettings.forEach((s) => {
+        if ((s.key.startsWith('page_') || s.key.startsWith('email_') || s.key.startsWith('trial_')) && !contentMap[s.key]) {
+          contentMap[s.key] = s.value;
+        }
+      });
+
+      // Email content
+      if (contentMap['email_setup_guide']) {
+        setEmailContent(contentMap['email_setup_guide']);
+      }
+
+      // Free trial content
+      if (contentMap['trial_main_title'] || contentMap['trial_description']) {
+        setFreeTrial({
+          mainTitle: contentMap['trial_main_title'] || freeTrial.mainTitle,
+          description: contentMap['trial_description'] || freeTrial.description,
+          sectionTitle: contentMap['trial_section_title'] || freeTrial.sectionTitle,
+          items: contentMap['trial_items'] ? JSON.parse(contentMap['trial_items']) : freeTrial.items,
+        });
+      }
+
+      // Page content for home page (default)
+      if (contentMap['page_home_heading1'] || contentMap['page_home_description']) {
+        setPageContent({
+          headingPart1: contentMap['page_home_heading1'] || pageContent.headingPart1,
+          headingPart2: contentMap['page_home_heading2'] || pageContent.headingPart2,
+          description: contentMap['page_home_description'] || pageContent.description,
+          inputPlaceholder: contentMap['page_home_input_placeholder'] || pageContent.inputPlaceholder,
+          buttonText: contentMap['page_home_button_text'] || pageContent.buttonText,
+          pageTitle: contentMap['page_home_meta_title'] || pageContent.pageTitle,
+          metaDescription: contentMap['page_home_meta_description'] || pageContent.metaDescription,
+          keywords: contentMap['page_home_keywords'] || pageContent.keywords,
+          ogTitle: contentMap['page_home_og_title'] || pageContent.ogTitle,
+          ogDescription: contentMap['page_home_og_description'] || pageContent.ogDescription,
+        });
+      }
+
+      // Parse language settings
+      const languageSettings = grouped['language'] || [];
+      const languageMap: Record<string, string> = {};
+      languageSettings.forEach((s) => {
+        languageMap[s.key] = s.value;
+      });
+      // Also check general for backward compatibility
+      generalSettings.forEach((s) => {
+        if (s.key.startsWith('language') && !languageMap[s.key]) {
+          languageMap[s.key] = s.value;
+        }
+      });
+
+      if (languageMap['languages_active']) {
+        try {
+          const parsedLanguages = JSON.parse(languageMap['languages_active']);
+          if (Array.isArray(parsedLanguages) && parsedLanguages.length > 0) {
+            setLanguages(parsedLanguages);
+          }
+        } catch (e) {
+          console.error('Failed to parse languages:', e);
+        }
+      }
+
+    } catch (error) {
+      console.error('Failed to fetch settings:', error);
+      toast.error('Failed to load settings');
+    } finally {
+      setIsPageLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchSettings();
+  }, [fetchSettings]);
+
+  // Load page-specific content when switching pages in Page Edit tab
+  const loadPageContent = useCallback(async (pageName: string) => {
+    try {
+      const grouped = await getGroupedSettings();
+      const contentSettings = grouped['content'] || [];
+      const generalSettings = grouped['general'] || [];
+      const contentMap: Record<string, string> = {};
+      
+      contentSettings.forEach((s) => {
+        contentMap[s.key] = s.value;
+      });
+      generalSettings.forEach((s) => {
+        if (s.key.startsWith(`page_${pageName}_`) && !contentMap[s.key]) {
+          contentMap[s.key] = s.value;
+        }
+      });
+
+      // Set page content if any exists
+      setPageContent({
+        headingPart1: contentMap[`page_${pageName}_heading1`] || '',
+        headingPart2: contentMap[`page_${pageName}_heading2`] || '',
+        description: contentMap[`page_${pageName}_description`] || '',
+        inputPlaceholder: contentMap[`page_${pageName}_input_placeholder`] || 'Email Address',
+        buttonText: contentMap[`page_${pageName}_button_text`] || 'Get Started',
+        pageTitle: contentMap[`page_${pageName}_meta_title`] || '',
+        metaDescription: contentMap[`page_${pageName}_meta_description`] || '',
+        keywords: contentMap[`page_${pageName}_keywords`] || '',
+        ogTitle: contentMap[`page_${pageName}_og_title`] || '',
+        ogDescription: contentMap[`page_${pageName}_og_description`] || '',
+      });
+    } catch (error) {
+      console.error('Failed to load page content:', error);
+    }
+  }, []);
+
+  // Load page content when activePage changes
+  useEffect(() => {
+    if (activeTab === 'page') {
+      loadPageContent(activePage);
+    }
+  }, [activePage, activeTab, loadPageContent]);
+
   const handleSave = async (type: string) => {
     setIsLoading(true);
-    await new Promise((resolve) => setTimeout(resolve, 1500));
-    setIsLoading(false);
-    toast.success(`${type} updated successfully!`);
+    try {
+      let settings: { key: string; value: string }[] = [];
+
+      switch (type) {
+        case "Social media links":
+          settings = [
+            { key: 'social_twitter_url', value: socialMedia.twitter.url },
+            { key: 'social_twitter_visible', value: String(socialMedia.twitter.visible) },
+            { key: 'social_facebook_url', value: socialMedia.facebook.url },
+            { key: 'social_facebook_visible', value: String(socialMedia.facebook.visible) },
+            { key: 'social_instagram_url', value: socialMedia.instagram.url },
+            { key: 'social_instagram_visible', value: String(socialMedia.instagram.visible) },
+            { key: 'social_linkedin_url', value: socialMedia.linkedin.url },
+            { key: 'social_linkedin_visible', value: String(socialMedia.linkedin.visible) },
+            { key: 'social_youtube_url', value: socialMedia.youtube.url },
+            { key: 'social_youtube_visible', value: String(socialMedia.youtube.visible) },
+            { key: 'social_tiktok_url', value: socialMedia.tiktok.url },
+            { key: 'social_tiktok_visible', value: String(socialMedia.tiktok.visible) },
+            { key: 'social_telegram_url', value: socialMedia.telegram.url },
+            { key: 'social_telegram_visible', value: String(socialMedia.telegram.visible) },
+          ];
+          break;
+        case "Contact information":
+          settings = [
+            { key: 'contact_phone', value: contactInfo.phone },
+            { key: 'contact_email', value: contactInfo.email },
+            { key: 'contact_business_hours', value: contactInfo.businessHours },
+            { key: 'contact_help_message', value: contactInfo.helpMessage },
+            { key: 'contact_button_text', value: contactInfo.buttonText },
+            { key: 'contact_success_message', value: contactInfo.successMessage },
+          ];
+          break;
+        case "Site status":
+          settings = [
+            { key: 'maintenance_enabled', value: String(!siteStatus.isActive) },
+            { key: 'maintenance_message', value: siteStatus.maintenanceMessage },
+          ];
+          break;
+        case "Addons":
+          settings = [
+            { key: 'addon_recaptcha_enabled', value: String(addons.recaptcha.enabled) },
+            { key: 'addon_recaptcha_site_key', value: addons.recaptcha.siteKey },
+            { key: 'addon_recaptcha_secret_key', value: addons.recaptcha.secretKey },
+            { key: 'addon_trustpilot_enabled', value: String(addons.trustpilot.enabled) },
+            { key: 'addon_ga_enabled', value: String(addons.googleAnalytics.enabled) },
+            { key: 'addon_ga_measurement_id', value: addons.googleAnalytics.measurementId },
+            { key: 'addon_clarity_enabled', value: String(addons.microsoftClarity.enabled) },
+            { key: 'addon_cloudflare_enabled', value: String(addons.cloudflare.enabled) },
+            { key: 'addon_getbutton_enabled', value: String(addons.getbutton.enabled) },
+            { key: 'addon_tawkto_enabled', value: String(addons.tawkto.enabled) },
+          ];
+          break;
+        case "Email content":
+          settings = [
+            { key: 'email_setup_guide', value: emailContent },
+          ];
+          break;
+        case "Free trial content":
+          settings = [
+            { key: 'trial_main_title', value: freeTrial.mainTitle },
+            { key: 'trial_description', value: freeTrial.description },
+            { key: 'trial_section_title', value: freeTrial.sectionTitle },
+            { key: 'trial_items', value: JSON.stringify(freeTrial.items) },
+          ];
+          break;
+        case "Page content":
+          settings = [
+            { key: `page_${activePage}_heading1`, value: pageContent.headingPart1 },
+            { key: `page_${activePage}_heading2`, value: pageContent.headingPart2 },
+            { key: `page_${activePage}_description`, value: pageContent.description },
+            { key: `page_${activePage}_input_placeholder`, value: pageContent.inputPlaceholder },
+            { key: `page_${activePage}_button_text`, value: pageContent.buttonText },
+            { key: `page_${activePage}_meta_title`, value: pageContent.pageTitle },
+            { key: `page_${activePage}_meta_description`, value: pageContent.metaDescription },
+            { key: `page_${activePage}_keywords`, value: pageContent.keywords },
+            { key: `page_${activePage}_og_title`, value: pageContent.ogTitle },
+            { key: `page_${activePage}_og_description`, value: pageContent.ogDescription },
+          ];
+          break;
+        case "Language settings":
+          settings = [
+            { key: 'languages_active', value: JSON.stringify(languages) },
+          ];
+          break;
+        default:
+          break;
+      }
+
+      if (settings.length > 0) {
+        await bulkUpdateSettings({ settings });
+      }
+      
+      toast.success(`${type} updated successfully!`);
+    } catch (error) {
+      console.error('Failed to save settings:', error);
+      toast.error(`Failed to save ${type.toLowerCase()}`);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const handleRefresh = () => {
+  const handleRefresh = async () => {
     toast.info("Refreshing settings...");
+    await fetchSettings();
+    toast.success("Settings refreshed!");
   };
 
   const handleDeactivateLanguage = (langCode: string) => {
@@ -246,6 +579,19 @@ www.cheapstreamtv.com`
     { id: "faq", label: "FAQ" },
     { id: "pricing", label: "Pricing" },
   ];
+
+  if (isPageLoading) {
+    return (
+      <div className="p-4 lg:p-8">
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="flex flex-col items-center gap-4">
+            <Loader2 className="w-10 h-10 text-[#3B82F6] animate-spin" />
+            <p className="text-[#94A3B8] text-sm">Loading settings...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-4 lg:p-8">

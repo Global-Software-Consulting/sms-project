@@ -243,5 +243,120 @@ export const API_ENDPOINTS = {
       VIP_DETAIL: (id: string) => `/admin/sms/vip/${id}`,
       VIP_AUTO_DETECT: '/admin/sms/vip/auto-detect',
     },
+
+    // Admin SEO
+    SEO: {
+      ROOT: '/admin/seo',
+      DETAIL: (id: string) => `/admin/seo/${id}`,
+      BY_PATH: (path: string) => `/admin/seo/path/${encodeURIComponent(path)}`,
+      UPSERT: '/admin/seo/upsert',
+      SEED: '/admin/seo/seed',
+    },
+
+    // Admin Settings
+    SETTINGS: {
+      ROOT: '/admin/settings',
+      GROUPED: '/admin/settings/grouped',
+      BY_KEY: (key: string) => `/admin/settings/key/${key}`,
+      BULK: '/admin/settings/bulk',
+      SEED: '/admin/settings/seed',
+      GENERAL: '/admin/settings/general',
+      MAINTENANCE: '/admin/settings/maintenance',
+      LIMITS: '/admin/settings/limits',
+      FEATURES: '/admin/settings/features',
+    },
+
+    // Admin Ads
+    ADS: {
+      ROOT: '/admin/ads',
+      STATS: '/admin/ads/stats',
+      POSITIONS: '/admin/ads/positions',
+      DETAIL: (id: string) => `/admin/ads/${id}`,
+    },
+
+    // Admin Legal
+    LEGAL: {
+      ROOT: '/admin/legal',
+      DETAIL: (id: string) => `/admin/legal/${id}`,
+      BY_TYPE: (type: string) => `/admin/legal/type/${type}`,
+    },
+
+    // Admin Blog
+    BLOG: {
+      ROOT: '/admin/blog',
+      STATS: '/admin/blog/stats',
+      DETAIL: (id: string) => `/admin/blog/${id}`,
+    },
+
+    // Admin Reviews
+    REVIEWS: {
+      ROOT: '/admin/reviews',
+      STATS: '/admin/reviews/stats',
+      DETAIL: (id: string) => `/admin/reviews/${id}`,
+      APPROVE: (id: string) => `/admin/reviews/${id}/approve`,
+      REJECT: (id: string) => `/admin/reviews/${id}/reject`,
+      FEATURE: (id: string) => `/admin/reviews/${id}/feature`,
+    },
+
+    // Admin Notifications
+    NOTIFICATIONS: {
+      ROOT: '/admin/notifications',
+      STATS: '/admin/notifications/stats',
+      DETAIL: (id: string) => `/admin/notifications/${id}`,
+      SEND_BULK: '/admin/notifications/bulk',
+      TEMPLATES: '/admin/notifications/templates',
+    },
+
+    // Admin FAQ
+    FAQ: {
+      ROOT: '/admin/faq',
+      CATEGORIES: '/admin/faq/categories',
+      DETAIL: (id: string) => `/admin/faq/${id}`,
+      CATEGORY_DETAIL: (id: string) => `/admin/faq/categories/${id}`,
+      REORDER: '/admin/faq/reorder',
+    },
+
+    // Admin Contact
+    CONTACT: {
+      ROOT: '/admin/contact',
+      STATS: '/admin/contact/stats',
+      DETAIL: (id: string) => `/admin/contact/${id}`,
+      REPLY: (id: string) => `/admin/contact/${id}/reply`,
+    },
+
+    // Admin Tickets
+    TICKETS: {
+      ROOT: '/admin/tickets',
+      STATS: '/admin/tickets/stats',
+      DETAIL: (id: string) => `/admin/tickets/${id}`,
+      ASSIGN: (id: string) => `/admin/tickets/${id}/assign`,
+      CLOSE: (id: string) => `/admin/tickets/${id}/close`,
+      MESSAGES: (id: string) => `/admin/tickets/${id}/messages`,
+    },
+
+    // Admin Ranks
+    RANKS: {
+      ROOT: '/admin/ranks',
+      DETAIL: (id: string) => `/admin/ranks/${id}`,
+      REORDER: '/admin/ranks/reorder',
+    },
+
+    // Admin Referrals
+    REFERRALS: {
+      ROOT: '/admin/referrals',
+      STATS: '/admin/referrals/stats',
+      CONFIG: '/admin/referrals/config',
+      PAYOUTS: '/admin/referrals/payouts',
+      PAYOUT_DETAIL: (id: string) => `/admin/referrals/payouts/${id}`,
+      APPROVE_PAYOUT: (id: string) => `/admin/referrals/payouts/${id}/approve`,
+      REJECT_PAYOUT: (id: string) => `/admin/referrals/payouts/${id}/reject`,
+    },
+
+    // Admin Coupons
+    COUPONS: {
+      ROOT: '/admin/coupons',
+      STATS: '/admin/coupons/stats',
+      DETAIL: (id: string) => `/admin/coupons/${id}`,
+    },
   },
 } as const;

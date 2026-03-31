@@ -1,14 +1,16 @@
 'use client';
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { AdminPageHeader } from "@/components/admin/page-header";
 import { AdminGlassCard } from "@/components/admin/glass-card";
 import { toast } from "sonner";
-import { Mail, Key, Globe, Lock, Eye, EyeOff } from "lucide-react";
+import { Mail, Globe, Lock, Eye, EyeOff, Loader2 } from "lucide-react";
+import { getGroupedSettings, bulkUpdateSettings } from "@/lib/api/settingsApi";
 
 export default function AdminLoginApiPage() {
   const [activeTab, setActiveTab] = useState<"login" | "api">("login");
   const [isLoading, setIsLoading] = useState(false);
+  const [isPageLoading, setIsPageLoading] = useState(true);
 
   // Login Options State
   const [loginOptions, setLoginOptions] = useState({
@@ -50,27 +52,137 @@ export default function AdminLoginApiPage() {
     jwtExpiresIn: "7d",
   });
 
+  // Fetch settings from API
+  const fetchSettings = useCallback(async () => {
+    try {
+      setIsPageLoading(true);
+      const grouped = await getGroupedSettings();
+      
+      // Parse login settings
+      const loginSettings = grouped['login'] || [];
+      const loginMap: Record<string, string> = {};
+      loginSettings.forEach((s) => {
+        loginMap[s.key] = s.value;
+      });
+      
+      if (Object.keys(loginMap).length > 0) {
+        setLoginOptions({
+          google: loginMap['login_google_enabled'] !== 'false',
+          facebook: loginMap['login_facebook_enabled'] === 'true',
+          twitter: loginMap['login_twitter_enabled'] === 'true',
+        });
+      }
+
+      // Parse API settings
+      const apiSettings = grouped['api'] || [];
+      const apiMap: Record<string, string> = {};
+      apiSettings.forEach((s) => {
+        apiMap[s.key] = s.value;
+      });
+      
+      if (Object.keys(apiMap).length > 0) {
+        setApiConfig({
+          smtpHost: apiMap['api_smtp_host'] || apiConfig.smtpHost,
+          smtpPort: apiMap['api_smtp_port'] || apiConfig.smtpPort,
+          smtpUser: apiMap['api_smtp_user'] || apiConfig.smtpUser,
+          smtpPassword: apiMap['api_smtp_password'] || apiConfig.smtpPassword,
+          useSslTls: apiMap['api_smtp_ssl'] !== 'false',
+          iptvApiKey: apiMap['api_iptv_key'] || apiConfig.iptvApiKey,
+          iptvBaseUrl: apiMap['api_iptv_url'] || apiConfig.iptvBaseUrl,
+          deeplApiKey: apiMap['api_deepl_key'] || apiConfig.deeplApiKey,
+          deeplBaseUrl: apiMap['api_deepl_url'] || apiConfig.deeplBaseUrl,
+          googleApiKey: apiMap['api_google_key'] || apiConfig.googleApiKey,
+          googleBaseUrl: apiMap['api_google_url'] || apiConfig.googleBaseUrl,
+          jwtSecret: apiMap['api_jwt_secret'] || apiConfig.jwtSecret,
+          jwtExpiresIn: apiMap['api_jwt_expires'] || apiConfig.jwtExpiresIn,
+        });
+      }
+    } catch (error) {
+      console.error('Failed to fetch settings:', error);
+      toast.error('Failed to load settings');
+    } finally {
+      setIsPageLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchSettings();
+  }, [fetchSettings]);
+
   const handleUpdateLoginOptions = async () => {
     setIsLoading(true);
-    await new Promise((resolve) => setTimeout(resolve, 1500));
-    setIsLoading(false);
-    toast.success("Login options updated successfully!");
+    try {
+      await bulkUpdateSettings({
+        settings: [
+          { key: 'login_google_enabled', value: String(loginOptions.google) },
+          { key: 'login_facebook_enabled', value: String(loginOptions.facebook) },
+          { key: 'login_twitter_enabled', value: String(loginOptions.twitter) },
+        ],
+      });
+      toast.success("Login options updated successfully!");
+    } catch (error) {
+      console.error('Failed to update login options:', error);
+      toast.error("Failed to update login options");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleUpdateAPIKeys = async () => {
     setIsLoading(true);
-    await new Promise((resolve) => setTimeout(resolve, 1500));
-    setIsLoading(false);
-    toast.success("API keys updated successfully!");
+    try {
+      await bulkUpdateSettings({
+        settings: [
+          { key: 'api_smtp_host', value: apiConfig.smtpHost },
+          { key: 'api_smtp_port', value: apiConfig.smtpPort },
+          { key: 'api_smtp_user', value: apiConfig.smtpUser },
+          { key: 'api_smtp_password', value: apiConfig.smtpPassword },
+          { key: 'api_smtp_ssl', value: String(apiConfig.useSslTls) },
+          { key: 'api_iptv_key', value: apiConfig.iptvApiKey },
+          { key: 'api_iptv_url', value: apiConfig.iptvBaseUrl },
+          { key: 'api_deepl_key', value: apiConfig.deeplApiKey },
+          { key: 'api_deepl_url', value: apiConfig.deeplBaseUrl },
+          { key: 'api_google_key', value: apiConfig.googleApiKey },
+          { key: 'api_google_url', value: apiConfig.googleBaseUrl },
+          { key: 'api_jwt_secret', value: apiConfig.jwtSecret },
+          { key: 'api_jwt_expires', value: apiConfig.jwtExpiresIn },
+        ],
+      });
+      toast.success("API keys updated successfully!");
+    } catch (error) {
+      console.error('Failed to update API keys:', error);
+      toast.error("Failed to update API keys");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const handleRefresh = () => {
+  const handleRefresh = async () => {
     toast.info("Refreshing configuration...");
+    await fetchSettings();
+    toast.success("Configuration refreshed!");
   };
 
   const togglePassword = (field: keyof typeof showPasswords) => {
     setShowPasswords({ ...showPasswords, [field]: !showPasswords[field] });
   };
+
+  if (isPageLoading) {
+    return (
+      <div className="p-4 lg:p-8">
+        <AdminPageHeader
+          title="Login & API Management"
+          description="Manage social login options and API integrations"
+        />
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="flex flex-col items-center gap-4">
+            <Loader2 className="w-10 h-10 text-[#3B82F6] animate-spin" />
+            <p className="text-[#94A3B8] text-sm">Loading settings...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-4 lg:p-8">

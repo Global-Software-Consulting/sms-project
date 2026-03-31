@@ -218,3 +218,12 @@ export {
   SERVICE_CATEGORIES,
   RENTAL_DURATIONS,
 } from './smsApi';
+
+// SEO API
+export * from './seoApi';
+
+// Settings API
+export * from './settingsApi';
+
+// Admin Modules API (Ads, Legal, Blog, Reviews, FAQ, etc.)
+export * from './adminModulesApi';

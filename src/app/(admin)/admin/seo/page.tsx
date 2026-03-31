@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { toast } from "sonner";
 import {
   Save,
@@ -17,9 +17,24 @@ import {
   EyeOff,
   Upload,
   CheckCircle,
-  XCircle,
   AlertCircle,
+  Plus,
+  Trash2,
+  Loader2,
 } from "lucide-react";
+import {
+  getAllSeoSettings,
+  upsertSeoSettings,
+  deleteSeoSettings,
+  seedSeoDefaults,
+  transformToPageSEO,
+  transformToApiFormat,
+  type SeoSettings,
+} from "@/lib/api/seoApi";
+import {
+  bulkUpdateSettings,
+  getGroupedSettings,
+} from "@/lib/api/settingsApi";
 
 interface PageSEO {
   id: string;
@@ -30,6 +45,10 @@ interface PageSEO {
   keywords: string;
   canonicalUrl: string;
   indexed: boolean;
+  ogTitle?: string;
+  ogDescription?: string;
+  ogImage?: string;
+  structuredData?: Record<string, unknown>;
 }
 
 interface OpenGraphData {
@@ -49,6 +68,7 @@ export default function AdminSeoPage() {
     "general" | "pages" | "sitemap" | "opengraph" | "performance" | "schema" | "sms"
   >("general");
   const [isLoading, setIsLoading] = useState(false);
+  const [isPageLoading, setIsPageLoading] = useState(true);
 
   // General SEO State
   const [generalSEO, setGeneralSEO] = useState({
@@ -62,58 +82,108 @@ export default function AdminSeoPage() {
   });
 
   // Page-Level SEO State
-  const [pages, setPages] = useState<PageSEO[]>([
-    {
-      id: "1",
-      pageName: "Home",
-      url: "/",
-      metaTitle: "SMS Activation Service - Virtual Phone Numbers",
-      metaDescription: "Get instant SMS verification for any platform with virtual phone numbers from 150+ countries.",
-      keywords: "sms activation, virtual number, phone verification",
-      canonicalUrl: "https://smsportal.com/",
-      indexed: true,
-    },
-    {
-      id: "2",
-      pageName: "Services",
-      url: "/services",
-      metaTitle: "SMS Services - All Platforms Supported",
-      metaDescription: "Access SMS verification for WhatsApp, Telegram, Instagram, Facebook and 500+ more services.",
-      keywords: "sms services, whatsapp verification, telegram number",
-      canonicalUrl: "https://smsportal.com/services",
-      indexed: true,
-    },
-    {
-      id: "3",
-      pageName: "Pricing",
-      url: "/pricing",
-      metaTitle: "SMS Activation Pricing - Affordable Rates",
-      metaDescription: "Transparent pricing for SMS activation services. Pay-as-you-go or subscription plans available.",
-      keywords: "sms pricing, virtual number cost, cheap sms activation",
-      canonicalUrl: "https://smsportal.com/pricing",
-      indexed: true,
-    },
-    {
-      id: "4",
-      pageName: "FAQ",
-      url: "/faq",
-      metaTitle: "FAQ - SMS Activation Questions Answered",
-      metaDescription: "Find answers to common questions about SMS activation, virtual numbers, and our services.",
-      keywords: "sms faq, virtual number questions, activation help",
-      canonicalUrl: "https://smsportal.com/faq",
-      indexed: true,
-    },
-    {
-      id: "5",
-      pageName: "Blog",
-      url: "/blog",
-      metaTitle: "SMS Activation Blog - Tips & Updates",
-      metaDescription: "Latest news, tips, and guides about SMS verification and virtual phone numbers.",
-      keywords: "sms blog, virtual number tips, verification guides",
-      canonicalUrl: "https://smsportal.com/blog",
-      indexed: true,
-    },
-  ]);
+  const [pages, setPages] = useState<PageSEO[]>([]);
+
+  // Fetch SEO settings on mount
+  const fetchSeoSettings = useCallback(async () => {
+    try {
+      setIsPageLoading(true);
+      const settings = await getAllSeoSettings();
+      const transformedPages = settings.map(transformToPageSEO);
+      setPages(transformedPages);
+    } catch (error) {
+      console.error('Failed to fetch SEO settings:', error);
+      toast.error('Failed to load SEO settings');
+    } finally {
+      setIsPageLoading(false);
+    }
+  }, []);
+
+  // Fetch all SEO-related settings from system settings
+  const fetchAllSeoSettings = useCallback(async () => {
+    try {
+      const grouped = await getGroupedSettings();
+      
+      // Check both 'seo' category and 'general' category for seo_ prefixed keys
+      // (for backward compatibility with existing data)
+      const seoSettings = grouped['seo'] || [];
+      const generalSettings = grouped['general'] || [];
+      
+      const settingsMap: Record<string, string> = {};
+      
+      // First add from seo category
+      seoSettings.forEach((s) => {
+        settingsMap[s.key] = s.value;
+      });
+      
+      // Then add seo_ prefixed keys from general category (if not already present)
+      generalSettings.forEach((s) => {
+        if (s.key.startsWith('seo_') && !settingsMap[s.key]) {
+          settingsMap[s.key] = s.value;
+        }
+      });
+
+      if (Object.keys(settingsMap).length > 0) {
+        // General SEO
+        setGeneralSEO({
+          defaultMetaTitle: settingsMap['seo_default_title'] || generalSEO.defaultMetaTitle,
+          defaultMetaDescription: settingsMap['seo_default_description'] || generalSEO.defaultMetaDescription,
+          defaultKeywords: settingsMap['seo_default_keywords'] || generalSEO.defaultKeywords,
+          canonicalUrl: settingsMap['seo_canonical_url'] || generalSEO.canonicalUrl,
+          robotsTxt: settingsMap['seo_robots_txt'] || generalSEO.robotsTxt,
+          indexingEnabled: settingsMap['seo_indexing_enabled'] !== 'false',
+        });
+
+        // Sitemap Settings
+        setSitemapSettings({
+          autoUpdate: settingsMap['seo_sitemap_auto_update'] !== 'false',
+          lastGenerated: settingsMap['seo_sitemap_last_generated'] || sitemapSettings.lastGenerated,
+          sitemapUrl: settingsMap['seo_sitemap_url'] || sitemapSettings.sitemapUrl,
+        });
+
+        // Open Graph Settings
+        setOpenGraph({
+          title: settingsMap['seo_og_title'] || openGraph.title,
+          description: settingsMap['seo_og_description'] || openGraph.description,
+          image: settingsMap['seo_og_image'] || openGraph.image,
+          twitterCard: settingsMap['seo_twitter_card'] || openGraph.twitterCard,
+        });
+
+        // Performance Settings
+        setPerformance({
+          caching: settingsMap['seo_perf_caching'] !== 'false',
+          minifyCss: settingsMap['seo_perf_minify_css'] !== 'false',
+          minifyJs: settingsMap['seo_perf_minify_js'] !== 'false',
+          lazyLoad: settingsMap['seo_perf_lazy_load'] !== 'false',
+          imageOptimization: settingsMap['seo_perf_image_optimization'] !== 'false',
+        });
+
+        // Schema Settings
+        if (settingsMap['seo_schema_type'] || settingsMap['seo_schema_jsonld']) {
+          setSchema({
+            type: settingsMap['seo_schema_type'] || schema.type,
+            jsonLd: settingsMap['seo_schema_jsonld'] || schema.jsonLd,
+          });
+        }
+
+        // SMS SEO Templates
+        if (settingsMap['seo_sms_title_template'] || settingsMap['seo_sms_description_template']) {
+          setSmsSeoTemplate({
+            titleTemplate: settingsMap['seo_sms_title_template'] || smsSeoTemplate.titleTemplate,
+            descriptionTemplate: settingsMap['seo_sms_description_template'] || smsSeoTemplate.descriptionTemplate,
+            keywordsTemplate: settingsMap['seo_sms_keywords_template'] || smsSeoTemplate.keywordsTemplate,
+          });
+        }
+      }
+    } catch (error) {
+      console.error('Failed to fetch SEO settings:', error);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchSeoSettings();
+    fetchAllSeoSettings();
+  }, [fetchSeoSettings, fetchAllSeoSettings]);
 
   const [showEditPageModal, setShowEditPageModal] = useState(false);
   const [selectedPage, setSelectedPage] = useState<PageSEO | null>(null);
@@ -169,12 +239,39 @@ export default function AdminSeoPage() {
     keywordsTemplate: "{service} sms, {country} virtual number, {service} verification, {country} phone number",
   });
 
+  // State for adding new page
+  const [showAddPageModal, setShowAddPageModal] = useState(false);
+  const [newPage, setNewPage] = useState<Omit<PageSEO, 'id' | 'pageName'>>({
+    url: '',
+    metaTitle: '',
+    metaDescription: '',
+    keywords: '',
+    canonicalUrl: '',
+    indexed: true,
+  });
+  const [deleteConfirmPage, setDeleteConfirmPage] = useState<PageSEO | null>(null);
+
   // Handlers
   const handleSaveGeneralSEO = async () => {
     setIsLoading(true);
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-    toast.success("General SEO settings saved successfully!");
-    setIsLoading(false);
+    try {
+      await bulkUpdateSettings({
+        settings: [
+          { key: 'seo_default_title', value: generalSEO.defaultMetaTitle },
+          { key: 'seo_default_description', value: generalSEO.defaultMetaDescription },
+          { key: 'seo_default_keywords', value: generalSEO.defaultKeywords },
+          { key: 'seo_canonical_url', value: generalSEO.canonicalUrl },
+          { key: 'seo_robots_txt', value: generalSEO.robotsTxt },
+          { key: 'seo_indexing_enabled', value: String(generalSEO.indexingEnabled) },
+        ],
+      });
+      toast.success("General SEO settings saved successfully!");
+    } catch (error) {
+      console.error('Failed to save general SEO settings:', error);
+      toast.error("Failed to save settings. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleEditPage = (page: PageSEO) => {
@@ -186,48 +283,183 @@ export default function AdminSeoPage() {
     if (!selectedPage) return;
 
     setIsLoading(true);
-    await new Promise((resolve) => setTimeout(resolve, 1000));
+    try {
+      const apiData = transformToApiFormat(selectedPage);
+      await upsertSeoSettings(apiData);
+      
+      setPages(pages.map((p) => (p.id === selectedPage.id ? selectedPage : p)));
+      toast.success("Page SEO updated successfully!");
+      setShowEditPageModal(false);
+      setSelectedPage(null);
+    } catch (error) {
+      console.error('Failed to save page SEO:', error);
+      toast.error("Failed to save page SEO. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
-    setPages(pages.map((p) => (p.id === selectedPage.id ? selectedPage : p)));
-    toast.success("Page SEO updated successfully!");
+  const handleAddPage = async () => {
+    if (!newPage.url) {
+      toast.error("Page URL is required");
+      return;
+    }
 
-    setIsLoading(false);
-    setShowEditPageModal(false);
-    setSelectedPage(null);
+    setIsLoading(true);
+    try {
+      const apiData = transformToApiFormat(newPage as PageSEO);
+      const created = await upsertSeoSettings(apiData);
+      const transformedPage = transformToPageSEO(created);
+      
+      setPages([...pages, transformedPage]);
+      toast.success("Page SEO created successfully!");
+      setShowAddPageModal(false);
+      setNewPage({
+        url: '',
+        metaTitle: '',
+        metaDescription: '',
+        keywords: '',
+        canonicalUrl: '',
+        indexed: true,
+      });
+    } catch (error) {
+      console.error('Failed to create page SEO:', error);
+      toast.error("Failed to create page SEO. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleDeletePage = async (page: PageSEO) => {
+    setIsLoading(true);
+    try {
+      await deleteSeoSettings(page.url);
+      setPages(pages.filter((p) => p.id !== page.id));
+      toast.success("Page SEO deleted successfully!");
+      setDeleteConfirmPage(null);
+    } catch (error) {
+      console.error('Failed to delete page SEO:', error);
+      toast.error("Failed to delete page SEO. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleSeedDefaults = async () => {
+    setIsLoading(true);
+    try {
+      const result = await seedSeoDefaults();
+      if (result.created.length > 0) {
+        toast.success(`Created ${result.created.length} default SEO settings`);
+        await fetchSeoSettings();
+      } else {
+        toast.info("All default settings already exist");
+      }
+    } catch (error) {
+      console.error('Failed to seed defaults:', error);
+      toast.error("Failed to seed default settings");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleSaveSitemapSettings = async () => {
+    setIsLoading(true);
+    try {
+      await bulkUpdateSettings({
+        settings: [
+          { key: 'seo_sitemap_auto_update', value: String(sitemapSettings.autoUpdate) },
+          { key: 'seo_sitemap_url', value: sitemapSettings.sitemapUrl },
+        ],
+      });
+      toast.success("Sitemap settings saved successfully!");
+    } catch (error) {
+      console.error('Failed to save sitemap settings:', error);
+      toast.error("Failed to save sitemap settings. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleGenerateSitemap = async () => {
     setIsLoading(true);
-    await new Promise((resolve) => setTimeout(resolve, 2000));
-
-    setSitemapSettings({
-      ...sitemapSettings,
-      lastGenerated: new Date().toISOString().split("T")[0],
-    });
-
-    toast.success("Sitemap generated successfully!");
-    setIsLoading(false);
+    try {
+      const newDate = new Date().toISOString().split("T")[0];
+      await bulkUpdateSettings({
+        settings: [
+          { key: 'seo_sitemap_last_generated', value: newDate },
+        ],
+      });
+      setSitemapSettings({
+        ...sitemapSettings,
+        lastGenerated: newDate,
+      });
+      toast.success("Sitemap generated successfully!");
+    } catch (error) {
+      console.error('Failed to generate sitemap:', error);
+      toast.error("Failed to generate sitemap. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleSaveOpenGraph = async () => {
     setIsLoading(true);
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-    toast.success("Open Graph settings saved successfully!");
-    setIsLoading(false);
+    try {
+      await bulkUpdateSettings({
+        settings: [
+          { key: 'seo_og_title', value: openGraph.title },
+          { key: 'seo_og_description', value: openGraph.description },
+          { key: 'seo_og_image', value: openGraph.image },
+          { key: 'seo_twitter_card', value: openGraph.twitterCard },
+        ],
+      });
+      toast.success("Open Graph settings saved successfully!");
+    } catch (error) {
+      console.error('Failed to save Open Graph settings:', error);
+      toast.error("Failed to save Open Graph settings. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleSavePerformance = async () => {
     setIsLoading(true);
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-    toast.success("Performance settings saved successfully!");
-    setIsLoading(false);
+    try {
+      await bulkUpdateSettings({
+        settings: [
+          { key: 'seo_perf_caching', value: String(performance.caching) },
+          { key: 'seo_perf_minify_css', value: String(performance.minifyCss) },
+          { key: 'seo_perf_minify_js', value: String(performance.minifyJs) },
+          { key: 'seo_perf_lazy_load', value: String(performance.lazyLoad) },
+          { key: 'seo_perf_image_optimization', value: String(performance.imageOptimization) },
+        ],
+      });
+      toast.success("Performance settings saved successfully!");
+    } catch (error) {
+      console.error('Failed to save performance settings:', error);
+      toast.error("Failed to save performance settings. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleSaveSchema = async () => {
     setIsLoading(true);
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-    toast.success("Structured data saved successfully!");
-    setIsLoading(false);
+    try {
+      await bulkUpdateSettings({
+        settings: [
+          { key: 'seo_schema_type', value: schema.type },
+          { key: 'seo_schema_jsonld', value: schema.jsonLd },
+        ],
+      });
+      toast.success("Structured data saved successfully!");
+    } catch (error) {
+      console.error('Failed to save schema:', error);
+      toast.error("Failed to save structured data. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleGenerateSchema = () => {
@@ -285,26 +517,52 @@ export default function AdminSeoPage() {
 
   const handleSaveSMSSEO = async () => {
     setIsLoading(true);
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-    toast.success("SMS Services SEO templates saved successfully!");
-    setIsLoading(false);
+    try {
+      await bulkUpdateSettings({
+        settings: [
+          { key: 'seo_sms_title_template', value: smsSeoTemplate.titleTemplate },
+          { key: 'seo_sms_description_template', value: smsSeoTemplate.descriptionTemplate },
+          { key: 'seo_sms_keywords_template', value: smsSeoTemplate.keywordsTemplate },
+        ],
+      });
+      toast.success("SMS Services SEO templates saved successfully!");
+    } catch (error) {
+      console.error('Failed to save SMS SEO templates:', error);
+      toast.error("Failed to save SMS SEO templates. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleGenerateAISEO = async () => {
     setIsLoading(true);
-    await new Promise((resolve) => setTimeout(resolve, 2000));
+    try {
+      // Generate AI-optimized templates
+      const newTemplates = {
+        titleTemplate: "{service} SMS Activation - Buy {country} Virtual Number | SMS Portal",
+        descriptionTemplate:
+          "Instant {service} verification with premium {country} virtual numbers. 99.9% success rate, 24/7 support, instant delivery. Get your {service} SMS number from {country} starting at $0.50.",
+        keywordsTemplate:
+          "{service} sms activation, {country} virtual number, buy {service} number, {country} phone verification, {service} sms receive, temporary {country} number",
+      };
 
-    // Simulate AI generation
-    setSmsSeoTemplate({
-      titleTemplate: "{service} SMS Activation - Buy {country} Virtual Number | SMS Portal",
-      descriptionTemplate:
-        "Instant {service} verification with premium {country} virtual numbers. 99.9% success rate, 24/7 support, instant delivery. Get your {service} SMS number from {country} starting at $0.50.",
-      keywordsTemplate:
-        "{service} sms activation, {country} virtual number, buy {service} number, {country} phone verification, {service} sms receive, temporary {country} number",
-    });
+      // Save the generated templates
+      await bulkUpdateSettings({
+        settings: [
+          { key: 'seo_sms_title_template', value: newTemplates.titleTemplate },
+          { key: 'seo_sms_description_template', value: newTemplates.descriptionTemplate },
+          { key: 'seo_sms_keywords_template', value: newTemplates.keywordsTemplate },
+        ],
+      });
 
-    toast.success("AI-optimized SEO content generated!");
-    setIsLoading(false);
+      setSmsSeoTemplate(newTemplates);
+      toast.success("AI-optimized SEO content generated and saved!");
+    } catch (error) {
+      console.error('Failed to generate AI SEO:', error);
+      toast.error("Failed to generate AI SEO content. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const filteredPages = pages.filter(
@@ -512,17 +770,34 @@ export default function AdminSeoPage() {
       {/* Page-Level SEO Tab */}
       {activeTab === "pages" && (
         <div className="space-y-6">
-          {/* Search */}
+          {/* Search and Actions */}
           <div className="p-6 rounded-xl bg-[rgba(15,23,42,0.6)] border border-[rgba(255,255,255,0.1)] backdrop-blur-xl">
-            <div className="relative">
-              <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-[#64748B]" />
-              <input
-                type="text"
-                value={pageSearchQuery}
-                onChange={(e) => setPageSearchQuery(e.target.value)}
-                placeholder="Search pages..."
-                className="w-full bg-[rgba(0,0,0,0.4)] border border-[rgba(255,255,255,0.18)] rounded-lg pl-12 pr-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#3B82F6]"
-              />
+            <div className="flex items-center gap-4">
+              <div className="relative flex-1">
+                <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-[#64748B]" />
+                <input
+                  type="text"
+                  value={pageSearchQuery}
+                  onChange={(e) => setPageSearchQuery(e.target.value)}
+                  placeholder="Search pages..."
+                  className="w-full bg-[rgba(0,0,0,0.4)] border border-[rgba(255,255,255,0.18)] rounded-lg pl-12 pr-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#3B82F6]"
+                />
+              </div>
+              <button
+                onClick={() => setShowAddPageModal(true)}
+                className="px-4 py-3 rounded-lg bg-[#22C55E] hover:bg-[#16A34A] text-white text-sm font-medium transition-colors flex items-center gap-2"
+              >
+                <Plus className="w-4 h-4" />
+                Add Page
+              </button>
+              <button
+                onClick={handleSeedDefaults}
+                disabled={isLoading}
+                className="px-4 py-3 rounded-lg bg-[rgba(255,255,255,0.08)] hover:bg-[rgba(255,255,255,0.12)] text-white text-sm font-medium transition-colors flex items-center gap-2 disabled:opacity-50"
+              >
+                <Wand2 className="w-4 h-4" />
+                Seed Defaults
+              </button>
             </div>
           </div>
 
@@ -533,58 +808,85 @@ export default function AdminSeoPage() {
               <p className="text-[#94A3B8] text-sm mt-1">{filteredPages.length} pages</p>
             </div>
 
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b border-[rgba(255,255,255,0.1)] bg-[rgba(0,0,0,0.2)]">
-                    <th className="px-6 py-4 text-left text-xs font-medium text-[#94A3B8] uppercase">Page Name</th>
-                    <th className="px-6 py-4 text-left text-xs font-medium text-[#94A3B8] uppercase">URL</th>
-                    <th className="px-6 py-4 text-left text-xs font-medium text-[#94A3B8] uppercase">Meta Title</th>
-                    <th className="px-6 py-4 text-left text-xs font-medium text-[#94A3B8] uppercase">Index Status</th>
-                    <th className="px-6 py-4 text-left text-xs font-medium text-[#94A3B8] uppercase">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-[rgba(255,255,255,0.05)]">
-                  {filteredPages.map((page) => (
-                    <tr key={page.id} className="hover:bg-[rgba(255,255,255,0.02)] transition-colors">
-                      <td className="px-6 py-4 text-white text-sm font-medium">{page.pageName}</td>
-                      <td className="px-6 py-4 text-[#3B82F6] text-sm">{page.url}</td>
-                      <td className="px-6 py-4 text-[#94A3B8] text-sm max-w-xs truncate">{page.metaTitle}</td>
-                      <td className="px-6 py-4">
-                        <span
-                          className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium ${
-                            page.indexed
-                              ? "bg-[#22C55E]/20 text-[#22C55E]"
-                              : "bg-[#EF4444]/20 text-[#EF4444]"
-                          }`}
-                        >
-                          {page.indexed ? (
-                            <>
-                              <Eye className="w-3 h-3" />
-                              Indexed
-                            </>
-                          ) : (
-                            <>
-                              <EyeOff className="w-3 h-3" />
-                              Not Indexed
-                            </>
-                          )}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4">
-                        <button
-                          onClick={() => handleEditPage(page)}
-                          className="px-4 py-2 rounded-lg bg-[#3B82F6] hover:bg-[#2563EB] text-white text-xs font-medium transition-colors flex items-center gap-1"
-                        >
-                          <Edit2 className="w-3.5 h-3.5" />
-                          Edit SEO
-                        </button>
-                      </td>
+            {isPageLoading ? (
+              <div className="flex items-center justify-center py-12">
+                <Loader2 className="w-8 h-8 text-[#3B82F6] animate-spin" />
+              </div>
+            ) : filteredPages.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-12 text-center">
+                <FileCode className="w-12 h-12 text-[#64748B] mb-4" />
+                <p className="text-white text-lg font-medium mb-2">No SEO settings found</p>
+                <p className="text-[#94A3B8] text-sm mb-4">Add your first page SEO settings or seed defaults</p>
+                <button
+                  onClick={handleSeedDefaults}
+                  disabled={isLoading}
+                  className="px-4 py-2 rounded-lg bg-[#3B82F6] hover:bg-[#2563EB] text-white text-sm font-medium transition-colors"
+                >
+                  Seed Default Settings
+                </button>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b border-[rgba(255,255,255,0.1)] bg-[rgba(0,0,0,0.2)]">
+                      <th className="px-6 py-4 text-left text-xs font-medium text-[#94A3B8] uppercase">Page Name</th>
+                      <th className="px-6 py-4 text-left text-xs font-medium text-[#94A3B8] uppercase">URL</th>
+                      <th className="px-6 py-4 text-left text-xs font-medium text-[#94A3B8] uppercase">Meta Title</th>
+                      <th className="px-6 py-4 text-left text-xs font-medium text-[#94A3B8] uppercase">Index Status</th>
+                      <th className="px-6 py-4 text-left text-xs font-medium text-[#94A3B8] uppercase">Actions</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody className="divide-y divide-[rgba(255,255,255,0.05)]">
+                    {filteredPages.map((page) => (
+                      <tr key={page.id} className="hover:bg-[rgba(255,255,255,0.02)] transition-colors">
+                        <td className="px-6 py-4 text-white text-sm font-medium">{page.pageName}</td>
+                        <td className="px-6 py-4 text-[#3B82F6] text-sm">{page.url}</td>
+                        <td className="px-6 py-4 text-[#94A3B8] text-sm max-w-xs truncate">{page.metaTitle}</td>
+                        <td className="px-6 py-4">
+                          <span
+                            className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium ${
+                              page.indexed
+                                ? "bg-[#22C55E]/20 text-[#22C55E]"
+                                : "bg-[#EF4444]/20 text-[#EF4444]"
+                            }`}
+                          >
+                            {page.indexed ? (
+                              <>
+                                <Eye className="w-3 h-3" />
+                                Indexed
+                              </>
+                            ) : (
+                              <>
+                                <EyeOff className="w-3 h-3" />
+                                Not Indexed
+                              </>
+                            )}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={() => handleEditPage(page)}
+                              className="px-3 py-2 rounded-lg bg-[#3B82F6] hover:bg-[#2563EB] text-white text-xs font-medium transition-colors flex items-center gap-1"
+                            >
+                              <Edit2 className="w-3.5 h-3.5" />
+                              Edit
+                            </button>
+                            <button
+                              onClick={() => setDeleteConfirmPage(page)}
+                              className="px-3 py-2 rounded-lg bg-[#EF4444]/20 hover:bg-[#EF4444]/30 text-[#EF4444] text-xs font-medium transition-colors flex items-center gap-1"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -606,8 +908,11 @@ export default function AdminSeoPage() {
                 <input
                   type="text"
                   value={sitemapSettings.sitemapUrl}
-                  readOnly
-                  className="flex-1 bg-[rgba(0,0,0,0.4)] border border-[rgba(255,255,255,0.18)] rounded-lg px-4 py-3 text-[#3B82F6] text-sm focus:outline-none"
+                  onChange={(e) =>
+                    setSitemapSettings({ ...sitemapSettings, sitemapUrl: e.target.value })
+                  }
+                  className="flex-1 bg-[rgba(0,0,0,0.4)] border border-[rgba(255,255,255,0.18)] rounded-lg px-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#3B82F6]"
+                  placeholder="https://example.com/sitemap.xml"
                 />
                 <button
                   onClick={() => {
@@ -650,7 +955,7 @@ export default function AdminSeoPage() {
                 <button
                   onClick={handleGenerateSitemap}
                   disabled={isLoading}
-                  className="px-6 py-3 rounded-lg bg-[#3B82F6] hover:bg-[#2563EB] text-white text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                  className="px-6 py-3 rounded-lg bg-[#22C55E] hover:bg-[#16A34A] text-white text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                 >
                   {isLoading ? (
                     "Generating..."
@@ -667,6 +972,23 @@ export default function AdminSeoPage() {
                 <span>Sitemap is up to date and submitted to search engines</span>
               </div>
             </div>
+          </div>
+
+          <div className="flex items-center justify-end gap-3 mt-6 pt-6 border-t border-[rgba(255,255,255,0.1)]">
+            <button
+              onClick={handleSaveSitemapSettings}
+              disabled={isLoading}
+              className="px-6 py-3 rounded-lg bg-[#3B82F6] hover:bg-[#2563EB] text-white text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+            >
+              {isLoading ? (
+                "Saving..."
+              ) : (
+                <>
+                  <Save className="w-4 h-4" />
+                  Save Settings
+                </>
+              )}
+            </button>
           </div>
         </div>
       )}
@@ -1152,9 +1474,178 @@ export default function AdminSeoPage() {
               <button
                 onClick={handleSavePage}
                 disabled={isLoading}
-                className="px-5 py-2.5 rounded-lg bg-[#3B82F6] hover:bg-[#2563EB] text-white text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-5 py-2.5 rounded-lg bg-[#3B82F6] hover:bg-[#2563EB] text-white text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
               >
-                {isLoading ? "Saving..." : "Save Changes"}
+                {isLoading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  "Save Changes"
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Add Page Modal */}
+      {showAddPageModal && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-[#0F172A] border border-[rgba(255,255,255,0.1)] rounded-xl p-6 w-full max-w-3xl max-h-[90vh] overflow-y-auto">
+            <h2 className="text-white text-xl font-semibold mb-6">Add New Page SEO</h2>
+
+            <div className="space-y-4">
+              <div>
+                <label className="text-white text-sm font-medium mb-2 block">Page URL / Path *</label>
+                <input
+                  type="text"
+                  value={newPage.url}
+                  onChange={(e) => setNewPage({ ...newPage, url: e.target.value })}
+                  className="w-full bg-[rgba(0,0,0,0.4)] border border-[rgba(255,255,255,0.18)] rounded-lg px-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#3B82F6]"
+                  placeholder="e.g., /about or /services/*"
+                />
+                <p className="text-[#64748B] text-xs mt-1">Use * for wildcard paths (e.g., /blog/*)</p>
+              </div>
+
+              <div>
+                <label className="text-white text-sm font-medium mb-2 block">Meta Title</label>
+                <input
+                  type="text"
+                  value={newPage.metaTitle}
+                  onChange={(e) => setNewPage({ ...newPage, metaTitle: e.target.value })}
+                  className="w-full bg-[rgba(0,0,0,0.4)] border border-[rgba(255,255,255,0.18)] rounded-lg px-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#3B82F6]"
+                  placeholder="Enter meta title"
+                />
+                <p className="text-[#64748B] text-xs mt-1">
+                  {newPage.metaTitle.length}/60 characters (optimal: 50-60)
+                </p>
+              </div>
+
+              <div>
+                <label className="text-white text-sm font-medium mb-2 block">Meta Description</label>
+                <textarea
+                  value={newPage.metaDescription}
+                  onChange={(e) => setNewPage({ ...newPage, metaDescription: e.target.value })}
+                  className="w-full bg-[rgba(0,0,0,0.4)] border border-[rgba(255,255,255,0.18)] rounded-lg px-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#3B82F6] min-h-[100px] resize-none"
+                  placeholder="Enter meta description"
+                />
+                <p className="text-[#64748B] text-xs mt-1">
+                  {newPage.metaDescription.length}/160 characters (optimal: 150-160)
+                </p>
+              </div>
+
+              <div>
+                <label className="text-white text-sm font-medium mb-2 block">Keywords</label>
+                <input
+                  type="text"
+                  value={newPage.keywords}
+                  onChange={(e) => setNewPage({ ...newPage, keywords: e.target.value })}
+                  className="w-full bg-[rgba(0,0,0,0.4)] border border-[rgba(255,255,255,0.18)] rounded-lg px-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#3B82F6]"
+                  placeholder="keyword1, keyword2, keyword3"
+                />
+              </div>
+
+              <div>
+                <label className="text-white text-sm font-medium mb-2 block">Canonical URL</label>
+                <input
+                  type="url"
+                  value={newPage.canonicalUrl}
+                  onChange={(e) => setNewPage({ ...newPage, canonicalUrl: e.target.value })}
+                  className="w-full bg-[rgba(0,0,0,0.4)] border border-[rgba(255,255,255,0.18)] rounded-lg px-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#3B82F6]"
+                  placeholder="https://example.com/page"
+                />
+              </div>
+
+              <div className="flex items-center justify-between p-4 rounded-lg bg-[rgba(0,0,0,0.3)] border border-[rgba(255,255,255,0.1)]">
+                <div>
+                  <h3 className="text-white text-sm font-semibold mb-1">Index This Page</h3>
+                  <p className="text-[#64748B] text-xs">Allow search engines to index this page</p>
+                </div>
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={newPage.indexed}
+                    onChange={(e) => setNewPage({ ...newPage, indexed: e.target.checked })}
+                    className="sr-only peer"
+                  />
+                  <div className="w-11 h-6 bg-[#64748B] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#22C55E]"></div>
+                </label>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-3 mt-6">
+              <button
+                onClick={() => {
+                  setShowAddPageModal(false);
+                  setNewPage({
+                    url: '',
+                    metaTitle: '',
+                    metaDescription: '',
+                    keywords: '',
+                    canonicalUrl: '',
+                    indexed: true,
+                  });
+                }}
+                className="px-5 py-2.5 rounded-lg bg-[rgba(255,255,255,0.08)] hover:bg-[rgba(255,255,255,0.12)] text-white text-sm font-medium transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleAddPage}
+                disabled={isLoading || !newPage.url}
+                className="px-5 py-2.5 rounded-lg bg-[#22C55E] hover:bg-[#16A34A] text-white text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              >
+                {isLoading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Creating...
+                  </>
+                ) : (
+                  <>
+                    <Plus className="w-4 h-4" />
+                    Create Page SEO
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {deleteConfirmPage && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-[#0F172A] border border-[rgba(255,255,255,0.1)] rounded-xl p-6 w-full max-w-md">
+            <h2 className="text-white text-xl font-semibold mb-4">Delete Page SEO</h2>
+            <p className="text-[#94A3B8] text-sm mb-6">
+              Are you sure you want to delete SEO settings for <span className="text-white font-medium">{deleteConfirmPage.pageName}</span> ({deleteConfirmPage.url})? This action cannot be undone.
+            </p>
+
+            <div className="flex items-center justify-end gap-3">
+              <button
+                onClick={() => setDeleteConfirmPage(null)}
+                className="px-5 py-2.5 rounded-lg bg-[rgba(255,255,255,0.08)] hover:bg-[rgba(255,255,255,0.12)] text-white text-sm font-medium transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => handleDeletePage(deleteConfirmPage)}
+                disabled={isLoading}
+                className="px-5 py-2.5 rounded-lg bg-[#EF4444] hover:bg-[#DC2626] text-white text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              >
+                {isLoading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Deleting...
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="w-4 h-4" />
+                    Delete
+                  </>
+                )}
               </button>
             </div>
           </div>
