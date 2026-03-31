@@ -171,11 +171,11 @@ export function AdminFormSelect({
           showError
             ? "border-[#EF4444] focus:ring-[#EF4444]"
             : "border-[rgba(255,255,255,0.18)] focus:ring-[#3B82F6]"
-        } text-white text-sm focus:outline-none focus:ring-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed`}
+        } text-white text-sm focus:outline-none focus:ring-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed [&>option]:bg-[#1E293B] [&>option]:text-white`}
       >
-        <option value="">Select {label}</option>
+        <option value="" className="bg-[#1E293B] text-white">Select {label}</option>
         {options.map((option) => (
-          <option key={option.value} value={option.value}>
+          <option key={option.value} value={option.value} className="bg-[#1E293B] text-white">
             {option.label}
           </option>
         ))}

@@ -237,6 +237,8 @@ export const API_ENDPOINTS = {
       ORDERS: '/admin/sms/orders',
       ORDER_DETAIL: (id: string) => `/admin/sms/orders/${id}`,
       ORDER_REFUND: (id: string) => `/admin/sms/orders/${id}/refund`,
+      ORDER_CANCEL: (id: string) => `/admin/sms/orders/${id}/cancel`,
+      ORDER_EXTEND: (id: string) => `/admin/sms/orders/${id}/extend`,
       RENTALS: '/admin/sms/rentals',
       STATISTICS: '/admin/sms/statistics',
       VIP: '/admin/sms/vip',

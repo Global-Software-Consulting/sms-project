@@ -571,6 +571,7 @@ export default function AdminUsersPage() {
         onToggleFilters={() => setShowFilters(!showFilters)}
         onApplyFilters={() => { setCurrentPage(1); fetchUsers(); }}
         onResetFilters={() => {
+          setSearchValue("");
           setStatusFilter("");
           setRoleFilter("");
           setSortBy("");
