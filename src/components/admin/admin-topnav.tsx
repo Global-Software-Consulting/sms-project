@@ -4,10 +4,13 @@ import { Search, Bell, Settings, User, Plus, Download, LogOut, UserCircle, Key, 
 import { AdminDropdown } from './dropdown';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
+import { LanguagePickerDropdown } from '@/components/google-translate';
+import { useState } from 'react';
 
 export function AdminTopNav() {
   const router = useRouter();
   const { logout, user } = useAuth();
+  const [showLangPicker, setShowLangPicker] = useState(false);
 
   const notificationItems = [
     {
@@ -54,20 +57,6 @@ export function AdminTopNav() {
     },
   ];
 
-  const languageItems = [
-    {
-      label: "English",
-      onClick: () => console.log("English selected"),
-    },
-    {
-      label: "Spanish",
-      onClick: () => console.log("Spanish selected"),
-    },
-    {
-      label: "French",
-      onClick: () => console.log("French selected"),
-    },
-  ];
 
   return (
     <header className="fixed top-0 left-0 lg:left-60 right-0 h-18 bg-[rgba(255,255,255,0.05)] border-b border-[rgba(255,255,255,0.18)] backdrop-blur-xl z-10">
@@ -132,15 +121,20 @@ export function AdminTopNav() {
             <span>Deposit</span>
           </button>
 
-          {/* Language Selector */}
-          <AdminDropdown
-            trigger={
-              <button className="hidden lg:flex items-center gap-2 p-2 rounded-xl hover:bg-[rgba(255,255,255,0.08)] transition-colors">
-                <Globe className="w-5 h-5 text-[#94A3B8]" />
-              </button>
-            }
-            items={languageItems}
-          />
+          {/* Language Selector - Google Translate */}
+          <div className="relative">
+            <button
+              onClick={() => setShowLangPicker(!showLangPicker)}
+              className="hidden lg:flex items-center gap-2 p-2 rounded-xl hover:bg-[rgba(255,255,255,0.08)] transition-colors"
+              title="Translate Page"
+            >
+              <Globe className="w-5 h-5 text-[#94A3B8]" />
+            </button>
+            <LanguagePickerDropdown
+              isOpen={showLangPicker}
+              onClose={() => setShowLangPicker(false)}
+            />
+          </div>
 
           {/* Profile Dropdown */}
           <AdminDropdown

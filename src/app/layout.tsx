@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { ThemeProvider } from '@/components/theme-provider';
 import { StoreProvider } from '@/components/providers/StoreProvider';
 import { Toaster } from '@/components/ui/sonner';
+import { GoogleTranslate } from '@/components/google-translate';
 import './globals.css';
 
 export const metadata: Metadata = {
@@ -25,6 +26,7 @@ export default function RootLayout({
           <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
             {children}
             <Toaster />
+            <GoogleTranslate />
           </ThemeProvider>
         </StoreProvider>
       </body>
