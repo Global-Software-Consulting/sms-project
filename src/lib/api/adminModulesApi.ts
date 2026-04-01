@@ -87,7 +87,7 @@ export interface LegalPage {
   title: string;
   content: string;
   isPublished: boolean;
-  lastUpdatedBy?: string;
+  updatedBy?: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -134,9 +134,43 @@ export const deleteLegalPage = async (id: string): Promise<void> => {
   await apiClient.delete(API_ENDPOINTS.ADMIN.LEGAL.DETAIL(id));
 };
 
+export const seedLegalPages = async (): Promise<{ created: string[]; skipped: string[] }> => {
+  const response = await apiClient.post<{ created: string[]; skipped: string[] }>(`${API_ENDPOINTS.ADMIN.LEGAL.ROOT}/seed`);
+  return response.data;
+};
+
 // ============================================
 // BLOG Types & Functions
 // ============================================
+
+export interface BlogCategory {
+  id: string;
+  name: string;
+  slug: string;
+  description?: string;
+  isActive: boolean;
+  sortOrder: number;
+  parentId?: string;
+  parent?: { id: string; name: string; slug: string };
+  children?: { id: string; name: string; slug: string }[];
+  _count?: { posts: number };
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface BlogAuthor {
+  id: string;
+  name: string;
+  slug: string;
+  bio?: string;
+  avatar?: string;
+  email?: string;
+  website?: string;
+  isActive: boolean;
+  _count?: { posts: number };
+  createdAt: string;
+  updatedAt: string;
+}
 
 export interface BlogPost {
   id: string;
@@ -145,16 +179,40 @@ export interface BlogPost {
   excerpt?: string;
   content: string;
   featuredImage?: string;
-  category?: string;
+  categoryId?: string;
+  category?: { id: string; name: string; slug: string };
   tags: string[];
-  status: 'draft' | 'published' | 'archived';
-  authorId: string;
-  author?: { id: string; username: string; firstName?: string; lastName?: string };
+  status: 'DRAFT' | 'PUBLISHED' | 'ARCHIVED';
+  authorId?: string;
+  author?: { id: string; name: string; slug: string; avatar?: string };
   viewCount: number;
   publishedAt?: string;
   createdAt: string;
   updatedAt: string;
 }
+
+export interface CreateBlogCategoryRequest {
+  name: string;
+  slug?: string;
+  description?: string;
+  isActive?: boolean;
+  sortOrder?: number;
+  parentId?: string;
+}
+
+export interface UpdateBlogCategoryRequest extends Partial<CreateBlogCategoryRequest> {}
+
+export interface CreateBlogAuthorRequest {
+  name: string;
+  slug?: string;
+  bio?: string;
+  avatar?: string;
+  email?: string;
+  website?: string;
+  isActive?: boolean;
+}
+
+export interface UpdateBlogAuthorRequest extends Partial<CreateBlogAuthorRequest> {}
 
 export interface CreateBlogPostRequest {
   title: string;
@@ -162,32 +220,124 @@ export interface CreateBlogPostRequest {
   excerpt?: string;
   content: string;
   featuredImage?: string;
-  category?: string;
+  categoryId?: string;
+  authorId?: string;
   tags?: string[];
-  status?: 'draft' | 'published' | 'archived';
+  status?: 'DRAFT' | 'PUBLISHED' | 'ARCHIVED';
 }
 
 export interface UpdateBlogPostRequest extends Partial<CreateBlogPostRequest> {}
 
 export interface BlogStats {
-  totalPosts: number;
-  publishedPosts: number;
-  draftPosts: number;
+  total: number;
+  published: number;
+  draft: number;
+  archived: number;
   totalViews: number;
 }
 
+// Blog Category API Functions
+export const getBlogCategories = async (includeInactive = false): Promise<BlogCategory[]> => {
+  const response = await apiClient.get<BlogCategory[]>(API_ENDPOINTS.ADMIN.BLOG_CATEGORIES.ROOT, {
+    params: { includeInactive: includeInactive ? 'true' : undefined },
+  });
+  return response.data;
+};
+
+export const getParentBlogCategories = async (includeInactive = false): Promise<BlogCategory[]> => {
+  const response = await apiClient.get<BlogCategory[]>(API_ENDPOINTS.ADMIN.BLOG_CATEGORIES.PARENTS, {
+    params: { includeInactive: includeInactive ? 'true' : undefined },
+  });
+  return response.data;
+};
+
+export const getBlogCategory = async (id: string): Promise<BlogCategory> => {
+  const response = await apiClient.get<BlogCategory>(API_ENDPOINTS.ADMIN.BLOG_CATEGORIES.DETAIL(id));
+  return response.data;
+};
+
+export const createBlogCategory = async (data: CreateBlogCategoryRequest): Promise<BlogCategory> => {
+  const response = await apiClient.post<BlogCategory>(API_ENDPOINTS.ADMIN.BLOG_CATEGORIES.ROOT, data);
+  return response.data;
+};
+
+export const updateBlogCategory = async (id: string, data: UpdateBlogCategoryRequest): Promise<BlogCategory> => {
+  const response = await apiClient.patch<BlogCategory>(API_ENDPOINTS.ADMIN.BLOG_CATEGORIES.DETAIL(id), data);
+  return response.data;
+};
+
+export const toggleBlogCategory = async (id: string, isActive: boolean): Promise<BlogCategory> => {
+  const response = await apiClient.patch<BlogCategory>(API_ENDPOINTS.ADMIN.BLOG_CATEGORIES.TOGGLE(id), { isActive });
+  return response.data;
+};
+
+export const reorderBlogCategories = async (ids: string[]): Promise<{ message: string }> => {
+  const response = await apiClient.post<{ message: string }>(API_ENDPOINTS.ADMIN.BLOG_CATEGORIES.REORDER, { ids });
+  return response.data;
+};
+
+export const deleteBlogCategory = async (id: string): Promise<void> => {
+  await apiClient.delete(API_ENDPOINTS.ADMIN.BLOG_CATEGORIES.DETAIL(id));
+};
+
+// Blog Author API Functions
+export const getBlogAuthors = async (includeInactive = false): Promise<BlogAuthor[]> => {
+  const response = await apiClient.get<BlogAuthor[]>(API_ENDPOINTS.ADMIN.BLOG_AUTHORS.ROOT, {
+    params: { includeInactive: includeInactive ? 'true' : undefined },
+  });
+  return response.data;
+};
+
+export const getRandomBlogAuthor = async (): Promise<BlogAuthor | null> => {
+  const response = await apiClient.get<BlogAuthor | null>(API_ENDPOINTS.ADMIN.BLOG_AUTHORS.RANDOM);
+  return response.data;
+};
+
+export const getBlogAuthor = async (id: string): Promise<BlogAuthor> => {
+  const response = await apiClient.get<BlogAuthor>(API_ENDPOINTS.ADMIN.BLOG_AUTHORS.DETAIL(id));
+  return response.data;
+};
+
+export const createBlogAuthor = async (data: CreateBlogAuthorRequest): Promise<BlogAuthor> => {
+  const response = await apiClient.post<BlogAuthor>(API_ENDPOINTS.ADMIN.BLOG_AUTHORS.ROOT, data);
+  return response.data;
+};
+
+export const updateBlogAuthor = async (id: string, data: UpdateBlogAuthorRequest): Promise<BlogAuthor> => {
+  const response = await apiClient.patch<BlogAuthor>(API_ENDPOINTS.ADMIN.BLOG_AUTHORS.DETAIL(id), data);
+  return response.data;
+};
+
+export const toggleBlogAuthor = async (id: string, isActive: boolean): Promise<BlogAuthor> => {
+  const response = await apiClient.patch<BlogAuthor>(API_ENDPOINTS.ADMIN.BLOG_AUTHORS.TOGGLE(id), { isActive });
+  return response.data;
+};
+
+export const deleteBlogAuthor = async (id: string): Promise<void> => {
+  await apiClient.delete(API_ENDPOINTS.ADMIN.BLOG_AUTHORS.DETAIL(id));
+};
+
+// Blog Post API Functions
 export const getBlogPosts = async (params?: { 
   status?: string; 
-  category?: string;
+  categoryId?: string;
+  authorId?: string;
+  search?: string;
+  tag?: string;
   page?: number;
   limit?: number;
-}): Promise<{ data: BlogPost[]; total: number; page: number; limit: number }> => {
+}): Promise<{ data: BlogPost[]; meta: { total: number; page: number; limit: number; totalPages: number } }> => {
   const response = await apiClient.get(API_ENDPOINTS.ADMIN.BLOG.ROOT, { params });
   return response.data;
 };
 
 export const getBlogStats = async (): Promise<BlogStats> => {
   const response = await apiClient.get<BlogStats>(API_ENDPOINTS.ADMIN.BLOG.STATS);
+  return response.data;
+};
+
+export const getBlogTags = async (): Promise<{ tag: string; count: number }[]> => {
+  const response = await apiClient.get<{ tag: string; count: number }[]>(API_ENDPOINTS.ADMIN.BLOG.TAGS);
   return response.data;
 };
 
@@ -206,8 +356,46 @@ export const updateBlogPost = async (id: string, data: UpdateBlogPostRequest): P
   return response.data;
 };
 
+export const publishBlogPost = async (id: string): Promise<BlogPost> => {
+  const response = await apiClient.post<BlogPost>(API_ENDPOINTS.ADMIN.BLOG.PUBLISH(id));
+  return response.data;
+};
+
+export const unpublishBlogPost = async (id: string): Promise<BlogPost> => {
+  const response = await apiClient.post<BlogPost>(API_ENDPOINTS.ADMIN.BLOG.UNPUBLISH(id));
+  return response.data;
+};
+
+export const archiveBlogPost = async (id: string): Promise<BlogPost> => {
+  const response = await apiClient.post<BlogPost>(API_ENDPOINTS.ADMIN.BLOG.ARCHIVE(id));
+  return response.data;
+};
+
 export const deleteBlogPost = async (id: string): Promise<void> => {
   await apiClient.delete(API_ENDPOINTS.ADMIN.BLOG.DETAIL(id));
+};
+
+export interface BulkCreateBlogRequest {
+  categoryId: string;
+  authorId?: string;
+  title: string;
+  content: string;
+  tags?: string[];
+  minHoursBetweenPosts?: number;
+  maxHoursBetweenPosts?: number;
+  authorRotation?: boolean;
+  count?: number;
+}
+
+export interface BulkCreateBlogResponse {
+  message: string;
+  count: number;
+  posts: BlogPost[];
+}
+
+export const bulkCreateBlogPosts = async (data: BulkCreateBlogRequest): Promise<BulkCreateBlogResponse> => {
+  const response = await apiClient.post<BulkCreateBlogResponse>(API_ENDPOINTS.ADMIN.BLOG.BULK, data);
+  return response.data;
 };
 
 // ============================================
@@ -263,6 +451,19 @@ export const rejectReview = async (id: string, reason?: string): Promise<AdminRe
 
 export const toggleReviewFeatured = async (id: string): Promise<AdminReview> => {
   const response = await apiClient.post<AdminReview>(API_ENDPOINTS.ADMIN.REVIEWS.FEATURE(id));
+  return response.data;
+};
+
+export interface UpdateReviewRequest {
+  rating?: number;
+  title?: string;
+  text?: string;
+  isFeatured?: boolean;
+  displayOrder?: number;
+}
+
+export const updateReview = async (id: string, data: UpdateReviewRequest): Promise<AdminReview> => {
+  const response = await apiClient.patch<AdminReview>(API_ENDPOINTS.ADMIN.REVIEWS.DETAIL(id), data);
   return response.data;
 };
 

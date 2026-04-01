@@ -1,57 +1,31 @@
 'use client';
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { AdminDataTable } from '@/components/admin/data-table';
 import { AdminPageHeader } from '@/components/admin/page-header';
 import { AdminFilterBar } from '@/components/admin/filter-bar';
 import { AdminModal } from '@/components/admin/modal';
 import { AdminSlideOver } from '@/components/admin/slide-over';
-import { AdminFormInput } from '@/components/admin/form-input';
 import { toast } from 'sonner';
-import { Star, Check, X, Edit, Trash2 } from "lucide-react";
+import { Star, Check, X, Edit, Trash2, Loader2 } from "lucide-react";
+import {
+  getAdminReviews,
+  approveReview,
+  rejectReview,
+  updateReview,
+  deleteReview,
+  type AdminReview,
+} from '@/lib/api/adminModulesApi';
 
-const reviewsData = [
-  {
-    id: "REV-001",
-    user: "john_doe",
-    rating: 5,
-    comment: "Excellent service! SMS received instantly.",
-    status: "approved",
-    date: "2026-03-25 14:30",
-  },
-  {
-    id: "REV-002",
-    user: "jane_smith",
-    rating: 4,
-    comment: "Good experience overall, fast activation.",
-    status: "approved",
-    date: "2026-03-24 10:15",
-  },
-  {
-    id: "REV-003",
-    user: "mike_wilson",
-    rating: 3,
-    comment: "Service works but took longer than expected.",
-    status: "pending",
-    date: "2026-03-27 09:45",
-  },
-  {
-    id: "REV-004",
-    user: "sarah_jones",
-    rating: 5,
-    comment: "Perfect! Will use again for sure.",
-    status: "approved",
-    date: "2026-03-26 16:20",
-  },
-  {
-    id: "REV-005",
-    user: "alex_brown",
-    rating: 2,
-    comment: "Had some issues with verification code.",
-    status: "pending",
-    date: "2026-03-27 11:00",
-  },
-];
+interface ReviewDisplay {
+  id: string;
+  user: string;
+  rating: number;
+  comment: string;
+  status: string;
+  date: string;
+  originalData: AdminReview;
+}
 
 const columns = [
   { key: "id", label: "ID", width: "10%" },
@@ -64,85 +38,143 @@ const columns = [
 ];
 
 export default function AdminReviewsPage() {
-  const [reviews, setReviews] = useState(reviewsData);
+  const [reviews, setReviews] = useState<ReviewDisplay[]>([]);
   const [showFilters, setShowFilters] = useState(false);
-  const [selectedReview, setSelectedReview] = useState<any>(null);
+  const [selectedReview, setSelectedReview] = useState<ReviewDisplay | null>(null);
   const [isApproveModalOpen, setIsApproveModalOpen] = useState(false);
   const [isRejectModalOpen, setIsRejectModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isPageLoading, setIsPageLoading] = useState(true);
+  const [statusFilter, setStatusFilter] = useState<string>('');
+  const [searchQuery, setSearchQuery] = useState('');
 
   const [editFormData, setEditFormData] = useState({
-    user: "",
     rating: 5,
     comment: "",
   });
 
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleString('en-US', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+    }).replace(',', '');
+  };
+
+  const fetchReviews = useCallback(async () => {
+    try {
+      const params: { status?: string } = {};
+      if (statusFilter) {
+        params.status = statusFilter.toUpperCase();
+      }
+      const response = await getAdminReviews(params);
+      const formattedReviews: ReviewDisplay[] = response.data.map((review: any, index: number) => ({
+        id: `REV-${String(index + 1).padStart(3, '0')}`,
+        user: review.user?.username || review.user?.firstName || review.user?.email?.split('@')[0] || 'Unknown',
+        rating: review.rating,
+        comment: review.text || review.content || review.title || '',
+        status: review.status.toLowerCase(),
+        date: formatDate(review.createdAt),
+        originalData: review,
+      }));
+      setReviews(formattedReviews);
+    } catch (error) {
+      console.error('Failed to fetch reviews:', error);
+      toast.error('Failed to load reviews');
+    }
+  }, [statusFilter]);
+
+  useEffect(() => {
+    const loadData = async () => {
+      setIsPageLoading(true);
+      await fetchReviews();
+      setIsPageLoading(false);
+    };
+    loadData();
+  }, [fetchReviews]);
+
   const handleApprove = async () => {
+    if (!selectedReview) return;
     setIsLoading(true);
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-
-    setReviews(
-      reviews.map((r) =>
-        r.id === selectedReview.id ? { ...r, status: "approved" } : r
-      )
-    );
-
-    setIsLoading(false);
-    setIsApproveModalOpen(false);
-    toast.success("Review approved successfully!");
+    try {
+      await approveReview(selectedReview.originalData.id);
+      toast.success("Review approved successfully!");
+      setIsApproveModalOpen(false);
+      await fetchReviews();
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || "Failed to approve review");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleReject = async () => {
+    if (!selectedReview) return;
     setIsLoading(true);
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-
-    setReviews(
-      reviews.map((r) =>
-        r.id === selectedReview.id ? { ...r, status: "rejected" } : r
-      )
-    );
-
-    setIsLoading(false);
-    setIsRejectModalOpen(false);
-    toast.success("Review rejected successfully!");
+    try {
+      await rejectReview(selectedReview.originalData.id);
+      toast.success("Review rejected successfully!");
+      setIsRejectModalOpen(false);
+      await fetchReviews();
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || "Failed to reject review");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleEdit = async () => {
-    if (!editFormData.comment) {
+    if (!selectedReview) return;
+    if (!editFormData.comment.trim()) {
       toast.error("Please enter a comment");
       return;
     }
-
     setIsLoading(true);
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-
-    setReviews(
-      reviews.map((r) =>
-        r.id === selectedReview.id
-          ? { ...r, rating: editFormData.rating, comment: editFormData.comment }
-          : r
-      )
-    );
-
-    setIsLoading(false);
-    setIsEditModalOpen(false);
-    toast.success("Review updated successfully!");
+    try {
+      await updateReview(selectedReview.originalData.id, {
+        rating: editFormData.rating,
+        text: editFormData.comment,
+      });
+      toast.success("Review updated successfully!");
+      setIsEditModalOpen(false);
+      await fetchReviews();
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || "Failed to update review");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleDelete = async () => {
+    if (!selectedReview) return;
     setIsLoading(true);
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-
-    setReviews(reviews.filter((r) => r.id !== selectedReview.id));
-
-    setIsLoading(false);
-    setIsDeleteModalOpen(false);
-    toast.success("Review deleted successfully!");
+    try {
+      await deleteReview(selectedReview.originalData.id);
+      toast.success("Review deleted successfully!");
+      setIsDeleteModalOpen(false);
+      await fetchReviews();
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || "Failed to delete review");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const renderCell = (item: any, column: any) => {
+  const filteredReviews = reviews.filter((review) => {
+    if (!searchQuery) return true;
+    const query = searchQuery.toLowerCase();
+    return (
+      review.user.toLowerCase().includes(query) ||
+      review.comment.toLowerCase().includes(query)
+    );
+  });
+
+  const renderCell = (item: ReviewDisplay, column: { key: string; label: string; width: string }) => {
     if (column.key === "rating") {
       return (
         <div className="flex items-center gap-1">
@@ -176,7 +208,7 @@ export default function AdminReviewsPage() {
       return (
         <span
           className={`px-3 py-1 rounded-lg text-xs font-medium capitalize ${
-            statusColors[item.status]
+            statusColors[item.status] || statusColors.pending
           }`}
         >
           {item.status}
@@ -215,7 +247,6 @@ export default function AdminReviewsPage() {
             onClick={() => {
               setSelectedReview(item);
               setEditFormData({
-                user: item.user,
                 rating: item.rating,
                 comment: item.comment,
               });
@@ -240,19 +271,26 @@ export default function AdminReviewsPage() {
       );
     }
 
-    return item[column.key];
+    return item[column.key as keyof ReviewDisplay];
   };
 
   const filters = [
     {
       label: "Status",
-      options: ["Approved", "Pending", "Rejected"],
-    },
-    {
-      label: "Rating",
-      options: ["5 Stars", "4 Stars", "3 Stars", "2 Stars", "1 Star"],
+      options: ["All", "Approved", "Pending", "Rejected"],
+      onChange: (value: string) => {
+        setStatusFilter(value === "All" ? "" : value.toLowerCase());
+      },
     },
   ];
+
+  if (isPageLoading) {
+    return (
+      <div className="p-4 lg:p-8 flex items-center justify-center min-h-[400px]">
+        <Loader2 className="w-8 h-8 animate-spin text-[#3B82F6]" />
+      </div>
+    );
+  }
 
   return (
     <div className="p-4 lg:p-8">
@@ -263,13 +301,13 @@ export default function AdminReviewsPage() {
 
       <AdminFilterBar
         searchPlaceholder="Search reviews by user or comment..."
-        onSearch={(value) => console.log("Search:", value)}
+        onSearch={(value) => setSearchQuery(value)}
         filters={filters}
         showFilters={showFilters}
         onToggleFilters={() => setShowFilters(!showFilters)}
       />
 
-      <AdminDataTable columns={columns} data={reviews} renderCell={renderCell} />
+      <AdminDataTable columns={columns} data={filteredReviews} renderCell={renderCell} />
 
       {/* Approve Modal */}
       <AdminModal
@@ -361,7 +399,15 @@ export default function AdminReviewsPage() {
         }
       >
         <div className="space-y-4">
-          <AdminFormInput label="User" value={editFormData.user} disabled />
+          <div>
+            <label className="text-white text-sm font-medium mb-2 block">User</label>
+            <input
+              type="text"
+              value={selectedReview?.user || ''}
+              disabled
+              className="w-full bg-[rgba(255,255,255,0.05)] border border-[rgba(255,255,255,0.18)] rounded-xl px-4 py-3 text-[#64748B] text-sm cursor-not-allowed"
+            />
+          </div>
 
           <div>
             <label className="text-white text-sm font-medium mb-2 block">

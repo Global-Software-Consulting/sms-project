@@ -24,7 +24,6 @@ const axiosInstance = axios.create({
 const inflightRequests = new Map<string, Promise<unknown>>();
 
 export const apiClient = {
-  ...axiosInstance,
   get: <T = unknown>(url: string, config?: Parameters<typeof axiosInstance.get>[1]) => {
     const key = `GET:${url}:${JSON.stringify(config?.params || {})}`;
     const existing = inflightRequests.get(key);
@@ -37,10 +36,14 @@ export const apiClient = {
     inflightRequests.set(key, request);
     return request;
   },
-  post: axiosInstance.post.bind(axiosInstance),
-  put: axiosInstance.put.bind(axiosInstance),
-  patch: axiosInstance.patch.bind(axiosInstance),
-  delete: axiosInstance.delete.bind(axiosInstance),
+  post: <T = unknown>(url: string, data?: unknown, config?: Parameters<typeof axiosInstance.post>[2]) => 
+    axiosInstance.post<T>(url, data, config),
+  put: <T = unknown>(url: string, data?: unknown, config?: Parameters<typeof axiosInstance.put>[2]) => 
+    axiosInstance.put<T>(url, data, config),
+  patch: <T = unknown>(url: string, data?: unknown, config?: Parameters<typeof axiosInstance.patch>[2]) => 
+    axiosInstance.patch<T>(url, data, config),
+  delete: <T = unknown>(url: string, config?: Parameters<typeof axiosInstance.delete>[1]) => 
+    axiosInstance.delete<T>(url, config),
   interceptors: axiosInstance.interceptors,
   defaults: axiosInstance.defaults,
 } as typeof axiosInstance;
