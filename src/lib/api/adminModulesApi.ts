@@ -454,6 +454,19 @@ export const toggleReviewFeatured = async (id: string): Promise<AdminReview> => 
   return response.data;
 };
 
+export interface UpdateReviewRequest {
+  rating?: number;
+  title?: string;
+  text?: string;
+  isFeatured?: boolean;
+  displayOrder?: number;
+}
+
+export const updateReview = async (id: string, data: UpdateReviewRequest): Promise<AdminReview> => {
+  const response = await apiClient.patch<AdminReview>(API_ENDPOINTS.ADMIN.REVIEWS.DETAIL(id), data);
+  return response.data;
+};
+
 export const deleteReview = async (id: string): Promise<void> => {
   await apiClient.delete(API_ENDPOINTS.ADMIN.REVIEWS.DETAIL(id));
 };

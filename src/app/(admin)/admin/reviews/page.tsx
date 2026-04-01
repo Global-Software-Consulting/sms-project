@@ -5,12 +5,14 @@ import { AdminDataTable } from '@/components/admin/data-table';
 import { AdminPageHeader } from '@/components/admin/page-header';
 import { AdminFilterBar } from '@/components/admin/filter-bar';
 import { AdminModal } from '@/components/admin/modal';
+import { AdminSlideOver } from '@/components/admin/slide-over';
 import { toast } from 'sonner';
-import { Star, Check, X, Trash2, Loader2 } from "lucide-react";
+import { Star, Check, X, Edit, Trash2, Loader2 } from "lucide-react";
 import {
   getAdminReviews,
   approveReview,
   rejectReview,
+  updateReview,
   deleteReview,
   type AdminReview,
 } from '@/lib/api/adminModulesApi';
@@ -41,11 +43,17 @@ export default function AdminReviewsPage() {
   const [selectedReview, setSelectedReview] = useState<ReviewDisplay | null>(null);
   const [isApproveModalOpen, setIsApproveModalOpen] = useState(false);
   const [isRejectModalOpen, setIsRejectModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isPageLoading, setIsPageLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState<string>('');
   const [searchQuery, setSearchQuery] = useState('');
+
+  const [editFormData, setEditFormData] = useState({
+    rating: 5,
+    comment: "",
+  });
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -115,6 +123,28 @@ export default function AdminReviewsPage() {
       await fetchReviews();
     } catch (error: any) {
       toast.error(error.response?.data?.message || "Failed to reject review");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleEdit = async () => {
+    if (!selectedReview) return;
+    if (!editFormData.comment.trim()) {
+      toast.error("Please enter a comment");
+      return;
+    }
+    setIsLoading(true);
+    try {
+      await updateReview(selectedReview.originalData.id, {
+        rating: editFormData.rating,
+        text: editFormData.comment,
+      });
+      toast.success("Review updated successfully!");
+      setIsEditModalOpen(false);
+      await fetchReviews();
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || "Failed to update review");
     } finally {
       setIsLoading(false);
     }
@@ -213,6 +243,20 @@ export default function AdminReviewsPage() {
               </button>
             </>
           )}
+          <button
+            onClick={() => {
+              setSelectedReview(item);
+              setEditFormData({
+                rating: item.rating,
+                comment: item.comment,
+              });
+              setIsEditModalOpen(true);
+            }}
+            className="p-2 rounded-lg hover:bg-[rgba(255,255,255,0.08)] transition-colors group"
+            title="Edit"
+          >
+            <Edit className="w-4 h-4 text-[#3B82F6] group-hover:scale-110 transition-transform" />
+          </button>
           <button
             onClick={() => {
               setSelectedReview(item);
@@ -330,6 +374,76 @@ export default function AdminReviewsPage() {
           The review will not be displayed publicly.
         </p>
       </AdminModal>
+
+      {/* Edit Review Slide-Over */}
+      <AdminSlideOver
+        isOpen={isEditModalOpen}
+        onClose={() => setIsEditModalOpen(false)}
+        title={`Edit Review: ${selectedReview?.id}`}
+        footer={
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setIsEditModalOpen(false)}
+              className="flex-1 px-4 py-2.5 rounded-xl bg-[rgba(255,255,255,0.08)] border border-[rgba(255,255,255,0.18)] text-white hover:bg-[rgba(255,255,255,0.12)] transition-colors text-sm font-medium"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleEdit}
+              disabled={isLoading}
+              className="flex-1 px-4 py-2.5 rounded-xl bg-[#3B82F6] hover:bg-[#2563EB] text-white text-sm font-medium transition-colors disabled:opacity-50"
+            >
+              {isLoading ? "Saving..." : "Save Changes"}
+            </button>
+          </div>
+        }
+      >
+        <div className="space-y-4">
+          <div>
+            <label className="text-white text-sm font-medium mb-2 block">User</label>
+            <input
+              type="text"
+              value={selectedReview?.user || ''}
+              disabled
+              className="w-full bg-[rgba(255,255,255,0.05)] border border-[rgba(255,255,255,0.18)] rounded-xl px-4 py-3 text-[#64748B] text-sm cursor-not-allowed"
+            />
+          </div>
+
+          <div>
+            <label className="text-white text-sm font-medium mb-2 block">
+              Rating
+            </label>
+            <select
+              value={editFormData.rating}
+              onChange={(e) =>
+                setEditFormData({ ...editFormData, rating: parseInt(e.target.value) })
+              }
+              className="w-full bg-[rgba(255,255,255,0.08)] border border-[rgba(255,255,255,0.18)] rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#3B82F6]"
+            >
+              <option value={5}>5 Stars</option>
+              <option value={4}>4 Stars</option>
+              <option value={3}>3 Stars</option>
+              <option value={2}>2 Stars</option>
+              <option value={1}>1 Star</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="text-white text-sm font-medium mb-2 block">
+              Comment <span className="text-[#EF4444]">*</span>
+            </label>
+            <textarea
+              value={editFormData.comment}
+              onChange={(e) =>
+                setEditFormData({ ...editFormData, comment: e.target.value })
+              }
+              rows={6}
+              className="w-full bg-[rgba(255,255,255,0.08)] border border-[rgba(255,255,255,0.18)] rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#3B82F6] resize-none"
+              placeholder="Enter review comment..."
+            />
+          </div>
+        </div>
+      </AdminSlideOver>
 
       {/* Delete Modal */}
       <AdminModal
