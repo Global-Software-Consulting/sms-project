@@ -25,7 +25,14 @@ import {
   adminGetProviders,
   adminUpdateProvider,
   adminSyncProvider,
+  adminAddVipNumber,
+  getServices,
+  getProductsRealtime,
+  getCountries,
   type SmsProvider,
+  type SmsService,
+  type SmsProduct,
+  type SmsCountry,
 } from '@/lib/api/smsApi';
 
 interface Service {
@@ -169,6 +176,21 @@ export default function AdminSmsServicesPage() {
   const [isProvidersLoading, setIsProvidersLoading] = useState(true);
   const [isSyncing, setIsSyncing] = useState<string | null>(null);
 
+  // Services & countries for provider details modal
+  const [providerServices, setProviderServices] = useState<SmsService[]>([]);
+  const [isServicesLoading, setIsServicesLoading] = useState(false);
+  const [serviceSearchQuery, setServiceSearchQuery] = useState("");
+  const [selectedServiceForCountries, setSelectedServiceForCountries] = useState<SmsService | null>(null);
+  const [serviceCountries, setServiceCountries] = useState<SmsProduct[]>([]);
+  const [isCountriesLoading, setIsCountriesLoading] = useState(false);
+  const [countrySearchQuery, setCountrySearchQuery] = useState("");
+
+  // VIP modal country selection
+  const [vipCountries, setVipCountries] = useState<SmsCountry[]>([]);
+  const [isVipCountriesLoading, setIsVipCountriesLoading] = useState(false);
+  const [selectedVipCountryId, setSelectedVipCountryId] = useState<string>("");
+  const [vipCountrySearch, setVipCountrySearch] = useState("");
+
   const fetchProviders = useCallback(async () => {
     setIsProvidersLoading(true);
     try {
@@ -236,9 +258,39 @@ export default function AdminSmsServicesPage() {
     setShowDeleteModal(true);
   };
 
-  const handleViewProvider = (provider: Provider) => {
+  const handleViewProvider = async (provider: Provider) => {
     setSelectedProvider(provider);
     setShowProviderModal(true);
+    setProviderServices([]);
+    setSelectedServiceForCountries(null);
+    setServiceCountries([]);
+    setServiceSearchQuery("");
+    setCountrySearchQuery("");
+    setIsServicesLoading(true);
+    try {
+      const response = await getServices({ providerId: provider.id, limit: 200 });
+      setProviderServices(response.data || []);
+    } catch (error: any) {
+      toast.error(error?.response?.data?.message || "Failed to fetch services");
+    } finally {
+      setIsServicesLoading(false);
+    }
+  };
+
+  const handleViewServiceCountries = async (service: SmsService) => {
+    if (!selectedProvider) return;
+    setSelectedServiceForCountries(service);
+    setServiceCountries([]);
+    setCountrySearchQuery("");
+    setIsCountriesLoading(true);
+    try {
+      const response = await getProductsRealtime(selectedProvider.id, service.id);
+      setServiceCountries(response.data || []);
+    } catch (error: any) {
+      toast.error(error?.response?.data?.message || "Failed to fetch countries");
+    } finally {
+      setIsCountriesLoading(false);
+    }
   };
 
   const handleSaveProvider = async () => {
@@ -304,8 +356,7 @@ export default function AdminSmsServicesPage() {
   };
 
   const handleSelectAll = () => {
-    if (!selectedProvider) return;
-    const allServiceIds = selectedProvider.services.map((s) => s.id);
+    const allServiceIds = providerServices.map((s) => s.id);
     setSelectedServices(allServiceIds);
   };
 
@@ -313,38 +364,58 @@ export default function AdminSmsServicesPage() {
     setSelectedServices([]);
   };
 
+  const handleOpenAddToVIP = async () => {
+    if (!selectedProvider || selectedServices.length === 0) return;
+    setShowAddToVIPModal(true);
+    setSelectedVipCountryId("");
+    setVipCountrySearch("");
+    setIsVipCountriesLoading(true);
+    try {
+      const response = await getCountries({ providerId: selectedProvider.id, limit: 200 });
+      setVipCountries(response.data || []);
+    } catch (error: any) {
+      toast.error(error?.response?.data?.message || "Failed to fetch countries");
+    } finally {
+      setIsVipCountriesLoading(false);
+    }
+  };
+
+  const vipRatingMap: Record<string, number> = { v1: 5, v2: 3, v3: 1 };
+
   const handleAddToVIP = async () => {
     if (selectedServices.length === 0) {
       toast.error("Please select at least one service");
       return;
     }
+    if (!selectedVipCountryId) {
+      toast.error("Please select a country");
+      return;
+    }
+    if (!selectedProvider) return;
+
+    const rating = vipRatingMap[selectedVIPCategory] ?? 5;
 
     setIsLoading(true);
-    await new Promise((resolve) => setTimeout(resolve, 1000));
+    let successCount = 0;
+    let duplicateCount = 0;
+    let failCount = 0;
 
-    const selectedCategory = vipCategories.find((cat) => cat.id === selectedVIPCategory);
-    if (!selectedCategory) return;
-
-    // Get services to add
-    const servicesToAdd = selectedProvider?.services.filter((s) => selectedServices.includes(s.id)) || [];
-
-    // Check for duplicates
-    const existingServiceIds = selectedCategory.services.map((s) => s.id);
-    const newServices = servicesToAdd.filter((s) => !existingServiceIds.includes(s.id));
-
-    if (newServices.length < servicesToAdd.length) {
-      const duplicateCount = servicesToAdd.length - newServices.length;
-      toast.warning(`${duplicateCount} duplicate(s) skipped`);
+    for (const serviceId of selectedServices) {
+      try {
+        await adminAddVipNumber(serviceId, selectedVipCountryId, selectedProvider.id, rating);
+        successCount++;
+      } catch (error: any) {
+        if (error?.response?.status === 409) {
+          duplicateCount++;
+        } else {
+          failCount++;
+        }
+      }
     }
 
-    // Update VIP category
-    setVipCategories(
-      vipCategories.map((cat) =>
-        cat.id === selectedVIPCategory ? { ...cat, services: [...cat.services, ...newServices] } : cat
-      )
-    );
-
-    toast.success(`${newServices.length} service(s) added to ${selectedCategory.name}`);
+    if (successCount > 0) toast.success(`${successCount} service(s) added to VIP`);
+    if (duplicateCount > 0) toast.warning(`${duplicateCount} duplicate(s) skipped`);
+    if (failCount > 0) toast.error(`${failCount} service(s) failed to add`);
 
     setIsLoading(false);
     setShowAddToVIPModal(false);
@@ -1027,6 +1098,9 @@ export default function AdminSmsServicesPage() {
                     setShowProviderModal(false);
                     setSelectedProvider(null);
                     setSelectedServices([]);
+                    setProviderServices([]);
+                    setSelectedServiceForCountries(null);
+                    setServiceCountries([]);
                   }}
                   className="p-2 hover:bg-[rgba(255,255,255,0.1)] rounded-lg text-[#94A3B8] transition-colors"
                 >
@@ -1036,140 +1110,220 @@ export default function AdminSmsServicesPage() {
             </div>
 
             <div className="p-6 space-y-6">
-              {/* Countries */}
-              <div>
-                <h3 className="text-white text-lg font-semibold mb-4 flex items-center gap-2">
-                  <Globe className="w-5 h-5" />
-                  Available Countries ({selectedProvider.countries.length})
-                </h3>
-                <div className="flex flex-wrap gap-2">
-                  {selectedProvider.countries.map((country) => (
-                    <span
-                      key={country}
-                      className="px-3 py-1.5 rounded-lg bg-[rgba(59,130,246,0.1)] text-[#3B82F6] text-sm border border-[rgba(59,130,246,0.3)]"
-                    >
-                      {country}
-                    </span>
-                  ))}
-                </div>
-              </div>
-
-              {/* Services */}
+              {/* Services List */}
               <div>
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="text-white text-lg font-semibold flex items-center gap-2">
-                    Services ({selectedProvider.totalServices})
+                    Services ({providerServices.length})
                   </h3>
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={handleSelectAll}
-                      className="px-4 py-2 rounded-lg bg-[rgba(59,130,246,0.2)] hover:bg-[rgba(59,130,246,0.3)] text-[#3B82F6] text-sm font-medium transition-colors"
-                    >
-                      Select All
-                    </button>
-                    <button
-                      onClick={handleDeselectAll}
-                      className="px-4 py-2 rounded-lg bg-[rgba(255,255,255,0.05)] hover:bg-[rgba(255,255,255,0.1)] text-[#94A3B8] text-sm font-medium transition-colors"
-                    >
-                      Deselect All
-                    </button>
-                    <button
-                      onClick={() => setShowAddToVIPModal(true)}
-                      disabled={selectedServices.length === 0}
-                      className="px-4 py-2 rounded-lg bg-[#F59E0B] hover:bg-[#D97706] text-white text-sm font-medium transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      <Star className="w-4 h-4" />
-                      Add to VIP ({selectedServices.length})
-                    </button>
-                  </div>
+                  {providerServices.length > 0 && (
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={handleSelectAll}
+                        className="px-4 py-2 rounded-lg bg-[rgba(59,130,246,0.2)] hover:bg-[rgba(59,130,246,0.3)] text-[#3B82F6] text-sm font-medium transition-colors"
+                      >
+                        Select All
+                      </button>
+                      <button
+                        onClick={handleDeselectAll}
+                        className="px-4 py-2 rounded-lg bg-[rgba(255,255,255,0.05)] hover:bg-[rgba(255,255,255,0.1)] text-[#94A3B8] text-sm font-medium transition-colors"
+                      >
+                        Deselect All
+                      </button>
+                      <button
+                        onClick={() => handleOpenAddToVIP()}
+                        disabled={selectedServices.length === 0}
+                        className="px-4 py-2 rounded-lg bg-[#F59E0B] hover:bg-[#D97706] text-white text-sm font-medium transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        <Star className="w-4 h-4" />
+                        Add to VIP ({selectedServices.length})
+                      </button>
+                    </div>
+                  )}
                 </div>
 
-                <div className="overflow-x-auto rounded-lg border border-[rgba(255,255,255,0.1)]">
-                  <table className="w-full">
-                    <thead>
-                      <tr className="border-b border-[rgba(255,255,255,0.1)] bg-[rgba(0,0,0,0.2)]">
-                        <th className="px-4 py-3 text-left">
-                          <input
-                            type="checkbox"
-                            checked={selectedServices.length === selectedProvider.services.length}
-                            onChange={(e) => {
-                              if (e.target.checked) {
-                                handleSelectAll();
-                              } else {
-                                handleDeselectAll();
-                              }
-                            }}
-                            className="w-4 h-4 rounded border-[rgba(255,255,255,0.3)] bg-[rgba(0,0,0,0.4)] checked:bg-[#3B82F6]"
-                          />
-                        </th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-[#94A3B8] uppercase">
-                          Service Name
-                        </th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-[#94A3B8] uppercase">
-                          Country
-                        </th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-[#94A3B8] uppercase">
-                          Success Rate
-                        </th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-[#94A3B8] uppercase">
-                          Total Orders
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-[rgba(255,255,255,0.05)]">
-                      {selectedProvider.services.map((service) => (
-                        <tr
-                          key={service.id}
-                          className="hover:bg-[rgba(255,255,255,0.02)] transition-colors cursor-pointer"
-                          onClick={() => handleSelectService(service.id)}
-                        >
-                          <td className="px-4 py-3">
-                            <input
-                              type="checkbox"
-                              checked={selectedServices.includes(service.id)}
-                              onChange={() => handleSelectService(service.id)}
-                              className="w-4 h-4 rounded border-[rgba(255,255,255,0.3)] bg-[rgba(0,0,0,0.4)] checked:bg-[#3B82F6]"
-                              onClick={(e) => e.stopPropagation()}
-                            />
-                          </td>
-                          <td className="px-4 py-3 text-white text-sm font-medium">{service.name}</td>
-                          <td className="px-4 py-3 text-[#94A3B8] text-sm">{service.country}</td>
-                          <td className="px-4 py-3">
-                            <div className="flex items-center gap-3">
-                              <div className="flex-1 h-2 bg-[rgba(255,255,255,0.1)] rounded-full overflow-hidden max-w-[120px]">
-                                <div
-                                  className={`h-full rounded-full ${
-                                    service.successRate >= 90
-                                      ? "bg-[#22C55E]"
-                                      : service.successRate >= 80
-                                      ? "bg-[#F59E0B]"
-                                      : "bg-[#EF4444]"
-                                  }`}
-                                  style={{ width: `${service.successRate}%` }}
+                {isServicesLoading ? (
+                  <div className="flex items-center justify-center py-12">
+                    <Loader2 className="w-6 h-6 text-[#3B82F6] animate-spin" />
+                    <span className="text-[#94A3B8] text-sm ml-3">Loading services...</span>
+                  </div>
+                ) : providerServices.length === 0 ? (
+                  <div className="text-center py-12 text-[#64748B]">No services found for this provider</div>
+                ) : (() => {
+                  const filteredServices = providerServices.filter((s) =>
+                    s.name.toLowerCase().includes(serviceSearchQuery.toLowerCase()) ||
+                    (s.category || "").toLowerCase().includes(serviceSearchQuery.toLowerCase())
+                  );
+                  return (
+                    <>
+                      <div className="relative mb-3">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#64748B]" />
+                        <input
+                          type="text"
+                          placeholder="Search services..."
+                          value={serviceSearchQuery}
+                          onChange={(e) => setServiceSearchQuery(e.target.value)}
+                          className="w-full pl-10 pr-4 py-2.5 rounded-lg bg-[rgba(255,255,255,0.05)] border border-[rgba(255,255,255,0.1)] text-white text-sm placeholder:text-[#64748B] focus:outline-none focus:ring-2 focus:ring-[#3B82F6]"
+                        />
+                        {serviceSearchQuery && (
+                          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[#64748B] text-xs">
+                            {filteredServices.length} of {providerServices.length}
+                          </span>
+                        )}
+                      </div>
+                      <div className="rounded-lg border border-[rgba(255,255,255,0.1)] max-h-[350px] overflow-y-auto">
+                        <table className="w-full">
+                          <thead className="sticky top-0 z-10">
+                            <tr className="border-b border-[rgba(255,255,255,0.1)] bg-[#0F172A]">
+                              <th className="px-4 py-3 text-left">
+                                <input
+                                  type="checkbox"
+                                  checked={selectedServices.length === providerServices.length && providerServices.length > 0}
+                                  onChange={(e) => {
+                                    if (e.target.checked) {
+                                      handleSelectAll();
+                                    } else {
+                                      handleDeselectAll();
+                                    }
+                                  }}
+                                  className="w-4 h-4 rounded border-[rgba(255,255,255,0.3)] bg-[rgba(0,0,0,0.4)] checked:bg-[#3B82F6]"
                                 />
-                              </div>
-                              <span
-                                className={`text-sm font-medium ${
-                                  service.successRate >= 90
-                                    ? "text-[#22C55E]"
-                                    : service.successRate >= 80
-                                    ? "text-[#F59E0B]"
-                                    : "text-[#EF4444]"
+                              </th>
+                              <th className="px-4 py-3 text-left text-xs font-medium text-[#94A3B8] uppercase">
+                                Service Name
+                              </th>
+                              <th className="px-4 py-3 text-left text-xs font-medium text-[#94A3B8] uppercase">
+                                Category
+                              </th>
+                              <th className="px-4 py-3 text-left text-xs font-medium text-[#94A3B8] uppercase">
+                                Status
+                              </th>
+                              <th className="px-4 py-3 text-left text-xs font-medium text-[#94A3B8] uppercase">
+                                Actions
+                              </th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-[rgba(255,255,255,0.05)]">
+                            {filteredServices.map((service) => (
+                              <tr
+                                key={service.id}
+                                className={`hover:bg-[rgba(255,255,255,0.02)] transition-colors cursor-pointer ${
+                                  selectedServiceForCountries?.id === service.id ? "bg-[rgba(59,130,246,0.05)]" : ""
                                 }`}
+                                onClick={() => handleSelectService(service.id)}
                               >
-                                {service.successRate}%
-                              </span>
-                            </div>
-                          </td>
-                          <td className="px-4 py-3">
-                            <span className="text-[#94A3B8] text-sm">{service.orders.toLocaleString()}</span>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                                <td className="px-4 py-3">
+                                  <input
+                                    type="checkbox"
+                                    checked={selectedServices.includes(service.id)}
+                                    onChange={() => handleSelectService(service.id)}
+                                    className="w-4 h-4 rounded border-[rgba(255,255,255,0.3)] bg-[rgba(0,0,0,0.4)] checked:bg-[#3B82F6]"
+                                    onClick={(e) => e.stopPropagation()}
+                                  />
+                                </td>
+                                <td className="px-4 py-3 text-white text-sm font-medium">{service.name}</td>
+                                <td className="px-4 py-3 text-[#94A3B8] text-sm capitalize">{service.category || "—"}</td>
+                                <td className="px-4 py-3">
+                                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                    service.isActive !== false
+                                      ? "bg-[rgba(34,197,94,0.1)] text-[#22C55E]"
+                                      : "bg-[rgba(239,68,68,0.1)] text-[#EF4444]"
+                                  }`}>
+                                    {service.isActive !== false ? "Active" : "Inactive"}
+                                  </span>
+                                </td>
+                                <td className="px-4 py-3">
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleViewServiceCountries(service);
+                                    }}
+                                    className="px-3 py-1.5 rounded-lg bg-[rgba(59,130,246,0.15)] hover:bg-[rgba(59,130,246,0.25)] text-[#3B82F6] text-xs font-medium transition-colors flex items-center gap-1"
+                                  >
+                                    <Globe className="w-3 h-3" />
+                                    View Countries
+                                  </button>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </>
+                  );
+                })()}
               </div>
+
+              {/* Countries / Products for selected service */}
+              {selectedServiceForCountries && (
+                <div>
+                  <h3 className="text-white text-lg font-semibold mb-4 flex items-center gap-2">
+                    <Globe className="w-5 h-5" />
+                    Countries for {selectedServiceForCountries.name}
+                  </h3>
+
+                  {isCountriesLoading ? (
+                    <div className="flex items-center justify-center py-8">
+                      <Loader2 className="w-6 h-6 text-[#3B82F6] animate-spin" />
+                      <span className="text-[#94A3B8] text-sm ml-3">Loading countries...</span>
+                    </div>
+                  ) : serviceCountries.length === 0 ? (
+                    <div className="text-center py-8 text-[#64748B]">No countries available for this service</div>
+                  ) : (() => {
+                    const filteredCountries = serviceCountries.filter((p) =>
+                      p.country.name.toLowerCase().includes(countrySearchQuery.toLowerCase()) ||
+                      p.country.code.toLowerCase().includes(countrySearchQuery.toLowerCase())
+                    );
+                    return (
+                      <>
+                        <div className="relative mb-3">
+                          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#64748B]" />
+                          <input
+                            type="text"
+                            placeholder="Search countries..."
+                            value={countrySearchQuery}
+                            onChange={(e) => setCountrySearchQuery(e.target.value)}
+                            className="w-full pl-10 pr-4 py-2.5 rounded-lg bg-[rgba(255,255,255,0.05)] border border-[rgba(255,255,255,0.1)] text-white text-sm placeholder:text-[#64748B] focus:outline-none focus:ring-2 focus:ring-[#3B82F6]"
+                          />
+                          {countrySearchQuery && (
+                            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[#64748B] text-xs">
+                              {filteredCountries.length} of {serviceCountries.length}
+                            </span>
+                          )}
+                        </div>
+                        <div className="rounded-lg border border-[rgba(255,255,255,0.1)] max-h-[300px] overflow-y-auto">
+                          <table className="w-full">
+                            <thead className="sticky top-0 z-10">
+                              <tr className="border-b border-[rgba(255,255,255,0.1)] bg-[#0F172A]">
+                                <th className="px-4 py-3 text-left text-xs font-medium text-[#94A3B8] uppercase">Country</th>
+                                <th className="px-4 py-3 text-left text-xs font-medium text-[#94A3B8] uppercase">Price</th>
+                                <th className="px-4 py-3 text-left text-xs font-medium text-[#94A3B8] uppercase">Provider Price</th>
+                                <th className="px-4 py-3 text-left text-xs font-medium text-[#94A3B8] uppercase">Available</th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-[rgba(255,255,255,0.05)]">
+                              {filteredCountries.map((product) => (
+                                <tr key={product.id} className="hover:bg-[rgba(255,255,255,0.02)] transition-colors">
+                                  <td className="px-4 py-3 text-white text-sm font-medium">
+                                    {product.country.name} ({product.country.code})
+                                  </td>
+                                  <td className="px-4 py-3 text-[#22C55E] text-sm font-medium">${product.price}</td>
+                                  <td className="px-4 py-3 text-[#94A3B8] text-sm">{product.providerPrice ? `$${product.providerPrice}` : "—"}</td>
+                                  <td className="px-4 py-3">
+                                    <span className={`text-sm font-medium ${product.availableCount > 0 ? "text-[#22C55E]" : "text-[#EF4444]"}`}>
+                                      {product.availableCount.toLocaleString()}
+                                    </span>
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      </>
+                    );
+                  })()}
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -1305,6 +1459,60 @@ export default function AdminSmsServicesPage() {
               ))}
             </div>
 
+            {/* Country Selection */}
+            <div className="mb-6">
+              <label className="text-white text-sm font-medium mb-2 block">
+                Country <span className="text-[#EF4444]">*</span>
+              </label>
+              {isVipCountriesLoading ? (
+                <div className="flex items-center gap-2 py-3">
+                  <Loader2 className="w-4 h-4 text-[#3B82F6] animate-spin" />
+                  <span className="text-[#94A3B8] text-sm">Loading countries...</span>
+                </div>
+              ) : (
+                <>
+                  <div className="relative mb-2">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#64748B]" />
+                    <input
+                      type="text"
+                      placeholder="Search countries..."
+                      value={vipCountrySearch}
+                      onChange={(e) => setVipCountrySearch(e.target.value)}
+                      className="w-full pl-10 pr-4 py-2.5 rounded-lg bg-[rgba(255,255,255,0.05)] border border-[rgba(255,255,255,0.1)] text-white text-sm placeholder:text-[#64748B] focus:outline-none focus:ring-2 focus:ring-[#F59E0B]"
+                    />
+                  </div>
+                  <div className="max-h-[180px] overflow-y-auto rounded-lg border border-[rgba(255,255,255,0.1)] divide-y divide-[rgba(255,255,255,0.05)]">
+                    {vipCountries
+                      .filter((c) =>
+                        c.name.toLowerCase().includes(vipCountrySearch.toLowerCase()) ||
+                        c.code.toLowerCase().includes(vipCountrySearch.toLowerCase())
+                      )
+                      .map((country) => (
+                        <label
+                          key={country.id}
+                          className={`flex items-center gap-3 px-4 py-2.5 cursor-pointer transition-colors ${
+                            selectedVipCountryId === country.id
+                              ? "bg-[rgba(245,158,11,0.1)]"
+                              : "hover:bg-[rgba(255,255,255,0.03)]"
+                          }`}
+                        >
+                          <input
+                            type="radio"
+                            name="vipCountry"
+                            value={country.id}
+                            checked={selectedVipCountryId === country.id}
+                            onChange={() => setSelectedVipCountryId(country.id)}
+                            className="w-4 h-4"
+                          />
+                          <span className="text-white text-sm">{country.name}</span>
+                          <span className="text-[#64748B] text-xs">({country.code})</span>
+                        </label>
+                      ))}
+                  </div>
+                </>
+              )}
+            </div>
+
             <div className="flex items-center justify-end gap-3">
               <button
                 onClick={() => {
@@ -1316,7 +1524,7 @@ export default function AdminSmsServicesPage() {
               </button>
               <button
                 onClick={handleAddToVIP}
-                disabled={isLoading}
+                disabled={isLoading || !selectedVipCountryId}
                 className="px-5 py-2.5 rounded-lg bg-[#F59E0B] hover:bg-[#D97706] text-white text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
               >
                 {isLoading ? (
