@@ -322,8 +322,30 @@ export const API_ENDPOINTS = {
     // Admin Blog
     BLOG: {
       ROOT: '/admin/blog',
+      BULK: '/admin/blog/bulk',
       STATS: '/admin/blog/stats',
+      TAGS: '/admin/blog/tags',
       DETAIL: (id: string) => `/admin/blog/${id}`,
+      PUBLISH: (id: string) => `/admin/blog/${id}/publish`,
+      UNPUBLISH: (id: string) => `/admin/blog/${id}/unpublish`,
+      ARCHIVE: (id: string) => `/admin/blog/${id}/archive`,
+    },
+
+    // Admin Blog Categories
+    BLOG_CATEGORIES: {
+      ROOT: '/admin/blog/categories',
+      PARENTS: '/admin/blog/categories/parents',
+      REORDER: '/admin/blog/categories/reorder',
+      DETAIL: (id: string) => `/admin/blog/categories/${id}`,
+      TOGGLE: (id: string) => `/admin/blog/categories/${id}/toggle`,
+    },
+
+    // Admin Blog Authors
+    BLOG_AUTHORS: {
+      ROOT: '/admin/blog/authors',
+      RANDOM: '/admin/blog/authors/random',
+      DETAIL: (id: string) => `/admin/blog/authors/${id}`,
+      TOGGLE: (id: string) => `/admin/blog/authors/${id}/toggle`,
     },
 
     // Admin Reviews

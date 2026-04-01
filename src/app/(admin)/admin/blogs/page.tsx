@@ -6,127 +6,98 @@ import { AdminGlassCard } from '@/components/admin/glass-card';
 import { AdminFormInput } from '@/components/admin/form-input';
 import { AdminModal } from '@/components/admin/modal';
 import { toast } from 'sonner';
-import { Plus, Edit, Trash2, Upload, Copy, Loader2 } from "lucide-react";
+import { Plus, Edit, Trash2, Upload, Copy, Loader2, Eye, X } from "lucide-react";
 import {
   getBlogPosts,
   createBlogPost,
   updateBlogPost,
   deleteBlogPost,
+  publishBlogPost,
+  unpublishBlogPost,
+  getBlogCategories,
+  createBlogCategory,
+  updateBlogCategory,
+  deleteBlogCategory,
+  getBlogAuthors,
+  createBlogAuthor,
+  updateBlogAuthor,
+  deleteBlogAuthor,
+  bulkCreateBlogPosts,
   type BlogPost,
+  type BlogCategory,
+  type BlogAuthor,
 } from '@/lib/api/adminModulesApi';
-
-// Mock data
-const blogsData = [
-  {
-    id: "2",
-    title: "2",
-    author: "Pirates",
-    slug: "slug-2",
-    publishedDate: "Jan 19, 2026 07:18 AM",
-    createdDate: "Jan 20, 2026 22:14 AM",
-    category: "TV / cheap iptv solutions",
-    tags: ["2"],
-    status: "published",
-    image: "https://images.unsplash.com/photo-1522869635100-9f4c5e86aa37?w=400",
-  },
-  {
-    id: "1",
-    title: "1",
-    author: "Jubayer Ahmed",
-    slug: "slug-1",
-    publishedDate: "Jan 19, 2026 07:18 AM",
-    createdDate: "Jan 19, 2026 07:18 AM",
-    category: "TV / cheap iptv solutions",
-    tags: ["1"],
-    status: "published",
-    image: "https://images.unsplash.com/photo-1522869635100-9f4c5e86aa37?w=400",
-  },
-  {
-    id: "one",
-    title: "one",
-    author: "Jubayer Ahmed",
-    slug: "slug-one",
-    publishedDate: "Jan 18, 2026 12:32 AM",
-    createdDate: "Jan 18, 2026 12:32 AM",
-    category: "TV / cheap iptv solutions",
-    tags: ["fasdjf"],
-    status: "published",
-    image: "https://images.unsplash.com/photo-1522869635100-9f4c5e86aa37?w=400",
-  },
-];
-
-const categoriesData = [
-  { id: "1", name: "IP-TV", slug: "ip-tv" },
-  { id: "2", name: "test the category", slug: "test-the-category" },
-];
-
-const authorsData = [
-  { id: "1", name: "Alan", description: "Awesome blog author/seo/graphicdesign" },
-  { id: "2", name: "new", description: "Test" },
-  { id: "3", name: "Pirates", description: "Python Dojo" },
-  { id: "4", name: "Jubayer Ahmed", description: "Javascript Developer" },
-];
 
 export default function AdminBlogsPage() {
   const [activeTab, setActiveTab] = useState<"manual" | "auto" | "category" | "author" | "image">("manual");
-  const [categorySubTab, setGategorySubTab] = useState<"category" | "subcategory">("category");
+  const [categorySubTab, setCategorySubTab] = useState<"category" | "subcategory">("category");
 
-  const [blogs, setBlogs] = useState(blogsData);
-  const [apiBlogPosts, setApiBlogPosts] = useState<BlogPost[]>([]);
-  const [categories, setCategories] = useState(categoriesData);
-  const [authors, setAuthors] = useState(authorsData);
+  // Data states
+  const [blogs, setBlogs] = useState<BlogPost[]>([]);
+  const [categories, setCategories] = useState<BlogCategory[]>([]);
+  const [authors, setAuthors] = useState<BlogAuthor[]>([]);
 
-  const [isCreateBlogModalOpen, setIsCreateBlogModalOpen] = useState(false);
-  const [isCreateCategoryModalOpen, setIsCreateCategoryModalOpen] = useState(false);
-  const [isCreateAuthorModalOpen, setIsCreateAuthorModalOpen] = useState(false);
-  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-  const [selectedItem, setSelectedItem] = useState<any>(null);
+  // Loading states
   const [isLoading, setIsLoading] = useState(false);
   const [isPageLoading, setIsPageLoading] = useState(true);
 
-  const fetchBlogPosts = useCallback(async () => {
-    try {
-      setIsPageLoading(true);
-      const response = await getBlogPosts();
-      setApiBlogPosts(response.data);
-      // Transform API data to match local format
-      const transformedBlogs = response.data.map(post => ({
-        id: post.id,
-        title: post.title,
-        author: post.author?.username || 'Unknown',
-        slug: post.slug,
-        publishedDate: post.publishedAt ? new Date(post.publishedAt).toLocaleString() : 'Not published',
-        createdDate: new Date(post.createdAt).toLocaleString(),
-        category: post.category || 'Uncategorized',
-        tags: post.tags || [],
-        status: post.status,
-        image: post.featuredImage || '',
-      }));
-      setBlogs(transformedBlogs.length > 0 ? transformedBlogs : blogsData);
-    } catch (error) {
-      console.error('Failed to fetch blog posts:', error);
-      // Keep mock data on error
-    } finally {
-      setIsPageLoading(false);
-    }
-  }, []);
+  // Modal states
+  const [isCreateBlogModalOpen, setIsCreateBlogModalOpen] = useState(false);
+  const [isEditBlogModalOpen, setIsEditBlogModalOpen] = useState(false);
+  const [isCreateCategoryModalOpen, setIsCreateCategoryModalOpen] = useState(false);
+  const [isEditCategoryModalOpen, setIsEditCategoryModalOpen] = useState(false);
+  const [isCreateAuthorModalOpen, setIsCreateAuthorModalOpen] = useState(false);
+  const [isEditAuthorModalOpen, setIsEditAuthorModalOpen] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [deleteType, setDeleteType] = useState<'blog' | 'category' | 'author'>('blog');
 
-  useEffect(() => {
-    fetchBlogPosts();
-  }, [fetchBlogPosts]);
+  // Selected items
+  const [selectedBlog, setSelectedBlog] = useState<BlogPost | null>(null);
+  const [selectedCategory, setSelectedCategory] = useState<BlogCategory | null>(null);
+  const [selectedAuthor, setSelectedAuthor] = useState<BlogAuthor | null>(null);
+
+  // Filter
+  const [statusFilter, setStatusFilter] = useState<string>('all');
+
+  // Form states
+  const [blogForm, setBlogForm] = useState({
+    title: '',
+    slug: '',
+    excerpt: '',
+    content: '',
+    featuredImage: '',
+    categoryId: '',
+    authorId: '',
+    tags: '',
+    status: 'DRAFT' as 'DRAFT' | 'PUBLISHED' | 'ARCHIVED',
+  });
+
+  const [categoryForm, setCategoryForm] = useState({
+    name: '',
+    slug: '',
+    description: '',
+    parentId: '',
+  });
+
+  const [authorForm, setAuthorForm] = useState({
+    name: '',
+    slug: '',
+    bio: '',
+    avatar: '',
+    email: '',
+    website: '',
+  });
 
   // Auto Blog Upload State
   const [autoBlogConfig, setAutoBlogConfig] = useState({
     category: "",
-    subCategory: "",
     author: "",
   });
 
-  const [blogPost, setBlogPost] = useState({
+  const [blogPostDraft, setBlogPostDraft] = useState({
     title: "",
     content: "",
     tags: "",
-    image: null as File | null,
   });
 
   const [scheduling, setScheduling] = useState({
@@ -138,104 +109,428 @@ export default function AdminBlogsPage() {
   // Image Editor State
   const [imageConfig, setImageConfig] = useState({
     searchName: "",
-    crop1: "2",
-    crop2: "4",
-    crop3: "10",
-    crop4: "15",
-    saturation1: "1",
-    saturation2: "15",
-    brightness1: "5",
-    brightness2: "10",
-    contrast1: "5",
-    contrast2: "10",
-    rotation1: "-1",
-    rotation2: "1",
-    noise1: "1",
-    noise2: "2",
+    crop1: "2", crop2: "4", crop3: "10", crop4: "15",
+    saturation1: "1", saturation2: "15",
+    brightness1: "5", brightness2: "10",
+    contrast1: "5", contrast2: "10",
+    rotation1: "-1", rotation2: "1",
+    noise1: "1", noise2: "2",
     convertWebP: true,
     stripEXIF: true,
     bypassMode: false,
   });
 
-  const [newCategory, setNewCategory] = useState({ name: "", slug: "" });
-  const [newAuthor, setNewAuthor] = useState({ name: "", description: "" });
+  // Fetch functions
+  const fetchBlogPosts = useCallback(async () => {
+    try {
+      const params: any = {};
+      if (statusFilter !== 'all') {
+        params.status = statusFilter;
+      }
+      const response = await getBlogPosts(params);
+      setBlogs(response.data);
+    } catch (error) {
+      console.error('Failed to fetch blog posts:', error);
+      toast.error('Failed to load blog posts');
+    }
+  }, [statusFilter]);
 
-  const handleUnpublish = async (blog: any) => {
-    setBlogs(blogs.map((b) => (b.id === blog.id ? { ...b, status: "draft" } : b)));
-    toast.success("Blog unpublished successfully!");
+  const fetchCategories = useCallback(async () => {
+    try {
+      const data = await getBlogCategories(true);
+      setCategories(data);
+    } catch (error) {
+      console.error('Failed to fetch categories:', error);
+    }
+  }, []);
+
+  const fetchAuthors = useCallback(async () => {
+    try {
+      const data = await getBlogAuthors(true);
+      setAuthors(data);
+    } catch (error) {
+      console.error('Failed to fetch authors:', error);
+    }
+  }, []);
+
+  useEffect(() => {
+    const loadData = async () => {
+      setIsPageLoading(true);
+      await Promise.all([fetchBlogPosts(), fetchCategories(), fetchAuthors()]);
+      setIsPageLoading(false);
+    };
+    loadData();
+  }, [fetchBlogPosts, fetchCategories, fetchAuthors]);
+
+  // Blog handlers
+  const handleCreateBlog = async () => {
+    if (!blogForm.title || !blogForm.content) {
+      toast.error('Title and content are required');
+      return;
+    }
+    setIsLoading(true);
+    try {
+      await createBlogPost({
+        title: blogForm.title,
+        slug: blogForm.slug || undefined,
+        excerpt: blogForm.excerpt || undefined,
+        content: blogForm.content,
+        featuredImage: blogForm.featuredImage || undefined,
+        categoryId: blogForm.categoryId || undefined,
+        authorId: blogForm.authorId || undefined,
+        tags: blogForm.tags ? blogForm.tags.split(',').map(t => t.trim()) : [],
+        status: blogForm.status,
+      });
+      toast.success('Blog post created successfully!');
+      setIsCreateBlogModalOpen(false);
+      resetBlogForm();
+      await fetchBlogPosts();
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Failed to create blog post');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleEditBlog = async () => {
+    if (!selectedBlog || !blogForm.title || !blogForm.content) {
+      toast.error('Title and content are required');
+      return;
+    }
+    setIsLoading(true);
+    try {
+      await updateBlogPost(selectedBlog.id, {
+        title: blogForm.title,
+        slug: blogForm.slug || undefined,
+        excerpt: blogForm.excerpt || undefined,
+        content: blogForm.content,
+        featuredImage: blogForm.featuredImage || undefined,
+        categoryId: blogForm.categoryId || undefined,
+        authorId: blogForm.authorId || undefined,
+        tags: blogForm.tags ? blogForm.tags.split(',').map(t => t.trim()) : [],
+        status: blogForm.status,
+      });
+      toast.success('Blog post updated successfully!');
+      setIsEditBlogModalOpen(false);
+      setSelectedBlog(null);
+      resetBlogForm();
+      await fetchBlogPosts();
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Failed to update blog post');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handlePublishToggle = async (blog: BlogPost) => {
+    try {
+      if (blog.status === 'PUBLISHED') {
+        await unpublishBlogPost(blog.id);
+        toast.success('Blog unpublished successfully!');
+      } else {
+        await publishBlogPost(blog.id);
+        toast.success('Blog published successfully!');
+      }
+      await fetchBlogPosts();
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Failed to update blog status');
+    }
   };
 
   const handleDeleteBlog = async () => {
+    if (!selectedBlog) return;
     setIsLoading(true);
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-    setBlogs(blogs.filter((b) => b.id !== selectedItem.id));
-    setIsLoading(false);
-    setIsDeleteModalOpen(false);
-    toast.success("Blog deleted successfully!");
+    try {
+      await deleteBlogPost(selectedBlog.id);
+      toast.success('Blog deleted successfully!');
+      setIsDeleteModalOpen(false);
+      setSelectedBlog(null);
+      await fetchBlogPosts();
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Failed to delete blog');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
+  // Bulk create handler
+  const handleBulkCreate = async () => {
+    if (!autoBlogConfig.category) {
+      toast.error('Please select a category');
+      return;
+    }
+    if (!blogPostDraft.title || !blogPostDraft.content) {
+      toast.error('Title and content are required');
+      return;
+    }
+    if (!scheduling.authorRotation && !autoBlogConfig.author) {
+      toast.error('Please select an author or enable author rotation');
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const result = await bulkCreateBlogPosts({
+        categoryId: autoBlogConfig.category,
+        authorId: autoBlogConfig.author || undefined,
+        title: blogPostDraft.title,
+        content: blogPostDraft.content,
+        tags: blogPostDraft.tags ? blogPostDraft.tags.split(',').map(t => t.trim()).filter(Boolean) : [],
+        minHoursBetweenPosts: parseInt(scheduling.minHours) || 8,
+        maxHoursBetweenPosts: parseInt(scheduling.maxHours) || 12,
+        authorRotation: scheduling.authorRotation,
+        count: 1,
+      });
+      toast.success(result.message);
+      // Reset form
+      setBlogPostDraft({ title: '', content: '', tags: '' });
+      await fetchBlogPosts();
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Failed to create bulk blogs');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Category handlers
   const handleCreateCategory = async () => {
-    if (!newCategory.name) {
-      toast.error("Please enter category name");
+    if (!categoryForm.name) {
+      toast.error('Category name is required');
       return;
     }
     setIsLoading(true);
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-    setCategories([...categories, { id: String(categories.length + 1), ...newCategory }]);
-    setNewCategory({ name: "", slug: "" });
-    setIsLoading(false);
-    setIsCreateCategoryModalOpen(false);
-    toast.success("Category created successfully!");
+    try {
+      await createBlogCategory({
+        name: categoryForm.name,
+        slug: categoryForm.slug || undefined,
+        description: categoryForm.description || undefined,
+        parentId: categoryForm.parentId || undefined,
+      });
+      toast.success('Category created successfully!');
+      setIsCreateCategoryModalOpen(false);
+      resetCategoryForm();
+      await fetchCategories();
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Failed to create category');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleEditCategory = async () => {
+    if (!selectedCategory || !categoryForm.name) {
+      toast.error('Category name is required');
+      return;
+    }
+    setIsLoading(true);
+    try {
+      await updateBlogCategory(selectedCategory.id, {
+        name: categoryForm.name,
+        slug: categoryForm.slug || undefined,
+        description: categoryForm.description || undefined,
+        parentId: categoryForm.parentId || undefined,
+      });
+      toast.success('Category updated successfully!');
+      setIsEditCategoryModalOpen(false);
+      setSelectedCategory(null);
+      resetCategoryForm();
+      await fetchCategories();
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Failed to update category');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleDeleteCategory = async () => {
+    if (!selectedCategory) return;
     setIsLoading(true);
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-    setCategories(categories.filter((c) => c.id !== selectedItem.id));
-    setIsLoading(false);
-    setIsDeleteModalOpen(false);
-    toast.success("Category deleted successfully!");
+    try {
+      await deleteBlogCategory(selectedCategory.id);
+      toast.success('Category deleted successfully!');
+      setIsDeleteModalOpen(false);
+      setSelectedCategory(null);
+      await fetchCategories();
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Failed to delete category');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
+  // Author handlers
   const handleCreateAuthor = async () => {
-    if (!newAuthor.name) {
-      toast.error("Please enter author name");
+    if (!authorForm.name) {
+      toast.error('Author name is required');
       return;
     }
     setIsLoading(true);
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-    setAuthors([...authors, { id: String(authors.length + 1), ...newAuthor }]);
-    setNewAuthor({ name: "", description: "" });
-    setIsLoading(false);
-    setIsCreateAuthorModalOpen(false);
-    toast.success("Author created successfully!");
+    try {
+      await createBlogAuthor({
+        name: authorForm.name,
+        slug: authorForm.slug || undefined,
+        bio: authorForm.bio || undefined,
+        avatar: authorForm.avatar || undefined,
+        email: authorForm.email || undefined,
+        website: authorForm.website || undefined,
+      });
+      toast.success('Author created successfully!');
+      setIsCreateAuthorModalOpen(false);
+      resetAuthorForm();
+      await fetchAuthors();
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Failed to create author');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleEditAuthor = async () => {
+    if (!selectedAuthor || !authorForm.name) {
+      toast.error('Author name is required');
+      return;
+    }
+    setIsLoading(true);
+    try {
+      await updateBlogAuthor(selectedAuthor.id, {
+        name: authorForm.name,
+        slug: authorForm.slug || undefined,
+        bio: authorForm.bio || undefined,
+        avatar: authorForm.avatar || undefined,
+        email: authorForm.email || undefined,
+        website: authorForm.website || undefined,
+      });
+      toast.success('Author updated successfully!');
+      setIsEditAuthorModalOpen(false);
+      setSelectedAuthor(null);
+      resetAuthorForm();
+      await fetchAuthors();
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Failed to update author');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleDeleteAuthor = async () => {
+    if (!selectedAuthor) return;
     setIsLoading(true);
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-    setAuthors(authors.filter((a) => a.id !== selectedItem.id));
-    setIsLoading(false);
-    setIsDeleteModalOpen(false);
-    toast.success("Author deleted successfully!");
+    try {
+      await deleteBlogAuthor(selectedAuthor.id);
+      toast.success('Author deleted successfully!');
+      setIsDeleteModalOpen(false);
+      setSelectedAuthor(null);
+      await fetchAuthors();
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Failed to delete author');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const handleAddMore = () => {
-    toast.info("Add more blog posts functionality");
+  // Reset form functions
+  const resetBlogForm = () => {
+    setBlogForm({
+      title: '', slug: '', excerpt: '', content: '', featuredImage: '',
+      categoryId: '', authorId: '', tags: '', status: 'DRAFT',
+    });
   };
 
-  const handleCreateBulkBlogs = async () => {
-    setIsLoading(true);
-    await new Promise((resolve) => setTimeout(resolve, 2000));
-    setIsLoading(false);
-    toast.success("Bulk blogs created successfully!");
+  const resetCategoryForm = () => {
+    setCategoryForm({ name: '', slug: '', description: '', parentId: '' });
   };
 
-  const handleProcessImages = async () => {
-    setIsLoading(true);
-    await new Promise((resolve) => setTimeout(resolve, 2000));
-    setIsLoading(false);
-    toast.success("Images processed successfully!");
+  const resetAuthorForm = () => {
+    setAuthorForm({ name: '', slug: '', bio: '', avatar: '', email: '', website: '' });
+  };
+
+  // Open edit modals
+  const openEditBlog = (blog: BlogPost) => {
+    setSelectedBlog(blog);
+    setBlogForm({
+      title: blog.title,
+      slug: blog.slug,
+      excerpt: blog.excerpt || '',
+      content: blog.content,
+      featuredImage: blog.featuredImage || '',
+      categoryId: blog.categoryId || '',
+      authorId: blog.authorId || '',
+      tags: blog.tags.join(', '),
+      status: blog.status,
+    });
+    setIsEditBlogModalOpen(true);
+  };
+
+  const openEditCategory = (category: BlogCategory) => {
+    setSelectedCategory(category);
+    setCategoryForm({
+      name: category.name,
+      slug: category.slug,
+      description: category.description || '',
+      parentId: category.parentId || '',
+    });
+    setIsEditCategoryModalOpen(true);
+  };
+
+  const openEditAuthor = (author: BlogAuthor) => {
+    setSelectedAuthor(author);
+    setAuthorForm({
+      name: author.name,
+      slug: author.slug,
+      bio: author.bio || '',
+      avatar: author.avatar || '',
+      email: author.email || '',
+      website: author.website || '',
+    });
+    setIsEditAuthorModalOpen(true);
+  };
+
+  // Open delete modals
+  const openDeleteBlog = (blog: BlogPost) => {
+    setSelectedBlog(blog);
+    setDeleteType('blog');
+    setIsDeleteModalOpen(true);
+  };
+
+  const openDeleteCategory = (category: BlogCategory) => {
+    setSelectedCategory(category);
+    setDeleteType('category');
+    setIsDeleteModalOpen(true);
+  };
+
+  const openDeleteAuthor = (author: BlogAuthor) => {
+    setSelectedAuthor(author);
+    setDeleteType('author');
+    setIsDeleteModalOpen(true);
+  };
+
+  const handleDelete = () => {
+    if (deleteType === 'blog') handleDeleteBlog();
+    else if (deleteType === 'category') handleDeleteCategory();
+    else if (deleteType === 'author') handleDeleteAuthor();
+  };
+
+  const getDeleteItemName = () => {
+    if (deleteType === 'blog') return selectedBlog?.title;
+    if (deleteType === 'category') return selectedCategory?.name;
+    if (deleteType === 'author') return selectedAuthor?.name;
+    return '';
+  };
+
+  const formatDate = (dateString?: string) => {
+    if (!dateString) return 'Not published';
+    return new Date(dateString).toLocaleString('en-US', {
+      year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit',
+    });
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'PUBLISHED': return 'bg-[#22C55E]/20 text-[#22C55E]';
+      case 'DRAFT': return 'bg-[#F59E0B]/20 text-[#F59E0B]';
+      case 'ARCHIVED': return 'bg-[#64748B]/20 text-[#64748B]';
+      default: return 'bg-[#64748B]/20 text-[#64748B]';
+    }
   };
 
   const tabs = [
@@ -245,6 +540,18 @@ export default function AdminBlogsPage() {
     { id: "author", label: "Author Pool" },
     { id: "image", label: "Image Auto Editor" },
   ];
+
+  // Get parent categories for dropdown
+  const parentCategories = categories.filter(c => !c.parentId);
+  const subCategories = categories.filter(c => c.parentId);
+
+  if (isPageLoading) {
+    return (
+      <div className="p-8 flex items-center justify-center min-h-[400px]">
+        <Loader2 className="w-8 h-8 text-[#3B82F6] animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <div className="p-4 lg:p-8">
@@ -272,13 +579,18 @@ export default function AdminBlogsPage() {
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-white text-xl font-semibold">Manage Blogs</h2>
             <div className="flex items-center gap-3">
-              <select className="bg-[rgba(255,255,255,0.08)] border border-[rgba(255,255,255,0.18)] rounded-lg px-4 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#3B82F6]">
-                <option>All Blogs</option>
-                <option>Published</option>
-                <option>Draft</option>
+              <select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+                className="bg-[rgba(255,255,255,0.08)] border border-[rgba(255,255,255,0.18)] rounded-lg px-4 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#3B82F6] [&>option]:bg-[#1E293B] [&>option]:text-white"
+              >
+                <option value="all">All Blogs</option>
+                <option value="PUBLISHED">Published</option>
+                <option value="DRAFT">Draft</option>
+                <option value="ARCHIVED">Archived</option>
               </select>
               <button
-                onClick={() => setIsCreateBlogModalOpen(true)}
+                onClick={() => { resetBlogForm(); setIsCreateBlogModalOpen(true); }}
                 className="px-4 py-2 rounded-lg bg-[#06B6D4] hover:bg-[#0891B2] text-white text-sm font-medium transition-colors flex items-center gap-2"
               >
                 <Plus className="w-4 h-4" />
@@ -287,205 +599,168 @@ export default function AdminBlogsPage() {
             </div>
           </div>
 
-          <div className="space-y-4">
-            {blogs.map((blog) => (
-              <div
-                key={blog.id}
-                className="p-6 rounded-xl bg-[rgba(0,0,0,0.3)] border border-[rgba(255,255,255,0.18)]"
-              >
-                <div className="flex items-start gap-4">
-                  {/* Blog Image */}
-                  <img
-                    src={blog.image}
-                    alt={blog.title}
-                    className="w-20 h-20 rounded-lg object-cover flex-shrink-0"
-                  />
+          {blogs.length === 0 ? (
+            <div className="text-center py-12">
+              <p className="text-[#64748B]">No blog posts found. Create your first blog post!</p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {blogs.map((blog) => (
+                <div
+                  key={blog.id}
+                  className="p-6 rounded-xl bg-[rgba(0,0,0,0.3)] border border-[rgba(255,255,255,0.18)]"
+                >
+                  <div className="flex items-start gap-4">
+                    {blog.featuredImage && (
+                      <img
+                        src={blog.featuredImage}
+                        alt={blog.title}
+                        className="w-20 h-20 rounded-lg object-cover flex-shrink-0"
+                      />
+                    )}
 
-                  {/* Blog Content */}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-start justify-between mb-2">
-                      <div>
-                        <h3 className="text-white text-lg font-semibold mb-1">{blog.title}</h3>
-                        <p className="text-[#94A3B8] text-sm">
-                          By {blog.author} • {blog.publishedDate}
-                        </p>
-                        <p className="text-[#64748B] text-xs">Published: {blog.publishedDate}</p>
-                      </div>
-                      <span className="px-3 py-1 rounded-full bg-[#22C55E]/20 text-[#22C55E] text-xs font-medium capitalize">
-                        {blog.status}
-                      </span>
-                    </div>
-
-                    <p className="text-[#3B82F6] text-sm mb-3">📺 {blog.category}</p>
-
-                    {/* Tags */}
-                    <div className="flex items-center gap-2 mb-4">
-                      {blog.tags.map((tag, index) => (
-                        <span
-                          key={index}
-                          className="px-3 py-1 rounded-full bg-[#06B6D4]/20 text-[#06B6D4] text-xs"
-                        >
-                          {tag}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-start justify-between mb-2">
+                        <div>
+                          <h3 className="text-white text-lg font-semibold mb-1">{blog.title}</h3>
+                          <p className="text-[#94A3B8] text-sm">
+                            By {blog.author?.name || 'Unknown'} • {formatDate(blog.publishedAt)}
+                          </p>
+                        </div>
+                        <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(blog.status)}`}>
+                          {blog.status}
                         </span>
-                      ))}
+                      </div>
+
+                      {blog.category && (
+                        <p className="text-[#3B82F6] text-sm mb-3">📁 {blog.category.name}</p>
+                      )}
+
+                      {blog.tags.length > 0 && (
+                        <div className="flex items-center gap-2 mb-4 flex-wrap">
+                          {blog.tags.map((tag, index) => (
+                            <span
+                              key={index}
+                              className="px-3 py-1 rounded-full bg-[#06B6D4]/20 text-[#06B6D4] text-xs"
+                            >
+                              {tag}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => handlePublishToggle(blog)}
+                          className={`px-4 py-2 rounded-lg text-white text-sm font-medium transition-colors ${
+                            blog.status === 'PUBLISHED'
+                              ? 'bg-[#F59E0B] hover:bg-[#D97706]'
+                              : 'bg-[#22C55E] hover:bg-[#16A34A]'
+                          }`}
+                        >
+                          {blog.status === 'PUBLISHED' ? 'Unpublish' : 'Publish'}
+                        </button>
+                        <button
+                          onClick={() => openEditBlog(blog)}
+                          className="px-4 py-2 rounded-lg bg-[#3B82F6] hover:bg-[#2563EB] text-white text-sm font-medium transition-colors flex items-center gap-2"
+                        >
+                          <Edit className="w-4 h-4" />
+                          Edit
+                        </button>
+                        <button
+                          onClick={() => openDeleteBlog(blog)}
+                          className="px-4 py-2 rounded-lg bg-[#EF4444] hover:bg-[#DC2626] text-white text-sm font-medium transition-colors flex items-center gap-2"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                          Delete
+                        </button>
+                      </div>
                     </div>
 
-                    {/* Actions */}
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => handleUnpublish(blog)}
-                        className="px-4 py-2 rounded-lg bg-[#F59E0B] hover:bg-[#D97706] text-white text-sm font-medium transition-colors"
-                      >
-                        Unpublish
-                      </button>
-                      <button className="px-4 py-2 rounded-lg bg-[#3B82F6] hover:bg-[#2563EB] text-white text-sm font-medium transition-colors flex items-center gap-2">
-                        <Edit className="w-4 h-4" />
-                        Edit
-                      </button>
-                      <button
-                        onClick={() => {
-                          setSelectedItem(blog);
-                          setIsDeleteModalOpen(true);
-                        }}
-                        className="px-4 py-2 rounded-lg bg-[#EF4444] hover:bg-[#DC2626] text-white text-sm font-medium transition-colors flex items-center gap-2"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                        Delete
-                      </button>
+                    <div className="text-right text-xs text-[#64748B]">
+                      <p>Slug: {blog.slug}</p>
+                      <p>Views: {blog.viewCount}</p>
+                      <p>Created: {formatDate(blog.createdAt)}</p>
                     </div>
-                  </div>
-
-                  {/* Slug Info */}
-                  <div className="text-right">
-                    <p className="text-[#64748B] text-xs mb-1">Slug: {blog.slug}</p>
-                    <p className="text-[#64748B] text-xs">Created: {blog.createdDate}</p>
                   </div>
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </AdminGlassCard>
       )}
 
       {/* Auto Blog Upload Tab */}
       {activeTab === "auto" && (
         <div className="space-y-6">
-          {/* Blog Configuration */}
           <div className="p-6 rounded-xl bg-[rgba(0,0,0,0.3)] border border-[rgba(255,255,255,0.18)]">
             <h3 className="text-white text-base font-semibold mb-4">📋 Blog Configuration</h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="text-white text-sm font-medium mb-2 block">Sub Category *</label>
+                <label className="text-white text-sm font-medium mb-2 block">Category</label>
                 <select
                   value={autoBlogConfig.category}
                   onChange={(e) => setAutoBlogConfig({ ...autoBlogConfig, category: e.target.value })}
-                  className="w-full bg-[rgba(255,255,255,0.08)] border border-[rgba(255,255,255,0.18)] rounded-lg px-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#3B82F6]"
+                  className="w-full bg-[rgba(255,255,255,0.08)] border border-[rgba(255,255,255,0.18)] rounded-lg px-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#3B82F6] [&>option]:bg-[#1E293B] [&>option]:text-white"
                 >
                   <option value="">Select category</option>
                   {categories.map((cat) => (
-                    <option key={cat.id} value={cat.id}>
-                      {cat.name}
-                    </option>
+                    <option key={cat.id} value={cat.id}>{cat.name}</option>
                   ))}
                 </select>
               </div>
-
               <div>
                 <label className="text-white text-sm font-medium mb-2 block">Author</label>
                 <select
                   value={autoBlogConfig.author}
                   onChange={(e) => setAutoBlogConfig({ ...autoBlogConfig, author: e.target.value })}
-                  className="w-full bg-[rgba(255,255,255,0.08)] border border-[rgba(255,255,255,0.18)] rounded-lg px-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#3B82F6]"
+                  className="w-full bg-[rgba(255,255,255,0.08)] border border-[rgba(255,255,255,0.18)] rounded-lg px-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#3B82F6] [&>option]:bg-[#1E293B] [&>option]:text-white"
                 >
                   <option value="">Random rotation</option>
                   {authors.map((author) => (
-                    <option key={author.id} value={author.id}>
-                      {author.name}
-                    </option>
+                    <option key={author.id} value={author.id}>{author.name}</option>
                   ))}
                 </select>
               </div>
             </div>
           </div>
 
-          {/* Blog Posts */}
           <div className="p-6 rounded-xl bg-[rgba(0,0,0,0.3)] border border-[rgba(255,255,255,0.18)]">
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <h3 className="text-white text-base font-semibold">✏️ Blog Posts *</h3>
-                <p className="text-[#3B82F6] text-xs mt-1">
-                  Each <span className="font-semibold">@search/query.post</span> with 50-word title, content, tags, and image
-                </p>
-              </div>
-              <button
-                onClick={handleAddMore}
-                className="px-4 py-2 rounded-lg bg-[#06B6D4] hover:bg-[#0891B2] text-white text-sm font-medium transition-colors"
-              >
-                + Add More
-              </button>
-            </div>
-
+            <h3 className="text-white text-base font-semibold mb-4">✏️ Blog Post Draft</h3>
             <div className="space-y-4">
-              <div className="p-4 rounded-lg bg-[rgba(255,255,255,0.05)] border border-[rgba(255,255,255,0.18)]">
-                <div className="flex items-center justify-between mb-4">
-                  <h4 className="text-[#3B82F6] text-sm font-semibold">📝 Blog Post #1</h4>
-                  <button className="px-3 py-1.5 rounded-lg bg-[#3B82F6] hover:bg-[#2563EB] text-white text-xs font-medium transition-colors flex items-center gap-2">
-                    <Copy className="w-3 h-3" />
-                    Copy
-                  </button>
-                </div>
-
-                <div className="space-y-4">
-                  <div>
-                    <label className="text-white text-sm font-medium mb-2 block">Title *</label>
-                    <input
-                      type="text"
-                      value={blogPost.title}
-                      onChange={(e) => setBlogPost({ ...blogPost, title: e.target.value })}
-                      placeholder="Enter blog title"
-                      className="w-full bg-[rgba(255,255,255,0.08)] border border-[rgba(255,255,255,0.18)] rounded-lg px-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#3B82F6] placeholder:text-[#64748B]"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="text-white text-sm font-medium mb-2 block">Content</label>
-                    <textarea
-                      value={blogPost.content}
-                      onChange={(e) => setBlogPost({ ...blogPost, content: e.target.value })}
-                      rows={6}
-                      placeholder="Write your blog content here..."
-                      className="w-full bg-[rgba(255,255,255,0.08)] border border-[rgba(255,255,255,0.18)] rounded-lg px-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#3B82F6] resize-none placeholder:text-[#64748B]"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="text-white text-sm font-medium mb-2 block">Tags</label>
-                    <input
-                      type="text"
-                      value={blogPost.tags}
-                      onChange={(e) => setBlogPost({ ...blogPost, tags: e.target.value })}
-                      placeholder="tag1, tag2, tag3"
-                      className="w-full bg-[rgba(255,255,255,0.08)] border border-[rgba(255,255,255,0.18)] rounded-lg px-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#3B82F6] placeholder:text-[#64748B]"
-                    />
-                    <p className="text-[#64748B] text-xs mt-1">Separate tags with commas</p>
-                  </div>
-
-                  <div>
-                    <label className="text-white text-sm font-medium mb-2 block">Image</label>
-                    <button className="px-4 py-2.5 rounded-lg bg-[rgba(255,255,255,0.08)] border border-[rgba(255,255,255,0.18)] text-[#3B82F6] hover:bg-[rgba(255,255,255,0.12)] transition-colors text-sm font-medium flex items-center gap-2">
-                      <Upload className="w-4 h-4" />
-                      Choose Image
-                    </button>
-                    <p className="text-[#64748B] text-xs mt-2">
-                      Max 5MB Supported: JPG, PNG, WebP, GIF, Uploads to Cloudflare R2.
-                    </p>
-                  </div>
-                </div>
+              <div>
+                <label className="text-white text-sm font-medium mb-2 block">Title *</label>
+                <input
+                  type="text"
+                  value={blogPostDraft.title}
+                  onChange={(e) => setBlogPostDraft({ ...blogPostDraft, title: e.target.value })}
+                  placeholder="Enter blog title"
+                  className="w-full bg-[rgba(255,255,255,0.08)] border border-[rgba(255,255,255,0.18)] rounded-lg px-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#3B82F6] placeholder:text-[#64748B]"
+                />
+              </div>
+              <div>
+                <label className="text-white text-sm font-medium mb-2 block">Content</label>
+                <textarea
+                  value={blogPostDraft.content}
+                  onChange={(e) => setBlogPostDraft({ ...blogPostDraft, content: e.target.value })}
+                  rows={6}
+                  placeholder="Write your blog content here..."
+                  className="w-full bg-[rgba(255,255,255,0.08)] border border-[rgba(255,255,255,0.18)] rounded-lg px-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#3B82F6] resize-none placeholder:text-[#64748B]"
+                />
+              </div>
+              <div>
+                <label className="text-white text-sm font-medium mb-2 block">Tags</label>
+                <input
+                  type="text"
+                  value={blogPostDraft.tags}
+                  onChange={(e) => setBlogPostDraft({ ...blogPostDraft, tags: e.target.value })}
+                  placeholder="tag1, tag2, tag3"
+                  className="w-full bg-[rgba(255,255,255,0.08)] border border-[rgba(255,255,255,0.18)] rounded-lg px-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#3B82F6] placeholder:text-[#64748B]"
+                />
               </div>
             </div>
           </div>
 
-          {/* Scheduling Options */}
           <div className="p-6 rounded-xl bg-[rgba(0,0,0,0.3)] border border-[rgba(255,255,255,0.18)]">
             <h3 className="text-white text-base font-semibold mb-4">⏰ Scheduling Options</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
@@ -498,7 +773,6 @@ export default function AdminBlogsPage() {
                   className="w-full bg-[rgba(255,255,255,0.08)] border border-[rgba(255,255,255,0.18)] rounded-lg px-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#3B82F6]"
                 />
               </div>
-
               <div>
                 <label className="text-white text-sm font-medium mb-2 block">Max Hours Between Posts</label>
                 <input
@@ -509,7 +783,6 @@ export default function AdminBlogsPage() {
                 />
               </div>
             </div>
-
             <div className="flex items-center gap-3">
               <input
                 type="checkbox"
@@ -519,20 +792,15 @@ export default function AdminBlogsPage() {
                 className="w-4 h-4 rounded border-[rgba(255,255,255,0.18)] bg-[rgba(255,255,255,0.08)] text-[#3B82F6] focus:ring-[#3B82F6]"
               />
               <label htmlFor="authorRotation" className="text-white text-sm">
-                <span className="font-semibold">Author Rotation</span>{" "}
-                <span className="text-[#22C55E]">ON</span>
+                Author Rotation <span className="text-[#22C55E]">{scheduling.authorRotation ? 'ON' : 'OFF'}</span>
               </label>
             </div>
-            <p className="text-[#22C55E] text-xs mt-2">
-              ✓ Authors will be randomly selected from the pool for each blog post
-            </p>
           </div>
 
-          {/* Create Button */}
           <button
-            onClick={handleCreateBulkBlogs}
+            onClick={handleBulkCreate}
             disabled={isLoading}
-            className="w-full md:w-auto px-8 py-3 rounded-lg bg-[#06B6D4] hover:bg-[#0891B2] text-white text-sm font-medium transition-colors disabled:opacity-50"
+            className="px-8 py-3 rounded-lg bg-[#06B6D4] hover:bg-[#0891B2] text-white text-sm font-medium transition-colors disabled:opacity-50"
           >
             {isLoading ? "Creating..." : "Create Bulk Blogs"}
           </button>
@@ -542,10 +810,9 @@ export default function AdminBlogsPage() {
       {/* Category Management Tab */}
       {activeTab === "category" && (
         <AdminGlassCard>
-          {/* Sub-tabs */}
           <div className="flex items-center gap-6 mb-6 border-b border-[rgba(255,255,255,0.18)]">
             <button
-              onClick={() => setGategorySubTab("category")}
+              onClick={() => setCategorySubTab("category")}
               className={`pb-3 px-2 text-sm font-medium transition-colors relative ${
                 categorySubTab === "category" ? "text-[#3B82F6]" : "text-[#64748B] hover:text-white"
               }`}
@@ -554,7 +821,7 @@ export default function AdminBlogsPage() {
               {categorySubTab === "category" && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#3B82F6]" />}
             </button>
             <button
-              onClick={() => setGategorySubTab("subcategory")}
+              onClick={() => setCategorySubTab("subcategory")}
               className={`pb-3 px-2 text-sm font-medium transition-colors relative ${
                 categorySubTab === "subcategory" ? "text-[#3B82F6]" : "text-[#64748B] hover:text-white"
               }`}
@@ -565,34 +832,40 @@ export default function AdminBlogsPage() {
           </div>
 
           <div className="flex items-center justify-between mb-6">
-            <h2 className="text-white text-xl font-semibold">Manage Categories</h2>
+            <h2 className="text-white text-xl font-semibold">
+              {categorySubTab === "category" ? "Manage Categories" : "Manage Sub-Categories"}
+            </h2>
             <button
-              onClick={() => setIsCreateCategoryModalOpen(true)}
+              onClick={() => { resetCategoryForm(); setIsCreateCategoryModalOpen(true); }}
               className="px-4 py-2 rounded-lg bg-[#06B6D4] hover:bg-[#0891B2] text-white text-sm font-medium transition-colors"
             >
-              + Create Category
+              + Create {categorySubTab === "category" ? "Category" : "Sub-Category"}
             </button>
           </div>
 
           <div className="space-y-3">
-            {categories.map((category) => (
+            {(categorySubTab === "category" ? parentCategories : subCategories).map((category) => (
               <div
                 key={category.id}
                 className="p-4 rounded-xl bg-[rgba(0,0,0,0.3)] border border-[rgba(255,255,255,0.18)] flex items-center justify-between"
               >
                 <div>
                   <h3 className="text-white text-base font-semibold mb-1">{category.name}</h3>
-                  <p className="text-[#64748B] text-sm">Slug: {category.slug}</p>
+                  <p className="text-[#64748B] text-sm">
+                    Slug: {category.slug}
+                    {category.parent && <span> • Parent: {category.parent.name}</span>}
+                    {category._count && <span> • Posts: {category._count.posts}</span>}
+                  </p>
                 </div>
                 <div className="flex items-center gap-2">
-                  <button className="px-3 py-1.5 rounded-lg bg-[#3B82F6] hover:bg-[#2563EB] text-white text-sm font-medium transition-colors">
+                  <button
+                    onClick={() => openEditCategory(category)}
+                    className="px-3 py-1.5 rounded-lg bg-[#3B82F6] hover:bg-[#2563EB] text-white text-sm font-medium transition-colors"
+                  >
                     Edit
                   </button>
                   <button
-                    onClick={() => {
-                      setSelectedItem(category);
-                      setIsDeleteModalOpen(true);
-                    }}
+                    onClick={() => openDeleteCategory(category)}
                     className="px-3 py-1.5 rounded-lg bg-[#EF4444] hover:bg-[#DC2626] text-white text-sm font-medium transition-colors"
                   >
                     Delete
@@ -600,6 +873,11 @@ export default function AdminBlogsPage() {
                 </div>
               </div>
             ))}
+            {(categorySubTab === "category" ? parentCategories : subCategories).length === 0 && (
+              <p className="text-[#64748B] text-center py-8">
+                No {categorySubTab === "category" ? "categories" : "sub-categories"} found. Create one to get started!
+              </p>
+            )}
           </div>
         </AdminGlassCard>
       )}
@@ -610,7 +888,7 @@ export default function AdminBlogsPage() {
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-white text-xl font-semibold">Manage Authors</h2>
             <button
-              onClick={() => setIsCreateAuthorModalOpen(true)}
+              onClick={() => { resetAuthorForm(); setIsCreateAuthorModalOpen(true); }}
               className="px-4 py-2 rounded-lg bg-[#06B6D4] hover:bg-[#0891B2] text-white text-sm font-medium transition-colors"
             >
               + Create Author
@@ -623,19 +901,25 @@ export default function AdminBlogsPage() {
                 key={author.id}
                 className="p-4 rounded-xl bg-[rgba(0,0,0,0.3)] border border-[rgba(255,255,255,0.18)] flex items-center justify-between"
               >
-                <div>
-                  <h3 className="text-white text-base font-semibold mb-1">{author.name}</h3>
-                  <p className="text-[#3B82F6] text-sm">{author.description}</p>
+                <div className="flex items-center gap-4">
+                  {author.avatar && (
+                    <img src={author.avatar} alt={author.name} className="w-12 h-12 rounded-full object-cover" />
+                  )}
+                  <div>
+                    <h3 className="text-white text-base font-semibold mb-1">{author.name}</h3>
+                    <p className="text-[#3B82F6] text-sm">{author.bio || 'No bio'}</p>
+                    {author._count && <p className="text-[#64748B] text-xs">Posts: {author._count.posts}</p>}
+                  </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  <button className="px-3 py-1.5 rounded-lg bg-[#3B82F6] hover:bg-[#2563EB] text-white text-sm font-medium transition-colors">
+                  <button
+                    onClick={() => openEditAuthor(author)}
+                    className="px-3 py-1.5 rounded-lg bg-[#3B82F6] hover:bg-[#2563EB] text-white text-sm font-medium transition-colors"
+                  >
                     Edit
                   </button>
                   <button
-                    onClick={() => {
-                      setSelectedItem(author);
-                      setIsDeleteModalOpen(true);
-                    }}
+                    onClick={() => openDeleteAuthor(author)}
                     className="px-3 py-1.5 rounded-lg bg-[#EF4444] hover:bg-[#DC2626] text-white text-sm font-medium transition-colors"
                   >
                     Delete
@@ -643,6 +927,9 @@ export default function AdminBlogsPage() {
                 </div>
               </div>
             ))}
+            {authors.length === 0 && (
+              <p className="text-[#64748B] text-center py-8">No authors found. Create one to get started!</p>
+            )}
           </div>
         </AdminGlassCard>
       )}
@@ -650,7 +937,6 @@ export default function AdminBlogsPage() {
       {/* Image Auto Editor Tab */}
       {activeTab === "image" && (
         <div className="space-y-6">
-          {/* Upload Images */}
           <div className="p-6 rounded-xl bg-[rgba(0,0,0,0.3)] border border-[rgba(255,255,255,0.18)]">
             <h3 className="text-white text-base font-semibold mb-4">Upload Images</h3>
             <button className="px-6 py-3 rounded-lg bg-[#06B6D4] hover:bg-[#0891B2] text-white text-sm font-medium transition-colors flex items-center gap-2">
@@ -659,7 +945,6 @@ export default function AdminBlogsPage() {
             </button>
           </div>
 
-          {/* Search Name */}
           <div className="p-6 rounded-xl bg-[rgba(0,0,0,0.3)] border border-[rgba(255,255,255,0.18)]">
             <h3 className="text-white text-base font-semibold mb-4">Search Name for Images</h3>
             <input
@@ -669,271 +954,245 @@ export default function AdminBlogsPage() {
               placeholder="e.g., How to use IPTV in Bangladesh"
               className="w-full bg-[rgba(255,255,255,0.08)] border border-[rgba(255,255,255,0.18)] rounded-lg px-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#3B82F6] placeholder:text-[#64748B]"
             />
-            <p className="text-[#64748B] text-xs mt-2">Images will be named: base-name-index</p>
           </div>
 
-          {/* Processing Settings */}
           <div className="p-6 rounded-xl bg-[rgba(0,0,0,0.3)] border border-[rgba(255,255,255,0.18)]">
             <h3 className="text-white text-base font-semibold mb-4">Processing Settings</h3>
-
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
               <div>
                 <label className="text-white text-sm font-medium mb-2 block">Crop (%)</label>
-                <div className="grid grid-cols-4 gap-2">
-                  {["crop1", "crop2", "crop3", "crop4"].map((key) => (
+                <div className="grid grid-cols-4 gap-1">
+                  {['crop1', 'crop2', 'crop3', 'crop4'].map((key) => (
                     <input
                       key={key}
                       type="number"
                       value={imageConfig[key as keyof typeof imageConfig] as string}
                       onChange={(e) => setImageConfig({ ...imageConfig, [key]: e.target.value })}
-                      className="w-full bg-[rgba(255,255,255,0.08)] border border-[rgba(255,255,255,0.18)] rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#3B82F6]"
+                      className="w-full bg-[rgba(255,255,255,0.08)] border border-[rgba(255,255,255,0.18)] rounded px-2 py-1 text-white text-xs"
                     />
                   ))}
                 </div>
               </div>
-
               <div>
                 <label className="text-white text-sm font-medium mb-2 block">Saturation (%)</label>
-                <div className="grid grid-cols-2 gap-2">
-                  {["saturation1", "saturation2"].map((key) => (
+                <div className="grid grid-cols-2 gap-1">
+                  {['saturation1', 'saturation2'].map((key) => (
                     <input
                       key={key}
                       type="number"
                       value={imageConfig[key as keyof typeof imageConfig] as string}
                       onChange={(e) => setImageConfig({ ...imageConfig, [key]: e.target.value })}
-                      className="w-full bg-[rgba(255,255,255,0.08)] border border-[rgba(255,255,255,0.18)] rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#3B82F6]"
+                      className="w-full bg-[rgba(255,255,255,0.08)] border border-[rgba(255,255,255,0.18)] rounded px-2 py-1 text-white text-xs"
                     />
                   ))}
                 </div>
               </div>
-
               <div>
                 <label className="text-white text-sm font-medium mb-2 block">Brightness (%)</label>
-                <div className="grid grid-cols-2 gap-2">
-                  {["brightness1", "brightness2"].map((key) => (
+                <div className="grid grid-cols-2 gap-1">
+                  {['brightness1', 'brightness2'].map((key) => (
                     <input
                       key={key}
                       type="number"
                       value={imageConfig[key as keyof typeof imageConfig] as string}
                       onChange={(e) => setImageConfig({ ...imageConfig, [key]: e.target.value })}
-                      className="w-full bg-[rgba(255,255,255,0.08)] border border-[rgba(255,255,255,0.18)] rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#3B82F6]"
+                      className="w-full bg-[rgba(255,255,255,0.08)] border border-[rgba(255,255,255,0.18)] rounded px-2 py-1 text-white text-xs"
                     />
                   ))}
                 </div>
               </div>
-
               <div>
                 <label className="text-white text-sm font-medium mb-2 block">Contrast (%)</label>
-                <div className="grid grid-cols-2 gap-2">
-                  {["contrast1", "contrast2"].map((key) => (
+                <div className="grid grid-cols-2 gap-1">
+                  {['contrast1', 'contrast2'].map((key) => (
                     <input
                       key={key}
                       type="number"
                       value={imageConfig[key as keyof typeof imageConfig] as string}
                       onChange={(e) => setImageConfig({ ...imageConfig, [key]: e.target.value })}
-                      className="w-full bg-[rgba(255,255,255,0.08)] border border-[rgba(255,255,255,0.18)] rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#3B82F6]"
+                      className="w-full bg-[rgba(255,255,255,0.08)] border border-[rgba(255,255,255,0.18)] rounded px-2 py-1 text-white text-xs"
                     />
                   ))}
                 </div>
               </div>
             </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-              <div>
-                <label className="text-white text-sm font-medium mb-2 block">Rotation (degrees)</label>
-                <div className="grid grid-cols-2 gap-2">
-                  {["rotation1", "rotation2"].map((key) => (
-                    <input
-                      key={key}
-                      type="number"
-                      value={imageConfig[key as keyof typeof imageConfig] as string}
-                      onChange={(e) => setImageConfig({ ...imageConfig, [key]: e.target.value })}
-                      className="w-full bg-[rgba(255,255,255,0.08)] border border-[rgba(255,255,255,0.18)] rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#3B82F6]"
-                    />
-                  ))}
-                </div>
-              </div>
-
-              <div>
-                <label className="text-white text-sm font-medium mb-2 block">Noise (%)</label>
-                <div className="grid grid-cols-2 gap-2">
-                  {["noise1", "noise2"].map((key) => (
-                    <input
-                      key={key}
-                      type="number"
-                      value={imageConfig[key as keyof typeof imageConfig] as string}
-                      onChange={(e) => setImageConfig({ ...imageConfig, [key]: e.target.value })}
-                      className="w-full bg-[rgba(255,255,255,0.08)] border border-[rgba(255,255,255,0.18)] rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#3B82F6]"
-                    />
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            <div className="space-y-3">
-              <div className="flex items-center gap-3">
+            <div className="flex items-center gap-6">
+              <label className="flex items-center gap-2 text-white text-sm">
                 <input
                   type="checkbox"
-                  id="convertWebP"
                   checked={imageConfig.convertWebP}
                   onChange={(e) => setImageConfig({ ...imageConfig, convertWebP: e.target.checked })}
-                  className="w-4 h-4 rounded border-[rgba(255,255,255,0.18)] bg-[rgba(255,255,255,0.08)] text-[#3B82F6] focus:ring-[#3B82F6]"
+                  className="w-4 h-4 rounded"
                 />
-                <label htmlFor="convertWebP" className="text-white text-sm">
-                  Convert to WebP format
-                </label>
-              </div>
-
-              <div className="flex items-center gap-3">
+                Convert to WebP
+              </label>
+              <label className="flex items-center gap-2 text-white text-sm">
                 <input
                   type="checkbox"
-                  id="stripEXIF"
                   checked={imageConfig.stripEXIF}
                   onChange={(e) => setImageConfig({ ...imageConfig, stripEXIF: e.target.checked })}
-                  className="w-4 h-4 rounded border-[rgba(255,255,255,0.18)] bg-[rgba(255,255,255,0.08)] text-[#3B82F6] focus:ring-[#3B82F6]"
+                  className="w-4 h-4 rounded"
                 />
-                <label htmlFor="stripEXIF" className="text-white text-sm">
-                  Strip EXIF metadata
-                </label>
-              </div>
+                Strip EXIF metadata
+              </label>
             </div>
           </div>
 
-          {/* Bypass Mode */}
-          <div className="p-6 rounded-xl bg-[rgba(245,158,11,0.1)] border border-[rgba(245,158,11,0.3)]">
-            <div className="flex items-start gap-3">
-              <input
-                type="checkbox"
-                id="bypassMode"
-                checked={imageConfig.bypassMode}
-                onChange={(e) => setImageConfig({ ...imageConfig, bypassMode: e.target.checked })}
-                className="w-5 h-5 rounded border-[rgba(255,255,255,0.18)] bg-[rgba(255,255,255,0.08)] text-[#F59E0B] focus:ring-[#F59E0B] mt-0.5"
-              />
-              <div className="flex-1">
-                <label htmlFor="bypassMode" className="text-[#F59E0B] text-sm font-semibold block mb-2">
-                  🟡 Bypass Mode <span className="text-xs">(Beta)</span>
-                </label>
-                <p className="text-[#F59E0B] text-xs leading-relaxed">
-                  When hidden backdrop is centralized on top of your Processing Settings for SEO dominance:
-                </p>
-                <ul className="text-[#F59E0B] text-xs mt-2 space-y-1 list-disc list-inside">
-                  <li>Images are auto-processed with hidden HTML-level CSS element, title, description, and alt.</li>
-                  <li>Alt extraction is ONLY allowed for NON-fetch without limitation for SEO.</li>
-                  <li>Left auto-rotate for ONLY allowed for NON-fetch without limitation for SEO.</li>
-                  <li>CSS auto-rotation with image margin/drag like visual separation.</li>
-                  <li>ALT alt-auto-rotate for ONLY allowed for NON-fetch without limitation for SEO.</li>
-                  <li>ALT alt-auto-generated (NO to SEO-in-text-visual-pics).</li>
-                  <li>LEFT auto-random-title for ONLY randomized (NO to 100% SEO).</li>
-                  <li>Optimized for 100X+ daily traffic and automated CPR.</li>
-                </ul>
-              </div>
-            </div>
-          </div>
-
-          {/* Process Button */}
-          <button
-            onClick={handleProcessImages}
-            disabled={isLoading}
-            className="w-full md:w-auto px-8 py-3 rounded-lg bg-[#06B6D4] hover:bg-[#0891B2] text-white text-sm font-medium transition-colors disabled:opacity-50"
-          >
-            {isLoading ? "Processing..." : "Process Images"}
+          <button className="px-8 py-3 rounded-lg bg-[#06B6D4] hover:bg-[#0891B2] text-white text-sm font-medium transition-colors">
+            Process Images
           </button>
         </div>
       )}
 
-      {/* Create Category Modal */}
+      {/* Create/Edit Blog Modal */}
       <AdminModal
-        isOpen={isCreateCategoryModalOpen}
-        onClose={() => setIsCreateCategoryModalOpen(false)}
-        title="Create Category"
+        isOpen={isCreateBlogModalOpen || isEditBlogModalOpen}
+        onClose={() => { setIsCreateBlogModalOpen(false); setIsEditBlogModalOpen(false); setSelectedBlog(null); }}
+        title={isEditBlogModalOpen ? "Edit Blog Post" : "Create Blog Post"}
         primaryAction={{
-          label: "Create",
-          onClick: handleCreateCategory,
+          label: isEditBlogModalOpen ? "Update" : "Create",
+          onClick: isEditBlogModalOpen ? handleEditBlog : handleCreateBlog,
           loading: isLoading,
           variant: "primary",
         }}
         secondaryAction={{
           label: "Cancel",
-          onClick: () => setIsCreateCategoryModalOpen(false),
+          onClick: () => { setIsCreateBlogModalOpen(false); setIsEditBlogModalOpen(false); setSelectedBlog(null); },
         }}
       >
-        <div className="space-y-4">
-          <AdminFormInput
-            label="Category Name"
-            required
-            value={newCategory.name}
-            onChange={(e) => setNewCategory({ ...newCategory, name: e.target.value })}
-            placeholder="Enter category name"
-          />
-          <AdminFormInput
-            label="Slug"
-            value={newCategory.slug}
-            onChange={(e) => setNewCategory({ ...newCategory, slug: e.target.value })}
-            placeholder="category-slug"
-          />
+        <div className="space-y-4 max-h-[60vh] overflow-y-auto">
+          <AdminFormInput label="Title" name="title" required value={blogForm.title} onChange={(value) => setBlogForm({ ...blogForm, title: value })} placeholder="Enter blog title" />
+          <AdminFormInput label="Slug" name="slug" value={blogForm.slug} onChange={(value) => setBlogForm({ ...blogForm, slug: value })} placeholder="auto-generated-if-empty" />
+          <AdminFormInput label="Excerpt" name="excerpt" value={blogForm.excerpt} onChange={(value) => setBlogForm({ ...blogForm, excerpt: value })} placeholder="Brief description" />
+          <div>
+            <label className="text-white text-sm font-medium mb-2 block">Content *</label>
+            <textarea
+              value={blogForm.content}
+              onChange={(e) => setBlogForm({ ...blogForm, content: e.target.value })}
+              rows={6}
+              placeholder="Write your blog content..."
+              className="w-full bg-[rgba(255,255,255,0.08)] border border-[rgba(255,255,255,0.18)] rounded-lg px-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#3B82F6] resize-none"
+            />
+          </div>
+          <AdminFormInput label="Featured Image URL" name="featuredImage" value={blogForm.featuredImage} onChange={(value) => setBlogForm({ ...blogForm, featuredImage: value })} placeholder="https://..." />
+          <div>
+            <label className="text-white text-sm font-medium mb-2 block">Category</label>
+            <select
+              value={blogForm.categoryId}
+              onChange={(e) => setBlogForm({ ...blogForm, categoryId: e.target.value })}
+              className="w-full bg-[rgba(255,255,255,0.08)] border border-[rgba(255,255,255,0.18)] rounded-lg px-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#3B82F6] [&>option]:bg-[#1E293B] [&>option]:text-white"
+            >
+              <option value="">Select category</option>
+              {categories.map((cat) => (<option key={cat.id} value={cat.id}>{cat.name}</option>))}
+            </select>
+          </div>
+          <div>
+            <label className="text-white text-sm font-medium mb-2 block">Author</label>
+            <select
+              value={blogForm.authorId}
+              onChange={(e) => setBlogForm({ ...blogForm, authorId: e.target.value })}
+              className="w-full bg-[rgba(255,255,255,0.08)] border border-[rgba(255,255,255,0.18)] rounded-lg px-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#3B82F6] [&>option]:bg-[#1E293B] [&>option]:text-white"
+            >
+              <option value="">Select author</option>
+              {authors.map((author) => (<option key={author.id} value={author.id}>{author.name}</option>))}
+            </select>
+          </div>
+          <AdminFormInput label="Tags" name="tags" value={blogForm.tags} onChange={(value) => setBlogForm({ ...blogForm, tags: value })} placeholder="tag1, tag2, tag3" />
+          <div>
+            <label className="text-white text-sm font-medium mb-2 block">Status</label>
+            <select
+              value={blogForm.status}
+              onChange={(e) => setBlogForm({ ...blogForm, status: e.target.value as any })}
+              className="w-full bg-[rgba(255,255,255,0.08)] border border-[rgba(255,255,255,0.18)] rounded-lg px-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#3B82F6] [&>option]:bg-[#1E293B] [&>option]:text-white"
+            >
+              <option value="DRAFT">Draft</option>
+              <option value="PUBLISHED">Published</option>
+              <option value="ARCHIVED">Archived</option>
+            </select>
+          </div>
         </div>
       </AdminModal>
 
-      {/* Create Author Modal */}
+      {/* Create/Edit Category Modal */}
       <AdminModal
-        isOpen={isCreateAuthorModalOpen}
-        onClose={() => setIsCreateAuthorModalOpen(false)}
-        title="Create Author"
+        isOpen={isCreateCategoryModalOpen || isEditCategoryModalOpen}
+        onClose={() => { setIsCreateCategoryModalOpen(false); setIsEditCategoryModalOpen(false); setSelectedCategory(null); }}
+        title={isEditCategoryModalOpen ? "Edit Category" : "Create Category"}
         primaryAction={{
-          label: "Create",
-          onClick: handleCreateAuthor,
+          label: isEditCategoryModalOpen ? "Update" : "Create",
+          onClick: isEditCategoryModalOpen ? handleEditCategory : handleCreateCategory,
           loading: isLoading,
           variant: "primary",
         }}
         secondaryAction={{
           label: "Cancel",
-          onClick: () => setIsCreateAuthorModalOpen(false),
+          onClick: () => { setIsCreateCategoryModalOpen(false); setIsEditCategoryModalOpen(false); setSelectedCategory(null); },
         }}
       >
         <div className="space-y-4">
-          <AdminFormInput
-            label="Author Name"
-            required
-            value={newAuthor.name}
-            onChange={(e) => setNewAuthor({ ...newAuthor, name: e.target.value })}
-            placeholder="Enter author name"
-          />
-          <AdminFormInput
-            label="Description"
-            value={newAuthor.description}
-            onChange={(e) => setNewAuthor({ ...newAuthor, description: e.target.value })}
-            placeholder="Author description"
-          />
+          <AdminFormInput label="Category Name" name="categoryName" required value={categoryForm.name} onChange={(value) => setCategoryForm({ ...categoryForm, name: value })} placeholder="Enter category name" />
+          <AdminFormInput label="Slug" name="categorySlug" value={categoryForm.slug} onChange={(value) => setCategoryForm({ ...categoryForm, slug: value })} placeholder="auto-generated-if-empty" />
+          <AdminFormInput label="Description" name="categoryDescription" value={categoryForm.description} onChange={(value) => setCategoryForm({ ...categoryForm, description: value })} placeholder="Category description" />
+          {categorySubTab === "subcategory" && (
+            <div>
+              <label className="text-white text-sm font-medium mb-2 block">Parent Category</label>
+              <select
+                value={categoryForm.parentId}
+                onChange={(e) => setCategoryForm({ ...categoryForm, parentId: e.target.value })}
+                className="w-full bg-[rgba(255,255,255,0.08)] border border-[rgba(255,255,255,0.18)] rounded-lg px-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#3B82F6] [&>option]:bg-[#1E293B] [&>option]:text-white"
+              >
+                <option value="">Select parent category</option>
+                {parentCategories.map((cat) => (<option key={cat.id} value={cat.id}>{cat.name}</option>))}
+              </select>
+            </div>
+          )}
         </div>
       </AdminModal>
 
-      {/* Delete Modal */}
+      {/* Create/Edit Author Modal */}
+      <AdminModal
+        isOpen={isCreateAuthorModalOpen || isEditAuthorModalOpen}
+        onClose={() => { setIsCreateAuthorModalOpen(false); setIsEditAuthorModalOpen(false); setSelectedAuthor(null); }}
+        title={isEditAuthorModalOpen ? "Edit Author" : "Create Author"}
+        primaryAction={{
+          label: isEditAuthorModalOpen ? "Update" : "Create",
+          onClick: isEditAuthorModalOpen ? handleEditAuthor : handleCreateAuthor,
+          loading: isLoading,
+          variant: "primary",
+        }}
+        secondaryAction={{
+          label: "Cancel",
+          onClick: () => { setIsCreateAuthorModalOpen(false); setIsEditAuthorModalOpen(false); setSelectedAuthor(null); },
+        }}
+      >
+        <div className="space-y-4">
+          <AdminFormInput label="Author Name" name="authorName" required value={authorForm.name} onChange={(value) => setAuthorForm({ ...authorForm, name: value })} placeholder="Enter author name" />
+          <AdminFormInput label="Slug" name="authorSlug" value={authorForm.slug} onChange={(value) => setAuthorForm({ ...authorForm, slug: value })} placeholder="auto-generated-if-empty" />
+          <AdminFormInput label="Bio" name="authorBio" value={authorForm.bio} onChange={(value) => setAuthorForm({ ...authorForm, bio: value })} placeholder="Author bio/description" />
+          <AdminFormInput label="Avatar URL" name="authorAvatar" value={authorForm.avatar} onChange={(value) => setAuthorForm({ ...authorForm, avatar: value })} placeholder="https://..." />
+          <AdminFormInput label="Email" name="authorEmail" value={authorForm.email} onChange={(value) => setAuthorForm({ ...authorForm, email: value })} placeholder="author@example.com" />
+          <AdminFormInput label="Website" name="authorWebsite" value={authorForm.website} onChange={(value) => setAuthorForm({ ...authorForm, website: value })} placeholder="https://..." />
+        </div>
+      </AdminModal>
+
+      {/* Delete Confirmation Modal */}
       <AdminModal
         isOpen={isDeleteModalOpen}
-        onClose={() => setIsDeleteModalOpen(false)}
+        onClose={() => { setIsDeleteModalOpen(false); setSelectedBlog(null); setSelectedCategory(null); setSelectedAuthor(null); }}
         title="Confirm Delete"
         primaryAction={{
           label: "Delete",
-          onClick:
-            activeTab === "manual"
-              ? handleDeleteBlog
-              : activeTab === "category"
-              ? handleDeleteCategory
-              : handleDeleteAuthor,
+          onClick: handleDelete,
           loading: isLoading,
           variant: "danger",
         }}
         secondaryAction={{
           label: "Cancel",
-          onClick: () => setIsDeleteModalOpen(false),
+          onClick: () => { setIsDeleteModalOpen(false); setSelectedBlog(null); setSelectedCategory(null); setSelectedAuthor(null); },
         }}
       >
         <p className="text-[#94A3B8]">
-          Are you sure you want to delete{" "}
-          <span className="text-white font-medium">
-            {selectedItem?.title || selectedItem?.name}
-          </span>
-          ? This action cannot be undone.
+          Are you sure you want to delete <span className="text-white font-medium">{getDeleteItemName()}</span>? This action cannot be undone.
         </p>
       </AdminModal>
     </div>
