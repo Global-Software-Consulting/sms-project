@@ -18,6 +18,10 @@ import {
 
 const categoryColors = ["#3B82F6", "#22C55E", "#F59E0B", "#8B5CF6", "#EC4899", "#06B6D4"];
 
+function capitalize(str: string): string {
+  return str.charAt(0).toUpperCase() + str.slice(1);
+}
+
 export default function AdminFaqPage() {
   const [categories, setCategories] = useState<FaqCategory[]>([]);
   const [articles, setArticles] = useState<FaqItem[]>([]);
@@ -33,9 +37,10 @@ export default function AdminFaqPage() {
   const [deleteItem, setDeleteItem] = useState<{ type: 'article' | 'category'; item: FaqItem | FaqCategory } | null>(null);
 
   const [articleForm, setArticleForm] = useState({
-    categoryId: '',
+    category: '',
     question: '',
     answer: '',
+    sortOrder: 0,
     isActive: true,
   });
 
@@ -66,7 +71,7 @@ export default function AdminFaqPage() {
   }, [fetchData]);
 
   const handleCreateArticle = async () => {
-    if (!articleForm.categoryId || !articleForm.question || !articleForm.answer) {
+    if (!articleForm.category || !articleForm.question || !articleForm.answer) {
       toast.error('Please fill in all required fields');
       return;
     }
@@ -77,15 +82,18 @@ export default function AdminFaqPage() {
         const updated = await updateFaqItem(editingArticle.id, {
           question: articleForm.question,
           answer: articleForm.answer,
+          category: articleForm.category,
+          sortOrder: articleForm.sortOrder,
           isActive: articleForm.isActive,
         });
         setArticles(articles.map(a => a.id === updated.id ? updated : a));
         toast.success('Article updated successfully!');
       } else {
         const created = await createFaqItem({
-          categoryId: articleForm.categoryId,
           question: articleForm.question,
           answer: articleForm.answer,
+          category: articleForm.category,
+          sortOrder: articleForm.sortOrder,
           isActive: articleForm.isActive,
         });
         setArticles([...articles, created]);
@@ -93,7 +101,7 @@ export default function AdminFaqPage() {
       }
       setShowArticleModal(false);
       setEditingArticle(null);
-      setArticleForm({ categoryId: '', question: '', answer: '', isActive: true });
+      setArticleForm({ category: '', question: '', answer: '', sortOrder: 0, isActive: true });
     } catch (error) {
       console.error('Failed to save article:', error);
       toast.error('Failed to save article');
@@ -138,7 +146,7 @@ export default function AdminFaqPage() {
       } else {
         await deleteFaqCategory(deleteItem.item.id);
         setCategories(categories.filter(c => c.id !== deleteItem.item.id));
-        setArticles(articles.filter(a => a.categoryId !== deleteItem.item.id));
+        setArticles(articles.filter(a => a.category !== (deleteItem.item as FaqCategory).name));
         toast.success('Category deleted successfully!');
       }
       setShowDeleteModal(false);
@@ -154,9 +162,10 @@ export default function AdminFaqPage() {
   const handleEditArticle = (article: FaqItem) => {
     setEditingArticle(article);
     setArticleForm({
-      categoryId: article.categoryId,
+      category: article.category,
       question: article.question,
       answer: article.answer,
+      sortOrder: article.sortOrder,
       isActive: article.isActive,
     });
     setShowArticleModal(true);
@@ -164,12 +173,13 @@ export default function AdminFaqPage() {
 
   const filteredArticles = articles.filter(article => {
     const matchesSearch = article.question.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesCategory = !selectedCategory || article.categoryId === selectedCategory;
+    const matchesCategory = !selectedCategory || article.category === selectedCategory;
     return matchesSearch && matchesCategory;
   });
 
-  const getCategoryName = (categoryId: string) => {
-    return categories.find(c => c.id === categoryId)?.name || 'Unknown';
+  const getCategoryName = (category: string) => {
+    const name = categories.find(c => c.id === category || c.name === category)?.name || category;
+    return capitalize(name);
   };
 
   if (isLoading) {
@@ -183,7 +193,7 @@ export default function AdminFaqPage() {
   return (
     <div className="p-8">
       <div className="mb-8">
-        <h1 className="text-white text-3xl font-semibold mb-2">Knowledge Base</h1>
+        <h1 className="text-white text-3xl font-semibold mb-2">FAQ Management</h1>
         <p className="text-[#94A3B8]">
           Create and manage help articles to assist your users.
         </p>
@@ -198,12 +208,12 @@ export default function AdminFaqPage() {
             >
               <BookOpen className="w-6 h-6" style={{ color: categoryColors[index % categoryColors.length] }} />
             </div>
-            <h3 className="text-white font-semibold mb-2">{category.name}</h3>
+            <h3 className="text-white font-semibold mb-2">{capitalize(category.name)}</h3>
             <p className="text-[#64748B] text-sm">{category.faqCount || 0} articles</p>
             <button
-              onClick={() => setSelectedCategory(selectedCategory === category.id ? null : category.id)}
+              onClick={() => setSelectedCategory(selectedCategory === category.name ? null : category.name)}
               className={`mt-3 text-xs px-3 py-1 rounded-lg transition-colors ${
-                selectedCategory === category.id 
+                selectedCategory === category.name
                   ? 'bg-[#3B82F6] text-white' 
                   : 'bg-[rgba(255,255,255,0.08)] text-[#94A3B8] hover:bg-[rgba(255,255,255,0.12)]'
               }`}
@@ -237,7 +247,7 @@ export default function AdminFaqPage() {
         <button 
           onClick={() => {
             setEditingArticle(null);
-            setArticleForm({ categoryId: categories[0]?.id || '', question: '', answer: '', isActive: true });
+            setArticleForm({ category: '', question: '', answer: '', sortOrder: 0, isActive: true });
             setShowArticleModal(true);
           }}
           className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#3B82F6] hover:bg-[#2563EB] text-white text-sm font-medium transition-colors"
@@ -266,7 +276,7 @@ export default function AdminFaqPage() {
               >
                 <div className="flex-1">
                   <div className="flex items-center gap-3 mb-2">
-                    <h4 className="text-white font-semibold">{article.question}</h4>
+                    <h4 className="text-white font-semibold">{capitalize(article.question)}</h4>
                     <span
                       className={`px-3 py-1 rounded-lg text-xs font-medium ${
                         article.isActive
@@ -278,7 +288,7 @@ export default function AdminFaqPage() {
                     </span>
                   </div>
                   <div className="flex items-center gap-4 text-xs text-[#64748B]">
-                    <span>{getCategoryName(article.categoryId)}</span>
+                    <span>{getCategoryName(article.category)}</span>
                     <span>•</span>
                     <span>{article.viewCount || 0} views</span>
                     <span>•</span>
@@ -328,13 +338,13 @@ export default function AdminFaqPage() {
               <div>
                 <label className="text-white text-sm font-medium mb-2 block">Category</label>
                 <select
-                  value={articleForm.categoryId}
-                  onChange={(e) => setArticleForm({ ...articleForm, categoryId: e.target.value })}
+                  value={articleForm.category}
+                  onChange={(e) => setArticleForm({ ...articleForm, category: e.target.value })}
                   className="w-full bg-[rgba(0,0,0,0.4)] border border-[rgba(255,255,255,0.18)] rounded-lg px-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#3B82F6]"
                 >
                   <option value="">Select category</option>
                   {categories.map(cat => (
-                    <option key={cat.id} value={cat.id}>{cat.name}</option>
+                    <option key={cat.id} value={cat.name}>{capitalize(cat.name)}</option>
                   ))}
                 </select>
               </div>

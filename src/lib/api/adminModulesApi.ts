@@ -297,12 +297,17 @@ export interface NotificationTemplate {
 }
 
 export interface BulkNotificationRequest {
-  userIds?: string[];
-  type: string;
   title: string;
   message: string;
+  type: 'SYSTEM' | 'PROMOTION' | 'ALERT' | 'INFO';
+  sendEmail?: boolean;
+  activeUsersOnly?: boolean;
+  membersOnly?: boolean;
+  userIds?: string[];
+  registeredAfter?: string;
+  registeredBefore?: string;
+  minWalletBalance?: number;
   data?: Record<string, unknown>;
-  sendToAll?: boolean;
 }
 
 export const getAdminNotifications = async (params?: {
@@ -341,36 +346,41 @@ export interface FaqCategory {
 
 export interface FaqItem {
   id: string;
-  categoryId: string;
-  category?: FaqCategory;
+  category: string;
   question: string;
   answer: string;
   sortOrder: number;
   isActive: boolean;
-  viewCount: number;
+  viewCount?: number;
   createdAt: string;
   updatedAt: string;
 }
 
 export interface CreateFaqCategoryRequest {
   name: string;
-  slug?: string;
   description?: string;
-  sortOrder?: number;
-  isActive?: boolean;
 }
 
 export interface CreateFaqItemRequest {
-  categoryId: string;
   question: string;
   answer: string;
+  category: string;
   sortOrder?: number;
   isActive?: boolean;
 }
 
+export interface FaqQueryParams {
+  category?: string;
+  search?: string;
+  isActive?: boolean;
+  page?: number;
+  limit?: number;
+}
+
 export const getFaqCategories = async (): Promise<FaqCategory[]> => {
-  const response = await apiClient.get<FaqCategory[]>(API_ENDPOINTS.ADMIN.FAQ.CATEGORIES);
-  return response.data;
+  const response = await apiClient.get(API_ENDPOINTS.ADMIN.FAQ.CATEGORIES);
+  const data = response.data;
+  return Array.isArray(data) ? data : (data?.data ?? []);
 };
 
 export const createFaqCategory = async (data: CreateFaqCategoryRequest): Promise<FaqCategory> => {
@@ -387,9 +397,10 @@ export const deleteFaqCategory = async (id: string): Promise<void> => {
   await apiClient.delete(API_ENDPOINTS.ADMIN.FAQ.CATEGORY_DETAIL(id));
 };
 
-export const getFaqItems = async (params?: { categoryId?: string }): Promise<FaqItem[]> => {
-  const response = await apiClient.get<FaqItem[]>(API_ENDPOINTS.ADMIN.FAQ.ROOT, { params });
-  return response.data;
+export const getFaqItems = async (params?: FaqQueryParams): Promise<FaqItem[]> => {
+  const response = await apiClient.get(API_ENDPOINTS.ADMIN.FAQ.ROOT, { params });
+  const data = response.data;
+  return Array.isArray(data) ? data : (data?.data ?? []);
 };
 
 export const createFaqItem = async (data: CreateFaqItemRequest): Promise<FaqItem> => {
