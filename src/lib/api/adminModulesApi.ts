@@ -87,7 +87,7 @@ export interface LegalPage {
   title: string;
   content: string;
   isPublished: boolean;
-  lastUpdatedBy?: string;
+  updatedBy?: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -132,6 +132,11 @@ export const updateLegalPage = async (id: string, data: UpdateLegalPageRequest):
 
 export const deleteLegalPage = async (id: string): Promise<void> => {
   await apiClient.delete(API_ENDPOINTS.ADMIN.LEGAL.DETAIL(id));
+};
+
+export const seedLegalPages = async (): Promise<{ created: string[]; skipped: string[] }> => {
+  const response = await apiClient.post<{ created: string[]; skipped: string[] }>(`${API_ENDPOINTS.ADMIN.LEGAL.ROOT}/seed`);
+  return response.data;
 };
 
 // ============================================

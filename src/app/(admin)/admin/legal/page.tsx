@@ -2,13 +2,14 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { AdminGlassCard } from '@/components/admin/glass-card';
-import { FileText, Edit, Eye, Plus, Trash2, Loader2, Save } from "lucide-react";
+import { FileText, Edit, Eye, Plus, Trash2, Loader2, Save, RefreshCw, X } from "lucide-react";
 import { toast } from 'sonner';
 import {
   getLegalPages,
   createLegalPage,
   updateLegalPage,
   deleteLegalPage,
+  seedLegalPages,
   type LegalPage,
 } from '@/lib/api/adminModulesApi';
 
@@ -16,8 +17,11 @@ export default function AdminLegalPage() {
   const [pages, setPages] = useState<LegalPage[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [isSeeding, setIsSeeding] = useState(false);
   const [selectedPage, setSelectedPage] = useState<LegalPage | null>(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showViewModal, setShowViewModal] = useState(false);
+  const [pageToView, setPageToView] = useState<LegalPage | null>(null);
   const [pageToDelete, setPageToDelete] = useState<LegalPage | null>(null);
   const [filter, setFilter] = useState<'all' | 'published' | 'draft'>('all');
 
@@ -128,6 +132,29 @@ export default function AdminLegalPage() {
     }
   };
 
+  const handleViewPage = (page: LegalPage) => {
+    setPageToView(page);
+    setShowViewModal(true);
+  };
+
+  const handleSeedDefaults = async () => {
+    setIsSeeding(true);
+    try {
+      const result = await seedLegalPages();
+      if (result.created.length > 0) {
+        toast.success(`Created ${result.created.length} default pages`);
+        await fetchPages();
+      } else {
+        toast.info('All default pages already exist');
+      }
+    } catch (error) {
+      console.error('Failed to seed defaults:', error);
+      toast.error('Failed to seed default pages');
+    } finally {
+      setIsSeeding(false);
+    }
+  };
+
   const filteredPages = pages.filter(page => {
     if (filter === 'published') return page.isPublished;
     if (filter === 'draft') return !page.isPublished;
@@ -156,20 +183,30 @@ export default function AdminLegalPage() {
           <select 
             value={filter}
             onChange={(e) => setFilter(e.target.value as 'all' | 'published' | 'draft')}
-            className="bg-[rgba(255,255,255,0.08)] border border-[rgba(255,255,255,0.18)] rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#3B82F6]"
+            className="bg-[#1E293B] border border-[rgba(255,255,255,0.18)] rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#3B82F6] [&>option]:bg-[#1E293B] [&>option]:text-white"
           >
             <option value="all">All Pages</option>
             <option value="published">Published</option>
             <option value="draft">Draft</option>
           </select>
         </div>
-        <button 
-          onClick={handleCreateNew}
-          className="flex items-center gap-2 px-4 py-3 rounded-xl bg-[#3B82F6] hover:bg-[#2563EB] text-white text-sm font-medium transition-colors"
-        >
-          <Plus className="w-5 h-5" />
-          Create New Page
-        </button>
+        <div className="flex items-center gap-3">
+          <button 
+            onClick={handleSeedDefaults}
+            disabled={isSeeding}
+            className="flex items-center gap-2 px-4 py-3 rounded-xl bg-[rgba(255,255,255,0.08)] border border-[rgba(255,255,255,0.18)] hover:bg-[rgba(255,255,255,0.12)] text-white text-sm font-medium transition-colors disabled:opacity-50"
+          >
+            {isSeeding ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
+            Seed Defaults
+          </button>
+          <button 
+            onClick={handleCreateNew}
+            className="flex items-center gap-2 px-4 py-3 rounded-xl bg-[#3B82F6] hover:bg-[#2563EB] text-white text-sm font-medium transition-colors"
+          >
+            <Plus className="w-5 h-5" />
+            Create New Page
+          </button>
+        </div>
       </div>
 
       <AdminGlassCard>
@@ -202,9 +239,9 @@ export default function AdminLegalPage() {
                   <div>
                     <h3 className="text-white font-semibold mb-1">{page.title}</h3>
                     <div className="flex items-center gap-3 text-xs text-[#64748B]">
-                      <span>Type: {page.type}</span>
-                      <span>•</span>
                       <span>Modified: {formatDate(page.updatedAt)}</span>
+                      <span>•</span>
+                      <span>by Admin</span>
                     </div>
                   </div>
                 </div>
@@ -221,6 +258,16 @@ export default function AdminLegalPage() {
                   </span>
 
                   <div className="flex items-center gap-2">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleViewPage(page);
+                      }}
+                      className="p-2 rounded-lg hover:bg-[rgba(59,130,246,0.1)] transition-colors"
+                      title="View"
+                    >
+                      <Eye className="w-5 h-5 text-[#3B82F6]" />
+                    </button>
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
@@ -268,12 +315,12 @@ export default function AdminLegalPage() {
                 <select
                   value={formData.type}
                   onChange={(e) => setFormData({ ...formData, type: e.target.value })}
-                  className="w-full bg-[rgba(255,255,255,0.08)] border border-[rgba(255,255,255,0.18)] rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#3B82F6]"
+                  className="w-full bg-[#1E293B] border border-[rgba(255,255,255,0.18)] rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#3B82F6] [&>option]:bg-[#1E293B] [&>option]:text-white"
                 >
                   <option value="">Select page type</option>
                   <option value="privacy-policy">Privacy Policy</option>
                   <option value="terms-of-use">Terms of Use</option>
-                  <option value="refund-policy">Payment & Refund Policy</option>
+                  <option value="refund-policy">Payment &amp; Refund Policy</option>
                   <option value="legal-disclaimer">Legal Disclaimer</option>
                   <option value="help-center">Help Center</option>
                   <option value="about-us">About Us</option>
@@ -360,6 +407,71 @@ export default function AdminLegalPage() {
               >
                 {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
                 Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* View Page Modal */}
+      {showViewModal && pageToView && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-[#0F172A] border border-[rgba(255,255,255,0.1)] rounded-xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
+            <div className="flex items-center justify-between p-6 border-b border-[rgba(255,255,255,0.1)]">
+              <div>
+                <h2 className="text-white text-xl font-semibold">{pageToView.title}</h2>
+                <div className="flex items-center gap-3 mt-1 text-xs text-[#64748B]">
+                  <span>Type: {pageToView.type}</span>
+                  <span>•</span>
+                  <span>Modified: {formatDate(pageToView.updatedAt)}</span>
+                  <span>•</span>
+                  <span
+                    className={`px-2 py-0.5 rounded text-xs font-medium ${
+                      pageToView.isPublished
+                        ? "bg-[#22C55E]/20 text-[#22C55E]"
+                        : "bg-[#F59E0B]/20 text-[#F59E0B]"
+                    }`}
+                  >
+                    {pageToView.isPublished ? 'Published' : 'Draft'}
+                  </span>
+                </div>
+              </div>
+              <button
+                onClick={() => {
+                  setShowViewModal(false);
+                  setPageToView(null);
+                }}
+                className="p-2 rounded-lg hover:bg-[rgba(255,255,255,0.08)] text-[#64748B] hover:text-white transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto p-6">
+              <div 
+                className="prose prose-invert max-w-none text-[#94A3B8]"
+                dangerouslySetInnerHTML={{ __html: pageToView.content }}
+              />
+            </div>
+            <div className="flex items-center justify-end gap-3 p-6 border-t border-[rgba(255,255,255,0.1)]">
+              <button
+                onClick={() => {
+                  setShowViewModal(false);
+                  setPageToView(null);
+                  handleSelectPage(pageToView);
+                }}
+                className="px-5 py-2.5 rounded-lg bg-[#3B82F6] hover:bg-[#2563EB] text-white text-sm font-medium transition-colors flex items-center gap-2"
+              >
+                <Edit className="w-4 h-4" />
+                Edit Page
+              </button>
+              <button
+                onClick={() => {
+                  setShowViewModal(false);
+                  setPageToView(null);
+                }}
+                className="px-5 py-2.5 rounded-lg bg-[rgba(255,255,255,0.08)] hover:bg-[rgba(255,255,255,0.12)] text-white text-sm font-medium transition-colors"
+              >
+                Close
               </button>
             </div>
           </div>

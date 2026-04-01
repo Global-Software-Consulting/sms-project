@@ -23,6 +23,7 @@ import {
   seedPaymentGateways,
   getPaygateProviders,
   togglePaygateProvider,
+  updatePaygateProvider,
   reorderPaygateProviders,
   seedPaygateProviders,
   getAdminWallets,
@@ -65,6 +66,17 @@ export default function AdminPaymentsPage() {
 
   // PayGate Providers State
   const [payGateProviders, setPayGateProviders] = useState<PaygateProvider[]>([]);
+  const [showEditProviderModal, setShowEditProviderModal] = useState(false);
+  const [selectedProvider, setSelectedProvider] = useState<PaygateProvider | null>(null);
+  const [providerFormData, setProviderFormData] = useState({
+    name: "",
+    description: "",
+    provider: "",
+    minAmount: 0,
+    maxAmount: 10000,
+    sortOrder: 0,
+    isEnabled: true,
+  });
 
   // Card Payment State (STRIPE toggle)
   const [cardPaymentEnabled, setCardPaymentEnabled] = useState(false);
@@ -246,6 +258,46 @@ export default function AdminPaymentsPage() {
     } catch (error) {
       console.error('Failed to toggle provider:', error);
       toast.error('Failed to toggle provider');
+    }
+  };
+
+  const handleEditProvider = (provider: PaygateProvider) => {
+    setSelectedProvider(provider);
+    setProviderFormData({
+      name: provider.name,
+      description: provider.description || "",
+      provider: provider.provider,
+      minAmount: provider.minAmount,
+      maxAmount: provider.maxAmount,
+      sortOrder: provider.sortOrder,
+      isEnabled: provider.isEnabled,
+    });
+    setShowEditProviderModal(true);
+  };
+
+  const handleSaveProvider = async () => {
+    if (!selectedProvider) return;
+
+    setIsLoading(true);
+    try {
+      await updatePaygateProvider(selectedProvider.id, {
+        name: providerFormData.name,
+        description: providerFormData.description,
+        provider: providerFormData.provider,
+        minAmount: providerFormData.minAmount,
+        maxAmount: providerFormData.maxAmount,
+        sortOrder: providerFormData.sortOrder,
+        isEnabled: providerFormData.isEnabled,
+      });
+      toast.success('Provider updated successfully');
+      await fetchPaygateProviders();
+      setShowEditProviderModal(false);
+      setSelectedProvider(null);
+    } catch (error) {
+      console.error('Failed to update provider:', error);
+      toast.error('Failed to update provider');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -541,6 +593,14 @@ export default function AdminPaymentsPage() {
                     <div className="px-3 py-1.5 rounded-lg bg-[rgba(59,130,246,0.1)] border border-[rgba(59,130,246,0.3)]">
                       <span className="text-[#3B82F6] text-sm font-semibold">#{provider.sortOrder}</span>
                     </div>
+
+                    <button
+                      onClick={() => handleEditProvider(provider)}
+                      className="p-2 rounded-lg bg-[rgba(59,130,246,0.1)] border border-[rgba(59,130,246,0.3)] text-[#3B82F6] hover:bg-[rgba(59,130,246,0.2)] transition-colors"
+                      title="Edit provider"
+                    >
+                      <Edit2 className="w-4 h-4" />
+                    </button>
 
                     <label className="relative inline-flex items-center cursor-pointer">
                       <input
@@ -911,6 +971,138 @@ export default function AdminPaymentsPage() {
                 onClick={() => {
                   setShowBalanceModal(false);
                   setSelectedUser(null);
+                }}
+                className="flex-1 px-5 py-2.5 rounded-lg bg-[rgba(255,255,255,0.08)] hover:bg-[rgba(255,255,255,0.12)] text-white text-sm font-medium transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit PayGate Provider Modal */}
+      {showEditProviderModal && selectedProvider && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-[#0F172A] border border-[rgba(255,255,255,0.1)] rounded-xl p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-white text-xl font-semibold">
+                Edit Provider
+              </h2>
+              <button
+                onClick={() => {
+                  setShowEditProviderModal(false);
+                  setSelectedProvider(null);
+                }}
+                className="p-2 rounded-lg hover:bg-[rgba(255,255,255,0.08)] text-[#64748B] hover:text-white transition-colors"
+              >
+                ×
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="text-white text-sm font-medium mb-2 block">Provider Name</label>
+                <input
+                  type="text"
+                  value={providerFormData.name}
+                  onChange={(e) => setProviderFormData({ ...providerFormData, name: e.target.value })}
+                  className="w-full bg-[rgba(0,0,0,0.4)] border border-[rgba(255,255,255,0.18)] rounded-lg px-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#3B82F6]"
+                  placeholder="Enter provider name"
+                />
+              </div>
+
+              <div>
+                <label className="text-white text-sm font-medium mb-2 block">Description</label>
+                <textarea
+                  value={providerFormData.description}
+                  onChange={(e) => setProviderFormData({ ...providerFormData, description: e.target.value })}
+                  rows={3}
+                  className="w-full bg-[rgba(0,0,0,0.4)] border border-[rgba(255,255,255,0.18)] rounded-lg px-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#3B82F6] resize-none"
+                  placeholder="Enter description"
+                />
+              </div>
+
+              <div>
+                <label className="text-white text-sm font-medium mb-2 block">Provider Type</label>
+                <input
+                  type="text"
+                  value={providerFormData.provider}
+                  onChange={(e) => setProviderFormData({ ...providerFormData, provider: e.target.value })}
+                  className="w-full bg-[rgba(0,0,0,0.4)] border border-[rgba(255,255,255,0.18)] rounded-lg px-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#3B82F6]"
+                  placeholder="e.g., PAYGATE, STRIPE"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-white text-sm font-medium mb-2 block">Min Amount ($)</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={providerFormData.minAmount}
+                    onChange={(e) => setProviderFormData({ ...providerFormData, minAmount: parseFloat(e.target.value) || 0 })}
+                    className="w-full bg-[rgba(0,0,0,0.4)] border border-[rgba(255,255,255,0.18)] rounded-lg px-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#3B82F6]"
+                    placeholder="0"
+                  />
+                </div>
+                <div>
+                  <label className="text-white text-sm font-medium mb-2 block">Max Amount ($)</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={providerFormData.maxAmount}
+                    onChange={(e) => setProviderFormData({ ...providerFormData, maxAmount: parseFloat(e.target.value) || 0 })}
+                    className="w-full bg-[rgba(0,0,0,0.4)] border border-[rgba(255,255,255,0.18)] rounded-lg px-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#3B82F6]"
+                    placeholder="10000"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="text-white text-sm font-medium mb-2 block">Sort Order</label>
+                <input
+                  type="number"
+                  min="0"
+                  value={providerFormData.sortOrder}
+                  onChange={(e) => setProviderFormData({ ...providerFormData, sortOrder: parseInt(e.target.value) || 0 })}
+                  className="w-full bg-[rgba(0,0,0,0.4)] border border-[rgba(255,255,255,0.18)] rounded-lg px-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#3B82F6]"
+                  placeholder="0"
+                />
+              </div>
+
+              <div className="flex items-center justify-between p-4 rounded-lg bg-[rgba(0,0,0,0.3)] border border-[rgba(255,255,255,0.1)]">
+                <div>
+                  <span className="text-white text-sm font-medium">Enabled</span>
+                  <p className="text-[#64748B] text-xs mt-1">Allow users to use this provider</p>
+                </div>
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={providerFormData.isEnabled}
+                    onChange={(e) => setProviderFormData({ ...providerFormData, isEnabled: e.target.checked })}
+                    className="sr-only peer"
+                  />
+                  <div className="w-11 h-6 bg-[#64748B] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#3B82F6]"></div>
+                </label>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3 mt-6">
+              <button
+                onClick={handleSaveProvider}
+                disabled={isLoading || !providerFormData.name}
+                className="flex-1 px-5 py-2.5 rounded-lg bg-[#3B82F6] hover:bg-[#2563EB] text-white text-sm font-medium transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {isLoading && <Loader2 className="w-4 h-4 animate-spin" />}
+                Save Changes
+              </button>
+              <button
+                onClick={() => {
+                  setShowEditProviderModal(false);
+                  setSelectedProvider(null);
                 }}
                 className="flex-1 px-5 py-2.5 rounded-lg bg-[rgba(255,255,255,0.08)] hover:bg-[rgba(255,255,255,0.12)] text-white text-sm font-medium transition-colors"
               >
