@@ -5,10 +5,13 @@ import { AdminPageHeader } from '@/components/admin/page-header';
 import { AdminGlassCard } from '@/components/admin/glass-card';
 import { AdminFormInput } from '@/components/admin/form-input';
 import { toast } from 'sonner';
-import { Send, Eye, Mail, Bell } from "lucide-react";
+import { Send, Eye, Mail, Bell, X } from "lucide-react";
+import { apiClient } from '@/config/api-client.config';
+import { API_ENDPOINTS } from '@/config/server.config';
 
 export default function AdminNotificationsPage() {
   const [isLoading, setIsLoading] = useState(false);
+  const [showPreview, setShowPreview] = useState(false);
   const [notificationType, setNotificationType] = useState<"email" | "website">("email");
 
   const [emailFormData, setEmailFormData] = useState({
@@ -29,14 +32,30 @@ export default function AdminNotificationsPage() {
     message: "",
   });
 
+  const targetLabels: Record<string, string> = {
+    all: "All Users",
+    "logged-in": "Logged-in Users",
+    purchased: "Purchased Users",
+    "no-purchase": "Logged-in (No Purchase)",
+  };
+
   const handlePreview = () => {
-    toast.info("Preview functionality");
+    const formData = notificationType === "email" ? emailFormData : websiteFormData;
+
+    if (notificationType === "email" && (!emailFormData.subject || !emailFormData.message)) {
+      toast.error("Please fill in subject and message");
+      return;
+    }
+    if (notificationType === "website" && (!websiteFormData.title || !websiteFormData.message)) {
+      toast.error("Please fill in title and message");
+      return;
+    }
+
+    setShowPreview(true);
   };
 
   const handleSend = async () => {
-    const formData = notificationType === "email" ? emailFormData : websiteFormData;
-
-    if (notificationType === "email" && (!formData.subject || !formData.message)) {
+    if (notificationType === "email" && (!emailFormData.subject || !emailFormData.message)) {
       toast.error("Please fill in subject and message");
       return;
     }
@@ -47,9 +66,39 @@ export default function AdminNotificationsPage() {
     }
 
     setIsLoading(true);
-    await new Promise((resolve) => setTimeout(resolve, 2000));
-    setIsLoading(false);
-    toast.success(`${notificationType === "email" ? "Email" : "Website notification"} sent successfully!`);
+    try {
+      const formData = notificationType === "email" ? emailFormData : websiteFormData;
+      const isAllUsers = formData.targetUsers === "all";
+      const isActiveOnly = formData.targetUsers === "logged-in" || formData.targetUsers === "no-purchase";
+      const isMembersOnly = formData.targetUsers === "purchased";
+
+      await apiClient.post(API_ENDPOINTS.ADMIN.NOTIFICATIONS.SEND_BULK, {
+        title: notificationType === "email" ? emailFormData.subject : websiteFormData.title,
+        message: formData.message,
+        type: "SYSTEM" as const,
+        sendEmail: notificationType === "email",
+        activeUsersOnly: isActiveOnly || isAllUsers,
+        membersOnly: isMembersOnly,
+        userIds: [],
+        registeredAfter: "",
+        registeredBefore: "",
+        minWalletBalance: formData.minSpent ? Number(formData.minSpent) : 0,
+        data: {},
+      });
+
+      toast.success(`${notificationType === "email" ? "Email" : "Website notification"} sent successfully!`);
+
+      if (notificationType === "email") {
+        setEmailFormData({ targetUsers: "all", countries: [], roles: [], minSpent: "", subject: "", message: "" });
+      } else {
+        setWebsiteFormData({ targetUsers: "all", countries: [], roles: [], minSpent: "", title: "", message: "" });
+      }
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Failed to send notification";
+      toast.error(message);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const countries = [
@@ -239,17 +288,17 @@ export default function AdminNotificationsPage() {
               {/* Min Spent */}
               <AdminFormInput
                 label="Minimum Spent ($)"
+                name="minSpent"
                 type="number"
                 placeholder="0.00"
                 value={notificationType === "email" ? emailFormData.minSpent : websiteFormData.minSpent}
-                onChange={(e) => {
+                onChange={(value) => {
                   if (notificationType === "email") {
-                    setEmailFormData({ ...emailFormData, minSpent: e.target.value });
+                    setEmailFormData({ ...emailFormData, minSpent: value });
                   } else {
-                    setWebsiteFormData({ ...websiteFormData, minSpent: e.target.value });
+                    setWebsiteFormData({ ...websiteFormData, minSpent: value });
                   }
                 }}
-                helpText="Only users who spent at least this amount"
               />
             </div>
           </div>
@@ -259,10 +308,11 @@ export default function AdminNotificationsPage() {
             <>
               <AdminFormInput
                 label="Email Subject"
+                name="subject"
                 required
                 placeholder="Enter email subject"
                 value={emailFormData.subject}
-                onChange={(e) => setEmailFormData({ ...emailFormData, subject: e.target.value })}
+                onChange={(value) => setEmailFormData({ ...emailFormData, subject: value })}
               />
 
               <div>
@@ -285,10 +335,11 @@ export default function AdminNotificationsPage() {
             <>
               <AdminFormInput
                 label="Notification Title"
+                name="title"
                 required
                 placeholder="Enter notification title"
                 value={websiteFormData.title}
-                onChange={(e) => setWebsiteFormData({ ...websiteFormData, title: e.target.value })}
+                onChange={(value) => setWebsiteFormData({ ...websiteFormData, title: value })}
               />
 
               <div>
@@ -335,6 +386,94 @@ export default function AdminNotificationsPage() {
           </div>
         </div>
       </AdminGlassCard>
+      {/* Preview Modal */}
+      {showPreview && (() => {
+        const formData = notificationType === "email" ? emailFormData : websiteFormData;
+        return (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+            <div className="w-full max-w-lg mx-4 rounded-2xl bg-[#1E293B] border border-[rgba(255,255,255,0.18)] shadow-2xl">
+              <div className="flex items-center justify-between p-6 border-b border-[rgba(255,255,255,0.1)]">
+                <h3 className="text-white text-lg font-semibold">Notification Preview</h3>
+                <button
+                  onClick={() => setShowPreview(false)}
+                  className="text-[#94A3B8] hover:text-white transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="p-6 space-y-4">
+                <div className="flex items-center gap-2 text-sm">
+                  {notificationType === "email" ? <Mail className="w-4 h-4 text-[#3B82F6]" /> : <Bell className="w-4 h-4 text-[#3B82F6]" />}
+                  <span className="text-[#3B82F6] font-medium capitalize">{notificationType} Notification</span>
+                </div>
+
+                <div>
+                  <span className="text-[#64748B] text-xs uppercase tracking-wider">Target</span>
+                  <p className="text-white text-sm mt-1">{targetLabels[formData.targetUsers]}</p>
+                </div>
+
+                {formData.countries.length > 0 && (
+                  <div>
+                    <span className="text-[#64748B] text-xs uppercase tracking-wider">Countries</span>
+                    <p className="text-white text-sm mt-1">{formData.countries.join(", ")}</p>
+                  </div>
+                )}
+
+                {formData.roles.length > 0 && (
+                  <div>
+                    <span className="text-[#64748B] text-xs uppercase tracking-wider">Roles</span>
+                    <p className="text-white text-sm mt-1">{formData.roles.join(", ")}</p>
+                  </div>
+                )}
+
+                {formData.minSpent && (
+                  <div>
+                    <span className="text-[#64748B] text-xs uppercase tracking-wider">Min Spent</span>
+                    <p className="text-white text-sm mt-1">${formData.minSpent}</p>
+                  </div>
+                )}
+
+                <div>
+                  <span className="text-[#64748B] text-xs uppercase tracking-wider">
+                    {notificationType === "email" ? "Subject" : "Title"}
+                  </span>
+                  <p className="text-white text-sm mt-1 font-medium">
+                    {notificationType === "email" ? emailFormData.subject : websiteFormData.title}
+                  </p>
+                </div>
+
+                <div>
+                  <span className="text-[#64748B] text-xs uppercase tracking-wider">Message</span>
+                  <p className="text-white text-sm mt-1 whitespace-pre-wrap bg-[rgba(255,255,255,0.05)] rounded-xl p-4 max-h-40 overflow-y-auto">
+                    {formData.message}
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3 p-6 border-t border-[rgba(255,255,255,0.1)]">
+                <button
+                  onClick={() => setShowPreview(false)}
+                  className="flex-1 px-6 py-3 rounded-xl bg-[rgba(255,255,255,0.08)] border border-[rgba(255,255,255,0.18)] text-white hover:bg-[rgba(255,255,255,0.12)] transition-colors font-medium"
+                >
+                  Edit
+                </button>
+                <button
+                  onClick={() => {
+                    setShowPreview(false);
+                    handleSend();
+                  }}
+                  disabled={isLoading}
+                  className="flex-1 px-6 py-3 rounded-xl bg-[#3B82F6] hover:bg-[#2563EB] text-white transition-colors font-medium flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <Send className="w-4 h-4" />
+                  Confirm & Send
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }
