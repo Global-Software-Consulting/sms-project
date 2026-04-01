@@ -30,12 +30,13 @@ export default function AdminLoginApiPage() {
   };
 
   // Login Options State (4 methods: Google, Twitter, GitHub, Telegram)
-  const [loginOptions, setLoginOptions] = useState({
-    google: true,
-    twitter: false,
-    github: true,
-    telegram: false,
-  });
+  // Initialize with null to indicate "not yet loaded" - will be set from API
+  const [loginOptions, setLoginOptions] = useState<{
+    google: boolean;
+    twitter: boolean;
+    github: boolean;
+    telegram: boolean;
+  } | null>(null);
 
   // API Configuration State
   const [showPasswords, setShowPasswords] = useState({
@@ -80,38 +81,35 @@ export default function AdminLoginApiPage() {
       setIsPageLoading(true);
       const grouped = await getGroupedSettings();
       
-      // Parse login settings (check both 'login' and 'general' categories for backward compatibility)
-      const loginSettings = grouped['login'] || [];
-      const generalSettings = grouped['general'] || [];
+      // Build a map of all login_* settings from ALL categories
+      // Settings may be stored in different categories (login, general, security, etc.)
       const loginMap: Record<string, string> = {};
       
-      // First add from login category
-      loginSettings.forEach((s) => {
-        loginMap[s.key] = s.value;
+      // Iterate through all categories and collect login_* keys
+      Object.values(grouped).forEach((settings) => {
+        settings.forEach((s) => {
+          if (s.key.startsWith('login_') && !loginMap[s.key]) {
+            loginMap[s.key] = s.value;
+          }
+        });
       });
       
-      // Then check general category for backward compatibility (don't overwrite if already exists)
-      generalSettings.forEach((s) => {
-        if (s.key.startsWith('login_') && !loginMap[s.key]) {
-          loginMap[s.key] = s.value;
-        }
-      });
-      
-      // Update state with fetched values (default to current state if not found)
-      setLoginOptions((prev) => ({
+      // Update state with fetched values
+      // Use API defaults if keys don't exist in database yet (matching backend defaults)
+      setLoginOptions({
         google: loginMap['login_google_enabled'] !== undefined 
           ? loginMap['login_google_enabled'] === 'true' 
-          : prev.google,
+          : true, // Backend default is true
         twitter: loginMap['login_twitter_enabled'] !== undefined 
           ? loginMap['login_twitter_enabled'] === 'true' 
-          : prev.twitter,
+          : false, // Backend default is false
         github: loginMap['login_github_enabled'] !== undefined 
           ? loginMap['login_github_enabled'] === 'true' 
-          : prev.github,
+          : true, // Backend default is true
         telegram: loginMap['login_telegram_enabled'] !== undefined 
           ? loginMap['login_telegram_enabled'] === 'true' 
-          : prev.telegram,
-      }));
+          : false, // Backend default is false
+      });
 
       // Parse API settings
       const apiSettings = grouped['api'] || [];
@@ -152,6 +150,11 @@ export default function AdminLoginApiPage() {
   }, [fetchSettings]);
 
   const handleUpdateLoginOptions = async () => {
+    if (!loginOptions) {
+      toast.error("Login options not loaded yet");
+      return;
+    }
+    
     setIsLoading(true);
     try {
       await bulkUpdateSettings({
@@ -299,10 +302,11 @@ export default function AdminLoginApiPage() {
                   <p className="text-[#64748B] text-sm">Allow users to sign in with Google accounts</p>
                 </div>
                 <button
-                  onClick={() => setLoginOptions({ ...loginOptions, google: !loginOptions.google })}
-                  className={`relative w-12 h-6 rounded-full transition-colors ${loginOptions.google ? "bg-[#3B82F6]" : "bg-[rgba(255,255,255,0.18)]"}`}
+                  onClick={() => loginOptions && setLoginOptions({ ...loginOptions, google: !loginOptions.google })}
+                  disabled={!loginOptions}
+                  className={`relative w-12 h-6 rounded-full transition-colors ${loginOptions?.google ? "bg-[#3B82F6]" : "bg-[rgba(255,255,255,0.18)]"} disabled:opacity-50`}
                 >
-                  <div className={`absolute top-0.5 w-5 h-5 bg-white rounded-full transition-transform ${loginOptions.google ? "translate-x-6" : "translate-x-0.5"}`} />
+                  <div className={`absolute top-0.5 w-5 h-5 bg-white rounded-full transition-transform ${loginOptions?.google ? "translate-x-6" : "translate-x-0.5"}`} />
                 </button>
               </div>
 
@@ -318,10 +322,11 @@ export default function AdminLoginApiPage() {
                   <p className="text-[#64748B] text-sm">Allow users to sign in with Twitter accounts</p>
                 </div>
                 <button
-                  onClick={() => setLoginOptions({ ...loginOptions, twitter: !loginOptions.twitter })}
-                  className={`relative w-12 h-6 rounded-full transition-colors ${loginOptions.twitter ? "bg-[#3B82F6]" : "bg-[rgba(255,255,255,0.18)]"}`}
+                  onClick={() => loginOptions && setLoginOptions({ ...loginOptions, twitter: !loginOptions.twitter })}
+                  disabled={!loginOptions}
+                  className={`relative w-12 h-6 rounded-full transition-colors ${loginOptions?.twitter ? "bg-[#3B82F6]" : "bg-[rgba(255,255,255,0.18)]"} disabled:opacity-50`}
                 >
-                  <div className={`absolute top-0.5 w-5 h-5 bg-white rounded-full transition-transform ${loginOptions.twitter ? "translate-x-6" : "translate-x-0.5"}`} />
+                  <div className={`absolute top-0.5 w-5 h-5 bg-white rounded-full transition-transform ${loginOptions?.twitter ? "translate-x-6" : "translate-x-0.5"}`} />
                 </button>
               </div>
 
@@ -337,10 +342,11 @@ export default function AdminLoginApiPage() {
                   <p className="text-[#64748B] text-sm">Allow users to sign in with GitHub accounts</p>
                 </div>
                 <button
-                  onClick={() => setLoginOptions({ ...loginOptions, github: !loginOptions.github })}
-                  className={`relative w-12 h-6 rounded-full transition-colors ${loginOptions.github ? "bg-[#3B82F6]" : "bg-[rgba(255,255,255,0.18)]"}`}
+                  onClick={() => loginOptions && setLoginOptions({ ...loginOptions, github: !loginOptions.github })}
+                  disabled={!loginOptions}
+                  className={`relative w-12 h-6 rounded-full transition-colors ${loginOptions?.github ? "bg-[#3B82F6]" : "bg-[rgba(255,255,255,0.18)]"} disabled:opacity-50`}
                 >
-                  <div className={`absolute top-0.5 w-5 h-5 bg-white rounded-full transition-transform ${loginOptions.github ? "translate-x-6" : "translate-x-0.5"}`} />
+                  <div className={`absolute top-0.5 w-5 h-5 bg-white rounded-full transition-transform ${loginOptions?.github ? "translate-x-6" : "translate-x-0.5"}`} />
                 </button>
               </div>
 
@@ -356,10 +362,11 @@ export default function AdminLoginApiPage() {
                   <p className="text-[#64748B] text-sm">Allow users to sign in with Telegram accounts</p>
                 </div>
                 <button
-                  onClick={() => setLoginOptions({ ...loginOptions, telegram: !loginOptions.telegram })}
-                  className={`relative w-12 h-6 rounded-full transition-colors ${loginOptions.telegram ? "bg-[#3B82F6]" : "bg-[rgba(255,255,255,0.18)]"}`}
+                  onClick={() => loginOptions && setLoginOptions({ ...loginOptions, telegram: !loginOptions.telegram })}
+                  disabled={!loginOptions}
+                  className={`relative w-12 h-6 rounded-full transition-colors ${loginOptions?.telegram ? "bg-[#3B82F6]" : "bg-[rgba(255,255,255,0.18)]"} disabled:opacity-50`}
                 >
-                  <div className={`absolute top-0.5 w-5 h-5 bg-white rounded-full transition-transform ${loginOptions.telegram ? "translate-x-6" : "translate-x-0.5"}`} />
+                  <div className={`absolute top-0.5 w-5 h-5 bg-white rounded-full transition-transform ${loginOptions?.telegram ? "translate-x-6" : "translate-x-0.5"}`} />
                 </button>
               </div>
             </div>
