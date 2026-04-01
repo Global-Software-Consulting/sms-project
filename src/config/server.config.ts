@@ -194,7 +194,7 @@ export const API_ENDPOINTS = {
 
     // Admin Analytics
     ANALYTICS: {
-      DASHBOARD: '/admin/analytics/dashboard',
+      DASHBOARD: '/admin/analytics/dashboard/stats',
       REVENUE: '/admin/analytics/revenue',
       USERS_GROWTH: '/admin/analytics/users/growth',
       PAYMENTS_BREAKDOWN: '/admin/analytics/payments/breakdown',
@@ -203,6 +203,9 @@ export const API_ENDPOINTS = {
       RECENT_SYSTEM_LOGS: '/admin/analytics/recent/system-logs',
       TOP_COUNTRIES: '/admin/analytics/top-countries',
       TOP_SERVICES: '/admin/analytics/top-services',
+      REVENUE_TRENDS: '/admin/analytics/revenue-trends',
+      ACTIVATION_TRENDS: '/admin/analytics/activation-trends',
+      RECENT_ACTIVITY: '/admin/analytics/recent-activity',
     },
 
     // Admin Membership

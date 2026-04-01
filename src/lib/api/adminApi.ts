@@ -579,48 +579,22 @@ export const unlockWallet = async (
 // Admin Analytics Types
 // ============================================
 
+export interface DashboardMetric {
+  label: string;
+  value: string;
+  changePercent: number | null;
+  trend: 'up' | 'down' | null;
+}
+
 export interface DashboardOverview {
-  users: {
-    totalUsers: number;
-    newUsersToday: number;
-    newUsersThisWeek: number;
-    newUsersThisMonth: number;
-    activeUsersToday: number;
-    userGrowthPercent: number;
-  };
-  revenue: {
-    totalRevenue: string;
-    revenueToday: string;
-    revenueThisWeek: string;
-    revenueThisMonth: string;
-    revenueGrowthPercent: number;
-    avgTransactionValue: string;
-  };
-  memberships: {
-    totalActive: number;
-    newToday: number;
-    cancelledToday: number;
-    byPlan: Record<string, number>;
-  };
-  wallet: {
-    totalBalance: string;
-    totalDeposited: string;
-    totalSpent: string;
-    lockedWallets: number;
-  };
-  api: {
-    totalRequests: number;
-    requestsToday: number;
-    activeKeys: number;
-    errorRate: number;
-  };
-  systemHealth: {
-    status: 'healthy' | 'degraded' | 'down';
-    uptime: number;
-    errorsToday: number;
-    warningsToday: number;
-  };
-  generatedAt: string;
+  totalUsers: DashboardMetric;
+  activeActivations: DashboardMetric;
+  totalRevenue: DashboardMetric;
+  pendingActivations: DashboardMetric;
+  failedActivations: DashboardMetric;
+  totalCountries: DashboardMetric;
+  totalServices: DashboardMetric;
+  successRate: DashboardMetric;
 }
 
 export interface RevenueChartData {
@@ -814,6 +788,59 @@ export const getTopCountries = async (): Promise<TopCountry[]> => {
 export const getTopServices = async (): Promise<TopService[]> => {
   const response = await apiClient.get<TopService[]>(
     API_ENDPOINTS.ADMIN.ANALYTICS.TOP_SERVICES,
+  );
+  return response.data;
+};
+
+export interface TrendDataPoint {
+  month: string;
+  value: number;
+}
+
+export interface TrendResponse {
+  months: number;
+  data: TrendDataPoint[];
+  total: string | number;
+}
+
+/**
+ * Get monthly revenue trends
+ */
+export const getRevenueTrends = async (months: number = 12): Promise<TrendResponse> => {
+  const response = await apiClient.get<TrendResponse>(
+    API_ENDPOINTS.ADMIN.ANALYTICS.REVENUE_TRENDS,
+    { params: { months } },
+  );
+  return response.data;
+};
+
+/**
+ * Get monthly activation trends
+ */
+export const getActivationTrends = async (months: number = 12): Promise<TrendResponse> => {
+  const response = await apiClient.get<TrendResponse>(
+    API_ENDPOINTS.ADMIN.ANALYTICS.ACTIVATION_TRENDS,
+    { params: { months } },
+  );
+  return response.data;
+};
+
+export interface RecentActivity {
+  id: string;
+  description: string;
+  username: string;
+  serviceName: string;
+  status: string;
+  createdAt: string;
+}
+
+/**
+ * Get recent SMS activation activity
+ */
+export const getRecentActivity = async (limit: number = 10): Promise<RecentActivity[]> => {
+  const response = await apiClient.get<RecentActivity[]>(
+    API_ENDPOINTS.ADMIN.ANALYTICS.RECENT_ACTIVITY,
+    { params: { limit } },
   );
   return response.data;
 };

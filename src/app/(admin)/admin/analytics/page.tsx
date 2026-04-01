@@ -33,79 +33,68 @@ import {
   getDashboardOverview,
   getTopCountries,
   getTopServices,
+  getRevenueTrends,
+  getActivationTrends,
+  getRecentActivity,
   type DashboardOverview,
   type TopCountry,
   type TopService,
+  type TrendResponse,
+  type RecentActivity,
 } from "@/lib/api/adminApi";
-
-const revenueData = [
-  { month: "Jan", revenue: 4200 },
-  { month: "Feb", revenue: 5800 },
-  { month: "Mar", revenue: 7200 },
-  { month: "Apr", revenue: 6500 },
-  { month: "May", revenue: 8900 },
-  { month: "Jun", revenue: 10200 },
-];
-
-const activationData = [
-  { month: "Jan", activations: 320 },
-  { month: "Feb", activations: 450 },
-  { month: "Mar", activations: 580 },
-  { month: "Apr", activations: 520 },
-  { month: "May", activations: 690 },
-  { month: "Jun", activations: 820 },
-];
 
 const COLORS = ["#3B82F6", "#22C55E", "#F59E0B", "#EF4444", "#8B5CF6", "#EC4899", "#06B6D4", "#84CC16", "#F97316", "#6366F1"];
 
-const recentActivities = [
-  {
-    id: 1,
-    user: "john_doe",
-    action: "New SMS activation for WhatsApp",
-    time: "2 minutes ago",
-    status: "active",
-  },
-  {
-    id: 2,
-    user: "jane_smith",
-    action: "Completed activation for Telegram",
-    time: "5 minutes ago",
-    status: "completed",
-  },
-  {
-    id: 3,
-    user: "mike_wilson",
-    action: "Cancelled activation for Instagram",
-    time: "8 minutes ago",
-    status: "cancelled",
-  },
-  {
-    id: 4,
-    user: "sarah_jones",
-    action: "New SMS activation for Facebook",
-    time: "12 minutes ago",
-    status: "active",
-  },
-];
+function formatTimeAgo(dateString: string): string {
+  const now = new Date();
+  const date = new Date(dateString);
+  const diffMs = now.getTime() - date.getTime();
+  const diffMinutes = Math.floor(diffMs / 60000);
+  if (diffMinutes < 1) return "just now";
+  if (diffMinutes < 60) return `${diffMinutes} minute${diffMinutes > 1 ? "s" : ""} ago`;
+  const diffHours = Math.floor(diffMinutes / 60);
+  if (diffHours < 24) return `${diffHours} hour${diffHours > 1 ? "s" : ""} ago`;
+  const diffDays = Math.floor(diffHours / 24);
+  return `${diffDays} day${diffDays > 1 ? "s" : ""} ago`;
+}
+
+function getActivityStatusStyle(status: string): string {
+  switch (status.toUpperCase()) {
+    case "COMPLETED": return "bg-[#22C55E]/20 text-[#22C55E]";
+    case "ACTIVE":
+    case "PENDING": return "bg-[#3B82F6]/20 text-[#3B82F6]";
+    case "CANCELLED":
+    case "FAILED": return "bg-[#EF4444]/20 text-[#EF4444]";
+    default: return "bg-[#94A3B8]/20 text-[#94A3B8]";
+  }
+}
 
 export default function AdminAnalyticsPage() {
   const [dashboard, setDashboard] = useState<DashboardOverview | null>(null);
   const [topCountries, setTopCountries] = useState<TopCountry[]>([]);
   const [topServices, setTopServices] = useState<TopService[]>([]);
+  const [revenueTrends, setRevenueTrends] = useState<TrendResponse | null>(null);
+  const [activationTrends, setActivationTrends] = useState<TrendResponse | null>(null);
+  const [recentActivities, setRecentActivities] = useState<RecentActivity[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   const fetchData = useCallback(async () => {
     setIsLoading(true);
     try {
-      const [dashboardData, countriesData, servicesData] = await Promise.all([
+      const [dashboardData, countriesData, servicesData, revenueData, activationData, activityData] = await Promise.all([
         getDashboardOverview(),
         getTopCountries(),
         getTopServices(),
+        getRevenueTrends(12),
+        getActivationTrends(12),
+        getRecentActivity(10),
       ]);
       setDashboard(dashboardData);
       setTopCountries(countriesData);
       setTopServices(servicesData);
+      setRevenueTrends(revenueData);
+      setActivationTrends(activationData);
+      setRecentActivities(activityData);
     } catch (error: any) {
       toast.error(error?.response?.data?.message || "Failed to fetch analytics data");
     } finally {
@@ -138,108 +127,130 @@ export default function AdminAnalyticsPage() {
       {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6 mb-6 lg:mb-8">
         <AdminStatCard
-          title="Total Users"
-          value={dashboard?.users?.totalUsers?.toLocaleString() ?? "—"}
+          title={dashboard?.totalUsers?.label ?? "Total Users"}
+          value={dashboard?.totalUsers?.value ?? "—"}
           icon={<Users className="w-6 h-6 text-[#3B82F6]" />}
-          trend={dashboard?.users ? { value: dashboard.users.userGrowthPercent, isPositive: dashboard.users.userGrowthPercent >= 0 } : undefined}
+          trend={dashboard?.totalUsers?.changePercent != null ? { value: dashboard.totalUsers.changePercent, isPositive: dashboard.totalUsers.trend === 'up' } : undefined}
         />
         <AdminStatCard
-          title="New Users Today"
-          value={dashboard?.users?.newUsersToday?.toLocaleString() ?? "—"}
+          title={dashboard?.activeActivations?.label ?? "Active Activations"}
+          value={dashboard?.activeActivations?.value ?? "—"}
           icon={<MessageSquare className="w-6 h-6 text-[#22C55E]" />}
+          trend={dashboard?.activeActivations?.changePercent != null ? { value: dashboard.activeActivations.changePercent, isPositive: dashboard.activeActivations.trend === 'up' } : undefined}
         />
         <AdminStatCard
-          title="Total Revenue"
-          value={dashboard?.revenue?.totalRevenue ? `$${dashboard.revenue.totalRevenue}` : "—"}
+          title={dashboard?.totalRevenue?.label ?? "Total Revenue"}
+          value={dashboard?.totalRevenue?.value ?? "—"}
           icon={<DollarSign className="w-6 h-6 text-[#F59E0B]" />}
-          trend={dashboard?.revenue ? { value: dashboard.revenue.revenueGrowthPercent, isPositive: dashboard.revenue.revenueGrowthPercent >= 0 } : undefined}
+          trend={dashboard?.totalRevenue?.changePercent != null ? { value: dashboard.totalRevenue.changePercent, isPositive: dashboard.totalRevenue.trend === 'up' } : undefined}
         />
         <AdminStatCard
-          title="Active Memberships"
-          value={dashboard?.memberships?.totalActive?.toLocaleString() ?? "—"}
+          title={dashboard?.pendingActivations?.label ?? "Pending Activations"}
+          value={dashboard?.pendingActivations?.value ?? "—"}
           icon={<Clock className="w-6 h-6 text-[#8B5CF6]" />}
+          trend={dashboard?.pendingActivations?.changePercent != null ? { value: dashboard.pendingActivations.changePercent, isPositive: dashboard.pendingActivations.trend === 'up' } : undefined}
         />
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6 mb-6 lg:mb-8">
         <AdminStatCard
-          title="Active Users Today"
-          value={dashboard?.users?.activeUsersToday?.toLocaleString() ?? "—"}
+          title={dashboard?.failedActivations?.label ?? "Failed Activations"}
+          value={dashboard?.failedActivations?.value ?? "—"}
           icon={<XCircle className="w-6 h-6 text-[#EF4444]" />}
+          trend={dashboard?.failedActivations?.changePercent != null ? { value: dashboard.failedActivations.changePercent, isPositive: dashboard.failedActivations.trend === 'up' } : undefined}
         />
         <AdminStatCard
-          title="Top Countries"
-          value={topCountries.length > 0 ? topCountries.length.toString() : "—"}
+          title={dashboard?.totalCountries?.label ?? "Total Countries"}
+          value={dashboard?.totalCountries?.value ?? "—"}
           icon={<Globe className="w-6 h-6 text-[#3B82F6]" />}
         />
         <AdminStatCard
-          title="Top Services"
-          value={topServices.length > 0 ? topServices.length.toString() : "—"}
+          title={dashboard?.totalServices?.label ?? "Total Services"}
+          value={dashboard?.totalServices?.value ?? "—"}
           icon={<Briefcase className="w-6 h-6 text-[#22C55E]" />}
         />
         <AdminStatCard
-          title="Avg Transaction"
-          value={dashboard?.revenue?.avgTransactionValue ? `$${dashboard.revenue.avgTransactionValue}` : "—"}
+          title={dashboard?.successRate?.label ?? "Success Rate"}
+          value={dashboard?.successRate?.value ?? "—"}
           icon={<MessageSquare className="w-6 h-6 text-[#22C55E]" />}
+          trend={dashboard?.successRate?.trend ? { value: dashboard.successRate.changePercent ?? 0, isPositive: dashboard.successRate.trend === 'up' } : undefined}
         />
       </div>
 
       {/* Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6 mb-6 lg:mb-8">
         <AdminGlassCard>
-          <h3 className="text-white text-base lg:text-lg font-semibold mb-4 lg:mb-6">Revenue Trends</h3>
-          <ResponsiveContainer width="100%" height={300}>
-            <AreaChart data={revenueData}>
-              <defs>
-                <linearGradient id="colorRevenueUnique" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#3B82F6" stopOpacity={0.3} />
-                  <stop offset="95%" stopColor="#3B82F6" stopOpacity={0} />
-                </linearGradient>
-              </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" />
-              <XAxis dataKey="month" stroke="#94A3B8" />
-              <YAxis stroke="#94A3B8" />
-              <Tooltip
-                contentStyle={{
-                  backgroundColor: "#111827",
-                  border: "1px solid rgba(255,255,255,0.18)",
-                  borderRadius: "12px",
-                }}
-              />
-              <Area
-                type="monotone"
-                dataKey="revenue"
-                stroke="#3B82F6"
-                strokeWidth={2}
-                fill="url(#colorRevenueUnique)"
-              />
-            </AreaChart>
-          </ResponsiveContainer>
+          <h3 className="text-white text-base lg:text-lg font-semibold mb-4 lg:mb-6">
+            Revenue Trends
+            {revenueTrends?.total && <span className="text-[#94A3B8] text-sm font-normal ml-2">(Total: ${revenueTrends.total})</span>}
+          </h3>
+          {revenueTrends?.data && revenueTrends.data.length > 0 ? (
+            <ResponsiveContainer width="100%" height={300}>
+              <AreaChart data={revenueTrends.data}>
+                <defs>
+                  <linearGradient id="colorRevenueUnique" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#3B82F6" stopOpacity={0.3} />
+                    <stop offset="95%" stopColor="#3B82F6" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" />
+                <XAxis dataKey="month" stroke="#94A3B8" />
+                <YAxis stroke="#94A3B8" />
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: "#111827",
+                    border: "1px solid rgba(255,255,255,0.18)",
+                    borderRadius: "12px",
+                  }}
+                />
+                <Area
+                  type="monotone"
+                  dataKey="value"
+                  stroke="#3B82F6"
+                  strokeWidth={2}
+                  fill="url(#colorRevenueUnique)"
+                />
+              </AreaChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className="flex items-center justify-center h-[300px] text-[#94A3B8] text-sm">
+              {isLoading ? "Loading..." : "No data available"}
+            </div>
+          )}
         </AdminGlassCard>
 
         <AdminGlassCard>
-          <h3 className="text-white text-base lg:text-lg font-semibold mb-4 lg:mb-6">Activation Trends</h3>
-          <ResponsiveContainer width="100%" height={300}>
-            <LineChart data={activationData}>
-              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" />
-              <XAxis dataKey="month" stroke="#94A3B8" />
-              <YAxis stroke="#94A3B8" />
-              <Tooltip
-                contentStyle={{
-                  backgroundColor: "#111827",
-                  border: "1px solid rgba(255,255,255,0.18)",
-                  borderRadius: "12px",
-                }}
-              />
-              <Line
-                type="monotone"
-                dataKey="activations"
-                stroke="#22C55E"
-                strokeWidth={3}
-                dot={{ fill: "#22C55E", r: 5 }}
-              />
-            </LineChart>
-          </ResponsiveContainer>
+          <h3 className="text-white text-base lg:text-lg font-semibold mb-4 lg:mb-6">
+            Activation Trends
+            {activationTrends?.total != null && <span className="text-[#94A3B8] text-sm font-normal ml-2">(Total: {activationTrends.total.toLocaleString()})</span>}
+          </h3>
+          {activationTrends?.data && activationTrends.data.length > 0 ? (
+            <ResponsiveContainer width="100%" height={300}>
+              <LineChart data={activationTrends.data}>
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" />
+                <XAxis dataKey="month" stroke="#94A3B8" />
+                <YAxis stroke="#94A3B8" />
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: "#111827",
+                    border: "1px solid rgba(255,255,255,0.18)",
+                    borderRadius: "12px",
+                  }}
+                />
+                <Line
+                  type="monotone"
+                  dataKey="value"
+                  stroke="#22C55E"
+                  strokeWidth={3}
+                  dot={{ fill: "#22C55E", r: 5 }}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className="flex items-center justify-center h-[300px] text-[#94A3B8] text-sm">
+              {isLoading ? "Loading..." : "No data available"}
+            </div>
+          )}
         </AdminGlassCard>
       </div>
 
@@ -321,23 +332,17 @@ export default function AdminAnalyticsPage() {
                   <MessageSquare className="w-5 h-5 text-[#3B82F6]" />
                 </div>
                 <div>
-                  <p className="text-white text-sm font-medium">{activity.action}</p>
+                  <p className="text-white text-sm font-medium">{activity.description}</p>
                   <p className="text-[#64748B] text-xs">
-                    by {activity.user} • {activity.time}
+                    by {activity.username} • {formatTimeAgo(activity.createdAt)}
                   </p>
                 </div>
               </div>
               <div>
                 <span
-                  className={`px-3 py-1 rounded-lg text-xs font-medium ${
-                    activity.status === "active"
-                      ? "bg-[#3B82F6]/20 text-[#3B82F6]"
-                      : activity.status === "completed"
-                      ? "bg-[#22C55E]/20 text-[#22C55E]"
-                      : "bg-[#EF4444]/20 text-[#EF4444]"
-                  }`}
+                  className={`px-3 py-1 rounded-lg text-xs font-medium ${getActivityStatusStyle(activity.status)}`}
                 >
-                  {activity.status}
+                  {activity.status.toLowerCase()}
                 </span>
               </div>
             </div>
