@@ -48,9 +48,9 @@ export function useNotifications() {
   return ctx;
 }
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api';
-// Socket URL is the base server URL (without /api path)
-const SOCKET_URL = API_URL.replace(/\/api\/?$/, '');
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api/v1';
+// Socket URL is the base server URL (without /api/v1 or /api path)
+const SOCKET_URL = API_URL.replace(/\/api(\/v\d+)?\/?$/, '');
 
 export function NotificationProvider({ children }: { children: ReactNode }) {
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
@@ -152,7 +152,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     let connectionAttempts = 0;
     const MAX_LOG_ATTEMPTS = 3;
 
-    const socket = io(SOCKET_URL, {
+    const socket = io(`${SOCKET_URL}/notifications`, {
       auth: { token: tokens.accessToken },
       transports: ['websocket', 'polling'],
       reconnection: true,

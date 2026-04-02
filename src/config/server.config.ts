@@ -364,6 +364,7 @@ export const API_ENDPOINTS = {
     // Admin Notifications
     NOTIFICATIONS: {
       ROOT: '/admin/notifications',
+      MY: '/admin/notifications/my',
       STATS: '/admin/notifications/stats',
       DETAIL: (id: string) => `/admin/notifications/${id}`,
       SEND_BULK: '/admin/notifications/bulk',
