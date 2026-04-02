@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { toast } from "sonner";
-import { Edit2, Trash2, ExternalLink, Plus, Loader2 } from "lucide-react";
+import { Edit2, Trash2, ExternalLink, Plus, Loader2, MonitorPlay } from "lucide-react";
 import {
   getAds,
   createAd,
@@ -201,71 +201,85 @@ export default function AdminAdsPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-[rgba(255,255,255,0.05)]">
-              {ads.map((ad) => (
-                <tr key={ad.id} className="hover:bg-[rgba(255,255,255,0.02)] transition-colors">
-                  <td className="px-6 py-4">
-                    <div className="flex items-center gap-4">
-                      <img
-                        src={ad.image || ""}
-                        alt={ad.title}
-                        className="w-12 h-12 rounded-lg object-cover border border-[rgba(255,255,255,0.1)]"
-                      />
-                      <div>
-                        <div className="text-white text-sm font-medium">{ad.title}</div>
-                        <div className="text-[#64748B] text-xs">{ad.description}</div>
+              {ads.length === 0 ? (
+                <tr>
+                  <td colSpan={4} className="py-16">
+                    <div className="flex flex-col items-center justify-center text-center">
+                      <div className="w-16 h-16 rounded-full bg-[rgba(255,255,255,0.05)] flex items-center justify-center mb-4">
+                        <MonitorPlay className="w-8 h-8 text-[#64748B]" />
                       </div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4">
-                    <span
-                      className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium ${
-                        ad.status === "active"
-                          ? "bg-[#22C55E]/20 text-[#22C55E]"
-                          : "bg-[#64748B]/20 text-[#64748B]"
-                      }`}
-                    >
-                      <span
-                        className={`w-1.5 h-1.5 rounded-full ${
-                          ad.status === "active" ? "bg-[#22C55E]" : "bg-[#64748B]"
-                        }`}
-                      />
-                      {ad.status === "active" ? "Active" : "Inactive"}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4">
-                    <span className="text-white text-sm">{ad.sortOrder}</span>
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => handleEditAd(ad)}
-                        className="p-2 hover:bg-[rgba(59,130,246,0.2)] rounded-lg text-[#3B82F6] transition-colors"
-                        title="Edit"
-                      >
-                        <Edit2 className="w-4 h-4" />
-                      </button>
-                      <button
-                        onClick={() => handleDeleteAd(ad)}
-                        className="p-2 hover:bg-[rgba(239,68,68,0.2)] rounded-lg text-[#EF4444] transition-colors"
-                        title="Delete"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                      {ad.url && (
-                        <a
-                          href={ad.url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="p-2 hover:bg-[rgba(34,197,94,0.2)] rounded-lg text-[#22C55E] transition-colors"
-                          title="View"
-                        >
-                          <ExternalLink className="w-4 h-4" />
-                        </a>
-                      )}
+                      <p className="text-white text-lg font-medium">No ads found</p>
+                      <p className="text-[#94A3B8] text-sm mt-1">Create your first ad to get started</p>
                     </div>
                   </td>
                 </tr>
-              ))}
+              ) : (
+                ads.map((ad) => (
+                  <tr key={ad.id} className="hover:bg-[rgba(255,255,255,0.02)] transition-colors">
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-4">
+                        <img
+                          src={ad.image || ""}
+                          alt={ad.title}
+                          className="w-12 h-12 rounded-lg object-cover border border-[rgba(255,255,255,0.1)]"
+                        />
+                        <div>
+                          <div className="text-white text-sm font-medium">{ad.title}</div>
+                          <div className="text-[#64748B] text-xs">{ad.description}</div>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <span
+                        className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium ${
+                          ad.status === "active"
+                            ? "bg-[#22C55E]/20 text-[#22C55E]"
+                            : "bg-[#64748B]/20 text-[#64748B]"
+                        }`}
+                      >
+                        <span
+                          className={`w-1.5 h-1.5 rounded-full ${
+                            ad.status === "active" ? "bg-[#22C55E]" : "bg-[#64748B]"
+                          }`}
+                        />
+                        {ad.status === "active" ? "Active" : "Inactive"}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className="text-white text-sm">{ad.sortOrder}</span>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => handleEditAd(ad)}
+                          className="p-2 hover:bg-[rgba(59,130,246,0.2)] rounded-lg text-[#3B82F6] transition-colors"
+                          title="Edit"
+                        >
+                          <Edit2 className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => handleDeleteAd(ad)}
+                          className="p-2 hover:bg-[rgba(239,68,68,0.2)] rounded-lg text-[#EF4444] transition-colors"
+                          title="Delete"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                        {ad.url && (
+                          <a
+                            href={ad.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="p-2 hover:bg-[rgba(34,197,94,0.2)] rounded-lg text-[#22C55E] transition-colors"
+                            title="View"
+                          >
+                            <ExternalLink className="w-4 h-4" />
+                          </a>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>

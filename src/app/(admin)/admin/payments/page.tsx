@@ -15,6 +15,7 @@ import {
   Save,
   Loader2,
   RefreshCw,
+  Wallet,
 } from "lucide-react";
 import {
   getPaymentGateways,
@@ -455,6 +456,15 @@ export default function AdminPaymentsPage() {
             </div>
           </div>
 
+          {paymentMethods.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-16 text-center">
+              <div className="w-16 h-16 rounded-full bg-[rgba(255,255,255,0.05)] flex items-center justify-center mb-4">
+                <CreditCard className="w-8 h-8 text-[#64748B]" />
+              </div>
+              <p className="text-white text-lg font-medium">No payment methods found</p>
+              <p className="text-[#94A3B8] text-sm mt-1">Seed default gateways to get started</p>
+            </div>
+          ) : (
           <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
             {paymentMethods.map((method) => (
               <div
@@ -535,6 +545,7 @@ export default function AdminPaymentsPage() {
               </div>
             ))}
           </div>
+          )}
         </div>
       )}
 
@@ -555,6 +566,15 @@ export default function AdminPaymentsPage() {
             </div>
           </div>
 
+          {payGateProviders.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-16 text-center">
+              <div className="w-16 h-16 rounded-full bg-[rgba(255,255,255,0.05)] flex items-center justify-center mb-4">
+                <Grip className="w-8 h-8 text-[#64748B]" />
+              </div>
+              <p className="text-white text-lg font-medium">No PayGate providers found</p>
+              <p className="text-[#94A3B8] text-sm mt-1">Configure payment gateway providers to get started</p>
+            </div>
+          ) : (
           <div className="space-y-4">
             {payGateProviders
               .sort((a, b) => a.sortOrder - b.sortOrder)
@@ -615,6 +635,7 @@ export default function AdminPaymentsPage() {
                 </div>
               ))}
           </div>
+          )}
         </div>
       )}
 
@@ -781,8 +802,14 @@ export default function AdminPaymentsPage() {
                   ))}
                   {userBalances.length === 0 && (
                     <tr>
-                      <td colSpan={4} className="px-6 py-12 text-center text-[#64748B]">
-                        No users found
+                      <td colSpan={4} className="py-16">
+                        <div className="flex flex-col items-center justify-center text-center">
+                          <div className="w-16 h-16 rounded-full bg-[rgba(255,255,255,0.05)] flex items-center justify-center mb-4">
+                            <Wallet className="w-8 h-8 text-[#64748B]" />
+                          </div>
+                          <p className="text-white text-lg font-medium">No users found</p>
+                          <p className="text-[#94A3B8] text-sm mt-1">Try adjusting your search or filters</p>
+                        </div>
                       </td>
                     </tr>
                   )}
