@@ -42,13 +42,23 @@ export interface Ticket {
   user: Record<string, unknown>;
 }
 
+export interface TicketAttachment {
+  key: string;
+  url: string;
+  originalName: string;
+  size: number;
+  mimeType: string;
+}
+
 export interface TicketMessage {
   id: string;
   ticketId: string;
   message: string;
   imageUrl: string | null;
+  attachments?: TicketAttachment[];
   isStaff: boolean;
   senderName: string;
+  staffName?: string;
   createdAt: string;
 }
 
@@ -110,7 +120,7 @@ export const createTicket = async (
     formData.append('subject', data.subject);
     formData.append('priority', data.priority);
     formData.append('message', data.message);
-    formData.append('image', image);
+    formData.append('attachments', image);
     const response = await apiClient.post<Ticket>(
       API_ENDPOINTS.TICKETS.ROOT,
       formData,
@@ -150,7 +160,7 @@ export const sendTicketMessage = async (
   if (image) {
     const formData = new FormData();
     formData.append('message', message);
-    formData.append('image', image);
+    formData.append('attachments', image);
     const response = await apiClient.post<TicketMessage>(
       API_ENDPOINTS.TICKETS.MESSAGES(ticketId),
       formData,
