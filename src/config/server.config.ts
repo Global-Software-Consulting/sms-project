@@ -215,6 +215,8 @@ export const API_ENDPOINTS = {
       SUBSCRIPTIONS: '/admin/membership/subscriptions',
       STATISTICS: '/admin/membership/statistics',
       GRANT: '/admin/membership/grant',
+      PLANS: '/admin/membership/plans',
+      PLAN_DETAIL: (slug: string) => `/admin/membership/plans/${slug}`,
     },
 
     // Admin API Keys

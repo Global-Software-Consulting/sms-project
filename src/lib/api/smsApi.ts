@@ -916,7 +916,7 @@ export const adminGetStatistics = async (): Promise<SmsStatistics> => {
  * GET /api/v1/admin/sms/vip
  */
 export const adminGetVipNumbers = async (
-  params?: PaginationParams,
+  params?: PaginationParams & { minRating?: number; maxRating?: number },
 ): Promise<PaginatedResponse<VipNumber>> => {
   const response = await apiClient.get<PaginatedResponse<VipNumber>>(
     API_ENDPOINTS.ADMIN.SMS.VIP,
