@@ -66,13 +66,16 @@ interface VIPCategory {
   services: Service[];
 }
 
-interface ServicePrice {
-  serviceId: string;
-  serviceName: string;
-  country: string;
-  basePrice: number;
-  finalPrice: number;
-  provider: string;
+interface PricingProduct {
+  id: string;
+  service: { id: string; name: string; slug: string };
+  country: { id: string; name: string; code: string };
+  provider: { id: string; name: string; slug: string };
+  basePrice: string;
+  finalPrice: string;
+  globalMarkup: number;
+  productMarkup: number;
+  priceOverride: string | null;
 }
 
 
@@ -92,8 +95,13 @@ export default function AdminSmsServicesPage() {
   const [globalMarkup, setGlobalMarkup] = useState<number>(0);
   const [pricingSearchQuery, setPricingSearchQuery] = useState("");
   const [showEditPriceModal, setShowEditPriceModal] = useState(false);
-  const [selectedServicePrice, setSelectedServicePrice] = useState<ServicePrice | null>(null);
-  const [newPrice, setNewPrice] = useState("");
+  const [selectedServicePrice, setSelectedServicePrice] = useState<PricingProduct | null>(null);
+  const [editPriceMode, setEditPriceMode] = useState<'override' | 'markup'>('override');
+  const [editPriceValue, setEditPriceValue] = useState("");
+  const [pricingProducts, setPricingProducts] = useState<PricingProduct[]>([]);
+  const [isPricingLoading, setIsPricingLoading] = useState(false);
+  const [pricingPage, setPricingPage] = useState(1);
+  const [pricingTotal, setPricingTotal] = useState(0);
 
   // Subscriptions State (from API)
   const [subscriptions, setSubscriptions] = useState<MembershipPlan[]>([]);
@@ -402,64 +410,93 @@ export default function AdminSmsServicesPage() {
   };
 
   // Pricing Functions
-  const getAllServicePrices = (): ServicePrice[] => {
-    const allPrices: ServicePrice[] = [];
-    providers.forEach((provider) => {
-      provider.services.forEach((service) => {
-        if (service.price) {
-          allPrices.push({
-            serviceId: service.id,
-            serviceName: service.name,
-            country: service.country,
-            basePrice: service.price,
-            finalPrice: service.price * (1 + globalMarkup / 100),
-            provider: provider.name,
-          });
-        }
-      });
-    });
-    return allPrices;
+  // Fetch global markup
+  const fetchGlobalMarkup = useCallback(async () => {
+    try {
+      const response = await apiClient.get<{ markup: number }>(
+        API_ENDPOINTS.ADMIN.SMS.PRICING_GLOBAL_MARKUP,
+      );
+      setGlobalMarkup(response.data.markup ?? 0);
+    } catch {
+      // silently fail
+    }
+  }, []);
+
+  // Fetch pricing products
+  const fetchPricingProducts = useCallback(async (page = 1, search = "") => {
+    setIsPricingLoading(true);
+    try {
+      const params: Record<string, any> = { page, limit: 20 };
+      if (search) params.search = search;
+      const response = await apiClient.get<{ data: PricingProduct[]; total: number }>(
+        API_ENDPOINTS.ADMIN.SMS.PRICING_PRODUCTS,
+        { params },
+      );
+      setPricingProducts(response.data.data || []);
+      setPricingTotal(response.data.total || 0);
+    } catch (error: any) {
+      toast.error(error?.response?.data?.message || "Failed to fetch products");
+    } finally {
+      setIsPricingLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (activeTab === 'pricing') {
+      fetchGlobalMarkup();
+      fetchPricingProducts(1, "");
+      setPricingPage(1);
+      setPricingSearchQuery("");
+    }
+  }, [activeTab, fetchGlobalMarkup, fetchPricingProducts]);
+
+  const handleApplyGlobalMarkup = async () => {
+    setIsLoading(true);
+    try {
+      await apiClient.put(API_ENDPOINTS.ADMIN.SMS.PRICING_GLOBAL_MARKUP, { markup: globalMarkup });
+      toast.success(`Global markup of ${globalMarkup}% applied!`);
+      fetchPricingProducts(pricingPage, pricingSearchQuery);
+    } catch (error: any) {
+      toast.error(error?.response?.data?.message || "Failed to apply markup");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const filteredServicePrices = getAllServicePrices().filter(
-    (sp) =>
-      sp.serviceName.toLowerCase().includes(pricingSearchQuery.toLowerCase()) ||
-      sp.country.toLowerCase().includes(pricingSearchQuery.toLowerCase()) ||
-      sp.provider.toLowerCase().includes(pricingSearchQuery.toLowerCase())
-  );
+  const handlePricingSearch = useCallback((query: string) => {
+    setPricingSearchQuery(query);
+    setPricingPage(1);
+    fetchPricingProducts(1, query);
+  }, [fetchPricingProducts]);
 
-  const handleApplyGlobalMarkup = () => {
-    toast.success(`Global markup of ${globalMarkup}% applied to all services!`);
-  };
-
-  const handleEditServicePrice = (servicePrice: ServicePrice) => {
-    setSelectedServicePrice(servicePrice);
-    setNewPrice(servicePrice.basePrice.toString());
+  const handleEditServicePrice = (product: PricingProduct) => {
+    setSelectedServicePrice(product);
+    setEditPriceMode(product.priceOverride ? 'override' : 'markup');
+    setEditPriceValue(product.priceOverride || product.productMarkup.toString());
     setShowEditPriceModal(true);
   };
 
   const handleSaveServicePrice = async () => {
     if (!selectedServicePrice) return;
-
     setIsLoading(true);
-    await new Promise((resolve) => setTimeout(resolve, 1000));
+    try {
+      const body = editPriceMode === 'override'
+        ? { priceOverride: editPriceValue ? parseFloat(editPriceValue) : null }
+        : { markup: parseFloat(editPriceValue) || 0 };
 
-    // Update service price in providers
-    setProviders(
-      providers.map((provider) => ({
-        ...provider,
-        services: provider.services.map((service) =>
-          service.id === selectedServicePrice.serviceId
-            ? { ...service, price: parseFloat(newPrice) || 0 }
-            : service
-        ),
-      }))
-    );
-
-    toast.success("Service price updated successfully!");
-    setIsLoading(false);
-    setShowEditPriceModal(false);
-    setSelectedServicePrice(null);
+      await apiClient.patch(
+        API_ENDPOINTS.ADMIN.SMS.PRICING_PRODUCT_DETAIL(selectedServicePrice.id),
+        body,
+      );
+      toast.success("Product price updated!");
+      setShowEditPriceModal(false);
+      setSelectedServicePrice(null);
+      fetchPricingProducts(pricingPage, pricingSearchQuery);
+    } catch (error: any) {
+      toast.error(error?.response?.data?.message || "Failed to update price");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   // Subscription Functions
@@ -847,9 +884,10 @@ export default function AdminSmsServicesPage() {
               </div>
               <button
                 onClick={handleApplyGlobalMarkup}
-                className="mt-6 px-6 py-3 rounded-lg bg-[#F59E0B] hover:bg-[#D97706] text-white text-sm font-medium transition-colors flex items-center gap-2"
+                disabled={isLoading}
+                className="mt-6 px-6 py-3 rounded-lg bg-[#F59E0B] hover:bg-[#D97706] text-white text-sm font-medium transition-colors flex items-center gap-2 disabled:opacity-50"
               >
-                <Percent className="w-4 h-4" />
+                {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Percent className="w-4 h-4" />}
                 Apply Global Markup
               </button>
             </div>
@@ -871,7 +909,11 @@ export default function AdminSmsServicesPage() {
               <input
                 type="text"
                 value={pricingSearchQuery}
-                onChange={(e) => setPricingSearchQuery(e.target.value)}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setPricingSearchQuery(val);
+                  handlePricingSearch(val);
+                }}
                 placeholder="Search services by name, country, or provider..."
                 className="w-full bg-[rgba(0,0,0,0.4)] border border-[rgba(255,255,255,0.18)] rounded-lg pl-12 pr-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#3B82F6]"
               />
@@ -883,74 +925,103 @@ export default function AdminSmsServicesPage() {
             <div className="p-6 border-b border-[rgba(255,255,255,0.1)]">
               <h3 className="text-white text-lg font-semibold">Service Pricing</h3>
               <p className="text-[#94A3B8] text-sm mt-1">
-                {filteredServicePrices.length} services • Click Edit to modify individual prices
+                {pricingTotal} products • Click Edit to modify individual prices
               </p>
             </div>
 
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b border-[rgba(255,255,255,0.1)] bg-[rgba(0,0,0,0.2)]">
-                    <th className="px-6 py-4 text-left text-xs font-medium text-[#94A3B8] uppercase">
-                      Service
-                    </th>
-                    <th className="px-6 py-4 text-left text-xs font-medium text-[#94A3B8] uppercase">
-                      Country
-                    </th>
-                    <th className="px-6 py-4 text-left text-xs font-medium text-[#94A3B8] uppercase">
-                      Provider
-                    </th>
-                    <th className="px-6 py-4 text-left text-xs font-medium text-[#94A3B8] uppercase">
-                      Base Price
-                    </th>
-                    <th className="px-6 py-4 text-left text-xs font-medium text-[#94A3B8] uppercase">
-                      Markup
-                    </th>
-                    <th className="px-6 py-4 text-left text-xs font-medium text-[#94A3B8] uppercase">
-                      Final Price
-                    </th>
-                    <th className="px-6 py-4 text-left text-xs font-medium text-[#94A3B8] uppercase">
-                      Actions
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-[rgba(255,255,255,0.05)]">
-                  {filteredServicePrices.map((servicePrice) => (
-                    <tr
-                      key={servicePrice.serviceId}
-                      className="hover:bg-[rgba(255,255,255,0.02)] transition-colors"
-                    >
-                      <td className="px-6 py-4 text-white text-sm font-medium">{servicePrice.serviceName}</td>
-                      <td className="px-6 py-4 text-[#94A3B8] text-sm">{servicePrice.country}</td>
-                      <td className="px-6 py-4 text-[#94A3B8] text-sm">{servicePrice.provider}</td>
-                      <td className="px-6 py-4 text-white text-sm">${servicePrice.basePrice.toFixed(2)}</td>
-                      <td className="px-6 py-4">
-                        <span
-                          className={`text-sm font-medium ${
-                            globalMarkup > 0 ? "text-[#22C55E]" : globalMarkup < 0 ? "text-[#EF4444]" : "text-[#64748B]"
-                          }`}
-                        >
-                          {globalMarkup > 0 ? "+" : ""}
-                          {globalMarkup}%
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 text-white text-sm font-semibold">
-                        ${servicePrice.finalPrice.toFixed(2)}
-                      </td>
-                      <td className="px-6 py-4">
-                        <button
-                          onClick={() => handleEditServicePrice(servicePrice)}
-                          className="px-4 py-2 rounded-lg bg-[#3B82F6] hover:bg-[#2563EB] text-white text-xs font-medium transition-colors flex items-center gap-1"
-                        >
-                          <Edit2 className="w-3.5 h-3.5" />
-                          Edit
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            {isPricingLoading ? (
+              <div className="flex items-center justify-center py-16">
+                <Loader2 className="w-6 h-6 text-[#3B82F6] animate-spin" />
+                <span className="text-[#94A3B8] text-sm ml-3">Loading products...</span>
+              </div>
+            ) : pricingProducts.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-16 text-center">
+                <div className="w-16 h-16 rounded-full bg-[rgba(255,255,255,0.05)] flex items-center justify-center mb-4">
+                  <DollarSign className="w-8 h-8 text-[#64748B]" />
+                </div>
+                <p className="text-white text-lg font-medium">No products found</p>
+                <p className="text-[#94A3B8] text-sm mt-1">Sync providers first or adjust your search</p>
+              </div>
+            ) : (
+              <>
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-b border-[rgba(255,255,255,0.1)] bg-[rgba(0,0,0,0.2)]">
+                        <th className="px-6 py-4 text-left text-xs font-medium text-[#94A3B8] uppercase">Service</th>
+                        <th className="px-6 py-4 text-left text-xs font-medium text-[#94A3B8] uppercase">Country</th>
+                        <th className="px-6 py-4 text-left text-xs font-medium text-[#94A3B8] uppercase">Provider</th>
+                        <th className="px-6 py-4 text-left text-xs font-medium text-[#94A3B8] uppercase">Base Price</th>
+                        <th className="px-6 py-4 text-left text-xs font-medium text-[#94A3B8] uppercase">Markup</th>
+                        <th className="px-6 py-4 text-left text-xs font-medium text-[#94A3B8] uppercase">Final Price</th>
+                        <th className="px-6 py-4 text-left text-xs font-medium text-[#94A3B8] uppercase">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-[rgba(255,255,255,0.05)]">
+                      {pricingProducts.map((product) => (
+                        <tr key={product.id} className="hover:bg-[rgba(255,255,255,0.02)] transition-colors">
+                          <td className="px-6 py-4 text-white text-sm font-medium">{product.service.name}</td>
+                          <td className="px-6 py-4 text-[#94A3B8] text-sm">{product.country.name}</td>
+                          <td className="px-6 py-4 text-[#94A3B8] text-sm">{product.provider.name}</td>
+                          <td className="px-6 py-4 text-white text-sm">${product.basePrice}</td>
+                          <td className="px-6 py-4">
+                            <div className="flex flex-col gap-0.5">
+                              {product.productMarkup !== 0 && (
+                                <span className="text-[#3B82F6] text-xs">Product: +{product.productMarkup}%</span>
+                              )}
+                              {product.globalMarkup !== 0 && (
+                                <span className="text-[#F59E0B] text-xs">Global: +{product.globalMarkup}%</span>
+                              )}
+                              {product.priceOverride && (
+                                <span className="text-[#8B5CF6] text-xs">Override: ${product.priceOverride}</span>
+                              )}
+                              {product.productMarkup === 0 && product.globalMarkup === 0 && !product.priceOverride && (
+                                <span className="text-[#64748B] text-xs">None</span>
+                              )}
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 text-white text-sm font-semibold">${product.finalPrice}</td>
+                          <td className="px-6 py-4">
+                            <button
+                              onClick={() => handleEditServicePrice(product)}
+                              className="px-4 py-2 rounded-lg bg-[#3B82F6] hover:bg-[#2563EB] text-white text-xs font-medium transition-colors flex items-center gap-1"
+                            >
+                              <Edit2 className="w-3.5 h-3.5" />
+                              Edit
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Pagination */}
+                {pricingTotal > 20 && (
+                  <div className="flex items-center justify-between px-6 py-4 border-t border-[rgba(255,255,255,0.1)]">
+                    <p className="text-[#94A3B8] text-sm">
+                      Page {pricingPage} of {Math.ceil(pricingTotal / 20)}
+                    </p>
+                    <div className="flex items-center gap-2">
+                      <button
+                        disabled={pricingPage <= 1}
+                        onClick={() => { setPricingPage(pricingPage - 1); fetchPricingProducts(pricingPage - 1, pricingSearchQuery); }}
+                        className="px-4 py-2 rounded-lg bg-[rgba(255,255,255,0.08)] text-white text-sm disabled:opacity-50 hover:bg-[rgba(255,255,255,0.12)] transition-colors"
+                      >
+                        Previous
+                      </button>
+                      <button
+                        disabled={pricingPage >= Math.ceil(pricingTotal / 20)}
+                        onClick={() => { setPricingPage(pricingPage + 1); fetchPricingProducts(pricingPage + 1, pricingSearchQuery); }}
+                        className="px-4 py-2 rounded-lg bg-[rgba(255,255,255,0.08)] text-white text-sm disabled:opacity-50 hover:bg-[rgba(255,255,255,0.12)] transition-colors"
+                      >
+                        Next
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
           </div>
         </div>
       )}
@@ -1518,32 +1589,77 @@ export default function AdminSmsServicesPage() {
       {showEditPriceModal && selectedServicePrice && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-[#0F172A] border border-[rgba(255,255,255,0.1)] rounded-xl p-6 w-full max-w-md">
-            <h2 className="text-white text-xl font-semibold mb-4">Edit Service Price</h2>
+            <h2 className="text-white text-xl font-semibold mb-2">Edit Product Price</h2>
             <p className="text-[#94A3B8] text-sm mb-6">
-              {selectedServicePrice.serviceName} ({selectedServicePrice.country}) - {selectedServicePrice.provider}
+              {selectedServicePrice.service.name} - {selectedServicePrice.country.name} ({selectedServicePrice.provider.name})
             </p>
 
-            <div className="mb-6">
-              <label className="text-white text-sm font-medium mb-2 block">Base Price ($)</label>
+            <div className="mb-4 p-3 rounded-lg bg-[rgba(255,255,255,0.05)] border border-[rgba(255,255,255,0.1)]">
+              <div className="flex justify-between text-sm">
+                <span className="text-[#64748B]">Current Base Price</span>
+                <span className="text-white">${selectedServicePrice.basePrice}</span>
+              </div>
+              <div className="flex justify-between text-sm mt-1">
+                <span className="text-[#64748B]">Current Final Price</span>
+                <span className="text-white font-semibold">${selectedServicePrice.finalPrice}</span>
+              </div>
+            </div>
+
+            {/* Mode selector */}
+            <div className="flex items-center gap-2 mb-4">
+              <button
+                onClick={() => { setEditPriceMode('override'); setEditPriceValue(selectedServicePrice.priceOverride || ''); }}
+                className={`flex-1 px-4 py-2.5 rounded-lg text-sm font-medium transition-all ${
+                  editPriceMode === 'override'
+                    ? 'bg-[#3B82F6] text-white'
+                    : 'bg-[rgba(255,255,255,0.05)] border border-[rgba(255,255,255,0.18)] text-[#94A3B8] hover:bg-[rgba(255,255,255,0.08)]'
+                }`}
+              >
+                Fixed Price Override
+              </button>
+              <button
+                onClick={() => { setEditPriceMode('markup'); setEditPriceValue(selectedServicePrice.productMarkup.toString()); }}
+                className={`flex-1 px-4 py-2.5 rounded-lg text-sm font-medium transition-all ${
+                  editPriceMode === 'markup'
+                    ? 'bg-[#3B82F6] text-white'
+                    : 'bg-[rgba(255,255,255,0.05)] border border-[rgba(255,255,255,0.18)] text-[#94A3B8] hover:bg-[rgba(255,255,255,0.08)]'
+                }`}
+              >
+                Product Markup %
+              </button>
+            </div>
+
+            <div className="mb-4">
+              <label className="text-white text-sm font-medium mb-2 block">
+                {editPriceMode === 'override' ? 'Fixed Price ($)' : 'Markup Percentage (%)'}
+              </label>
               <input
                 type="number"
-                step="0.01"
-                value={newPrice}
-                onChange={(e) => setNewPrice(e.target.value)}
+                step={editPriceMode === 'override' ? '0.01' : '0.1'}
+                value={editPriceValue}
+                onChange={(e) => setEditPriceValue(e.target.value)}
                 className="w-full bg-[rgba(0,0,0,0.4)] border border-[rgba(255,255,255,0.18)] rounded-lg px-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#3B82F6]"
-                placeholder="0.00"
+                placeholder={editPriceMode === 'override' ? '2.50' : '5'}
               />
-              <p className="text-[#64748B] text-xs mt-2">
-                With {globalMarkup}% markup: ${((parseFloat(newPrice) || 0) * (1 + globalMarkup / 100)).toFixed(2)}
-              </p>
+              {editPriceMode === 'override' && (
+                <p className="text-[#64748B] text-xs mt-2">
+                  Leave empty and save to remove override and use calculated price
+                </p>
+              )}
             </div>
+
+            {editPriceMode === 'override' && selectedServicePrice.priceOverride && (
+              <button
+                onClick={() => { setEditPriceValue(''); }}
+                className="w-full mb-4 px-4 py-2 rounded-lg bg-[rgba(239,68,68,0.1)] border border-[rgba(239,68,68,0.3)] text-[#EF4444] text-sm font-medium hover:bg-[rgba(239,68,68,0.2)] transition-colors"
+              >
+                Remove Price Override (use calculated)
+              </button>
+            )}
 
             <div className="flex items-center justify-end gap-3">
               <button
-                onClick={() => {
-                  setShowEditPriceModal(false);
-                  setSelectedServicePrice(null);
-                }}
+                onClick={() => { setShowEditPriceModal(false); setSelectedServicePrice(null); }}
                 className="px-5 py-2.5 rounded-lg bg-[rgba(255,255,255,0.08)] hover:bg-[rgba(255,255,255,0.12)] text-white text-sm font-medium transition-colors"
               >
                 Cancel
@@ -1553,7 +1669,7 @@ export default function AdminSmsServicesPage() {
                 disabled={isLoading}
                 className="px-5 py-2.5 rounded-lg bg-[#3B82F6] hover:bg-[#2563EB] text-white text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
               >
-                {isLoading ? "Saving..." : <><Save className="w-4 h-4" />Save Price</>}
+                {isLoading ? <><Loader2 className="w-4 h-4 animate-spin" />Saving...</> : <><Save className="w-4 h-4" />Save Price</>}
               </button>
             </div>
           </div>

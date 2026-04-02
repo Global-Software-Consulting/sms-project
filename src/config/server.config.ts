@@ -285,6 +285,9 @@ export const API_ENDPOINTS = {
       VIP: '/admin/sms/vip',
       VIP_DETAIL: (id: string) => `/admin/sms/vip/${id}`,
       VIP_AUTO_DETECT: '/admin/sms/vip/auto-detect',
+      PRICING_GLOBAL_MARKUP: '/admin/sms/pricing/global-markup',
+      PRICING_PRODUCTS: '/admin/sms/pricing/products',
+      PRICING_PRODUCT_DETAIL: (id: string) => `/admin/sms/pricing/products/${id}`,
     },
 
     // Admin SEO
