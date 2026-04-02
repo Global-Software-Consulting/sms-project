@@ -26,6 +26,8 @@ import {
   adminUpdateProvider,
   adminSyncProvider,
   adminAddVipNumber,
+  adminGetVipNumbers,
+  adminRemoveVipNumber,
   getServices,
   getProductsRealtime,
   getCountries,
@@ -33,7 +35,11 @@ import {
   type SmsService,
   type SmsProduct,
   type SmsCountry,
+  type VipNumber,
 } from '@/lib/api/smsApi';
+import { apiClient } from '@/config/api-client.config';
+import { API_ENDPOINTS } from '@/config/server.config';
+import { type MembershipPlan } from '@/lib/api/membershipApi';
 
 interface Service {
   id: string;
@@ -69,16 +75,6 @@ interface ServicePrice {
   provider: string;
 }
 
-interface Subscription {
-  id: string;
-  name: string;
-  price: number;
-  duration: string;
-  features: string[];
-  discount: number;
-  status: "active" | "inactive";
-  color: string;
-}
 
 export default function AdminSmsServicesPage() {
   const [activeTab, setActiveTab] = useState<"providers" | "vip" | "pricing" | "subscriptions">("providers");
@@ -99,76 +95,19 @@ export default function AdminSmsServicesPage() {
   const [selectedServicePrice, setSelectedServicePrice] = useState<ServicePrice | null>(null);
   const [newPrice, setNewPrice] = useState("");
 
-  // Subscriptions State
-  const [subscriptions, setSubscriptions] = useState<Subscription[]>([
-    {
-      id: "1",
-      name: "Free",
-      price: 0,
-      duration: "Forever",
-      features: ["Basic SMS Services", "5 Activations/month", "Email Support", "Standard Speed"],
-      discount: 0,
-      status: "active",
-      color: "#64748B",
-    },
-    {
-      id: "2",
-      name: "Basic",
-      price: 9.99,
-      duration: "Monthly",
-      features: ["All SMS Services", "50 Activations/month", "Priority Support", "Fast Speed", "5% Discount"],
-      discount: 5,
-      status: "active",
-      color: "#3B82F6",
-    },
-    {
-      id: "3",
-      name: "Pro",
-      price: 29.99,
-      duration: "Monthly",
-      features: [
-        "All SMS Services",
-        "200 Activations/month",
-        "24/7 Priority Support",
-        "Ultra Fast Speed",
-        "15% Discount",
-        "API Access",
-      ],
-      discount: 15,
-      status: "active",
-      color: "#F59E0B",
-    },
-    {
-      id: "4",
-      name: "Enterprise",
-      price: 99.99,
-      duration: "Monthly",
-      features: [
-        "All SMS Services",
-        "Unlimited Activations",
-        "Dedicated Support",
-        "Instant Speed",
-        "25% Discount",
-        "Full API Access",
-        "Custom Integration",
-        "White Label Options",
-      ],
-      discount: 25,
-      status: "active",
-      color: "#8B5CF6",
-    },
-  ]);
+  // Subscriptions State (from API)
+  const [subscriptions, setSubscriptions] = useState<MembershipPlan[]>([]);
+  const [isPlansLoading, setIsPlansLoading] = useState(false);
   const [showEditSubscriptionModal, setShowEditSubscriptionModal] = useState(false);
   const [showDeleteSubscriptionModal, setShowDeleteSubscriptionModal] = useState(false);
-  const [selectedSubscription, setSelectedSubscription] = useState<Subscription | null>(null);
+  const [selectedSubscription, setSelectedSubscription] = useState<MembershipPlan | null>(null);
   const [subscriptionFormData, setSubscriptionFormData] = useState({
     name: "",
-    price: 0,
-    duration: "Monthly",
+    price: "",
+    description: "",
     features: "",
     discount: 0,
-    status: "active" as "active" | "inactive",
-    color: "#3B82F6",
+    isActive: true,
   });
 
   // API providers
@@ -190,6 +129,46 @@ export default function AdminSmsServicesPage() {
   const [isVipCountriesLoading, setIsVipCountriesLoading] = useState(false);
   const [selectedVipCountryId, setSelectedVipCountryId] = useState<string>("");
   const [vipCountrySearch, setVipCountrySearch] = useState("");
+
+  // VIP numbers from API (3 tiers by rating)
+  const [vipPremium, setVipPremium] = useState<VipNumber[]>([]);
+  const [vipStandard, setVipStandard] = useState<VipNumber[]>([]);
+  const [vipBasic, setVipBasic] = useState<VipNumber[]>([]);
+  const [isVipLoading, setIsVipLoading] = useState(false);
+
+  const fetchVipNumbers = useCallback(async () => {
+    setIsVipLoading(true);
+    try {
+      const [premium, standard, basic] = await Promise.all([
+        adminGetVipNumbers({ limit: 200, minRating: 4 }),
+        adminGetVipNumbers({ limit: 200, minRating: 2, maxRating: 3 }),
+        adminGetVipNumbers({ limit: 200, maxRating: 1 }),
+      ]);
+      setVipPremium(premium.data || []);
+      setVipStandard(standard.data || []);
+      setVipBasic(basic.data || []);
+    } catch (error: any) {
+      toast.error(error?.response?.data?.message || "Failed to fetch VIP numbers");
+    } finally {
+      setIsVipLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (activeTab === 'vip') {
+      fetchVipNumbers();
+    }
+  }, [activeTab, fetchVipNumbers]);
+
+  const handleRemoveVip = async (vipId: string) => {
+    try {
+      await adminRemoveVipNumber(vipId);
+      toast.success("VIP number removed");
+      fetchVipNumbers();
+    } catch (error: any) {
+      toast.error(error?.response?.data?.message || "Failed to remove VIP number");
+    }
+  };
 
   const fetchProviders = useCallback(async () => {
     setIsProvidersLoading(true);
@@ -422,20 +401,6 @@ export default function AdminSmsServicesPage() {
     setSelectedServices([]);
   };
 
-  const handleRemoveFromVIP = async (categoryId: string, serviceId: string) => {
-    setVipCategories(
-      vipCategories.map((cat) =>
-        cat.id === categoryId ? { ...cat, services: cat.services.filter((s) => s.id !== serviceId) } : cat
-      )
-    );
-    toast.success("Service removed from VIP category");
-  };
-
-  const getTopServices = () => {
-    const allServices = providers.flatMap((p) => p.services);
-    return allServices.sort((a, b) => b.orders - a.orders).slice(0, 10);
-  };
-
   // Pricing Functions
   const getAllServicePrices = (): ServicePrice[] => {
     const allPrices: ServicePrice[] = [];
@@ -498,66 +463,87 @@ export default function AdminSmsServicesPage() {
   };
 
   // Subscription Functions
-  const handleEditSubscription = (subscription: Subscription) => {
-    setSelectedSubscription(subscription);
+  const fetchPlans = useCallback(async () => {
+    setIsPlansLoading(true);
+    try {
+      const response = await apiClient.get<MembershipPlan[] | { plans: MembershipPlan[] }>(
+        API_ENDPOINTS.ADMIN.MEMBERSHIP.PLANS,
+      );
+      const plans = Array.isArray(response.data) ? response.data : (response.data as any).plans || [];
+      setSubscriptions(plans);
+    } catch (error: any) {
+      toast.error(error?.response?.data?.message || "Failed to fetch plans");
+    } finally {
+      setIsPlansLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (activeTab === 'subscriptions') {
+      fetchPlans();
+    }
+  }, [activeTab, fetchPlans]);
+
+  const handleEditSubscription = (plan: MembershipPlan) => {
+    setSelectedSubscription(plan);
     setSubscriptionFormData({
-      name: subscription.name,
-      price: subscription.price,
-      duration: subscription.duration,
-      features: subscription.features.join("\n"),
-      discount: subscription.discount,
-      status: subscription.status,
-      color: subscription.color,
+      name: plan.name,
+      price: plan.price,
+      description: plan.description || "",
+      features: plan.features.join("\n"),
+      discount: plan.discount,
+      isActive: plan.isActive,
     });
     setShowEditSubscriptionModal(true);
   };
 
-  const handleDeleteSubscription = (subscription: Subscription) => {
-    setSelectedSubscription(subscription);
+  const handleDeleteSubscription = (plan: MembershipPlan) => {
+    setSelectedSubscription(plan);
     setShowDeleteSubscriptionModal(true);
   };
 
   const handleSaveSubscription = async () => {
+    if (!selectedSubscription) return;
     setIsLoading(true);
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-
-    if (selectedSubscription) {
-      setSubscriptions(
-        subscriptions.map((sub) =>
-          sub.id === selectedSubscription.id
-            ? {
-                ...sub,
-                name: subscriptionFormData.name,
-                price: subscriptionFormData.price,
-                duration: subscriptionFormData.duration,
-                features: subscriptionFormData.features.split("\n").filter((f) => f.trim()),
-                discount: subscriptionFormData.discount,
-                status: subscriptionFormData.status,
-                color: subscriptionFormData.color,
-              }
-            : sub
-        )
+    try {
+      await apiClient.patch(
+        API_ENDPOINTS.ADMIN.MEMBERSHIP.PLAN_DETAIL(selectedSubscription.slug),
+        {
+          name: subscriptionFormData.name,
+          price: parseFloat(subscriptionFormData.price) || 0,
+          description: subscriptionFormData.description,
+          features: subscriptionFormData.features.split("\n").filter((f: string) => f.trim()),
+          discount: subscriptionFormData.discount,
+          isActive: subscriptionFormData.isActive,
+        },
       );
-      toast.success("Subscription updated successfully!");
+      toast.success("Plan updated successfully!");
+      setShowEditSubscriptionModal(false);
+      setSelectedSubscription(null);
+      fetchPlans();
+    } catch (error: any) {
+      toast.error(error?.response?.data?.message || "Failed to update plan");
+    } finally {
+      setIsLoading(false);
     }
-
-    setIsLoading(false);
-    setShowEditSubscriptionModal(false);
-    setSelectedSubscription(null);
   };
 
   const handleConfirmDeleteSubscription = async () => {
     if (!selectedSubscription) return;
-
     setIsLoading(true);
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-
-    setSubscriptions(subscriptions.filter((sub) => sub.id !== selectedSubscription.id));
-    toast.success("Subscription deleted successfully!");
-
-    setIsLoading(false);
-    setShowDeleteSubscriptionModal(false);
-    setSelectedSubscription(null);
+    try {
+      await apiClient.delete(
+        API_ENDPOINTS.ADMIN.MEMBERSHIP.PLAN_DETAIL(selectedSubscription.slug),
+      );
+      toast.success("Plan deleted successfully!");
+      setShowDeleteSubscriptionModal(false);
+      setSelectedSubscription(null);
+      fetchPlans();
+    } catch (error: any) {
+      toast.error(error?.response?.data?.message || "Failed to delete plan");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const filteredProviders = providers.filter(
@@ -754,105 +740,80 @@ export default function AdminSmsServicesPage() {
       {/* VIP Categories Tab */}
       {activeTab === "vip" && (
         <div className="space-y-6">
-          {/* Top Services */}
-          <div className="p-6 rounded-xl bg-[rgba(15,23,42,0.6)] border border-[rgba(255,255,255,0.1)] backdrop-blur-xl">
-            <h3 className="text-white text-lg font-semibold mb-4">Top Ordered Services</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3">
-              {getTopServices()
-                .slice(0, 5)
-                .map((service, index) => (
-                  <div
-                    key={service.id}
-                    className="p-4 rounded-lg bg-[rgba(0,0,0,0.3)] border border-[rgba(255,255,255,0.1)]"
-                  >
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-[#3B82F6] text-xs font-medium">#{index + 1}</span>
-                      <span className="text-[#22C55E] text-xs">{service.successRate}%</span>
+          {isVipLoading ? (
+            <div className="flex items-center justify-center py-20">
+              <Loader2 className="w-8 h-8 text-[#3B82F6] animate-spin" />
+              <span className="ml-3 text-[#94A3B8]">Loading VIP numbers...</span>
+            </div>
+          ) : (
+            <>
+              {[
+                { label: "V1 - Premium", color: "#F59E0B", data: vipPremium },
+                { label: "V2 - Standard", color: "#3B82F6", data: vipStandard },
+                { label: "V3 - Basic", color: "#64748B", data: vipBasic },
+              ].map((tier) => (
+                <div
+                  key={tier.label}
+                  className="p-6 rounded-xl bg-[rgba(15,23,42,0.6)] border border-[rgba(255,255,255,0.1)] backdrop-blur-xl"
+                >
+                  <div className="flex items-center justify-between mb-6">
+                    <div className="flex items-center gap-3">
+                      <Star className="w-5 h-5" style={{ color: tier.color }} />
+                      <h3 className="text-white text-lg font-semibold">{tier.label}</h3>
+                      <span className="px-3 py-1 rounded-full bg-[rgba(255,255,255,0.1)] text-[#94A3B8] text-xs">
+                        {tier.data.length} services
+                      </span>
                     </div>
-                    <div className="text-white text-sm font-medium mb-1">{service.name}</div>
-                    <div className="text-[#64748B] text-xs">{service.country}</div>
-                    <div className="text-[#64748B] text-xs mt-1">{service.orders} orders</div>
                   </div>
-                ))}
-            </div>
-          </div>
 
-          {/* VIP Categories */}
-          {vipCategories.map((category) => (
-            <div
-              key={category.id}
-              className="p-6 rounded-xl bg-[rgba(15,23,42,0.6)] border border-[rgba(255,255,255,0.1)] backdrop-blur-xl"
-            >
-              <div className="flex items-center justify-between mb-6">
-                <div className="flex items-center gap-3">
-                  <Star className="w-5 h-5 text-[#F59E0B]" />
-                  <h3 className="text-white text-lg font-semibold">{category.name}</h3>
-                  <span className="px-3 py-1 rounded-full bg-[rgba(255,255,255,0.1)] text-[#94A3B8] text-xs">
-                    {category.services.length} services
-                  </span>
+                  {tier.data.length > 0 ? (
+                    <div className="overflow-x-auto">
+                      <table className="w-full">
+                        <thead>
+                          <tr className="border-b border-[rgba(255,255,255,0.1)]">
+                            <th className="px-4 py-3 text-left text-xs font-medium text-[#94A3B8] uppercase">Service</th>
+                            <th className="px-4 py-3 text-left text-xs font-medium text-[#94A3B8] uppercase">Country</th>
+                            <th className="px-4 py-3 text-left text-xs font-medium text-[#94A3B8] uppercase">Provider</th>
+                            <th className="px-4 py-3 text-left text-xs font-medium text-[#94A3B8] uppercase">Rating</th>
+                            <th className="px-4 py-3 text-left text-xs font-medium text-[#94A3B8] uppercase">Orders</th>
+                            <th className="px-4 py-3 text-left text-xs font-medium text-[#94A3B8] uppercase">Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-[rgba(255,255,255,0.05)]">
+                          {tier.data.map((vip) => (
+                            <tr key={vip.id} className="hover:bg-[rgba(255,255,255,0.02)] transition-colors">
+                              <td className="px-4 py-3 text-white text-sm font-medium">{vip.service.name}</td>
+                              <td className="px-4 py-3 text-[#94A3B8] text-sm">{vip.country.name} ({vip.country.code})</td>
+                              <td className="px-4 py-3 text-[#94A3B8] text-sm">{vip.provider.displayName}</td>
+                              <td className="px-4 py-3">
+                                <span className="px-2 py-1 rounded-full text-xs font-medium" style={{ backgroundColor: `${tier.color}20`, color: tier.color }}>
+                                  {vip.rating}/5
+                                </span>
+                              </td>
+                              <td className="px-4 py-3 text-[#94A3B8] text-sm">{vip.orderCount.toLocaleString()}</td>
+                              <td className="px-4 py-3">
+                                <button
+                                  onClick={() => handleRemoveVip(vip.id)}
+                                  className="p-2 hover:bg-[rgba(239,68,68,0.2)] rounded-lg text-[#EF4444] transition-colors"
+                                  title="Remove"
+                                >
+                                  <X className="w-4 h-4" />
+                                </button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  ) : (
+                    <div className="text-center py-8 text-[#64748B] text-sm">
+                      No services in this category. Add services from providers.
+                    </div>
+                  )}
                 </div>
-              </div>
-
-              {category.services.length > 0 ? (
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead>
-                      <tr className="border-b border-[rgba(255,255,255,0.1)]">
-                        <th className="px-4 py-3 text-left text-xs font-medium text-[#94A3B8] uppercase">
-                          Service
-                        </th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-[#94A3B8] uppercase">
-                          Country
-                        </th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-[#94A3B8] uppercase">
-                          Success Rate
-                        </th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-[#94A3B8] uppercase">
-                          Orders
-                        </th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-[#94A3B8] uppercase">
-                          Actions
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-[rgba(255,255,255,0.05)]">
-                      {category.services.map((service) => (
-                        <tr key={service.id} className="hover:bg-[rgba(255,255,255,0.02)] transition-colors">
-                          <td className="px-4 py-3 text-white text-sm">{service.name}</td>
-                          <td className="px-4 py-3 text-[#94A3B8] text-sm">{service.country}</td>
-                          <td className="px-4 py-3">
-                            <div className="flex items-center gap-2">
-                              <div className="flex-1 h-2 bg-[rgba(255,255,255,0.1)] rounded-full overflow-hidden max-w-[100px]">
-                                <div
-                                  className="h-full bg-[#22C55E] rounded-full"
-                                  style={{ width: `${service.successRate}%` }}
-                                />
-                              </div>
-                              <span className="text-[#22C55E] text-xs font-medium">{service.successRate}%</span>
-                            </div>
-                          </td>
-                          <td className="px-4 py-3 text-[#94A3B8] text-sm">{service.orders}</td>
-                          <td className="px-4 py-3">
-                            <button
-                              onClick={() => handleRemoveFromVIP(category.id, service.id)}
-                              className="p-2 hover:bg-[rgba(239,68,68,0.2)] rounded-lg text-[#EF4444] transition-colors"
-                              title="Remove"
-                            >
-                              <X className="w-4 h-4" />
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              ) : (
-                <div className="text-center py-8 text-[#64748B] text-sm">
-                  No services in this category. Add services from providers.
-                </div>
-              )}
-            </div>
-          ))}
+              ))}
+            </>
+          )}
         </div>
       )}
 
@@ -997,7 +958,6 @@ export default function AdminSmsServicesPage() {
       {/* Subscriptions Tab */}
       {activeTab === "subscriptions" && (
         <div>
-          {/* Header */}
           <div className="p-6 rounded-xl bg-[rgba(15,23,42,0.6)] border border-[rgba(255,255,255,0.1)] backdrop-blur-xl mb-6">
             <div className="flex items-center justify-between">
               <div>
@@ -1007,77 +967,90 @@ export default function AdminSmsServicesPage() {
             </div>
           </div>
 
-          {/* Subscription Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {subscriptions.map((subscription) => (
-              <div
-                key={subscription.id}
-                className="p-6 rounded-xl bg-[rgba(15,23,42,0.6)] border-2 backdrop-blur-xl hover:scale-105 transition-all"
-                style={{ borderColor: `${subscription.color}40` }}
-              >
-                <div className="flex items-start justify-between mb-4">
-                  <div>
-                    <div className="flex items-center gap-2 mb-2">
-                      <Crown className="w-5 h-5" style={{ color: subscription.color }} />
-                      <h3 className="text-white text-lg font-bold">{subscription.name}</h3>
-                    </div>
-                    <div className="flex items-baseline gap-1">
-                      <span className="text-white text-3xl font-bold">${subscription.price}</span>
-                      <span className="text-[#64748B] text-sm">/{subscription.duration.toLowerCase()}</span>
-                    </div>
-                  </div>
-                  <span
-                    className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium ${
-                      subscription.status === "active"
-                        ? "bg-[#22C55E]/20 text-[#22C55E]"
-                        : "bg-[#64748B]/20 text-[#64748B]"
-                    }`}
-                  >
-                    <span
-                      className={`w-1.5 h-1.5 rounded-full ${
-                        subscription.status === "active" ? "bg-[#22C55E]" : "bg-[#64748B]"
-                      }`}
-                    />
-                    {subscription.status}
-                  </span>
-                </div>
-
-                {subscription.discount > 0 && (
-                  <div
-                    className="px-3 py-1.5 rounded-lg mb-4 text-center"
-                    style={{ backgroundColor: `${subscription.color}20`, color: subscription.color }}
-                  >
-                    <span className="text-sm font-semibold">{subscription.discount}% Discount on Services</span>
-                  </div>
-                )}
-
-                <div className="space-y-2 mb-6">
-                  {subscription.features.map((feature, index) => (
-                    <div key={index} className="flex items-start gap-2">
-                      <Check className="w-4 h-4 text-[#22C55E] mt-0.5 flex-shrink-0" />
-                      <span className="text-[#94A3B8] text-sm">{feature}</span>
-                    </div>
-                  ))}
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => handleEditSubscription(subscription)}
-                    className="flex-1 px-4 py-2 rounded-lg bg-[#3B82F6] hover:bg-[#2563EB] text-white text-sm font-medium transition-colors flex items-center justify-center gap-2"
-                  >
-                    <Edit2 className="w-4 h-4" />
-                    Edit
-                  </button>
-                  <button
-                    onClick={() => handleDeleteSubscription(subscription)}
-                    className="px-4 py-2 rounded-lg bg-[#EF4444] hover:bg-[#DC2626] text-white text-sm font-medium transition-colors"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                </div>
+          {isPlansLoading ? (
+            <div className="flex items-center justify-center py-20">
+              <Loader2 className="w-8 h-8 text-[#3B82F6] animate-spin" />
+              <span className="ml-3 text-[#94A3B8]">Loading plans...</span>
+            </div>
+          ) : subscriptions.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-20 text-center">
+              <div className="w-16 h-16 rounded-full bg-[rgba(255,255,255,0.05)] flex items-center justify-center mb-4">
+                <Crown className="w-8 h-8 text-[#64748B]" />
               </div>
-            ))}
-          </div>
+              <p className="text-white text-lg font-medium">No plans found</p>
+              <p className="text-[#94A3B8] text-sm mt-1">Create membership plans from the backend</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              {subscriptions.map((plan) => {
+                const planColor = plan.isPopular ? "#F59E0B" : parseFloat(plan.price) === 0 ? "#64748B" : "#3B82F6";
+                return (
+                  <div
+                    key={plan.id}
+                    className="p-6 rounded-xl bg-[rgba(15,23,42,0.6)] border-2 backdrop-blur-xl hover:scale-105 transition-all"
+                    style={{ borderColor: `${planColor}40` }}
+                  >
+                    <div className="flex items-start justify-between mb-4">
+                      <div>
+                        <div className="flex items-center gap-2 mb-2">
+                          <Crown className="w-5 h-5" style={{ color: planColor }} />
+                          <h3 className="text-white text-lg font-bold">{plan.name}</h3>
+                        </div>
+                        <div className="flex items-baseline gap-1">
+                          <span className="text-white text-3xl font-bold">${plan.price}</span>
+                          <span className="text-[#64748B] text-sm">/monthly</span>
+                        </div>
+                      </div>
+                      <span
+                        className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium ${
+                          plan.isActive
+                            ? "bg-[#22C55E]/20 text-[#22C55E]"
+                            : "bg-[#64748B]/20 text-[#64748B]"
+                        }`}
+                      >
+                        <span className={`w-1.5 h-1.5 rounded-full ${plan.isActive ? "bg-[#22C55E]" : "bg-[#64748B]"}`} />
+                        {plan.isActive ? "active" : "inactive"}
+                      </span>
+                    </div>
+
+                    {plan.discount > 0 && (
+                      <div
+                        className="px-3 py-1.5 rounded-lg mb-4 text-center"
+                        style={{ backgroundColor: `${planColor}20`, color: planColor }}
+                      >
+                        <span className="text-sm font-semibold">{plan.discount}% Discount on Services</span>
+                      </div>
+                    )}
+
+                    <div className="space-y-2 mb-6">
+                      {plan.features.map((feature: string, index: number) => (
+                        <div key={index} className="flex items-start gap-2">
+                          <Check className="w-4 h-4 text-[#22C55E] mt-0.5 flex-shrink-0" />
+                          <span className="text-[#94A3B8] text-sm">{feature}</span>
+                        </div>
+                      ))}
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => handleEditSubscription(plan)}
+                        className="flex-1 px-4 py-2 rounded-lg bg-[#3B82F6] hover:bg-[#2563EB] text-white text-sm font-medium transition-colors flex items-center justify-center gap-2"
+                      >
+                        <Edit2 className="w-4 h-4" />
+                        Edit
+                      </button>
+                      <button
+                        onClick={() => handleDeleteSubscription(plan)}
+                        className="px-4 py-2 rounded-lg bg-[#EF4444] hover:bg-[#DC2626] text-white text-sm font-medium transition-colors"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       )}
 
@@ -1605,59 +1578,35 @@ export default function AdminSmsServicesPage() {
                     placeholder="Enter plan name"
                   />
                 </div>
-
                 <div>
                   <label className="text-white text-sm font-medium mb-2 block">Price ($)</label>
                   <input
                     type="number"
                     step="0.01"
                     value={subscriptionFormData.price}
-                    onChange={(e) =>
-                      setSubscriptionFormData({ ...subscriptionFormData, price: parseFloat(e.target.value) || 0 })
-                    }
+                    onChange={(e) => setSubscriptionFormData({ ...subscriptionFormData, price: e.target.value })}
                     className="w-full bg-[rgba(0,0,0,0.4)] border border-[rgba(255,255,255,0.18)] rounded-lg px-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#3B82F6]"
                     placeholder="0.00"
                   />
                 </div>
               </div>
 
-              <div className="grid grid-cols-3 gap-4">
-                <div>
-                  <label className="text-white text-sm font-medium mb-2 block">Duration</label>
-                  <select
-                    value={subscriptionFormData.duration}
-                    onChange={(e) => setSubscriptionFormData({ ...subscriptionFormData, duration: e.target.value })}
-                    className="w-full bg-[rgba(0,0,0,0.4)] border border-[rgba(255,255,255,0.18)] rounded-lg px-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#3B82F6]"
-                  >
-                    <option value="Forever">Forever</option>
-                    <option value="Monthly">Monthly</option>
-                    <option value="Yearly">Yearly</option>
-                  </select>
-                </div>
-
+              <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="text-white text-sm font-medium mb-2 block">Discount (%)</label>
                   <input
                     type="number"
                     value={subscriptionFormData.discount}
-                    onChange={(e) =>
-                      setSubscriptionFormData({ ...subscriptionFormData, discount: parseInt(e.target.value) || 0 })
-                    }
+                    onChange={(e) => setSubscriptionFormData({ ...subscriptionFormData, discount: parseInt(e.target.value) || 0 })}
                     className="w-full bg-[rgba(0,0,0,0.4)] border border-[rgba(255,255,255,0.18)] rounded-lg px-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#3B82F6]"
                     placeholder="0"
                   />
                 </div>
-
                 <div>
                   <label className="text-white text-sm font-medium mb-2 block">Status</label>
                   <select
-                    value={subscriptionFormData.status}
-                    onChange={(e) =>
-                      setSubscriptionFormData({
-                        ...subscriptionFormData,
-                        status: e.target.value as "active" | "inactive",
-                      })
-                    }
+                    value={subscriptionFormData.isActive ? "active" : "inactive"}
+                    onChange={(e) => setSubscriptionFormData({ ...subscriptionFormData, isActive: e.target.value === "active" })}
                     className="w-full bg-[rgba(0,0,0,0.4)] border border-[rgba(255,255,255,0.18)] rounded-lg px-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#3B82F6]"
                   >
                     <option value="active">Active</option>
@@ -1667,12 +1616,13 @@ export default function AdminSmsServicesPage() {
               </div>
 
               <div>
-                <label className="text-white text-sm font-medium mb-2 block">Theme Color</label>
+                <label className="text-white text-sm font-medium mb-2 block">Description</label>
                 <input
-                  type="color"
-                  value={subscriptionFormData.color}
-                  onChange={(e) => setSubscriptionFormData({ ...subscriptionFormData, color: e.target.value })}
-                  className="w-full h-12 bg-[rgba(0,0,0,0.4)] border border-[rgba(255,255,255,0.18)] rounded-lg px-2 cursor-pointer"
+                  type="text"
+                  value={subscriptionFormData.description}
+                  onChange={(e) => setSubscriptionFormData({ ...subscriptionFormData, description: e.target.value })}
+                  className="w-full bg-[rgba(0,0,0,0.4)] border border-[rgba(255,255,255,0.18)] rounded-lg px-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#3B82F6]"
+                  placeholder="Plan description"
                 />
               </div>
 
@@ -1689,10 +1639,7 @@ export default function AdminSmsServicesPage() {
 
             <div className="flex items-center justify-end gap-3 mt-6">
               <button
-                onClick={() => {
-                  setShowEditSubscriptionModal(false);
-                  setSelectedSubscription(null);
-                }}
+                onClick={() => { setShowEditSubscriptionModal(false); setSelectedSubscription(null); }}
                 className="px-5 py-2.5 rounded-lg bg-[rgba(255,255,255,0.08)] hover:bg-[rgba(255,255,255,0.12)] text-white text-sm font-medium transition-colors"
               >
                 Cancel
@@ -1713,18 +1660,13 @@ export default function AdminSmsServicesPage() {
       {showDeleteSubscriptionModal && selectedSubscription && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-[#0F172A] border border-[rgba(255,255,255,0.1)] rounded-xl p-6 w-full max-w-md">
-            <h2 className="text-white text-xl font-semibold mb-4">Delete Subscription</h2>
+            <h2 className="text-white text-xl font-semibold mb-4">Delete Plan</h2>
             <p className="text-[#94A3B8] text-sm mb-6">
-              Are you sure you want to delete the "{selectedSubscription.name}" subscription plan? This action cannot
-              be undone.
+              Are you sure you want to delete the &quot;{selectedSubscription.name}&quot; plan? This action cannot be undone.
             </p>
-
             <div className="flex items-center justify-end gap-3">
               <button
-                onClick={() => {
-                  setShowDeleteSubscriptionModal(false);
-                  setSelectedSubscription(null);
-                }}
+                onClick={() => { setShowDeleteSubscriptionModal(false); setSelectedSubscription(null); }}
                 className="px-5 py-2.5 rounded-lg bg-[rgba(255,255,255,0.08)] hover:bg-[rgba(255,255,255,0.12)] text-white text-sm font-medium transition-colors"
               >
                 Cancel
