@@ -400,6 +400,19 @@ export default function Support() {
                                       className="mt-2 max-w-full rounded-md max-h-48 object-contain"
                                     />
                                   )}
+                                  {msg.attachments && msg.attachments.length > 0 && (
+                                    <div className="mt-2 space-y-2">
+                                      {msg.attachments.map((attachment, idx) => (
+                                        <img
+                                          key={idx}
+                                          src={attachment.url}
+                                          alt={attachment.originalName || 'Attachment'}
+                                          className="max-w-full rounded-md max-h-48 object-contain cursor-pointer"
+                                          onClick={() => window.open(attachment.url, '_blank')}
+                                        />
+                                      ))}
+                                    </div>
+                                  )}
                                 </div>
                               </div>
                             ))}
