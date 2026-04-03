@@ -70,7 +70,7 @@ export default function PaymentPolicy() {
               service and country)
             </li>
             <li>
-              <strong>V3 Elite:</strong> $2.25 - $4.95 per SMS (varies by
+              <strong>V3 Basic:</strong> $2.25 - $4.95 per SMS (varies by
               service and country)
             </li>
             <li>

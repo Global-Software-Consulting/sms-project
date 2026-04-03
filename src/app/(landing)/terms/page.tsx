@@ -38,7 +38,7 @@ export default function Terms() {
             <li>V1 Standard - Cost-effective SMS verification</li>
             <li>V2 Premium - Fast delivery with high success rates</li>
             <li>
-              V3 Elite - Guaranteed instant delivery with dedicated support
+              V3 Basic - Guaranteed instant delivery with dedicated support
             </li>
           </ul>
         </CardContent>

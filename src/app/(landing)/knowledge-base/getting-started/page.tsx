@@ -52,7 +52,7 @@ export default function GettingStartedArticle() {
         'Favorites: Save your frequently used services for quick access',
         'Orders: Track your order history and active numbers',
         'Wallet: Manage your balance, add funds, and view transactions',
-        'Membership: Upgrade to Pro or Elite for better rates and features',
+        'Membership: Upgrade to Pro or VIP for better rates and features',
         'Reviews: Earn rewards by reviewing your activation experience',
         'API: Access developer tools and integration documentation',
         'Referrals: Invite friends and earn commissions',

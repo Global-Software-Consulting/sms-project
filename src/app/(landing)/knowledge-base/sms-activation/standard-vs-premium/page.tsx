@@ -39,7 +39,7 @@ export default function StandardVsPremium() {
       feature: 'Number Pool',
       v1: 'Standard pool',
       v2: 'Premium pool',
-      v3: 'Elite pool',
+      v3: 'Basic pool',
     },
     {
       feature: 'Support',
@@ -90,7 +90,7 @@ export default function StandardVsPremium() {
               <div>
                 <p className="mb-4 text-lg leading-relaxed">
                   Our platform offers three provider tiers: V1 Standard, V2
-                  Premium, and V3 Elite. Each tier is designed for different use
+                  Premium, and V3 Basic. Each tier is designed for different use
                   cases and offers varying levels of performance, reliability,
                   and support.
                 </p>
@@ -174,13 +174,13 @@ export default function StandardVsPremium() {
                 </ul>
               </div>
 
-              {/* V3 Elite Provider */}
+              {/* V3 Basic Provider */}
               <div>
                 <h2 className="mb-4 flex items-center gap-2 text-2xl font-semibold">
-                  <span className="text-2xl">👑</span> V3 Elite Provider
+                  <span className="text-2xl">👑</span> V3 Basic Provider
                 </h2>
                 <p className="text-muted-foreground mb-4 leading-relaxed">
-                  V3 Elite is our premium tier offering guaranteed instant
+                  V3 Basic is our premium tier offering guaranteed instant
                   delivery with the highest success rates and dedicated support.
                   Built for mission-critical applications and enterprise
                   customers.
@@ -240,7 +240,7 @@ export default function StandardVsPremium() {
                             💎 V2 Premium
                           </th>
                           <th className="p-4 text-left font-semibold">
-                            👑 V3 Elite
+                            👑 V3 Basic
                           </th>
                         </tr>
                       </thead>

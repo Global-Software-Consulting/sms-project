@@ -100,7 +100,7 @@ export default function Pricing() {
     },
     {
       id: 'v3',
-      name: 'Elite V3',
+      name: 'Basic V3',
       badge: '👑 Ultimate',
       tagline: 'Guaranteed delivery, maximum speed',
       priceRange: '$1.50 - $5.00',
@@ -109,7 +109,7 @@ export default function Pricing() {
         '99.9% success rate',
         'Absolute maximum priority',
         'Dedicated elite support',
-        'Elite-only providers',
+        'Basic-tier providers',
         'Smart routing algorithm',
         'Extended SMS retention',
       ],

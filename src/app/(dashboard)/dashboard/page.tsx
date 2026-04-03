@@ -391,11 +391,14 @@ export default function Dashboard() {
                   </SelectTrigger>
                   <SelectContent>
                     {data.services.length > 0 ? (
-                      data.services.slice(0, 20).map((service) => (
-                        <SelectItem key={service.id} value={service.code}>
-                          {service.name}
-                        </SelectItem>
-                      ))
+                      data.services
+                        .filter((service, index, self) => self.findIndex(s => s.name === service.name) === index)
+                        .slice(0, 20)
+                        .map((service) => (
+                          <SelectItem key={service.id} value={service.code}>
+                            {service.name}
+                          </SelectItem>
+                        ))
                     ) : (
                       <SelectItem value="__empty" disabled>No services available</SelectItem>
                     )}
@@ -452,7 +455,7 @@ export default function Dashboard() {
                   />
                   <div>
                     <Badge className="from-warning bg-gradient-to-r to-amber-500">
-                      👑 Elite V3
+                      👑 Basic V3
                     </Badge>
                     <p className="text-muted-foreground mt-1 text-xs">
                       From $2.50

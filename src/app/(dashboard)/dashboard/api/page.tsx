@@ -224,9 +224,9 @@ export default function APIAccess() {
       endpoint: 'https://api.smspro.com/v2',
     },
     v3: {
-      name: 'Elite V3',
+      name: 'Basic V3',
       icon: '👑',
-      description: 'Ultimate API access with guaranteed performance',
+      description: 'Budget-friendly API access',
       features: [
         'Unlimited rate limits',
         'Dedicated support',
@@ -381,8 +381,8 @@ export default function APIAccess() {
               </TabsTrigger>
               <TabsTrigger value="v3" className="space-x-1 text-xs sm:space-x-2 sm:text-sm">
                 <span>👑</span>
-                <span className="hidden sm:inline">V3 Elite</span>
-                <span className="sm:hidden">Elite</span>
+                <span className="hidden sm:inline">V3 Basic</span>
+                <span className="sm:hidden">Basic</span>
               </TabsTrigger>
             </TabsList>
 

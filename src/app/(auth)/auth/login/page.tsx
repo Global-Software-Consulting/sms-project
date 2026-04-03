@@ -146,7 +146,7 @@ export default function Login() {
               <h3 className="font-semibold">New Features</h3>
             </div>
             <p className="text-muted-foreground text-sm">
-              Check out our new V3 Elite providers with 99.9% success rates and
+              Check out our new V3 Basic providers with 99.9% success rates and
               instant delivery!
             </p>
           </div>

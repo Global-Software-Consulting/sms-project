@@ -131,7 +131,7 @@ export default function Home() {
       icon: Globe,
       title: 'Multiple Providers',
       description:
-        'Choose from V1 Standard, V2 Premium, or V3 Elite providers based on your needs',
+        'Choose from V1 Standard, V2 Premium, or V3 Basic providers based on your needs',
     },
     {
       icon: Sparkles,
@@ -231,7 +231,7 @@ export default function Home() {
               Choose Your Provider Type
             </h2>
             <p className="text-muted-foreground text-base sm:text-lg">
-              Select from Standard, Premium, or Elite providers based on your
+              Select from Standard, Premium, or Basic providers based on your
               needs
             </p>
           </div>
@@ -324,16 +324,16 @@ export default function Home() {
               </CardContent>
             </Card>
 
-            {/* Elite V3 */}
+            {/* Basic V3 */}
             <Card className="border-warning relative overflow-hidden border-2">
               <div className="bg-warning text-warning-foreground absolute top-0 right-0 px-3 py-1 text-xs font-semibold">
                 BEST
               </div>
               <CardHeader>
                 <Badge className="from-warning mb-2 w-fit bg-gradient-to-r to-amber-500">
-                  👑 Elite V3
+                  👑 Basic V3
                 </Badge>
-                <CardTitle className="text-xl">Elite Activation</CardTitle>
+                <CardTitle className="text-xl">Basic Activation</CardTitle>
                 <CardDescription>
                   Ultimate tier with guaranteed delivery
                 </CardDescription>
@@ -355,7 +355,7 @@ export default function Home() {
                   <div className="flex items-center space-x-2">
                     <CheckCircle2 className="text-warning h-5 w-5" />
                     <span className="text-sm font-semibold">
-                      Elite providers only
+                      Basic providers only
                     </span>
                   </div>
                   <div className="flex items-center space-x-2">

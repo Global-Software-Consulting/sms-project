@@ -442,10 +442,10 @@ print(response.json())`}</code>
             <Card className="border-warning border-2">
               <CardHeader>
                 <Badge className="bg-warning text-warning-foreground mb-2 w-fit">
-                  👑 V3 Elite
+                  👑 V3 Basic
                 </Badge>
-                <CardTitle className="text-lg">Elite Tier</CardTitle>
-                <CardDescription>Ultimate performance</CardDescription>
+                <CardTitle className="text-lg">Basic Tier</CardTitle>
+                <CardDescription>Budget-friendly option</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="bg-muted overflow-x-auto rounded-lg p-3 font-mono text-xs">
