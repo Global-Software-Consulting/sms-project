@@ -268,9 +268,9 @@ export default function AdminPaymentsPage() {
       name: provider.name,
       description: provider.description || "",
       provider: provider.provider,
-      minAmount: provider.minAmount,
-      maxAmount: provider.maxAmount,
-      sortOrder: provider.sortOrder,
+      minAmount: Number(provider.minAmount) || 0,
+      maxAmount: Number(provider.maxAmount) || 10000,
+      sortOrder: Number(provider.sortOrder) || 0,
       isEnabled: provider.isEnabled,
     });
     setShowEditProviderModal(true);

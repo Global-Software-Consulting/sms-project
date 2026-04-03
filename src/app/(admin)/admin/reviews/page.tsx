@@ -27,7 +27,7 @@ interface ReviewDisplay {
   originalData: AdminReview;
 }
 
-const columns = [
+const columns: { key: string; label: string; width?: string }[] = [
   { key: "id", label: "ID", width: "10%" },
   { key: "user", label: "User", width: "15%" },
   { key: "rating", label: "Rating", width: "12%" },
