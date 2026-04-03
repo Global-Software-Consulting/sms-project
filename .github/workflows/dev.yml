@@ -1,0 +1,146 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [dev, main]
+  push:
+    branches: [dev]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint-and-build:
+    name: Lint & Build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Build
+        run: npm run build
+
+  build-and-push:
+    name: Build & Push Docker Image
+    needs: lint-and-build
+    if: github.event_name == 'push' && github.ref == 'refs/heads/dev'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository_owner }}/${{ github.event.repository.name }}
+          tags: |
+            type=ref,event=branch
+            type=sha,prefix={{branch}}-
+
+      - name: Build and push
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          build-args: |
+            NEXT_PUBLIC_API_URL=${{ secrets.NEXT_PUBLIC_API_URL }}
+
+  deploy-dev:
+    name: Deploy to Dev Server
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Copy deployment files to server
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          port: ${{ secrets.SERVER_PORT }}
+          source: "docker-compose.dev.yml"
+          target: "~/sms-frontend/"
+
+      - name: Build and deploy via SSH
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          port: ${{ secrets.SERVER_PORT }}
+          command_timeout: 10m
+          envs: ENV_DEV,GITHUB_TOKEN
+          script: |
+            set -e
+
+            # Disk usage check
+            DISK_USAGE=$(df / --output=pcent | tail -1 | tr -d ' %')
+            if [ "$DISK_USAGE" -ge 90 ]; then
+              echo "BLOCKED: Disk usage at ${DISK_USAGE}% — deployment aborted"
+              exit 1
+            elif [ "$DISK_USAGE" -ge 80 ]; then
+              echo "WARNING: Disk usage at ${DISK_USAGE}%"
+            fi
+
+            cd ~/sms-frontend
+
+            # Save current image for rollback
+            docker inspect --format='{{.Config.Image}}' sms_frontend_dev 2>/dev/null > ~/sms-frontend/.previous-image || echo "none" > ~/sms-frontend/.previous-image
+
+            # Env to tmpfs (RAM only)
+            mkdir -p /dev/shm/sms-frontend
+            echo "$ENV_DEV" > /dev/shm/sms-frontend/.env
+            chmod 600 /dev/shm/sms-frontend/.env
+
+            # Login to GitHub Container Registry
+            echo "$GITHUB_TOKEN" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+
+            # Pull pre-built image from registry (lowercase required)
+            export IMAGE_TAG="ghcr.io/$(echo ${{ github.repository }} | tr '[:upper:]' '[:lower:]'):dev"
+            docker pull $IMAGE_TAG
+
+            # Symlink env so compose env_file: .env resolves correctly
+            ln -sf /dev/shm/sms-frontend/.env ~/sms-frontend/.env
+            IMAGE_TAG=$IMAGE_TAG docker compose -f docker-compose.dev.yml up -d
+
+            # Cleanup: remove symlink and tmpfs env after container reads it
+            rm -f ~/sms-frontend/.env /dev/shm/sms-frontend/.env
+
+            # Health check
+            sleep 15
+            curl -sf http://localhost:3001/ > /dev/null || { echo "Health check failed"; docker logs sms_frontend_dev --tail 20; exit 1; }
+
+            docker image prune -f
+        env:
+          ENV_DEV: ${{ secrets.ENV_DEV }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

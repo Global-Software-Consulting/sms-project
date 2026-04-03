@@ -1,0 +1,10 @@
+node_modules
+.next
+.git
+.github
+ansible
+docs
+system-docs
+*.md
+.env*
+!env.example
