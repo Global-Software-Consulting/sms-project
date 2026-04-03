@@ -32,7 +32,7 @@ jobs:
   build-and-push:
     name: Build & Push Docker Image
     needs: lint-and-build
-    if: github.event_name == 'push' && github.ref == 'refs/heads/dev'
+    if: github.event_name == 'push' && github.ref == 'refs/heads/develop'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
