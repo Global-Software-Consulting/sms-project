@@ -1,0 +1,19 @@
+# Production Stack
+# Usage:
+#   docker compose -f docker-compose.prod.yml up -d
+
+services:
+  app:
+    image: ${IMAGE_TAG:-ghcr.io/global-software-consulting/sms-project:prod}
+    container_name: sms_frontend_prod
+    restart: unless-stopped
+    ports:
+      - "3001:3001"
+    env_file:
+      - .env
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3001/"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 30s

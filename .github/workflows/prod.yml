@@ -1,0 +1,140 @@
+name: Deploy Production
+
+on:
+  push:
+    branches: [main]
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+concurrency:
+  group: deploy-prod
+  cancel-in-progress: false
+
+jobs:
+  lint-and-build:
+    name: Lint & Build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Build
+        run: npm run build
+
+  build-and-push:
+    name: Build & Push Image
+    needs: lint-and-build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: docker/metadata-action@v5
+        id: meta
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=sha,prefix=
+            type=raw,value=prod
+
+      - name: Build and push image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          build-args: |
+            NEXT_PUBLIC_API_URL=${{ secrets.NEXT_PUBLIC_API_URL }}
+
+  deploy-prod:
+    name: Deploy to Production
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Copy compose file to server
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          port: ${{ secrets.SERVER_PORT }}
+          source: "docker-compose.prod.yml"
+          target: "~/sms-frontend/"
+
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          port: ${{ secrets.SERVER_PORT }}
+          command_timeout: 5m
+          envs: ENV_PROD,GHCR_TOKEN
+          script: |
+            set -e
+
+            # Disk usage check
+            DISK_USAGE=$(df / --output=pcent | tail -1 | tr -d ' %')
+            if [ "$DISK_USAGE" -ge 90 ]; then
+              echo "BLOCKED: Disk usage at ${DISK_USAGE}% — deployment aborted"
+              exit 1
+            elif [ "$DISK_USAGE" -ge 80 ]; then
+              echo "WARNING: Disk usage at ${DISK_USAGE}%"
+            fi
+
+            cd ~/sms-frontend
+
+            # Save current image for rollback
+            docker inspect --format='{{.Config.Image}}' sms_frontend_prod 2>/dev/null > ~/sms-frontend/.previous-image || echo "none" > ~/sms-frontend/.previous-image
+
+            # Env to tmpfs (RAM only)
+            mkdir -p /dev/shm/sms-frontend
+            echo "$ENV_PROD" > /dev/shm/sms-frontend/.env
+            chmod 600 /dev/shm/sms-frontend/.env
+
+            # Pull and restart
+            echo "$GHCR_TOKEN" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+            docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:prod
+
+            # Symlink env so compose env_file: .env resolves correctly
+            ln -sf /dev/shm/sms-frontend/.env ~/sms-frontend/.env
+            docker compose -f docker-compose.prod.yml up -d --no-build
+
+            # Cleanup: remove symlink and tmpfs env after container reads it
+            rm -f ~/sms-frontend/.env /dev/shm/sms-frontend/.env
+
+            # Health check
+            sleep 10
+            curl -sf http://localhost:3001/ > /dev/null || { echo "Health check failed"; docker logs sms_frontend_prod --tail 20; exit 1; }
+
+            docker image prune -f
+        env:
+          ENV_PROD: ${{ secrets.ENV_PROD }}
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
