@@ -5,7 +5,7 @@
 
 services:
   app:
-    image: ${IMAGE_TAG:-ghcr.io/global-software-consulting/sms-project:dev}
+    image: ${IMAGE_TAG:-ghcr.io/global-software-consulting/sms-project:develop}
     container_name: sms_frontend_dev
     restart: unless-stopped
     ports:
