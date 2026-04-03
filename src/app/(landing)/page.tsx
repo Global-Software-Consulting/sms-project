@@ -1,4 +1,5 @@
 'use client';
+import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import {
@@ -20,9 +21,92 @@ import {
   Lock,
   TrendingUp,
   CheckCircle2,
+  Loader2,
 } from 'lucide-react';
+import { getPlans, MembershipPlan } from '@/lib/api/membershipApi';
+import { apiClient } from '@/config/api-client.config';
+import { API_ENDPOINTS } from '@/config/server.config';
+
+interface Review {
+  id: string;
+  user: { username: string; firstName: string };
+  rating: number;
+  text: string;
+  title: string;
+}
+
+const fallbackReviews = [
+  {
+    name: 'Sarah Johnson',
+    role: 'Developer',
+    content:
+      "Best SMS service I've used. Fast, reliable, and great API documentation.",
+    rating: 5,
+  },
+  {
+    name: 'Mike Chen',
+    role: 'Business Owner',
+    content:
+      'The premium providers are worth it. Never had a failed verification.',
+    rating: 5,
+  },
+  {
+    name: 'Emma Davis',
+    role: 'Marketing Manager',
+    content:
+      'VIP membership pays for itself. The discounts are incredible.',
+    rating: 5,
+  },
+];
 
 export default function Home() {
+  const [plans, setPlans] = useState<MembershipPlan[]>([]);
+  const [plansLoading, setPlansLoading] = useState(true);
+  const [reviews, setReviews] = useState<typeof fallbackReviews>(fallbackReviews);
+  const [reviewsLoading, setReviewsLoading] = useState(true);
+
+  const fetchPlans = useCallback(async () => {
+    try {
+      setPlansLoading(true);
+      const data = await getPlans();
+      const activePlans = data.filter((p) => p.isActive !== false);
+      setPlans(activePlans);
+    } catch (error) {
+      console.error('Failed to fetch membership plans:', error);
+    } finally {
+      setPlansLoading(false);
+    }
+  }, []);
+
+  const fetchReviews = useCallback(async () => {
+    try {
+      setReviewsLoading(true);
+      const response = await apiClient.get<{ data: Review[] }>(
+        API_ENDPOINTS.REVIEWS.FEATURED
+      );
+      const data = Array.isArray(response) ? response : (response as any).data ?? response;
+      if (Array.isArray(data) && data.length > 0) {
+        setReviews(
+          data.map((r: Review) => ({
+            name: r.user?.firstName || r.user?.username || 'Anonymous',
+            role: r.title || 'Customer',
+            content: r.text,
+            rating: r.rating,
+          }))
+        );
+      }
+    } catch (error) {
+      console.error('Failed to fetch reviews, using fallback:', error);
+    } finally {
+      setReviewsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchPlans();
+    fetchReviews();
+  }, [fetchPlans, fetchReviews]);
+
   const stats = [
     { label: 'Active Numbers', value: '45K+' },
     { label: 'Countries', value: '180+' },
@@ -80,41 +164,6 @@ export default function Home() {
     },
   ];
 
-  const membershipTiers = [
-    {
-      name: 'Basic',
-      price: '$0',
-      discount: '0%',
-      features: ['Standard pricing', 'All services', 'Basic support'],
-      badge: null,
-    },
-    {
-      name: 'Standard',
-      price: '$29',
-      discount: '10%',
-      features: ['10% discount', 'Priority support', 'Favorite services'],
-      badge: null,
-    },
-    {
-      name: 'Pro',
-      price: '$79',
-      discount: '25%',
-      features: ['25% discount', '24/7 support', 'API access', 'VIP routing'],
-      badge: 'Popular',
-    },
-    {
-      name: 'VIP',
-      price: '$199',
-      discount: '40%',
-      features: [
-        '40% discount',
-        'Dedicated support',
-        'Premium API',
-        'Highest priority',
-      ],
-      badge: 'Best Value',
-    },
-  ];
 
   return (
     <div className="w-full">
@@ -420,59 +469,71 @@ export default function Home() {
             </p>
           </div>
 
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-            {membershipTiers.map((tier) => (
-              <Card
-                key={tier.name}
-                className={
-                  tier.name === 'VIP'
-                    ? 'border-primary relative border-2'
-                    : 'border-2'
-                }
-              >
-                {tier.badge && (
-                  <div className="bg-primary text-primary-foreground absolute top-0 right-0 rounded-bl-lg px-3 py-1 text-xs font-semibold">
-                    {tier.badge}
-                  </div>
-                )}
-                <CardHeader>
-                  <CardTitle className="text-2xl">{tier.name}</CardTitle>
-                  <div className="pt-2">
-                    <p className="text-3xl font-bold">{tier.price}</p>
-                    <p className="text-muted-foreground text-sm">per month</p>
-                  </div>
-                  <Badge
-                    variant={tier.name === 'VIP' ? 'default' : 'secondary'}
-                    className="mt-2 w-fit"
-                  >
-                    {tier.discount} Discount
-                  </Badge>
-                </CardHeader>
-                <CardContent>
-                  <ul className="space-y-2">
-                    {tier.features.map((feature) => (
-                      <li
-                        key={feature}
-                        className="flex items-center space-x-2 text-sm"
-                      >
-                        <CheckCircle2 className="text-success h-4 w-4 flex-shrink-0" />
-                        <span>{feature}</span>
-                      </li>
-                    ))}
-                  </ul>
-                  <Button
-                    asChild
-                    className="mt-6 w-full"
-                    variant={tier.name === 'VIP' ? 'default' : 'outline'}
-                  >
-                    <Link href="/dashboard/membership">
-                      {tier.name === 'Basic' ? 'Get Started' : 'Upgrade'}
-                    </Link>
-                  </Button>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+          {plansLoading ? (
+            <div className="flex justify-center py-12">
+              <Loader2 className="text-primary h-8 w-8 animate-spin" />
+            </div>
+          ) : plans.length > 0 ? (
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+              {plans.map((plan) => (
+                <Card
+                  key={plan.id}
+                  className={
+                    plan.isPopular
+                      ? 'border-primary relative border-2'
+                      : 'border-2'
+                  }
+                >
+                  {plan.isPopular && (
+                    <div className="bg-primary text-primary-foreground absolute top-0 right-0 rounded-bl-lg px-3 py-1 text-xs font-semibold">
+                      Popular
+                    </div>
+                  )}
+                  <CardHeader>
+                    <CardTitle className="text-2xl">{plan.name}</CardTitle>
+                    <div className="pt-2">
+                      <p className="text-3xl font-bold">
+                        ${parseFloat(plan.price).toFixed(0)}
+                      </p>
+                      <p className="text-muted-foreground text-sm">per month</p>
+                    </div>
+                    <Badge
+                      variant={plan.isPopular ? 'default' : 'secondary'}
+                      className="mt-2 w-fit"
+                    >
+                      {plan.discount}% Discount
+                    </Badge>
+                  </CardHeader>
+                  <CardContent>
+                    <ul className="space-y-2">
+                      {plan.features.map((feature) => (
+                        <li
+                          key={feature}
+                          className="flex items-center space-x-2 text-sm"
+                        >
+                          <CheckCircle2 className="text-success h-4 w-4 flex-shrink-0" />
+                          <span>{feature}</span>
+                        </li>
+                      ))}
+                    </ul>
+                    <Button
+                      asChild
+                      className="mt-6 w-full"
+                      variant={plan.isPopular ? 'default' : 'outline'}
+                    >
+                      <Link href="/dashboard/membership">
+                        {parseFloat(plan.price) === 0 ? 'Get Started' : 'Upgrade'}
+                      </Link>
+                    </Button>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          ) : (
+            <p className="text-muted-foreground text-center">
+              No membership plans available at the moment.
+            </p>
+          )}
         </div>
       </section>
 
@@ -488,51 +549,35 @@ export default function Home() {
             </p>
           </div>
 
-          <div className="grid gap-6 md:grid-cols-3">
-            {[
-              {
-                name: 'Sarah Johnson',
-                role: 'Developer',
-                content:
-                  "Best SMS service I've used. Fast, reliable, and great API documentation.",
-                rating: 5,
-              },
-              {
-                name: 'Mike Chen',
-                role: 'Business Owner',
-                content:
-                  'The premium providers are worth it. Never had a failed verification.',
-                rating: 5,
-              },
-              {
-                name: 'Emma Davis',
-                role: 'Marketing Manager',
-                content:
-                  'VIP membership pays for itself. The discounts are incredible.',
-                rating: 5,
-              },
-            ].map((review, i) => (
-              <Card key={i}>
-                <CardHeader>
-                  <div className="mb-2 flex space-x-1">
-                    {Array.from({ length: review.rating }).map((_, i) => (
-                      <Star
-                        key={i}
-                        className="fill-warning text-warning h-4 w-4"
-                      />
-                    ))}
-                  </div>
-                  <CardTitle className="text-base">{review.name}</CardTitle>
-                  <CardDescription>{review.role}</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-muted-foreground text-sm">
-                    {review.content}
-                  </p>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+          {reviewsLoading ? (
+            <div className="flex justify-center py-12">
+              <Loader2 className="text-primary h-8 w-8 animate-spin" />
+            </div>
+          ) : (
+            <div className="grid gap-6 md:grid-cols-3">
+              {reviews.map((review, i) => (
+                <Card key={i}>
+                  <CardHeader>
+                    <div className="mb-2 flex space-x-1">
+                      {Array.from({ length: review.rating }).map((_, i) => (
+                        <Star
+                          key={i}
+                          className="fill-warning text-warning h-4 w-4"
+                        />
+                      ))}
+                    </div>
+                    <CardTitle className="text-base">{review.name}</CardTitle>
+                    <CardDescription>{review.role}</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-muted-foreground text-sm">
+                      {review.content}
+                    </p>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
 
           <div className="border-border mt-12 flex flex-wrap justify-center gap-6 border-t pt-12 sm:gap-8">
             <div className="text-center">

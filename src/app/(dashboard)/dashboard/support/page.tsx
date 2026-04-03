@@ -138,7 +138,7 @@ export default function Support() {
           priority: 'NORMAL',
           message: description,
         },
-        image || undefined,
+        image ? [image] : undefined,
       );
       setTitle('');
       setDescription('');

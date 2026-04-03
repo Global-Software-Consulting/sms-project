@@ -85,8 +85,9 @@ export interface TicketQueryParams {
 
 export interface CreateTicketRequest {
   subject: string;
-  priority: string;
   message: string;
+  category?: string;
+  priority?: string;
 }
 
 // ============================================
@@ -113,14 +114,15 @@ export const getTickets = async (
  */
 export const createTicket = async (
   data: CreateTicketRequest,
-  image?: File,
+  attachments?: File[],
 ): Promise<Ticket> => {
-  if (image) {
+  if (attachments && attachments.length > 0) {
     const formData = new FormData();
     formData.append('subject', data.subject);
-    formData.append('priority', data.priority);
     formData.append('message', data.message);
-    formData.append('attachments', image);
+    if (data.category) formData.append('category', data.category);
+    if (data.priority) formData.append('priority', data.priority);
+    attachments.forEach((file) => formData.append('attachments', file));
     const response = await apiClient.post<Ticket>(
       API_ENDPOINTS.TICKETS.ROOT,
       formData,

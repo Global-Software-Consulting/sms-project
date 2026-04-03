@@ -49,7 +49,7 @@ export default function Pricing() {
       if (providersRes.status === 'fulfilled') {
         // getProviders returns { providers: [...] }
         const providersList = providersRes.value?.providers || [];
-        setProviders(providersList.filter(p => p.isActive));
+        setProviders(providersList.filter(p => p.isActive !== false));
       }
     } catch (err) {
       console.error('Failed to fetch pricing data:', err);
@@ -197,8 +197,8 @@ export default function Pricing() {
         price: plan.price === '0' || plan.price === '0.00'
           ? 'Free'
           : `${formatPrice(plan.price, plan.currency)}/mo`,
-        discount: `${plan.discountPercent}%`,
-        description: plan.description || `Save ${plan.discountPercent}% on every activation`,
+        discount: `${plan.discountPercent ?? plan.discount ?? 0}%`,
+        description: plan.description || `Save ${plan.discountPercent ?? plan.discount ?? 0}% on every activation`,
         isVIP: plan.slug === 'vip',
         color: getPlanColor(plan.slug).text,
       }))
@@ -239,7 +239,7 @@ export default function Pricing() {
 
   // Get VIP plan for calculation example
   const vipPlan = plans.find(p => p.slug === 'vip');
-  const vipDiscount = vipPlan?.discountPercent || 40;
+  const vipDiscount = vipPlan?.discountPercent ?? vipPlan?.discount ?? 40;
   const vipPrice = vipPlan ? parseFloat(vipPlan.price) : 199;
 
   return (

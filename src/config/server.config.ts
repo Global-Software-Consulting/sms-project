@@ -108,6 +108,7 @@ export const API_ENDPOINTS = {
     RENT_HISTORY: '/sms/rent/history',
     FAVORITES: '/sms/favorites',
     FAVORITE_DETAIL: (id: string) => `/sms/favorites/${id}`,
+    VIP_CATEGORIES: '/sms/vip/categories',
   },
 
   // ========================
@@ -124,6 +125,22 @@ export const API_ENDPOINTS = {
   // ========================
   CONTACT: {
     SUBMIT: '/contact',
+  },
+
+  // ========================
+  // FAQ (Public)
+  // ========================
+  FAQ: {
+    ROOT: '/faq',
+    CATEGORIES: '/faq/categories',
+  },
+
+  // ========================
+  // Blog (Public)
+  // ========================
+  BLOG: {
+    ROOT: '/blog',
+    DETAIL: (slug: string) => `/blog/${slug}`,
   },
 
   // ========================

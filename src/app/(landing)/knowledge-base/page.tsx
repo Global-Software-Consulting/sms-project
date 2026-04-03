@@ -9,99 +9,153 @@ import {
 import { Input } from '@/components/ui/input';
 import {
   Search,
-  BookOpen,
-  Smartphone,
-  Home,
-  Crown,
-  DollarSign,
-  MessageSquare,
-  Code,
-  AlertCircle,
+  Loader2,
+  HelpCircle,
+  ChevronDown,
+  ChevronRight,
 } from 'lucide-react';
 import Link from 'next/link';
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import { apiClient } from '@/config/api-client.config';
+import { API_ENDPOINTS } from '@/config/server.config';
+
+interface FaqItem {
+  id: string;
+  question: string;
+  answer: string;
+  category?: {
+    id: string;
+    name: string;
+    slug?: string;
+    description?: string;
+  };
+  sortOrder?: number;
+}
+
+interface CategoryGroup {
+  id: string;
+  name: string;
+  description: string;
+  slug?: string;
+  faqs: FaqItem[];
+}
 
 export default function KnowledgeBase() {
   const [searchQuery, setSearchQuery] = useState('');
-  const [activeFilter, setActiveFilter] = useState('all');
+  const [categories, setCategories] = useState<CategoryGroup[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
+  const [expandedFaqs, setExpandedFaqs] = useState<Set<string>>(new Set());
 
-  const categories = [
-    {
-      id: 'getting-started',
-      title: 'Getting Started',
-      description: 'Learn the basics and set up your account',
-      icon: BookOpen,
-      articles: 8,
-      color: 'text-primary',
-    },
-    {
-      id: 'sms-activation',
-      title: 'SMS Activation Guide',
-      description: 'How SMS activation works step by step',
-      icon: Smartphone,
-      articles: 12,
-      color: 'text-success',
-    },
-    {
-      id: 'rent-numbers',
-      title: 'Rent Numbers Guide',
-      description: 'Extended number rental explained',
-      icon: Home,
-      articles: 6,
-      color: 'text-warning',
-    },
-    {
-      id: 'membership',
-      title: 'Membership & Discounts',
-      description: 'Understanding tiers and benefits',
-      icon: Crown,
-      articles: 5,
-      color: 'text-primary',
-    },
-    {
-      id: 'wallet',
-      title: 'Wallet & Payments',
-      description: 'Managing your balance and transactions',
-      icon: DollarSign,
-      articles: 9,
-      color: 'text-success',
-    },
-    {
-      id: 'reviews',
-      title: 'Reviews & Limits',
-      description: 'Review system and service limits',
-      icon: MessageSquare,
-      articles: 4,
-      color: 'text-warning',
-    },
-    {
-      id: 'api',
-      title: 'API Usage',
-      description: 'Integrate our API into your workflow',
-      icon: Code,
-      articles: 15,
-      color: 'text-primary',
-    },
-    {
-      id: 'troubleshooting',
-      title: 'Troubleshooting',
-      description: 'Common issues and solutions',
-      icon: AlertCircle,
-      articles: 10,
-      color: 'text-destructive',
-    },
-  ];
+  const fetchData = useCallback(async () => {
+    try {
+      setIsLoading(true);
 
-  const filters = [
-    { id: 'all', label: 'All Categories' },
-    { id: 'popular', label: 'Popular' },
-    { id: 'recent', label: 'Recently Updated' },
-  ];
+      // Fetch all FAQs and categories in parallel
+      const [faqRes, catRes] = await Promise.allSettled([
+        apiClient.get(API_ENDPOINTS.FAQ.ROOT, { params: { limit: 500 } }),
+        apiClient.get(API_ENDPOINTS.FAQ.CATEGORIES),
+      ]);
+
+      // Parse categories
+      let catList: any[] = [];
+      if (catRes.status === 'fulfilled') {
+        const catData = catRes.value.data;
+        catList = Array.isArray(catData) ? catData : catData.data || catData.categories || [];
+      }
+
+      // Parse FAQs
+      let faqList: FaqItem[] = [];
+      if (faqRes.status === 'fulfilled') {
+        const faqData = faqRes.value.data;
+        faqList = Array.isArray(faqData) ? faqData : faqData.data || faqData.faqs || [];
+      }
+
+      // Group FAQs by category
+      const grouped = new Map<string, CategoryGroup>();
+
+      // Initialize from categories
+      catList.forEach((cat: any) => {
+        const id = cat.id;
+        grouped.set(id, {
+          id,
+          name: cat.name || cat.title,
+          description: cat.description || '',
+          slug: cat.slug,
+          faqs: [],
+        });
+      });
+
+      // Add FAQs to their categories
+      faqList.forEach((faq) => {
+        const catId = faq.category?.id || 'uncategorized';
+        if (!grouped.has(catId)) {
+          grouped.set(catId, {
+            id: catId,
+            name: faq.category?.name || 'General',
+            description: faq.category?.description || '',
+            slug: faq.category?.slug,
+            faqs: [],
+          });
+        }
+        grouped.get(catId)!.faqs.push(faq);
+      });
+
+      // Filter out empty categories and sort
+      const result = Array.from(grouped.values()).filter(c => c.faqs.length > 0);
+      setCategories(result);
+
+      // Auto-expand first category
+      if (result.length > 0) {
+        setExpandedCategories(new Set([result[0].id]));
+      }
+    } catch {
+      setCategories([]);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  const toggleCategory = (id: string) => {
+    setExpandedCategories((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleFaq = (id: string) => {
+    setExpandedFaqs((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  // Filter based on search
+  const filteredCategories = searchQuery
+    ? categories
+        .map((cat) => ({
+          ...cat,
+          faqs: cat.faqs.filter(
+            (faq) =>
+              faq.question.toLowerCase().includes(searchQuery.toLowerCase()) ||
+              faq.answer.toLowerCase().includes(searchQuery.toLowerCase()),
+          ),
+        }))
+        .filter((cat) => cat.faqs.length > 0)
+    : categories;
 
   return (
     <div className="container mx-auto px-4 py-12 sm:py-16 md:py-20">
-      <div className="mx-auto max-w-6xl space-y-8">
-        {/* Hero Section */}
+      <div className="mx-auto max-w-4xl space-y-8">
+        {/* Header */}
         <div className="space-y-6 text-center">
           <h1 className="text-3xl font-bold sm:text-4xl md:text-5xl">Knowledge Base</h1>
           <p className="text-muted-foreground mx-auto max-w-2xl text-base sm:text-xl">
@@ -109,7 +163,6 @@ export default function KnowledgeBase() {
             activation flow to advanced usage.
           </p>
 
-          {/* Search Bar */}
           <div className="relative mx-auto max-w-2xl">
             <Search className="text-muted-foreground absolute top-1/2 left-4 h-5 w-5 -translate-y-1/2" />
             <Input
@@ -120,65 +173,91 @@ export default function KnowledgeBase() {
               className="h-12 [border-color:var(--glass-border)] pl-12 text-base backdrop-blur-[var(--glass-blur)] [background:var(--glass-primary)]"
             />
           </div>
-
-          {/* Category Filters */}
-          <div className="flex flex-wrap justify-center gap-3">
-            {filters.map((filter) => (
-              <button
-                key={filter.id}
-                onClick={() => setActiveFilter(filter.id)}
-                className={`rounded-lg px-4 py-2 text-sm font-medium transition-all duration-180 ${
-                  activeFilter === filter.id
-                    ? 'bg-primary text-primary-foreground [box-shadow:var(--glow-accent)]'
-                    : 'text-foreground [background:var(--glass-secondary)] [border:1px_solid_var(--glass-border)] hover:[box-shadow:var(--glass-shadow-2)]'
-                }`}
-              >
-                {filter.label}
-              </button>
-            ))}
-          </div>
         </div>
 
-        {/* Categories Grid */}
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {categories.map((category) => {
-            const Icon = category.icon;
-            return (
-              <Link
-                key={category.id}
-                href={`/knowledge-base/${category.id}`}
-                className="group block"
-              >
-                <Card className="h-full transition-all duration-180 hover:-translate-y-1 hover:[box-shadow:var(--glass-shadow-3),var(--glow-accent)]">
-                  <CardHeader>
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1 space-y-3">
-                        <div
-                          className={`h-12 w-12 rounded-xl ${category.color} flex items-center justify-center bg-current/10`}
-                        >
-                          <Icon className={`h-6 w-6 ${category.color}`} />
-                        </div>
-                        <div>
-                          <CardTitle className="group-hover:text-primary transition-colors">
-                            {category.title}
-                          </CardTitle>
-                          <CardDescription className="mt-2">
-                            {category.description}
-                          </CardDescription>
-                        </div>
+        {/* Content */}
+        {isLoading ? (
+          <div className="flex items-center justify-center py-20">
+            <Loader2 className="text-primary h-8 w-8 animate-spin" />
+          </div>
+        ) : filteredCategories.length === 0 ? (
+          <Card>
+            <CardContent className="py-16 text-center">
+              <HelpCircle className="text-muted-foreground mx-auto mb-4 h-12 w-12 opacity-20" />
+              <p className="text-muted-foreground">
+                {searchQuery ? 'No articles match your search' : 'No articles available yet'}
+              </p>
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="space-y-4">
+            {filteredCategories.map((category) => {
+              const isExpanded = expandedCategories.has(category.id) || !!searchQuery;
+              return (
+                <Card key={category.id} className="overflow-hidden">
+                  {/* Category header - clickable to expand/collapse */}
+                  <button
+                    onClick={() => toggleCategory(category.id)}
+                    className="flex w-full items-center justify-between p-6 text-left transition-colors hover:bg-muted/30"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="bg-primary/10 flex h-10 w-10 items-center justify-center rounded-lg">
+                        <HelpCircle className="text-primary h-5 w-5" />
+                      </div>
+                      <div>
+                        <h2 className="text-lg font-semibold">{category.name}</h2>
+                        {category.description && (
+                          <p className="text-muted-foreground text-sm">{category.description}</p>
+                        )}
                       </div>
                     </div>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-muted-foreground text-sm">
-                      {category.articles} articles
+                    <div className="flex items-center gap-3">
+                      <span className="text-muted-foreground text-sm">
+                        {category.faqs.length} {category.faqs.length === 1 ? 'article' : 'articles'}
+                      </span>
+                      {isExpanded ? (
+                        <ChevronDown className="text-muted-foreground h-5 w-5" />
+                      ) : (
+                        <ChevronRight className="text-muted-foreground h-5 w-5" />
+                      )}
                     </div>
-                  </CardContent>
+                  </button>
+
+                  {/* FAQ items */}
+                  {isExpanded && (
+                    <div className="border-t border-border">
+                      {category.faqs.map((faq) => {
+                        const isFaqExpanded = expandedFaqs.has(faq.id);
+                        return (
+                          <div key={faq.id} className="border-b border-border last:border-0">
+                            <button
+                              onClick={() => toggleFaq(faq.id)}
+                              className="flex w-full items-center justify-between px-6 py-4 text-left transition-colors hover:bg-muted/20"
+                            >
+                              <span className="pr-4 text-sm font-medium">{faq.question}</span>
+                              {isFaqExpanded ? (
+                                <ChevronDown className="text-muted-foreground h-4 w-4 shrink-0" />
+                              ) : (
+                                <ChevronRight className="text-muted-foreground h-4 w-4 shrink-0" />
+                              )}
+                            </button>
+                            {isFaqExpanded && (
+                              <div className="bg-muted/10 px-6 pb-4">
+                                <p className="text-muted-foreground text-sm leading-relaxed whitespace-pre-line">
+                                  {faq.answer}
+                                </p>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
                 </Card>
-              </Link>
-            );
-          })}
-        </div>
+              );
+            })}
+          </div>
+        )}
 
         {/* Bottom CTA */}
         <Card className="mt-12 text-center">

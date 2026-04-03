@@ -33,12 +33,14 @@ import {
   getFavorites,
   addFavorite,
   removeFavorite,
+  getVipCategories,
   SmsProvider,
   SmsService,
   SmsCountry,
   SmsProduct,
   SmsOrder,
   SmsFavorite,
+  VipCategory,
   getOrderStatusLabel,
   getOrderStatusColor,
   getCountryFlag,
@@ -76,6 +78,10 @@ export default function Activation() {
   const [countrySearch, setCountrySearch] = useState('');
   const [countryFilter, setCountryFilter] = useState<CountryFilterType>('all');
   const [priceSort, setPriceSort] = useState<PriceSortType>('none');
+
+  // VIP categories state
+  const [vipCategories, setVipCategories] = useState<VipCategory[]>([]);
+  const [isVipLoading, setIsVipLoading] = useState(false);
 
   // Active orders state
   const [activeOrders, setActiveOrders] = useState<SmsOrder[]>([]);
@@ -117,6 +123,15 @@ export default function Activation() {
           setFavorites(favoritesRes.value.data || []);
         }
       });
+
+      // Load VIP categories
+      setIsVipLoading(true);
+      getVipCategories()
+        .then((res) => {
+          setVipCategories((res.categories || []).filter(c => c.serviceCount > 0));
+        })
+        .catch(() => {})
+        .finally(() => setIsVipLoading(false));
     } catch (err) {
       console.error('Failed to fetch initial data:', err);
     } finally {
@@ -488,7 +503,9 @@ export default function Activation() {
             }}
           />
           {providers.map(provider => {
-            const badge = getProviderBadge(provider.slug);
+            // Extract VIP category name (e.g. "V1 - Premium" from "5sim.net V1 - Premium")
+            const vipMatch = provider.displayName.match(/(V\d+\s*-\s*.+)$/i);
+            const tabLabel = vipMatch ? vipMatch[1] : provider.displayName;
             return (
               <button
                 key={provider.id}
@@ -500,9 +517,7 @@ export default function Activation() {
                     : 'text-muted-foreground hover:text-foreground'
                 )}
               >
-                <span>{badge.icon}</span>
-                <span className="hidden sm:inline">{provider.displayName}</span>
-                <span className="sm:hidden">{badge.label}</span>
+                {tabLabel}
               </button>
             );
           })}
@@ -708,64 +723,92 @@ export default function Activation() {
               />
             </div>
 
-            {/* Service List */}
+            {/* Service List - VIP services from categories API */}
             <div className="scrollbar-thin min-h-0 flex-1 space-y-1 overflow-y-auto pr-1">
-              {filteredServices.length === 0 && (
-                <div className="text-muted-foreground py-10 text-center text-sm">
-                  No services found
-                </div>
-              )}
-              {filteredServices.map(svc => {
-                const isSelected = selectedService?.id === svc.id;
-                return (
-                  <button
-                    key={svc.id}
-                    onClick={() => handleSelectService(svc)}
-                    className={cn(
-                      'group flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-all',
-                      isSelected
-                        ? 'bg-primary/10 border-primary/30 border shadow-sm'
-                        : 'hover:bg-muted/60 border border-transparent'
-                    )}
-                  >
-                    {/* Icon */}
-                    <div className="bg-muted flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-sm">
-                      {svc.iconUrl ? (
-                        <img src={svc.iconUrl} alt="" className="h-5 w-5" />
-                      ) : (
-                        '📱'
-                      )}
-                    </div>
+              {(() => {
+                const providerVip = vipCategories.find(c => c.providerId === selectedProvider?.id);
+                const vipServices = providerVip?.services || [];
+                const q = serviceSearch.toLowerCase();
+                const filtered = q
+                  ? vipServices.filter(v => v.service.name.toLowerCase().includes(q) || v.country.name.toLowerCase().includes(q))
+                  : vipServices;
 
-                    {/* Name */}
-                    <span
+                if (isVipLoading) {
+                  return (
+                    <div className="flex items-center justify-center py-10">
+                      <Loader2 className="text-muted-foreground h-5 w-5 animate-spin" />
+                    </div>
+                  );
+                }
+
+                if (filtered.length === 0) {
+                  return (
+                    <div className="text-muted-foreground py-10 text-center text-sm">
+                      {q ? 'No services found' : 'No VIP services for this provider'}
+                    </div>
+                  );
+                }
+
+                return filtered.map(vip => {
+                  const isSelected = selectedService?.id === vip.service.id;
+                  return (
+                    <button
+                      key={vip.id}
+                      onClick={() => {
+                        const matchingService = services.find(s => s.id === vip.service.id || s.slug === vip.service.slug);
+                        if (matchingService) {
+                          handleSelectService(matchingService);
+                        } else if (selectedProvider) {
+                          getServices({ providerId: selectedProvider.id, limit: 200 }).then(res => {
+                            const svcList = res.data || [];
+                            setServices(svcList);
+                            const svc = svcList.find(s => s.id === vip.service.id || s.slug === vip.service.slug);
+                            if (svc) handleSelectService(svc);
+                          });
+                        }
+                      }}
                       className={cn(
-                        'flex-1 truncate text-sm font-medium',
-                        isSelected ? 'text-primary' : 'text-foreground'
+                        'group flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-all',
+                        isSelected
+                          ? 'bg-primary/10 border-primary/30 border shadow-sm'
+                          : 'hover:bg-muted/60 border border-transparent'
                       )}
                     >
-                      {svc.name}
-                    </span>
+                      <div className="bg-muted flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-sm">
+                        {vip.service.iconUrl ? (
+                          <img src={vip.service.iconUrl} alt="" className="h-5 w-5" />
+                        ) : (
+                          '📱'
+                        )}
+                      </div>
 
-                    {/* Category */}
-                    {svc.category && (
-                      <Badge variant="secondary" className="text-xs">
-                        {svc.category}
-                      </Badge>
-                    )}
+                      <div className="min-w-0 flex-1">
+                        <span className={cn(
+                          'block truncate text-sm font-medium',
+                          isSelected ? 'text-primary' : 'text-foreground'
+                        )}>
+                          {vip.service.name}
+                        </span>
+                        <span className="text-muted-foreground text-xs">
+                          {vip.country.name} ({vip.country.code})
+                        </span>
+                      </div>
 
-                    {isSelected && (
-                      <ChevronRight className="text-primary h-4 w-4 shrink-0" />
-                    )}
-                  </button>
-                );
-              })}
+                      <Star className="h-3.5 w-3.5 shrink-0 fill-amber-400 text-amber-400" />
+
+                      {isSelected && (
+                        <ChevronRight className="text-primary h-4 w-4 shrink-0" />
+                      )}
+                    </button>
+                  );
+                });
+              })()}
             </div>
 
             {/* Count footer */}
             <div className="border-border border-t pt-2">
               <span className="text-muted-foreground text-sm">
-                {filteredServices.length} services available
+                {(vipCategories.find(c => c.providerId === selectedProvider?.id)?.serviceCount) || 0} VIP services
               </span>
             </div>
           </CardContent>

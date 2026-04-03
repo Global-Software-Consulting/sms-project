@@ -646,6 +646,44 @@ export const removeFavorite = async (
   return response.data;
 };
 
+// --- VIP Services (User-facing) ---
+
+export interface VipCategoryService {
+  id: string;
+  service: {
+    id: string;
+    name: string;
+    slug: string;
+    iconUrl: string | null;
+  };
+  country: {
+    id: string;
+    name: string;
+    code: string;
+  };
+  rating: number;
+  orderCount: number;
+  successRate: number;
+}
+
+export interface VipCategory {
+  providerId: string;
+  label: string;
+  serviceCount: number;
+  services: VipCategoryService[];
+}
+
+/**
+ * Get VIP categories with services grouped by provider
+ * GET /api/v1/sms/vip/categories
+ */
+export const getVipCategories = async (): Promise<{ categories: VipCategory[] }> => {
+  const response = await apiClient.get<{ categories: VipCategory[] }>(
+    API_ENDPOINTS.SMS.VIP_CATEGORIES,
+  );
+  return response.data;
+};
+
 // ============================================
 // ADMIN API FUNCTIONS
 // ============================================

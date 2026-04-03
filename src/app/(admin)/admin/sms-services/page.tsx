@@ -205,26 +205,11 @@ export default function AdminSmsServicesPage() {
     avgSuccessRate: 0,
   }));
 
-  const [vipCategories, setVipCategories] = useState<VIPCategory[]>([
-    {
-      id: "v1",
-      name: "V1 - Premium",
-      services: [
-        { id: "s1", name: "Facebook", country: "USA", successRate: 95, orders: 1250, price: 2.5 },
-        { id: "s10", name: "Discord", country: "USA", successRate: 94, orders: 950, price: 2.4 },
-      ],
-    },
-    {
-      id: "v2",
-      name: "V2 - Standard",
-      services: [],
-    },
-    {
-      id: "v3",
-      name: "V3 - Basic",
-      services: [],
-    },
-  ]);
+  const vipCategories: VIPCategory[] = [
+    { id: "v1", name: "V1 - Premium", services: [] },
+    { id: "v2", name: "V2 - Standard", services: [] },
+    { id: "v3", name: "V3 - Basic", services: [] },
+  ];
 
   const [providerFormData, setProviderFormData] = useState({
     name: "",
@@ -319,17 +304,7 @@ export default function AdminSmsServicesPage() {
     setIsLoading(true);
     await new Promise((resolve) => setTimeout(resolve, 1000));
 
-    // Remove provider services from VIP categories
-    const providerServiceIds = selectedProvider.services.map((s) => s.id);
-    setVipCategories(
-      vipCategories.map((cat) => ({
-        ...cat,
-        services: cat.services.filter((s) => !providerServiceIds.includes(s.id)),
-      }))
-    );
-
-    setProviders(providers.filter((p) => p.id !== selectedProvider.id));
-    toast.success("Provider deleted and services removed from VIP categories!");
+    toast.success("Provider deleted successfully!");
 
     setIsLoading(false);
     setShowDeleteModal(false);
