@@ -114,6 +114,8 @@ export interface UpdateApiKeyRequest {
 
 export interface ApiKeyQueryParams {
   includeRevoked?: boolean;
+  page?: number;
+  limit?: number;
 }
 
 // ============================================

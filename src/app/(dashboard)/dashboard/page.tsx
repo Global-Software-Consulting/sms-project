@@ -395,7 +395,7 @@ export default function Dashboard() {
                         .filter((service, index, self) => self.findIndex(s => s.name === service.name) === index)
                         .slice(0, 20)
                         .map((service) => (
-                          <SelectItem key={service.id} value={service.code}>
+                          <SelectItem key={service.id} value={service.slug || service.id}>
                             {service.name}
                           </SelectItem>
                         ))

@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import {
@@ -21,7 +21,7 @@ import { register, selectIsLoading, clearError } from '@/store/slices/authSlice'
 import { getGoogleOAuthUrl, getGithubOAuthUrl } from '@/lib/api';
 import { getLoginOptions, type LoginOptions } from '@/lib/api/settingsApi';
 
-export default function Signup() {
+function SignupContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const dispatch = useAppDispatch();
@@ -392,5 +392,13 @@ export default function Signup() {
         </Card>
       </div>
     </div>
+  );
+}
+
+export default function Signup() {
+  return (
+    <Suspense>
+      <SignupContent />
+    </Suspense>
   );
 }

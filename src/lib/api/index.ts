@@ -232,14 +232,14 @@ export {
 // SEO API
 export * from './seoApi';
 
-// Settings API
-export * from './settingsApi';
+// Settings API - import directly to avoid duplicates
+// export * from './settingsApi';
 
-// Admin Modules API (Ads, Legal, Blog, Reviews, FAQ, etc.)
-export * from './adminModulesApi';
+// Admin Modules API - import directly to avoid duplicates
+// export * from './adminModulesApi';
 
-// Teammate's APIs
-export * from './couponsApi';
+// Teammate's APIs - import directly to avoid duplicates
+// export * from './couponsApi';
 export * from './adminReferralsApi';
 export * from './ranksApi';
 export * from './adminTicketsApi';

@@ -472,7 +472,7 @@ export default function Orders() {
               <div className="border-border space-y-2 border-t pt-4">
                 <div className="flex items-center justify-between">
                   <span className="text-muted-foreground text-sm">Base Price</span>
-                  <span>{formatPrice(selectedOrder.basePrice)}</span>
+                  <span>{formatPrice(selectedOrder.basePrice || selectedOrder.cost)}</span>
                 </div>
                 {parseFloat(selectedOrder.discount) > 0 && (
                   <div className="flex items-center justify-between">
@@ -502,7 +502,7 @@ export default function Orders() {
                 )}
                 <div className="flex items-center justify-between">
                   <span className="text-muted-foreground">Expires</span>
-                  <span>{formatDate(selectedOrder.expiresAt)}</span>
+                  <span>{formatDate(selectedOrder.expiresAt || '')}</span>
                 </div>
               </div>
             </div>

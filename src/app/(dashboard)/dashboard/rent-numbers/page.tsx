@@ -299,7 +299,7 @@ export default function RentNumbers() {
       const response = await cancelRental(rentalId);
 
       setActiveRentals(prev => prev.filter(r => r.id !== rentalId));
-      setRentalHistory(prev => [response.order, ...prev]);
+      setRentalHistory(prev => [response.order as unknown as SmsRental, ...prev]);
       setWalletBalance(prev =>
         (parseFloat(prev) + parseFloat(response.refundAmount)).toFixed(2)
       );

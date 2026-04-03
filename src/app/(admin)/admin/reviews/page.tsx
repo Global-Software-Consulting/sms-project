@@ -174,7 +174,7 @@ export default function AdminReviewsPage() {
     );
   });
 
-  const renderCell = (item: ReviewDisplay, column: { key: string; label: string; width: string }) => {
+  const renderCell = (item: ReviewDisplay, column: { key: string; label: string; width?: string }) => {
     if (column.key === "rating") {
       return (
         <div className="flex items-center gap-1">
@@ -271,7 +271,7 @@ export default function AdminReviewsPage() {
       );
     }
 
-    return item[column.key as keyof ReviewDisplay];
+    return String(item[column.key as keyof ReviewDisplay] ?? '');
   };
 
   const filters = [

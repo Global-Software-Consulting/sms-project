@@ -63,7 +63,7 @@ import {
   getCommissions,
   getPayouts,
   requestPayout,
-  formatAmount,
+  formatReferralAmount as formatAmount,
   getTierInfo,
   getReferralStatusLabel,
   getCommissionStatusLabel,

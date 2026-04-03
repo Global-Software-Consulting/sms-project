@@ -139,8 +139,13 @@ export default function Settings() {
     // Validate new password
     const validation = validatePassword(newPassword);
     if (!validation.isValid) {
+      const errors: string[] = [];
+      if (!validation.minLength) errors.push('Min 8 characters');
+      if (!validation.hasUppercase) errors.push('Uppercase letter required');
+      if (!validation.hasLowercase) errors.push('Lowercase letter required');
+      if (!validation.hasNumber) errors.push('Number required');
       toast.error('Invalid password', {
-        description: validation.errors.join(', '),
+        description: errors.join(', '),
       });
       return;
     }
