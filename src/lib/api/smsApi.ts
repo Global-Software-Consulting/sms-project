@@ -11,7 +11,8 @@ export type SmsOrderStatus =
   | 'COMPLETED' // SMS received successfully
   | 'CANCELLED' // User cancelled before SMS arrived
   | 'EXPIRED' // Timed out without receiving SMS
-  | 'REFUNDED'; // Admin issued manual refund
+  | 'REFUNDED' // Admin issued manual refund
+  | 'FAILED'; // Provider failed to assign number
 
 export type SmsRentalStatus =
   | 'ACTIVE' // Rental is active, receiving messages
@@ -140,6 +141,8 @@ export interface SmsOrder {
   status: SmsOrderStatus;
   smsCode: string | null;
   smsFullText: string | null;
+  fullSms?: string | null;
+  basePrice?: string;
   cost: string;
   discount: string;
   finalCost: string;
@@ -1035,6 +1038,7 @@ export const getOrderStatusLabel = (status: SmsOrderStatus): string => {
     CANCELLED: 'Cancelled',
     EXPIRED: 'Expired',
     REFUNDED: 'Refunded',
+    FAILED: 'Failed',
   };
   return labels[status] || status;
 };
@@ -1050,6 +1054,7 @@ export const getOrderStatusColor = (status: SmsOrderStatus): string => {
     CANCELLED: 'var(--text-muted)',
     EXPIRED: 'var(--danger)',
     REFUNDED: 'var(--info)',
+    FAILED: 'var(--danger)',
   };
   return colors[status] || 'var(--text-secondary)';
 };

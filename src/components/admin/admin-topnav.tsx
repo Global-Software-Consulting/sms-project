@@ -370,7 +370,7 @@ export function AdminTopNav() {
               trigger={
                 <div className="flex items-center gap-3 pl-2 lg:pl-4 border-l border-[rgba(255,255,255,0.18)] cursor-pointer">
                   <div className="text-right hidden lg:block">
-                    <p className="text-white text-sm font-medium">{user?.name || 'Admin User'}</p>
+                    <p className="text-white text-sm font-medium">{(user as any)?.name || user?.email?.split('@')[0] || 'Admin User'}</p>
                     <p className="text-[#64748B] text-xs">{user?.email || ''}</p>
                   </div>
                   <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#3B82F6] to-[#8B5CF6] flex items-center justify-center">

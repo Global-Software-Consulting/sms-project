@@ -122,7 +122,7 @@ export interface PayoutQueryParams {
   status?: PayoutStatus;
 }
 
-export interface UpdateProfileRequest {
+export interface UpdateReferralProfileRequest {
   customCode?: string;
   autoPayoutEnabled?: boolean;
   minPayoutAmount?: number;
@@ -152,7 +152,7 @@ export const getReferralProfile = async (): Promise<ReferralProfile> => {
  * PATCH /api/v1/referrals/profile
  */
 export const updateReferralProfile = async (
-  data: UpdateProfileRequest,
+  data: UpdateReferralProfileRequest,
 ): Promise<ReferralProfile> => {
   const response = await apiClient.patch<ReferralProfile>(
     API_ENDPOINTS.REFERRALS.PROFILE,
@@ -350,7 +350,7 @@ export const getPayoutStatusColor = (status: PayoutStatus): string => {
 /**
  * Format currency amount
  */
-export const formatAmount = (amount: number): string => {
+export const formatReferralAmount = (amount: number): string => {
   return new Intl.NumberFormat('en-US', {
     style: 'currency',
     currency: 'USD',

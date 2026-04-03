@@ -129,9 +129,9 @@ export default function Pricing() {
           id: provider.id,
           name: provider.displayName,
           badge: `${badge.icon} ${badge.label}`,
-          tagline: provider.description || 'SMS verification service',
-          priceRange: provider.priceRange || '$0.30 - $5.00',
-          features: provider.features || [
+          tagline: (provider as any).description || 'SMS verification service',
+          priceRange: (provider as any).priceRange || '$0.30 - $5.00',
+          features: (provider as any).features || [
             'SMS verification',
             'Multiple countries',
             'Fast delivery',

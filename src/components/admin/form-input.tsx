@@ -6,7 +6,7 @@ import { AlertCircle } from "lucide-react";
 interface FormInputProps {
   label: string;
   name: string;
-  type?: "text" | "email" | "password" | "number" | "tel";
+  type?: "text" | "email" | "password" | "number" | "tel" | "date";
   value: string;
   onChange: (value: string) => void;
   placeholder?: string;

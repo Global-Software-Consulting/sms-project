@@ -27,7 +27,7 @@ interface ReviewDisplay {
   originalData: AdminReview;
 }
 
-const columns = [
+const columns: { key: string; label: string; width?: string }[] = [
   { key: "id", label: "ID", width: "10%" },
   { key: "user", label: "User", width: "15%" },
   { key: "rating", label: "Rating", width: "12%" },
@@ -174,7 +174,7 @@ export default function AdminReviewsPage() {
     );
   });
 
-  const renderCell = (item: ReviewDisplay, column: { key: string; label: string; width: string }) => {
+  const renderCell = (item: ReviewDisplay, column: { key: string; label: string; width?: string }) => {
     if (column.key === "rating") {
       return (
         <div className="flex items-center gap-1">
@@ -271,7 +271,7 @@ export default function AdminReviewsPage() {
       );
     }
 
-    return item[column.key as keyof ReviewDisplay];
+    return String(item[column.key as keyof ReviewDisplay] ?? '');
   };
 
   const filters = [
