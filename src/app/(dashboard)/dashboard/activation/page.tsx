@@ -503,9 +503,10 @@ export default function Activation() {
             }}
           />
           {providers.map(provider => {
-            // Extract VIP category name (e.g. "V1 - Premium" from "5sim.net V1 - Premium")
+            // Use VIP category label if available, otherwise extract from displayName
+            const vipCategory = vipCategories.find(c => c.providerId === provider.id);
             const vipMatch = provider.displayName.match(/(V\d+\s*-\s*.+)$/i);
-            const tabLabel = vipMatch ? vipMatch[1] : provider.displayName;
+            const tabLabel = vipCategory?.label || (vipMatch ? vipMatch[1] : provider.displayName);
             return (
               <button
                 key={provider.id}
