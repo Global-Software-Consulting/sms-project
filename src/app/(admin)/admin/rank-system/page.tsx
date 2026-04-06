@@ -67,9 +67,10 @@ export default function AdminRankSystemPage() {
     try {
       const data = await getRanks();
       const ranksArray = Array.isArray(data) ? data : [];
-      setRanks(ranksArray.length > 0 ? ranksArray.sort((a, b) => a.sortOrder - b.sortOrder) : dummyRanks);
+      setRanks(ranksArray.sort((a, b) => a.sortOrder - b.sortOrder));
     } catch (error: any) {
-      setRanks(dummyRanks);
+      toast.error(error?.response?.data?.message || "Failed to fetch ranks");
+      setRanks([]);
     } finally {
       setIsPageLoading(false);
     }
