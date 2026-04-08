@@ -407,9 +407,21 @@ export interface RentResponse {
 
 export interface SyncResponse {
   message: string;
-  services: number;
-  countries: number;
-  products: number;
+  status: 'syncing' | 'completed' | 'failed' | 'idle';
+  startedAt?: string;
+  services?: number;
+  countries?: number;
+  products?: number;
+}
+
+export interface SyncStatusResponse {
+  status: 'syncing' | 'completed' | 'failed' | 'idle';
+  startedAt?: string;
+  completedAt?: string;
+  services?: number;
+  countries?: number;
+  products?: number;
+  error?: string;
 }
 
 // ============================================
@@ -727,12 +739,24 @@ export const adminUpdateProvider = async (
 };
 
 /**
- * Force sync provider catalog
+ * Start async sync for provider catalog
  * POST /api/v1/admin/sms/providers/:id/sync
+ * Returns immediately - sync runs in background on server
  */
 export const adminSyncProvider = async (id: string): Promise<SyncResponse> => {
   const response = await apiClient.post<SyncResponse>(
     API_ENDPOINTS.ADMIN.SMS.PROVIDER_SYNC(id),
+  );
+  return response.data;
+};
+
+/**
+ * Get sync status for a provider
+ * GET /api/v1/admin/sms/providers/:id/sync-status
+ */
+export const adminGetSyncStatus = async (id: string): Promise<SyncStatusResponse> => {
+  const response = await apiClient.get<SyncStatusResponse>(
+    API_ENDPOINTS.ADMIN.SMS.PROVIDER_SYNC_STATUS(id),
   );
   return response.data;
 };

@@ -25,6 +25,7 @@ import {
   adminGetProviders,
   adminUpdateProvider,
   adminSyncProvider,
+  adminGetSyncStatus,
   adminAddVipNumber,
   adminGetVipNumbers,
   adminRemoveVipNumber,
@@ -284,16 +285,66 @@ export default function AdminSmsServicesPage() {
     }
   };
 
-  // Sync provider
+  // Sync provider with background polling
   const handleSyncProvider = async (providerId: string) => {
     setIsSyncing(providerId);
+    
     try {
-      const result = await adminSyncProvider(providerId);
-      toast.success(`Synced! ${result.services} services, ${result.countries} countries, ${result.products} products`);
-      fetchProviders();
+      // Start the sync (returns immediately)
+      const startResult = await adminSyncProvider(providerId);
+      
+      if (startResult.status === 'syncing') {
+        toast.info("Sync started! Waiting for completion...", { duration: 3000 });
+        
+        // Poll for completion
+        let attempts = 0;
+        const maxAttempts = 60; // Max 5 minutes (60 * 5s)
+        
+        const pollStatus = async (): Promise<void> => {
+          attempts++;
+          
+          try {
+            const status = await adminGetSyncStatus(providerId);
+            
+            if (status.status === 'completed') {
+              toast.success(`Sync complete! ${status.services || 0} services, ${status.countries || 0} countries, ${status.products || 0} products`);
+              fetchProviders();
+              setIsSyncing(null);
+              return;
+            } else if (status.status === 'failed') {
+              toast.error(`Sync failed: ${status.error || 'Unknown error'}`);
+              setIsSyncing(null);
+              return;
+            } else if (status.status === 'syncing' && attempts < maxAttempts) {
+              // Still syncing, poll again after 5 seconds
+              setTimeout(pollStatus, 5000);
+            } else {
+              // Max attempts reached
+              toast.info("Sync is still running. Check back later or refresh the page.");
+              setIsSyncing(null);
+            }
+          } catch (pollError) {
+            console.error('Error polling sync status:', pollError);
+            if (attempts < maxAttempts) {
+              setTimeout(pollStatus, 5000);
+            } else {
+              toast.error("Could not get sync status. The sync may still be running.");
+              setIsSyncing(null);
+            }
+          }
+        };
+        
+        // Start polling after 3 seconds
+        setTimeout(pollStatus, 3000);
+      } else {
+        // Sync completed immediately or already had result
+        toast.success(startResult.message);
+        fetchProviders();
+        setIsSyncing(null);
+      }
     } catch (error: any) {
-      toast.error(error?.response?.data?.message || "Failed to sync provider");
-    } finally {
+      const message = error?.response?.data?.message || error?.message || "Failed to start sync";
+      toast.error(message);
       setIsSyncing(null);
     }
   };
