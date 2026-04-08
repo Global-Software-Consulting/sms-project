@@ -29,6 +29,7 @@ export const API_ENDPOINTS = {
     GUEST: '/auth/guest',
     VERIFY_OTP: '/auth/verify-otp',
     FORGOT_PASSWORD: '/auth/forgot-password',
+    RESET_PASSWORD: '/auth/reset-password',
     // OAuth paths (appended to baseURL)
     GOOGLE: '/auth/google',
     GITHUB: '/auth/github',

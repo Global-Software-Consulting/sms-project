@@ -246,6 +246,22 @@ export const forgotPassword = async (email: string): Promise<OtpResponse> => {
 };
 
 /**
+ * Reset password with OTP code
+ * POST /api/v1/auth/reset-password
+ */
+export const resetPassword = async (data: {
+  email: string;
+  code: string;
+  newPassword: string;
+}): Promise<MessageResponse> => {
+  const response = await apiClient.post<MessageResponse>(
+    API_ENDPOINTS.AUTH.RESET_PASSWORD,
+    data,
+  );
+  return response.data;
+};
+
+/**
  * Request guest login OTP (email-code-only, no password required)
  * POST /api/v1/auth/guest
  */

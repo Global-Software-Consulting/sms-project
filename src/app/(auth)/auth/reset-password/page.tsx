@@ -1,6 +1,7 @@
 'use client';
-import { useState } from 'react';
+import { useState, Suspense } from 'react';
 import Link from 'next/link';
+import { useRouter, useSearchParams } from 'next/navigation';
 import {
   Card,
   CardContent,
@@ -12,18 +13,37 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
-import { Eye, EyeOff, Lock } from 'lucide-react';
+import {
+  InputOTP,
+  InputOTPGroup,
+  InputOTPSlot,
+  InputOTPSeparator,
+} from '@/components/ui/input-otp';
+import { Eye, EyeOff, Lock, Mail, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { resetPassword } from '@/lib/api';
+import { getErrorMessage } from '@/config/errors.config';
 
-export default function ResetPassword() {
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+function ResetPasswordContent() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const emailFromQuery = searchParams.get('email') || '';
+
+  const [email] = useState(emailFromQuery);
+  const [otp, setOtp] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (otp.length !== 6) {
+      toast.error('Please enter the complete 6-digit code');
+      return;
+    }
 
     if (password !== confirmPassword) {
       toast.error("Passwords don't match");
@@ -36,16 +56,38 @@ export default function ResetPassword() {
     }
 
     setIsLoading(true);
-
-    // Simulate API call
-    setTimeout(() => {
-      setIsLoading(false);
+    try {
+      await resetPassword({ email, code: otp, newPassword: password });
       toast.success('Password reset successful!', {
         description: 'You can now sign in with your new password',
       });
-      // In real app: navigate to login
-    }, 1500);
+      router.push('/auth/login');
+    } catch (error) {
+      toast.error('Password reset failed', {
+        description: getErrorMessage(error),
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
+
+  // Redirect if no email provided
+  if (!emailFromQuery) {
+    return (
+      <div className="from-background via-background to-muted/20 flex min-h-screen w-full items-center justify-center bg-gradient-to-br p-4">
+        <Card className="relative w-full max-w-md border-[var(--glass-border)] shadow-[var(--glass-shadow-3)] backdrop-blur-[var(--glass-blur)]">
+          <CardContent className="pt-6 text-center">
+            <p className="text-muted-foreground mb-4">
+              No email provided. Please start from the forgot password page.
+            </p>
+            <Button asChild className="w-full">
+              <Link href="/auth/forgot-password">Go to Forgot Password</Link>
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="from-background via-background to-muted/20 flex min-h-screen w-full items-center justify-center bg-gradient-to-br p-4">
@@ -57,15 +99,57 @@ export default function ResetPassword() {
 
       <Card className="relative w-full max-w-md border-[var(--glass-border)] shadow-[var(--glass-shadow-3)] backdrop-blur-[var(--glass-blur)]">
         <CardHeader className="space-y-1 text-center">
-          {/* Logo */}
-          <div className="bg-primary/10 mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl">
-            <Lock className="text-primary h-8 w-8" />
+          <div className="from-primary to-accent mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br">
+            <Lock className="text-primary-foreground h-8 w-8" />
           </div>
           <CardTitle className="text-2xl font-bold">Reset Password</CardTitle>
-          <CardDescription>Enter your new password below</CardDescription>
+          <CardDescription>
+            Enter the OTP sent to your email and set a new password
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
+            {/* Prefilled Email (read-only) */}
+            <div className="space-y-2">
+              <Label htmlFor="email">Email</Label>
+              <div className="relative">
+                <Mail className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
+                <Input
+                  id="email"
+                  type="email"
+                  value={email}
+                  className="pl-9"
+                  disabled
+                />
+              </div>
+            </div>
+
+            {/* OTP Input */}
+            <div className="space-y-2">
+              <Label>Verification Code</Label>
+              <div className="flex justify-center">
+                <InputOTP
+                  maxLength={6}
+                  value={otp}
+                  onChange={setOtp}
+                  disabled={isLoading}
+                >
+                  <InputOTPGroup>
+                    <InputOTPSlot index={0} />
+                    <InputOTPSlot index={1} />
+                    <InputOTPSlot index={2} />
+                  </InputOTPGroup>
+                  <InputOTPSeparator />
+                  <InputOTPGroup>
+                    <InputOTPSlot index={3} />
+                    <InputOTPSlot index={4} />
+                    <InputOTPSlot index={5} />
+                  </InputOTPGroup>
+                </InputOTP>
+              </div>
+            </div>
+
+            {/* New Password */}
             <div className="space-y-2">
               <Label htmlFor="password">New Password</Label>
               <div className="relative">
@@ -79,6 +163,7 @@ export default function ResetPassword() {
                   className="pr-9 pl-9"
                   required
                   minLength={8}
+                  disabled={isLoading}
                 />
                 <button
                   type="button"
@@ -96,6 +181,8 @@ export default function ResetPassword() {
                 Must be at least 8 characters
               </p>
             </div>
+
+            {/* Confirm Password */}
             <div className="space-y-2">
               <Label htmlFor="confirmPassword">Confirm New Password</Label>
               <div className="relative">
@@ -109,6 +196,7 @@ export default function ResetPassword() {
                   className="pr-9 pl-9"
                   required
                   minLength={8}
+                  disabled={isLoading}
                 />
                 <button
                   type="button"
@@ -123,8 +211,16 @@ export default function ResetPassword() {
                 </button>
               </div>
             </div>
-            <Button type="submit" className="w-full" disabled={isLoading}>
-              {isLoading ? 'Resetting...' : 'Reset Password'}
+
+            <Button type="submit" className="w-full" disabled={isLoading || otp.length !== 6}>
+              {isLoading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Resetting...
+                </>
+              ) : (
+                'Reset Password'
+              )}
             </Button>
           </form>
         </CardContent>
@@ -141,5 +237,13 @@ export default function ResetPassword() {
         </CardFooter>
       </Card>
     </div>
+  );
+}
+
+export default function ResetPassword() {
+  return (
+    <Suspense>
+      <ResetPasswordContent />
+    </Suspense>
   );
 }

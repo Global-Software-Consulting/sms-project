@@ -97,9 +97,9 @@ function SignupContent() {
 
     if (register.fulfilled.match(result)) {
       toast.success('Account created successfully!', {
-        description: 'Welcome to SMSPro! Redirecting to your dashboard...',
+        description: 'Please verify your email to continue.',
       });
-      router.push('/dashboard');
+      router.push('/auth/verify-email');
     } else {
       toast.error('Registration failed', {
         description: (result.payload as string) || 'Something went wrong. Please try again.',

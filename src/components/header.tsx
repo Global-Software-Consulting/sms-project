@@ -2,7 +2,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useTheme } from 'next-themes';
-import { Moon, Sun, Menu, X } from 'lucide-react';
+import { Moon, Sun, Menu, X, UserRound } from 'lucide-react';
 import { Button } from './ui/button';
 import { useState, useEffect } from 'react';
 import { cn } from './ui/utils';
@@ -84,6 +84,19 @@ export function Header() {
           <Button
             asChild
             variant="ghost"
+            size="icon"
+            className="h-9 w-9"
+            title="Guest Login"
+          >
+            <Link href="/auth/guest-login">
+              <UserRound className="h-4 w-4" />
+              <span className="sr-only">Guest Login</span>
+            </Link>
+          </Button>
+
+          <Button
+            asChild
+            variant="ghost"
             size="sm"
             className="hidden md:inline-flex"
           >
@@ -135,6 +148,12 @@ export function Header() {
             </Link>
           ))}
           <div className="flex flex-col gap-2 pt-4 pb-2">
+            <Button asChild variant="outline" className="w-full">
+              <Link href="/auth/guest-login" onClick={() => setMobileMenuOpen(false)}>
+                <UserRound className="mr-2 h-4 w-4" />
+                Guest Login
+              </Link>
+            </Button>
             <Button asChild variant="outline" className="w-full">
               <Link href="/dashboard" onClick={() => setMobileMenuOpen(false)}>
                 Dashboard
