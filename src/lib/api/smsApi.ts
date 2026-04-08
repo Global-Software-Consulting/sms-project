@@ -38,6 +38,7 @@ export interface SmsProvider {
   balance?: string; // Admin only
   markup?: number; // Admin only
   lastSyncAt?: string; // Admin only
+  version?: string; // Admin only - V1_STANDARD, V2, V3, etc.
 }
 
 /**
@@ -1005,6 +1006,30 @@ export const adminAddVipNumber = async (
     message: string;
   }>(API_ENDPOINTS.ADMIN.SMS.VIP, {
     serviceId,
+    countryId,
+    providerId,
+    rating,
+  });
+  return response.data;
+};
+
+/**
+ * Bulk add VIP numbers - single API call for multiple services
+ * POST /api/v1/admin/sms/vip/bulk
+ */
+export const adminBulkAddVipNumbers = async (
+  serviceIds: string[],
+  countryId: string,
+  providerId: string,
+  rating?: number,
+): Promise<{ message: string; added: number; skipped: number; invalid: number }> => {
+  const response = await apiClient.post<{
+    message: string;
+    added: number;
+    skipped: number;
+    invalid: number;
+  }>(API_ENDPOINTS.ADMIN.SMS.VIP_BULK, {
+    serviceIds,
     countryId,
     providerId,
     rating,

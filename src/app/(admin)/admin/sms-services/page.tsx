@@ -26,7 +26,7 @@ import {
   adminUpdateProvider,
   adminSyncProvider,
   adminGetSyncStatus,
-  adminAddVipNumber,
+  adminBulkAddVipNumbers,
   adminGetVipNumbers,
   adminRemoveVipNumber,
   getServices,
@@ -59,6 +59,12 @@ interface Provider {
   services: Service[];
   totalServices: number;
   avgSuccessRate: number;
+  priority?: number;
+  markup?: number;
+  isActive?: boolean;
+  balance?: string;
+  lastSyncAt?: string;
+  supportsRental?: boolean;
 }
 
 interface VIPCategory {
@@ -199,11 +205,17 @@ export default function AdminSmsServicesPage() {
   const providers: Provider[] = apiProviders.map(p => ({
     id: p.id,
     name: p.displayName || p.name,
-    version: (p as any).version || "V1 Standard",
+    version: (p as any).version || "V1_STANDARD",
     countries: [],
     services: [],
     totalServices: 0,
     avgSuccessRate: 0,
+    priority: p.priority,
+    markup: (p as any).markup,
+    isActive: p.isActive,
+    balance: p.balance,
+    lastSyncAt: p.lastSyncAt,
+    supportsRental: p.supportsRental,
   }));
 
   const vipCategories: VIPCategory[] = [
@@ -214,14 +226,20 @@ export default function AdminSmsServicesPage() {
 
   const [providerFormData, setProviderFormData] = useState({
     name: "",
-    version: "V1 Standard",
+    version: "V1_STANDARD",
+    priority: 100,
+    markup: 0,
+    isActive: true,
   });
 
   const handleEditProvider = (provider: Provider) => {
     setSelectedProvider(provider);
     setProviderFormData({
       name: provider.name,
-      version: provider.version,
+      version: provider.version || "V1_STANDARD",
+      priority: provider.priority || 100,
+      markup: provider.markup || 0,
+      isActive: provider.isActive ?? true,
     });
     setShowEditProviderModal(true);
   };
@@ -273,6 +291,9 @@ export default function AdminSmsServicesPage() {
       await adminUpdateProvider(selectedProvider.id, {
         displayName: providerFormData.name,
         version: providerFormData.version,
+        priority: providerFormData.priority,
+        markup: providerFormData.markup,
+        isActive: providerFormData.isActive,
       });
       toast.success("Provider updated successfully!");
       setShowEditProviderModal(false);
@@ -409,26 +430,30 @@ export default function AdminSmsServicesPage() {
     const rating = vipRatingMap[selectedVIPCategory] ?? 5;
 
     setIsLoading(true);
-    let successCount = 0;
-    let duplicateCount = 0;
-    let failCount = 0;
+    
+    try {
+      // Single bulk API call instead of multiple individual calls
+      const result = await adminBulkAddVipNumbers(
+        selectedServices,
+        selectedVipCountryId,
+        selectedProvider.id,
+        rating
+      );
 
-    for (const serviceId of selectedServices) {
-      try {
-        await adminAddVipNumber(serviceId, selectedVipCountryId, selectedProvider.id, rating);
-        successCount++;
-      } catch (error: any) {
-        if (error?.response?.status === 409) {
-          duplicateCount++;
-        } else {
-          failCount++;
-        }
+      if (result.added > 0) {
+        toast.success(`${result.added} service(s) added to VIP`);
       }
+      if (result.skipped > 0) {
+        toast.warning(`${result.skipped} duplicate(s) skipped`);
+      }
+      if (result.invalid > 0) {
+        toast.error(`${result.invalid} invalid service(s)`);
+      }
+      
+      fetchVipNumbers();
+    } catch (error: any) {
+      toast.error(error?.response?.data?.message || "Failed to add VIP services");
     }
-
-    if (successCount > 0) toast.success(`${successCount} service(s) added to VIP`);
-    if (duplicateCount > 0) toast.warning(`${duplicateCount} duplicate(s) skipped`);
-    if (failCount > 0) toast.error(`${failCount} service(s) failed to add`);
 
     setIsLoading(false);
     setShowAddToVIPModal(false);
@@ -1402,7 +1427,7 @@ export default function AdminSmsServicesPage() {
       {/* Edit Provider Modal */}
       {showEditProviderModal && selectedProvider && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-[#0F172A] border border-[rgba(255,255,255,0.1)] rounded-xl p-6 w-full max-w-md">
+          <div className="bg-[#0F172A] border border-[rgba(255,255,255,0.1)] rounded-xl p-6 w-full max-w-lg">
             <h2 className="text-white text-xl font-semibold mb-6">Edit Provider</h2>
 
             <div className="space-y-4 mb-6">
@@ -1417,19 +1442,80 @@ export default function AdminSmsServicesPage() {
                 />
               </div>
 
-              <div>
-                <label className="text-white text-sm font-medium mb-2 block">Version</label>
-                <select
-                  value={providerFormData.version}
-                  onChange={(e) => setProviderFormData({ ...providerFormData, version: e.target.value })}
-                  className="w-full bg-[rgba(0,0,0,0.4)] border border-[rgba(255,255,255,0.18)] rounded-lg px-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#3B82F6]"
-                >
-                  <option value="V1 Standard">V1 Standard</option>
-                  <option value="V2">V2</option>
-                  <option value="V3">V3</option>
-                  <option value="V4">V4</option>
-                  <option value="V5">V5</option>
-                </select>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-white text-sm font-medium mb-2 block">Version</label>
+                  <select
+                    value={providerFormData.version}
+                    onChange={(e) => setProviderFormData({ ...providerFormData, version: e.target.value })}
+                    className="w-full bg-[rgba(0,0,0,0.4)] border border-[rgba(255,255,255,0.18)] rounded-lg px-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#3B82F6]"
+                  >
+                    <option value="V1_STANDARD">V1 - Premium</option>
+                    <option value="V2">V2 - Standard</option>
+                    <option value="V3">V3 - Basic</option>
+                    <option value="V4">V4</option>
+                    <option value="V5">V5</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="text-white text-sm font-medium mb-2 block">Priority</label>
+                  <input
+                    type="number"
+                    value={providerFormData.priority}
+                    onChange={(e) => setProviderFormData({ ...providerFormData, priority: parseInt(e.target.value) || 0 })}
+                    className="w-full bg-[rgba(0,0,0,0.4)] border border-[rgba(255,255,255,0.18)] rounded-lg px-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#3B82F6]"
+                    placeholder="100"
+                    min="0"
+                    max="1000"
+                  />
+                  <p className="text-[#64748B] text-xs mt-1">Higher = shown first</p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-white text-sm font-medium mb-2 block">Markup (%)</label>
+                  <input
+                    type="number"
+                    value={providerFormData.markup}
+                    onChange={(e) => setProviderFormData({ ...providerFormData, markup: parseFloat(e.target.value) || 0 })}
+                    className="w-full bg-[rgba(0,0,0,0.4)] border border-[rgba(255,255,255,0.18)] rounded-lg px-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#3B82F6]"
+                    placeholder="0"
+                    min="0"
+                    max="100"
+                    step="0.1"
+                  />
+                  <p className="text-[#64748B] text-xs mt-1">Added to all prices</p>
+                </div>
+
+                <div>
+                  <label className="text-white text-sm font-medium mb-2 block">Status</label>
+                  <div className="flex items-center gap-3 h-[46px]">
+                    <button
+                      type="button"
+                      onClick={() => setProviderFormData({ ...providerFormData, isActive: true })}
+                      className={`flex-1 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+                        providerFormData.isActive
+                          ? "bg-[#22C55E] text-white"
+                          : "bg-[rgba(255,255,255,0.05)] text-[#64748B] hover:bg-[rgba(255,255,255,0.1)]"
+                      }`}
+                    >
+                      Active
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setProviderFormData({ ...providerFormData, isActive: false })}
+                      className={`flex-1 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+                        !providerFormData.isActive
+                          ? "bg-[#EF4444] text-white"
+                          : "bg-[rgba(255,255,255,0.05)] text-[#64748B] hover:bg-[rgba(255,255,255,0.1)]"
+                      }`}
+                    >
+                      Inactive
+                    </button>
+                  </div>
+                </div>
               </div>
             </div>
 

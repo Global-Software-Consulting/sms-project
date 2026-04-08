@@ -302,6 +302,7 @@ export const API_ENDPOINTS = {
       RENTALS: '/admin/sms/rentals',
       STATISTICS: '/admin/sms/statistics',
       VIP: '/admin/sms/vip',
+      VIP_BULK: '/admin/sms/vip/bulk',
       VIP_DETAIL: (id: string) => `/admin/sms/vip/${id}`,
       VIP_AUTO_DETECT: '/admin/sms/vip/auto-detect',
       PRICING_GLOBAL_MARKUP: '/admin/sms/pricing/global-markup',
