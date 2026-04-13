@@ -1,6 +1,7 @@
 import { apiClient } from '@/config/api-client.config';
 import { API_ENDPOINTS } from '@/config/server.config';
 import type { TicketStatus, TicketPriority, TicketCategory, TicketMessage } from './ticketsApi';
+import { uploadFile, UploadResult } from './storageApi';
 
 // ============================================
 // Types
@@ -68,6 +69,7 @@ export interface UpdateTicketRequest {
 
 export interface ReplyTicketRequest {
   message: string;
+  attachments?: UploadResult[];
 }
 
 // ============================================
@@ -111,13 +113,32 @@ export const updateAdminTicket = async (
   return response.data;
 };
 
+/**
+ * Reply to a ticket as admin/staff (with optional attachment)
+ * 
+ * Flow:
+ * 1. If file provided, upload it first via /storage/upload
+ * 2. Then send reply with the uploaded attachment URL
+ */
 export const replyToTicket = async (
   id: string,
-  data: ReplyTicketRequest,
+  message: string,
+  file?: File,
 ): Promise<TicketMessage> => {
+  let attachments: UploadResult[] | undefined;
+
+  // Upload file first if provided
+  if (file) {
+    const uploaded = await uploadFile(file, `tickets/${id}`);
+    attachments = [uploaded];
+  }
+
   const response = await apiClient.post<TicketMessage>(
     API_ENDPOINTS.ADMIN.TICKETS.REPLY(id),
-    data,
+    {
+      message,
+      attachments,
+    },
   );
   return response.data;
 };

@@ -1,5 +1,6 @@
 import { apiClient } from '@/config/api-client.config';
 import { API_ENDPOINTS } from '@/config/server.config';
+import { uploadFile, uploadMultipleFiles, UploadResult } from './storageApi';
 
 // ============================================
 // Types
@@ -88,6 +89,12 @@ export interface CreateTicketRequest {
   message: string;
   category?: string;
   priority?: string;
+  attachments?: UploadResult[];
+}
+
+export interface AddMessageRequest {
+  message: string;
+  attachments?: UploadResult[];
 }
 
 // ============================================
@@ -109,30 +116,35 @@ export const getTickets = async (
 };
 
 /**
- * Create a new support ticket (with optional image)
+ * Create a new support ticket (with optional attachments)
+ * 
+ * Flow:
+ * 1. If files provided, upload them first via /storage/upload
+ * 2. Then create ticket with the uploaded attachment URLs
+ * 
  * POST /api/v1/tickets
  */
 export const createTicket = async (
   data: CreateTicketRequest,
-  attachments?: File[],
+  files?: File[],
 ): Promise<Ticket> => {
-  if (attachments && attachments.length > 0) {
-    const formData = new FormData();
-    formData.append('subject', data.subject);
-    formData.append('message', data.message);
-    if (data.category) formData.append('category', data.category);
-    if (data.priority) formData.append('priority', data.priority);
-    attachments.forEach((file) => formData.append('attachments', file));
-    const response = await apiClient.post<Ticket>(
-      API_ENDPOINTS.TICKETS.ROOT,
-      formData,
-      { headers: { 'Content-Type': 'multipart/form-data' } },
-    );
-    return response.data;
+  let attachments: UploadResult[] | undefined;
+
+  // Upload files first if provided
+  if (files && files.length > 0) {
+    attachments = await uploadMultipleFiles(files, 'tickets/pending');
   }
+
+  // Create ticket with JSON payload
   const response = await apiClient.post<Ticket>(
     API_ENDPOINTS.TICKETS.ROOT,
-    data,
+    {
+      subject: data.subject,
+      message: data.message,
+      category: data.category,
+      priority: data.priority,
+      attachments,
+    },
   );
   return response.data;
 };
@@ -151,28 +163,34 @@ export const getTicketDetail = async (
 };
 
 /**
- * Send a message on a ticket
+ * Send a message on a ticket (with optional attachment)
+ * 
+ * Flow:
+ * 1. If file provided, upload it first via /storage/upload
+ * 2. Then send message with the uploaded attachment URL
+ * 
  * POST /api/v1/tickets/:id/messages
  */
 export const sendTicketMessage = async (
   ticketId: string,
   message: string,
-  image?: File,
+  file?: File,
 ): Promise<TicketMessage> => {
-  if (image) {
-    const formData = new FormData();
-    formData.append('message', message);
-    formData.append('attachments', image);
-    const response = await apiClient.post<TicketMessage>(
-      API_ENDPOINTS.TICKETS.MESSAGES(ticketId),
-      formData,
-      { headers: { 'Content-Type': 'multipart/form-data' } },
-    );
-    return response.data;
+  let attachments: UploadResult[] | undefined;
+
+  // Upload file first if provided
+  if (file) {
+    const uploaded = await uploadFile(file, `tickets/${ticketId}`);
+    attachments = [uploaded];
   }
+
+  // Send message with JSON payload
   const response = await apiClient.post<TicketMessage>(
     API_ENDPOINTS.TICKETS.MESSAGES(ticketId),
-    { message },
+    {
+      message,
+      attachments,
+    },
   );
   return response.data;
 };

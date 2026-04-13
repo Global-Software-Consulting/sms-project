@@ -197,7 +197,7 @@ export default function AdminSupportPage() {
     if (!replyMessage.trim() || !selectedTicket) return;
     setIsLoading(true);
     try {
-      const newMessage = await replyToTicket(selectedTicket.id, { message: replyMessage.trim() });
+      const newMessage = await replyToTicket(selectedTicket.id, replyMessage.trim());
       setMessages((prev) => [...prev, newMessage]);
       setReplyMessage("");
       toast.success("Reply sent successfully!");

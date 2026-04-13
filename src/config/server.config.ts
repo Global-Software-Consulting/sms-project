@@ -113,6 +113,13 @@ export const API_ENDPOINTS = {
   },
 
   // ========================
+  // Storage (File Uploads)
+  // ========================
+  STORAGE: {
+    UPLOAD: '/storage/upload',
+  },
+
+  // ========================
   // Tickets (Support)
   // ========================
   TICKETS: {
