@@ -168,7 +168,7 @@ export default function Login() {
               Welcome Back
             </CardTitle>
             <CardDescription className="text-base">
-              Sign in to your SMSPro account to continue
+              Sign in to your BestSMSHQ account to continue
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -302,14 +302,23 @@ export default function Login() {
               </>
             )}
           </CardContent>
-          <CardFooter className="flex justify-center">
+          <CardFooter className="flex flex-col items-center gap-2">
             <p className="text-muted-foreground text-sm">
-              Don't have an account?{' '}
+              Don&apos;t have an account?{' '}
               <Link
                 href="/auth/signup"
                 className="text-primary font-medium hover:underline"
               >
                 Sign up
+              </Link>
+            </p>
+            <p className="text-muted-foreground text-sm">
+              Just checking orders?{' '}
+              <Link
+                href="/auth/guest-login"
+                className="text-primary font-medium hover:underline"
+              >
+                Guest Login
               </Link>
             </p>
           </CardFooter>

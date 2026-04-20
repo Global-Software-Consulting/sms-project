@@ -16,7 +16,7 @@ export function Footer() {
                   S
                 </span>
               </div>
-              <span className="text-lg font-bold sm:text-xl">SMSPro</span>
+              <span className="text-lg font-bold sm:text-xl">BestSMSHQ</span>
             </div>
             <p className="text-muted-foreground max-w-xs text-sm">
               Premium SMS activation and number rental platform. Fast, reliable,
@@ -195,7 +195,7 @@ export function Footer() {
         <div className="border-border mt-8 border-t pt-6 sm:pt-8">
           <div className="text-muted-foreground flex flex-col items-center justify-between gap-3 text-sm sm:flex-row">
             <p className="text-center sm:text-left">
-              &copy; {currentYear} SMSPro. All rights reserved.
+              &copy; {currentYear} BestSMSHQ. All rights reserved.
             </p>
             <div className="flex flex-wrap items-center justify-center gap-3 sm:gap-4">
               <Link

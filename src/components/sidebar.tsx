@@ -79,7 +79,7 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
                     S
                   </span>
                 </div>
-                <span className="truncate font-bold">SMSPro</span>
+                <span className="truncate font-bold">BestSMSHQ</span>
               </Link>
             )}
             {/* Desktop collapse toggle */}

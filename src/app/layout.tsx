@@ -7,8 +7,8 @@ import './globals.css';
 
 export const metadata: Metadata = {
   title: {
-    default: 'SMSPro',
-    template: '%s | SMSPro',
+    default: 'BestSMSHQ',
+    template: '%s | BestSMSHQ',
   },
   description:
     'Premium SMS activation and number rental platform. Fast, reliable, and secure.',

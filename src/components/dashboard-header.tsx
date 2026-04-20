@@ -111,7 +111,7 @@ export function DashboardHeader({ onMenuClick }: DashboardHeaderProps = {}) {
             </button>
           )}
           {/* Logo shown only on mobile when sidebar is hidden */}
-          <span className="truncate text-sm font-bold lg:hidden">SMSPro</span>
+          <span className="truncate text-sm font-bold lg:hidden">BestSMSHQ</span>
         </div>
 
         {/* Right side - Actions */}

@@ -42,6 +42,13 @@ import {
   formatPrice,
 } from '@/lib/api/smsApi';
 
+const getServiceType = (provider?: { displayName?: string; slug?: string }) => {
+  const name = (provider?.displayName || provider?.slug || '').toLowerCase();
+  if (name.includes('premium') || name.includes('v2')) return 'Premium';
+  if (name.includes('elite') || name.includes('v3') || name.includes('basic')) return 'Elite';
+  return 'Standard';
+};
+
 export default function Orders() {
   // Data state
   const [orders, setOrders] = useState<SmsOrder[]>([]);
@@ -255,7 +262,7 @@ export default function Orders() {
                             {order.service?.name || 'Unknown Service'}
                           </h3>
                           <Badge variant="secondary">
-                            {order.provider?.displayName || 'Provider'}
+                            {getServiceType(order.provider)}
                           </Badge>
                           <Badge
                             variant="secondary"
@@ -390,11 +397,11 @@ export default function Orders() {
                 </span>
               </div>
 
-              {/* Provider */}
+              {/* Service Type */}
               <div className="flex items-center justify-between">
-                <span className="text-muted-foreground text-sm">Provider</span>
+                <span className="text-muted-foreground text-sm">Type</span>
                 <span className="font-medium">
-                  {selectedOrder.provider?.displayName || 'Unknown'}
+                  {getServiceType(selectedOrder.provider)}
                 </span>
               </div>
 

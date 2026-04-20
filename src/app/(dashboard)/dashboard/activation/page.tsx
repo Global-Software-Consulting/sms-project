@@ -589,41 +589,42 @@ export default function Activation() {
                             {getOrderStatusLabel(order.status)}
                           </Badge>
                         </div>
-                        <code className="text-muted-foreground font-mono text-xs">
+                        <code className="text-foreground font-mono text-sm font-semibold">
                           {order.phoneNumber || 'Waiting for number...'}
                         </code>
+                        {order.smsCode && (
+                          <div className="mt-1 flex items-center gap-2">
+                            <code className="text-success font-mono text-sm font-bold">
+                              {order.smsCode}
+                            </code>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-5 w-5 shrink-0"
+                              onClick={() => copyToClipboard(order.smsCode!)}
+                            >
+                              <Copy className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        )}
                       </div>
                     </div>
 
-                    {/* Timer */}
+                    {/* Timer + Expiration */}
                     {(order.status === 'PENDING' ||
                       order.status === 'WAITING_SMS') && timeRemaining && (
-                      <div className="text-muted-foreground flex shrink-0 items-center gap-1.5 text-sm">
-                        <Clock className="h-3.5 w-3.5" />
-                        <span className="font-mono tabular-nums">
-                          {timeRemaining.minutes}:
-                          {timeRemaining.seconds.toString().padStart(2, '0')}
-                        </span>
-                      </div>
-                    )}
-
-                    {/* SMS Code */}
-                    {order.smsCode && (
-                      <div className="bg-success/15 border-success/30 flex shrink-0 items-center gap-2 rounded-lg border px-3 py-1.5">
-                        <span className="text-success text-xs font-medium">
-                          Code:
-                        </span>
-                        <code className="text-success font-mono font-bold">
-                          {order.smsCode}
-                        </code>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-5 w-5 shrink-0"
-                          onClick={() => copyToClipboard(order.smsCode!)}
-                        >
-                          <Copy className="h-3 w-3" />
-                        </Button>
+                      <div className="flex shrink-0 flex-col items-end gap-0.5">
+                        <div className="text-foreground flex items-center gap-1.5 text-sm font-semibold">
+                          <Clock className="h-3.5 w-3.5" />
+                          <span className="font-mono tabular-nums">
+                            {timeRemaining.minutes}:{timeRemaining.seconds.toString().padStart(2, '0')}
+                          </span>
+                        </div>
+                        {order.expiresAt && (
+                          <span className="text-muted-foreground text-[10px]">
+                            Expires {new Date(order.expiresAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          </span>
+                        )}
                       </div>
                     )}
 
@@ -721,20 +722,21 @@ export default function Activation() {
               />
             </div>
 
-            {/* Service List - VIP services from categories API */}
+            {/* Service List - All services for selected provider */}
             <div className="scrollbar-thin min-h-0 flex-1 space-y-1 overflow-y-auto pr-1">
               {(() => {
-                const providerVip = vipCategories.find(c => c.providerId === selectedProvider?.id);
-                const vipServices = providerVip?.services || [];
                 const q = serviceSearch.toLowerCase();
+                const dedupedServices = services.filter(
+                  (svc, idx, self) => self.findIndex(s => s.name === svc.name) === idx
+                );
                 const filtered = q
-                  ? vipServices.filter(v => v.service.name.toLowerCase().includes(q) || v.country.name.toLowerCase().includes(q))
-                  : vipServices;
+                  ? dedupedServices.filter(svc => svc.name.toLowerCase().includes(q))
+                  : dedupedServices;
 
-                if (isVipLoading) {
+                if (!selectedProvider) {
                   return (
-                    <div className="flex items-center justify-center py-10">
-                      <Loader2 className="text-muted-foreground h-5 w-5 animate-spin" />
+                    <div className="text-muted-foreground py-10 text-center text-sm">
+                      Select a provider to see available services
                     </div>
                   );
                 }
@@ -742,29 +744,17 @@ export default function Activation() {
                 if (filtered.length === 0) {
                   return (
                     <div className="text-muted-foreground py-10 text-center text-sm">
-                      {q ? 'No services found' : 'No VIP services for this provider'}
+                      {q ? 'No services found' : 'No services available'}
                     </div>
                   );
                 }
 
-                return filtered.map(vip => {
-                  const isSelected = selectedService?.id === vip.service.id;
+                return filtered.map(svc => {
+                  const isSelected = selectedService?.id === svc.id;
                   return (
                     <button
-                      key={vip.id}
-                      onClick={() => {
-                        const matchingService = services.find(s => s.id === vip.service.id || s.slug === vip.service.slug);
-                        if (matchingService) {
-                          handleSelectService(matchingService);
-                        } else if (selectedProvider) {
-                          getServices({ providerId: selectedProvider.id, limit: 200 }).then(res => {
-                            const svcList = res.data || [];
-                            setServices(svcList);
-                            const svc = svcList.find(s => s.id === vip.service.id || s.slug === vip.service.slug);
-                            if (svc) handleSelectService(svc);
-                          });
-                        }
-                      }}
+                      key={svc.id}
+                      onClick={() => handleSelectService(svc)}
                       className={cn(
                         'group flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-all',
                         isSelected
@@ -773,8 +763,8 @@ export default function Activation() {
                       )}
                     >
                       <div className="bg-muted flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-sm">
-                        {vip.service.iconUrl ? (
-                          <img src={vip.service.iconUrl} alt="" className="h-5 w-5" />
+                        {svc.iconUrl ? (
+                          <img src={svc.iconUrl} alt="" className="h-5 w-5" />
                         ) : (
                           '📱'
                         )}
@@ -785,14 +775,9 @@ export default function Activation() {
                           'block truncate text-sm font-medium',
                           isSelected ? 'text-primary' : 'text-foreground'
                         )}>
-                          {vip.service.name}
-                        </span>
-                        <span className="text-muted-foreground text-xs">
-                          {vip.country.name} ({vip.country.code})
+                          {svc.name}
                         </span>
                       </div>
-
-                      <Star className="h-3.5 w-3.5 shrink-0 fill-amber-400 text-amber-400" />
 
                       {isSelected && (
                         <ChevronRight className="text-primary h-4 w-4 shrink-0" />
@@ -806,7 +791,7 @@ export default function Activation() {
             {/* Count footer */}
             <div className="border-border border-t pt-2">
               <span className="text-muted-foreground text-sm">
-                {(vipCategories.find(c => c.providerId === selectedProvider?.id)?.serviceCount) || 0} VIP services
+                {services.filter((svc, idx, self) => self.findIndex(s => s.name === svc.name) === idx).length} services
               </span>
             </div>
           </CardContent>

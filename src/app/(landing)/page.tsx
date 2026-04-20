@@ -606,7 +606,7 @@ export default function Home() {
             Ready to Get Started?
           </h2>
           <p className="text-muted-foreground text-base sm:text-lg">
-            Join thousands of satisfied customers using SMSPro
+            Join thousands of satisfied customers using BestSMSHQ
           </p>
           <Button asChild size="lg" className="btn-premium text-base">
             <Link href="/auth/signup">

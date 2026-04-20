@@ -119,7 +119,7 @@ function SignupContent() {
         {/* Features Section - Hidden on mobile */}
         <div className="hidden space-y-6 lg:block">
           <div className="space-y-3">
-            <h2 className="text-3xl font-bold">Join SMSPro Today</h2>
+            <h2 className="text-3xl font-bold">Join BestSMSHQ Today</h2>
             <p className="text-muted-foreground text-lg">
               Start with our powerful SMS activation platform
             </p>
@@ -190,7 +190,7 @@ function SignupContent() {
               </span>
             </CardTitle>
             <CardDescription className="text-base">
-              Join SMSPro and start with premium SMS activation
+              Join BestSMSHQ and start with premium SMS activation
             </CardDescription>
           </CardHeader>
           <CardContent>

@@ -39,7 +39,6 @@ const menuItems = [
   { path: '/admin/dashboard', label: 'Admin Dashboard', icon: LayoutDashboard },
   { path: '/admin/users', label: 'User Management', icon: Users },
   { path: '/admin/activations', label: 'Order Management', icon: ShoppingCart },
-  { path: '/admin/services', label: 'Product Management', icon: Briefcase },
   { path: '/admin/sms-services', label: 'SMS Services', icon: MessageSquare },
   { path: '/admin/coupons', label: 'Coupon Management', icon: Ticket },
   { path: '/admin/referrals', label: 'Affiliate Management', icon: Gift },
@@ -93,7 +92,7 @@ export function AdminSidebar() {
               <MessageSquare className="w-6 h-6 text-white" />
             </div>
             <div>
-              <h1 className="text-white font-semibold text-lg">SMS Portal</h1>
+              <h1 className="text-white font-semibold text-lg">BestSMSHQ</h1>
               <p className="text-[#64748B] text-xs">Admin Panel</p>
             </div>
           </div>

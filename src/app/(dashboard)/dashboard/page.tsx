@@ -21,13 +21,6 @@ import {
   AlertCircle,
 } from 'lucide-react';
 import Link from 'next/link';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { useState, useEffect, useCallback } from 'react';
 import {
   getWalletBalance,
@@ -67,9 +60,6 @@ interface DashboardData {
 
 export default function Dashboard() {
   const { user, isAuthenticated, isInitialized } = useAuth();
-  const [quickCountry, setQuickCountry] = useState('');
-  const [quickService, setQuickService] = useState('');
-  const [quickProvider, setQuickProvider] = useState('v1');
 
   // Dashboard data state
   const [data, setData] = useState<DashboardData>({
@@ -353,120 +343,23 @@ export default function Dashboard() {
       </div>
 
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-        {/* Quick Order Box */}
+        {/* Order SMS Now */}
         <Card className="md:col-span-1 lg:col-span-2">
           <CardHeader>
-            <CardTitle>Quick Order</CardTitle>
+            <CardTitle>SMS Activation</CardTitle>
             <CardDescription>
-              Order a new SMS activation instantly
+              Get phone numbers for instant SMS verification
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid gap-4 md:grid-cols-2">
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Country</label>
-                <Select value={quickCountry} onValueChange={setQuickCountry}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select country" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {data.countries.length > 0 ? (
-                      data.countries.slice(0, 20).map((country) => (
-                        <SelectItem key={country.id} value={country.code.toLowerCase()}>
-                          {getCountryFlag(country.code)} {country.name}
-                        </SelectItem>
-                      ))
-                    ) : (
-                      <SelectItem value="__empty" disabled>No countries available</SelectItem>
-                    )}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Service</label>
-                <Select value={quickService} onValueChange={setQuickService}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select service" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {data.services.length > 0 ? (
-                      data.services
-                        .filter((service, index, self) => self.findIndex(s => s.name === service.name) === index)
-                        .slice(0, 20)
-                        .map((service) => (
-                          <SelectItem key={service.id} value={service.slug || service.id}>
-                            {service.name}
-                          </SelectItem>
-                        ))
-                    ) : (
-                      <SelectItem value="__empty" disabled>No services available</SelectItem>
-                    )}
-                  </SelectContent>
-                </Select>
-              </div>
+          <CardContent className="flex flex-col items-center gap-4 py-6">
+            <div className="bg-primary/10 flex h-16 w-16 items-center justify-center rounded-2xl">
+              <MessageSquare className="text-primary h-8 w-8" />
             </div>
-
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Provider Type</label>
-              <div className="flex flex-wrap gap-3">
-                <label className="flex cursor-pointer items-center space-x-2">
-                  <input
-                    type="radio"
-                    name="provider"
-                    value="v1"
-                    checked={quickProvider === 'v1'}
-                    onChange={(e) => setQuickProvider(e.target.value)}
-                    className="h-4 w-4"
-                  />
-                  <div>
-                    <Badge variant="secondary">💰 Standard V1</Badge>
-                    <p className="text-muted-foreground mt-1 text-xs">
-                      From $0.50
-                    </p>
-                  </div>
-                </label>
-                <label className="flex cursor-pointer items-center space-x-2">
-                  <input
-                    type="radio"
-                    name="provider"
-                    value="v2"
-                    checked={quickProvider === 'v2'}
-                    onChange={(e) => setQuickProvider(e.target.value)}
-                    className="h-4 w-4"
-                  />
-                  <div>
-                    <Badge className="from-primary to-accent bg-gradient-to-r">
-                      💎 Premium V2
-                    </Badge>
-                    <p className="text-muted-foreground mt-1 text-xs">
-                      From $1.50
-                    </p>
-                  </div>
-                </label>
-                <label className="flex cursor-pointer items-center space-x-2">
-                  <input
-                    type="radio"
-                    name="provider"
-                    value="v3"
-                    checked={quickProvider === 'v3'}
-                    onChange={(e) => setQuickProvider(e.target.value)}
-                    className="h-4 w-4"
-                  />
-                  <div>
-                    <Badge className="from-warning bg-gradient-to-r to-amber-500">
-                      👑 Basic V3
-                    </Badge>
-                    <p className="text-muted-foreground mt-1 text-xs">
-                      From $2.50
-                    </p>
-                  </div>
-                </label>
-              </div>
-            </div>
-
+            <p className="text-muted-foreground text-center text-sm">
+              Choose from 500+ services across 180+ countries with instant delivery
+            </p>
             <Button asChild className="w-full" size="lg">
-              <Link href="/dashboard/activation">Order Now</Link>
+              <Link href="/dashboard/activation">Order SMS Now</Link>
             </Button>
           </CardContent>
         </Card>
@@ -557,7 +450,12 @@ export default function Dashboard() {
                         {rental.phoneNumber || 'Pending...'}
                       </p>
                       <p className="text-muted-foreground text-sm">
-                        {rental.provider?.displayName || 'Provider'}
+                        {(() => {
+                          const name = (rental.provider?.displayName || '').toLowerCase();
+                          if (name.includes('premium') || name.includes('v2')) return 'Premium';
+                          if (name.includes('elite') || name.includes('v3') || name.includes('basic')) return 'Elite';
+                          return 'Standard';
+                        })()}
                       </p>
                     </div>
                   </div>

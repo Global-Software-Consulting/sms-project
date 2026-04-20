@@ -97,7 +97,7 @@ export default function Blog() {
         <div className="space-y-6 text-center">
           <h1 className="text-3xl font-bold sm:text-4xl md:text-5xl">Blog</h1>
           <p className="text-muted-foreground mx-auto max-w-2xl text-base sm:text-xl">
-            Latest news, guides, and updates from SMSPro
+            Latest news, guides, and updates from BestSMSHQ
           </p>
 
           {posts.length > 0 && (
