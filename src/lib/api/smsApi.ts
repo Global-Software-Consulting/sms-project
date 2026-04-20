@@ -508,10 +508,11 @@ export const getProductsRealtime = async (
  */
 export const activateNumber = async (
   productId: string,
+  couponCode?: string,
 ): Promise<ActivateResponse> => {
   const response = await apiClient.post<ActivateResponse>(
     API_ENDPOINTS.SMS.ACTIVATE,
-    { productId },
+    { productId, ...(couponCode ? { couponCode } : {}) },
   );
   return response.data;
 };

@@ -186,6 +186,7 @@ export interface CreatePaymentRequest {
   cancelUrl?: string;
   // PayGate.to provider selection (like CheapStreamTV)
   paygateProvider?: PaygateProvider;
+  couponCode?: string;
 }
 
 export interface PaymentQueryParams {

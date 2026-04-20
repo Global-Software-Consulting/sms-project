@@ -100,6 +100,7 @@ export default function WalletPage() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [showPaymentDialog, setShowPaymentDialog] = useState(false);
   const [checkoutUrl, setCheckoutUrl] = useState<string | null>(null);
+  const [couponCode, setCouponCode] = useState('');
 
   // Fetch wallet data
   const fetchWalletData = useCallback(async () => {
@@ -229,6 +230,7 @@ export default function WalletPage() {
         paygateProvider: selectedGateway === 'PAYGATE' ? paygateProvider : undefined,
         successUrl: `${window.location.origin}/dashboard/wallet?payment=success`,
         cancelUrl: `${window.location.origin}/dashboard/wallet?payment=cancelled`,
+        ...(couponCode ? { couponCode } : {}),
       });
 
       if (response.checkoutUrl) {
@@ -435,6 +437,15 @@ export default function WalletPage() {
                 </Select>
               </div>
             )}
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Coupon Code (optional)</label>
+              <Input
+                placeholder="Enter coupon code"
+                value={couponCode}
+                onChange={(e) => setCouponCode(e.target.value)}
+              />
+            </div>
 
             <Button
               size="lg"

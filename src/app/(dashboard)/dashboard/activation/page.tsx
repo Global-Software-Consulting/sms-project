@@ -78,6 +78,7 @@ export default function Activation() {
   const [countrySearch, setCountrySearch] = useState('');
   const [countryFilter, setCountryFilter] = useState<CountryFilterType>('all');
   const [priceSort, setPriceSort] = useState<PriceSortType>('none');
+  const [couponCode, setCouponCode] = useState('');
 
   // VIP categories state
   const [vipCategories, setVipCategories] = useState<VipCategory[]>([]);
@@ -334,7 +335,7 @@ export default function Activation() {
 
     try {
       setActivatingProductId(product.id); // Track which specific product is being activated
-      const response = await activateNumber(product.id);
+      const response = await activateNumber(product.id, couponCode || undefined);
 
       if (response.order) {
         setActiveOrders(prev => [response.order, ...prev]);
@@ -454,11 +455,19 @@ export default function Activation() {
           </p>
         </div>
 
-        {/* Balance & Selection Crumbs */}
+        {/* Balance, Coupon & Selection Crumbs */}
         <div className="flex flex-wrap items-center gap-2">
           <Badge variant="outline" className="text-sm">
             Balance: {formatBalance(walletBalance, 'USD')}
           </Badge>
+          <div className="relative">
+            <Input
+              placeholder="Coupon code"
+              value={couponCode}
+              onChange={(e) => setCouponCode(e.target.value)}
+              className="h-8 w-32 text-xs sm:w-40"
+            />
+          </div>
 
           {selectedService && (
             <div className="border-border bg-card flex items-center gap-2 rounded-full border px-3 py-1.5 text-sm font-medium">

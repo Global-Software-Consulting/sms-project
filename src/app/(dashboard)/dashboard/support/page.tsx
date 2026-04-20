@@ -282,7 +282,7 @@ export default function Support() {
             <input
               ref={fileInputRef}
               type="file"
-              accept=".jpg,.jpeg,.png,.webp"
+              accept=".jpg,.jpeg,.png,.webp,.gif,.pdf"
               onChange={handleImageSelect}
               className="hidden"
             />
@@ -451,7 +451,7 @@ export default function Support() {
                             <input
                               ref={chatFileInputRef}
                               type="file"
-                              accept=".jpg,.jpeg,.png,.webp"
+                              accept=".jpg,.jpeg,.png,.webp,.gif,.pdf"
                               onChange={handleChatImageSelect}
                               className="hidden"
                             />

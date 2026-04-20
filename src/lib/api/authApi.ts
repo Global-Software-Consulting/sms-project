@@ -64,6 +64,13 @@ export const hasEqualOrHigherRole = (
   targetRole: UserRole,
 ): boolean => ROLE_HIERARCHY[userRole] >= ROLE_HIERARCHY[targetRole];
 
+export interface UserRank {
+  name: string;
+  badge: string;
+  color: string;
+  discountPercent: number;
+}
+
 export interface User {
   id: string;
   email: string;
@@ -77,6 +84,7 @@ export interface User {
   status: UserStatus;
   emailVerified: boolean;
   abuseScore: number;
+  rank?: UserRank | null;
   createdAt: string;
 }
 

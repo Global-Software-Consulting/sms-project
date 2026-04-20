@@ -20,6 +20,7 @@ import {
   Crown,
   Loader2,
   RefreshCw,
+  Lock,
 } from "lucide-react";
 import {
   adminGetProviders,
@@ -83,6 +84,7 @@ interface PricingProduct {
   globalMarkup: number;
   productMarkup: number;
   priceOverride: string | null;
+  isPriceLocked?: boolean;
 }
 
 
@@ -109,6 +111,7 @@ export default function AdminSmsServicesPage() {
   const [isPricingLoading, setIsPricingLoading] = useState(false);
   const [pricingPage, setPricingPage] = useState(1);
   const [pricingTotal, setPricingTotal] = useState(0);
+  const [showLockedOnly, setShowLockedOnly] = useState(false);
 
   // Subscriptions State (from API)
   const [subscriptions, setSubscriptions] = useState<MembershipPlan[]>([]);
@@ -532,8 +535,8 @@ export default function AdminSmsServicesPage() {
     setIsLoading(true);
     try {
       const body = editPriceMode === 'override'
-        ? { priceOverride: editPriceValue ? parseFloat(editPriceValue) : null }
-        : { markup: parseFloat(editPriceValue) || 0 };
+        ? { priceOverride: editPriceValue ? parseFloat(editPriceValue) : null, isPriceLocked: selectedServicePrice.isPriceLocked }
+        : { markup: parseFloat(editPriceValue) || 0, isPriceLocked: selectedServicePrice.isPriceLocked };
 
       await apiClient.patch(
         API_ENDPOINTS.ADMIN.SMS.PRICING_PRODUCT_DETAIL(selectedServicePrice.id),
@@ -953,21 +956,34 @@ export default function AdminSmsServicesPage() {
             )}
           </div>
 
-          {/* Search Bar */}
+          {/* Search Bar + Lock Filter */}
           <div className="p-6 rounded-xl bg-[rgba(15,23,42,0.6)] border border-[rgba(255,255,255,0.1)] backdrop-blur-xl">
-            <div className="relative">
-              <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-[#64748B]" />
-              <input
-                type="text"
-                value={pricingSearchQuery}
-                onChange={(e) => {
-                  const val = e.target.value;
-                  setPricingSearchQuery(val);
-                  handlePricingSearch(val);
-                }}
-                placeholder="Search services by name, country, or provider..."
-                className="w-full bg-[rgba(0,0,0,0.4)] border border-[rgba(255,255,255,0.18)] rounded-lg pl-12 pr-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#3B82F6]"
-              />
+            <div className="flex items-center gap-3">
+              <div className="relative flex-1">
+                <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-[#64748B]" />
+                <input
+                  type="text"
+                  value={pricingSearchQuery}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setPricingSearchQuery(val);
+                    handlePricingSearch(val);
+                  }}
+                  placeholder="Search services by name, country, or provider..."
+                  className="w-full bg-[rgba(0,0,0,0.4)] border border-[rgba(255,255,255,0.18)] rounded-lg pl-12 pr-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#3B82F6]"
+                />
+              </div>
+              <button
+                onClick={() => setShowLockedOnly(!showLockedOnly)}
+                className={`flex items-center gap-2 px-4 py-3 rounded-lg text-sm font-medium transition-all whitespace-nowrap ${
+                  showLockedOnly
+                    ? 'bg-[#3B82F6] text-white'
+                    : 'bg-[rgba(255,255,255,0.05)] border border-[rgba(255,255,255,0.18)] text-[#94A3B8] hover:bg-[rgba(255,255,255,0.08)]'
+                }`}
+              >
+                <Lock className="w-4 h-4" />
+                Locked Only
+              </button>
             </div>
           </div>
 
@@ -1009,9 +1025,14 @@ export default function AdminSmsServicesPage() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-[rgba(255,255,255,0.05)]">
-                      {pricingProducts.map((product) => (
+                      {pricingProducts.filter(p => !showLockedOnly || p.isPriceLocked).map((product) => (
                         <tr key={product.id} className="hover:bg-[rgba(255,255,255,0.02)] transition-colors">
-                          <td className="px-6 py-4 text-white text-sm font-medium">{product.service.name}</td>
+                          <td className="px-6 py-4 text-white text-sm font-medium">
+                            <span className="flex items-center gap-2">
+                              {product.service.name}
+                              {product.isPriceLocked && <Lock className="w-3 h-3 text-[#F59E0B]" />}
+                            </span>
+                          </td>
                           <td className="px-6 py-4 text-[#94A3B8] text-sm">{product.country.name}</td>
                           <td className="px-6 py-4 text-[#94A3B8] text-sm">{product.provider.name}</td>
                           <td className="px-6 py-4 text-white text-sm">${product.basePrice}</td>
@@ -1483,7 +1504,7 @@ export default function AdminSmsServicesPage() {
                     className="w-full bg-[rgba(0,0,0,0.4)] border border-[rgba(255,255,255,0.18)] rounded-lg px-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#3B82F6]"
                     placeholder="0"
                     min="0"
-                    max="100"
+                    max="1000"
                     step="0.1"
                   />
                   <p className="text-[#64748B] text-xs mt-1">Added to all prices</p>
@@ -1768,6 +1789,24 @@ export default function AdminSmsServicesPage() {
                 Remove Price Override (use calculated)
               </button>
             )}
+
+            {/* Lock Price Toggle */}
+            <div className="mb-4 flex items-center justify-between p-3 rounded-lg bg-[rgba(255,255,255,0.05)] border border-[rgba(255,255,255,0.1)]">
+              <div>
+                <span className="text-white text-sm font-medium">Lock Price</span>
+                <p className="text-[#64748B] text-xs">Locked prices won&apos;t change during bulk updates</p>
+              </div>
+              <button
+                onClick={() => setSelectedServicePrice({ ...selectedServicePrice, isPriceLocked: !selectedServicePrice.isPriceLocked })}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                  selectedServicePrice.isPriceLocked ? 'bg-[#3B82F6]' : 'bg-[rgba(255,255,255,0.18)]'
+                }`}
+              >
+                <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                  selectedServicePrice.isPriceLocked ? 'translate-x-6' : 'translate-x-1'
+                }`} />
+              </button>
+            </div>
 
             <div className="flex items-center justify-end gap-3">
               <button

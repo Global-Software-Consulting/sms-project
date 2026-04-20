@@ -248,11 +248,25 @@ export default function Dashboard() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold sm:text-3xl">Dashboard</h1>
-        <p className="text-muted-foreground mt-1">
-          Welcome back! Here's your overview.
-        </p>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-bold sm:text-3xl">Dashboard</h1>
+          <p className="text-muted-foreground mt-1">
+            Welcome back! Here&apos;s your overview.
+          </p>
+        </div>
+        {user?.rank && (
+          <Badge
+            className="px-3 py-1.5 text-sm"
+            style={{ backgroundColor: `${user.rank.color}20`, color: user.rank.color, borderColor: `${user.rank.color}40` }}
+            variant="outline"
+          >
+            {user.rank.badge} {user.rank.name}
+            {user.rank.discountPercent > 0 && (
+              <span className="ml-1 opacity-75">({user.rank.discountPercent}% off)</span>
+            )}
+          </Badge>
+        )}
       </div>
 
       {/* Summary Cards */}
