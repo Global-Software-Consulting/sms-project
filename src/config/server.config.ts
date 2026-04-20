@@ -96,6 +96,8 @@ export const API_ENDPOINTS = {
   SMS: {
     PROVIDERS: '/sms/providers',
     SERVICES: '/sms/services',
+    SERVICES_UNIFIED: '/sms/services/unified',
+    SERVICES_UNIFIED_COUNTRIES: (serviceName: string) => `/sms/services/unified/${encodeURIComponent(serviceName)}/countries`,
     COUNTRIES: '/sms/countries',
     PRODUCTS: '/sms/products',
     PRODUCTS_REALTIME: '/sms/products/realtime',
@@ -110,6 +112,7 @@ export const API_ENDPOINTS = {
     FAVORITES: '/sms/favorites',
     FAVORITE_DETAIL: (id: string) => `/sms/favorites/${id}`,
     VIP_CATEGORIES: '/sms/vip/categories',
+    VIP_UNIFIED: '/sms/vip/unified',
   },
 
   // ========================
@@ -299,6 +302,9 @@ export const API_ENDPOINTS = {
       SERVICES: '/admin/sms/services',
       SERVICE_DETAIL: (id: string) => `/admin/sms/services/${id}`,
       SERVICES_BULK_DISABLE: '/admin/sms/services/bulk-disable',
+      SERVICES_BULK_UPDATE_ICONS: '/admin/sms/services/bulk-update-icons',
+      SERVICES_RECALCULATE_POPULARITY: '/admin/sms/services/recalculate-popularity',
+      SERVICES_USAGE_STATS: '/admin/sms/services/usage-stats',
       COUNTRIES: '/admin/sms/countries',
       COUNTRY_DETAIL: (id: string) => `/admin/sms/countries/${id}`,
       ORDERS: '/admin/sms/orders',
@@ -312,9 +318,16 @@ export const API_ENDPOINTS = {
       VIP_BULK: '/admin/sms/vip/bulk',
       VIP_DETAIL: (id: string) => `/admin/sms/vip/${id}`,
       VIP_AUTO_DETECT: '/admin/sms/vip/auto-detect',
+      VIP_CATEGORIES: '/admin/sms/vip/categories',
+      VIP_UNIFIED: '/admin/sms/vip/unified',
+      VIP_TOGGLE: '/admin/sms/vip/toggle',
+      VIP_AUTO_POPULATE: '/admin/sms/vip/auto-populate',
+      VIP_TOP_ORDERED: '/admin/sms/vip/top-ordered',
       PRICING_GLOBAL_MARKUP: '/admin/sms/pricing/global-markup',
       PRICING_PRODUCTS: '/admin/sms/pricing/products',
       PRICING_PRODUCT_DETAIL: (id: string) => `/admin/sms/pricing/products/${id}`,
+      PRICING_BULK_LOCK: '/admin/sms/pricing/products/bulk-lock',
+      PRICING_LOCKED_STATS: '/admin/sms/pricing/locked-stats',
     },
 
     // Admin SEO

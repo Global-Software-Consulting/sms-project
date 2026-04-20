@@ -359,6 +359,7 @@ export interface AdminRentalQueryParams extends RentalQueryParams {
 
 export interface AdminServiceQueryParams extends ServiceQueryParams {
   isActive?: boolean;
+  hasIcon?: boolean; // Filter by icon presence (true = has icon, false = missing icon)
 }
 
 export interface AdminCountryQueryParams extends CountryQueryParams {
@@ -698,6 +699,130 @@ export const getVipCategories = async (): Promise<{ categories: VipCategory[] }>
   const response = await apiClient.get<{ categories: VipCategory[] }>(
     API_ENDPOINTS.SMS.VIP_CATEGORIES,
   );
+  return response.data;
+};
+
+// --- Unified Services (Deduplicated across providers) ---
+
+/**
+ * Unified service - deduplicated across all providers
+ */
+export interface UnifiedService {
+  name: string;
+  slug: string;
+  iconUrl: string | null;
+  category: string;
+  description: string | null;
+  isPopular: boolean;
+  providers: Array<{
+    id: string;
+    name: string;
+    slug: string;
+    version: string;
+    serviceId: string;
+  }>;
+  totalCountries: number;
+}
+
+/**
+ * Country with providers for unified service
+ */
+export interface UnifiedServiceCountry {
+  id: string;
+  name: string;
+  code: string;
+  iconUrl: string | null;
+  bestPrice: string;
+  providerCount: number;
+  providers: Array<{
+    id: string;
+    name: string;
+    slug: string;
+    version: string;
+    serviceId: string;
+    productId: string;
+    price: string;
+    available: number;
+  }>;
+}
+
+/**
+ * Get unified services (deduplicated across all providers)
+ * GET /api/v1/sms/services/unified
+ */
+export const getUnifiedServices = async (
+  params?: ServiceQueryParams,
+): Promise<PaginatedResponse<UnifiedService>> => {
+  const response = await apiClient.get<PaginatedResponse<UnifiedService>>(
+    API_ENDPOINTS.SMS.SERVICES_UNIFIED,
+    { params },
+  );
+  return response.data;
+};
+
+/**
+ * Get countries for a unified service (across all providers)
+ * GET /api/v1/sms/services/unified/:serviceName/countries
+ */
+export const getCountriesForUnifiedService = async (
+  serviceName: string,
+  params?: CountryQueryParams,
+): Promise<PaginatedResponse<UnifiedServiceCountry>> => {
+  const response = await apiClient.get<PaginatedResponse<UnifiedServiceCountry>>(
+    API_ENDPOINTS.SMS.SERVICES_UNIFIED_COUNTRIES(serviceName),
+    { params },
+  );
+  return response.data;
+};
+
+// --- Unified VIP (No duplicates) ---
+
+/**
+ * Unified VIP service - deduplicated
+ */
+export interface UnifiedVipService {
+  name: string;
+  slug: string;
+  iconUrl: string | null;
+  category: string;
+  countryCount: number;
+  countries: Array<{
+    id: string;
+    name: string;
+    code: string;
+    iconUrl: string | null;
+    providerCount: number;
+    bestRating: number;
+    providers: Array<{
+      providerId: string;
+      providerName: string;
+      providerSlug: string;
+      version: string;
+      serviceId: string;
+      vipId: string;
+      rating: number;
+      orderCount: number;
+      successRate: number | null;
+    }>;
+  }>;
+}
+
+/**
+ * Get unified VIP categories (no duplicates)
+ * GET /api/v1/sms/vip/unified
+ */
+export const getUnifiedVipCategories = async (): Promise<{
+  enabled: boolean;
+  serviceCount?: number;
+  services: UnifiedVipService[];
+  message?: string;
+}> => {
+  const response = await apiClient.get<{
+    enabled: boolean;
+    serviceCount?: number;
+    services: UnifiedVipService[];
+    message?: string;
+  }>(API_ENDPOINTS.SMS.VIP_UNIFIED);
   return response.data;
 };
 
@@ -1069,6 +1194,225 @@ export const adminAutoDetectVip = async (): Promise<{
 }> => {
   const response = await apiClient.post(
     API_ENDPOINTS.ADMIN.SMS.VIP_AUTO_DETECT,
+  );
+  return response.data;
+};
+
+/**
+ * Get unified VIP categories (admin - with full details)
+ * GET /api/v1/admin/sms/vip/unified
+ */
+export const adminGetUnifiedVipCategories = async (): Promise<{
+  enabled: boolean;
+  serviceCount?: number;
+  services: UnifiedVipService[];
+  message?: string;
+}> => {
+  const response = await apiClient.get(
+    API_ENDPOINTS.ADMIN.SMS.VIP_UNIFIED,
+  );
+  return response.data;
+};
+
+/**
+ * Toggle VIP categories on/off
+ * POST /api/v1/admin/sms/vip/toggle
+ */
+export const adminToggleVip = async (
+  enabled: boolean,
+): Promise<{ enabled: boolean; message: string }> => {
+  const response = await apiClient.post<{ enabled: boolean; message: string }>(
+    API_ENDPOINTS.ADMIN.SMS.VIP_TOGGLE,
+    { enabled },
+  );
+  return response.data;
+};
+
+/**
+ * Auto-populate VIP from top-used services
+ * POST /api/v1/admin/sms/vip/auto-populate
+ */
+export const adminAutoPopulateVip = async (params?: {
+  minOrders?: number;
+  limit?: number;
+}): Promise<{ message: string; added: number; criteria: { minOrders: number; limit: number } }> => {
+  const response = await apiClient.post(
+    API_ENDPOINTS.ADMIN.SMS.VIP_AUTO_POPULATE,
+    null,
+    { params },
+  );
+  return response.data;
+};
+
+/**
+ * Get top ordered services
+ * GET /api/v1/admin/sms/vip/top-ordered
+ */
+export const adminGetTopOrderedServices = async (
+  limit?: number,
+): Promise<{
+  data: Array<{
+    service: { id: string; name: string; slug: string; iconUrl: string | null };
+    country: { id: string; name: string; code: string };
+    provider: { id: string; name: string; slug: string };
+    orderCount: number;
+    successRate: number;
+  }>;
+}> => {
+  const response = await apiClient.get(
+    API_ENDPOINTS.ADMIN.SMS.VIP_TOP_ORDERED,
+    { params: { limit } },
+  );
+  return response.data;
+};
+
+// --- Admin Service Icons & Popularity ---
+
+/**
+ * Bulk update service icons
+ * POST /api/v1/admin/sms/services/bulk-update-icons
+ */
+export const adminBulkUpdateIcons = async (
+  updates: Array<{ serviceId: string; iconUrl: string | null }>,
+): Promise<{ message: string; updated: number }> => {
+  const response = await apiClient.post<{ message: string; updated: number }>(
+    API_ENDPOINTS.ADMIN.SMS.SERVICES_BULK_UPDATE_ICONS,
+    { updates },
+  );
+  return response.data;
+};
+
+/**
+ * Recalculate service popularity based on order usage
+ * POST /api/v1/admin/sms/services/recalculate-popularity
+ */
+export const adminRecalculatePopularity = async (): Promise<{
+  message: string;
+  updated: number;
+}> => {
+  const response = await apiClient.post<{ message: string; updated: number }>(
+    API_ENDPOINTS.ADMIN.SMS.SERVICES_RECALCULATE_POPULARITY,
+  );
+  return response.data;
+};
+
+/**
+ * Get service usage statistics
+ * GET /api/v1/admin/sms/services/usage-stats
+ */
+export const adminGetServiceUsageStats = async (params?: {
+  days?: number;
+  limit?: number;
+}): Promise<{
+  data: Array<{
+    id: string;
+    name: string;
+    iconUrl: string | null;
+    totalOrders: number;
+    totalRevenue: string;
+    topCountries: Array<{ name: string; code: string; orders: number }>;
+  }>;
+  meta: { days: number; total: number };
+}> => {
+  const response = await apiClient.get(
+    API_ENDPOINTS.ADMIN.SMS.SERVICES_USAGE_STATS,
+    { params },
+  );
+  return response.data;
+};
+
+// --- Admin Pricing - Bulk Lock ---
+
+/**
+ * Product with pricing details (admin)
+ */
+export interface AdminProduct {
+  id: string;
+  service: {
+    id: string;
+    name: string;
+    slug: string;
+    iconUrl: string | null;
+  };
+  country: {
+    id: string;
+    name: string;
+    code: string;
+    iconUrl: string | null;
+  };
+  provider: {
+    id: string;
+    name: string;
+    slug: string;
+    version: string;
+    markup: number;
+  };
+  providerPrice: string;
+  basePrice: string;
+  productMarkup: number;
+  providerMarkup: number;
+  globalMarkup: number;
+  priceOverride: string | null;
+  isPriceLocked: boolean;
+  finalPrice: string;
+}
+
+/**
+ * Get admin products with pricing
+ * GET /api/v1/admin/sms/pricing/products
+ */
+export const adminGetProducts = async (params?: {
+  search?: string;
+  providerId?: string;
+  serviceId?: string;
+  countryId?: string;
+  isPriceLocked?: boolean;
+  isActive?: boolean;
+  page?: number;
+  limit?: number;
+}): Promise<{
+  data: AdminProduct[];
+  globalMarkup: number;
+  meta: {
+    total: number;
+    lockedCount: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  };
+}> => {
+  const response = await apiClient.get(
+    API_ENDPOINTS.ADMIN.SMS.PRICING_PRODUCTS,
+    { params },
+  );
+  return response.data;
+};
+
+/**
+ * Bulk lock/unlock products
+ * POST /api/v1/admin/sms/pricing/products/bulk-lock
+ */
+export const adminBulkLockProducts = async (
+  productIds: string[],
+  lock: boolean,
+): Promise<{ message: string; updated: number }> => {
+  const response = await apiClient.post<{ message: string; updated: number }>(
+    API_ENDPOINTS.ADMIN.SMS.PRICING_BULK_LOCK,
+    { productIds, lock },
+  );
+  return response.data;
+};
+
+/**
+ * Get locked products statistics
+ * GET /api/v1/admin/sms/pricing/locked-stats
+ */
+export const adminGetLockedProductsStats = async (): Promise<{
+  totalLocked: number;
+  byProvider: Array<{ providerId: string; providerName: string; count: number }>;
+}> => {
+  const response = await apiClient.get(
+    API_ENDPOINTS.ADMIN.SMS.PRICING_LOCKED_STATS,
   );
   return response.data;
 };
