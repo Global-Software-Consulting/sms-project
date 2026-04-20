@@ -390,9 +390,9 @@ export interface ProvidersResponse {
   providers: SmsProvider[];
 }
 
-export interface ActivateResponse {
-  order: SmsOrder;
-  message: string;
+export interface ActivateResponse extends SmsOrder {
+  order?: SmsOrder; // Backend may return order at top level or nested
+  message?: string;
 }
 
 export interface CancelResponse {

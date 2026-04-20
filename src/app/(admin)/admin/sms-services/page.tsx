@@ -477,11 +477,12 @@ export default function AdminSmsServicesPage() {
   }, []);
 
   // Fetch pricing products
-  const fetchPricingProducts = useCallback(async (page = 1, search = "") => {
+  const fetchPricingProducts = useCallback(async (page = 1, search = "", lockedOnly = false) => {
     setIsPricingLoading(true);
     try {
       const params: Record<string, any> = { page, limit: 20 };
       if (search) params.search = search;
+      if (lockedOnly) params.isPriceLocked = true;
       const response = await apiClient.get<{ data: PricingProduct[]; total: number }>(
         API_ENDPOINTS.ADMIN.SMS.PRICING_PRODUCTS,
         { params },
@@ -509,7 +510,7 @@ export default function AdminSmsServicesPage() {
     try {
       await apiClient.put(API_ENDPOINTS.ADMIN.SMS.PRICING_GLOBAL_MARKUP, { markup: globalMarkup });
       toast.success(`Global markup of ${globalMarkup}% applied!`);
-      fetchPricingProducts(pricingPage, pricingSearchQuery);
+      fetchPricingProducts(pricingPage, pricingSearchQuery, showLockedOnly);
     } catch (error: any) {
       toast.error(error?.response?.data?.message || "Failed to apply markup");
     } finally {
@@ -520,7 +521,7 @@ export default function AdminSmsServicesPage() {
   const handlePricingSearch = useCallback((query: string) => {
     setPricingSearchQuery(query);
     setPricingPage(1);
-    fetchPricingProducts(1, query);
+    fetchPricingProducts(1, query, showLockedOnly);
   }, [fetchPricingProducts]);
 
   const handleEditServicePrice = (product: PricingProduct) => {
@@ -545,7 +546,7 @@ export default function AdminSmsServicesPage() {
       toast.success("Product price updated!");
       setShowEditPriceModal(false);
       setSelectedServicePrice(null);
-      fetchPricingProducts(pricingPage, pricingSearchQuery);
+      fetchPricingProducts(pricingPage, pricingSearchQuery, showLockedOnly);
     } catch (error: any) {
       toast.error(error?.response?.data?.message || "Failed to update price");
     } finally {
@@ -974,7 +975,12 @@ export default function AdminSmsServicesPage() {
                 />
               </div>
               <button
-                onClick={() => setShowLockedOnly(!showLockedOnly)}
+                onClick={() => {
+                  const newVal = !showLockedOnly;
+                  setShowLockedOnly(newVal);
+                  setPricingPage(1);
+                  fetchPricingProducts(1, pricingSearchQuery, newVal);
+                }}
                 className={`flex items-center gap-2 px-4 py-3 rounded-lg text-sm font-medium transition-all whitespace-nowrap ${
                   showLockedOnly
                     ? 'bg-[#3B82F6] text-white'
@@ -1025,7 +1031,7 @@ export default function AdminSmsServicesPage() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-[rgba(255,255,255,0.05)]">
-                      {pricingProducts.filter(p => !showLockedOnly || p.isPriceLocked).map((product) => (
+                      {pricingProducts.map((product) => (
                         <tr key={product.id} className="hover:bg-[rgba(255,255,255,0.02)] transition-colors">
                           <td className="px-6 py-4 text-white text-sm font-medium">
                             <span className="flex items-center gap-2">
@@ -1077,14 +1083,14 @@ export default function AdminSmsServicesPage() {
                     <div className="flex items-center gap-2">
                       <button
                         disabled={pricingPage <= 1}
-                        onClick={() => { setPricingPage(pricingPage - 1); fetchPricingProducts(pricingPage - 1, pricingSearchQuery); }}
+                        onClick={() => { setPricingPage(pricingPage - 1); fetchPricingProducts(pricingPage - 1, pricingSearchQuery, showLockedOnly); }}
                         className="px-4 py-2 rounded-lg bg-[rgba(255,255,255,0.08)] text-white text-sm disabled:opacity-50 hover:bg-[rgba(255,255,255,0.12)] transition-colors"
                       >
                         Previous
                       </button>
                       <button
                         disabled={pricingPage >= Math.ceil(pricingTotal / 20)}
-                        onClick={() => { setPricingPage(pricingPage + 1); fetchPricingProducts(pricingPage + 1, pricingSearchQuery); }}
+                        onClick={() => { setPricingPage(pricingPage + 1); fetchPricingProducts(pricingPage + 1, pricingSearchQuery, showLockedOnly); }}
                         className="px-4 py-2 rounded-lg bg-[rgba(255,255,255,0.08)] text-white text-sm disabled:opacity-50 hover:bg-[rgba(255,255,255,0.12)] transition-colors"
                       >
                         Next

@@ -78,7 +78,6 @@ export default function Activation() {
   const [countrySearch, setCountrySearch] = useState('');
   const [countryFilter, setCountryFilter] = useState<CountryFilterType>('all');
   const [priceSort, setPriceSort] = useState<PriceSortType>('none');
-  const [couponCode, setCouponCode] = useState('');
 
   // VIP categories state
   const [vipCategories, setVipCategories] = useState<VipCategory[]>([]);
@@ -335,17 +334,20 @@ export default function Activation() {
 
     try {
       setActivatingProductId(product.id); // Track which specific product is being activated
-      const response = await activateNumber(product.id, couponCode || undefined);
+      const response = await activateNumber(product.id);
 
-      if (response.order) {
-        setActiveOrders(prev => [response.order, ...prev]);
+      // Backend may return { order: ... } or the order directly at top level
+      const order = response.order || (response as any);
+
+      if (order && order.id) {
+        setActiveOrders(prev => [order, ...prev]);
         setWalletBalance(prev => (parseFloat(prev) - price).toFixed(2));
 
         toast.success('Number activated!', {
           description: `${selectedService.name} / ${product.country.name} - Waiting for SMS...`,
         });
       } else {
-        console.error('No order in response:', response);
+        console.error('Unexpected response:', response);
         toast.error('Activation failed', {
           description: 'Invalid response from server',
         });
@@ -364,14 +366,18 @@ export default function Activation() {
   const handleCancelOrder = async (orderId: string) => {
     try {
       const response = await cancelOrder(orderId);
+      const cancelledOrder = response.order || (response as any);
+      const refundAmount = response.refundAmount || (response as any).refundAmount || '0';
       setActiveOrders(prev =>
-        prev.map(o => (o.id === orderId ? response.order : o))
+        prev.map(o => (o.id === orderId ? cancelledOrder : o))
       );
-      setWalletBalance(prev =>
-        (parseFloat(prev) + parseFloat(response.refundAmount)).toFixed(2)
-      );
+      if (parseFloat(refundAmount) > 0) {
+        setWalletBalance(prev =>
+          (parseFloat(prev) + parseFloat(refundAmount)).toFixed(2)
+        );
+      }
       toast.success('Order cancelled', {
-        description: `Refunded: ${formatPrice(response.refundAmount)}`,
+        description: refundAmount !== '0' ? `Refunded: ${formatPrice(refundAmount)}` : 'Order has been cancelled',
       });
     } catch (err: any) {
       toast.error('Failed to cancel order', {
@@ -455,50 +461,6 @@ export default function Activation() {
           </p>
         </div>
 
-        {/* Balance, Coupon & Selection Crumbs */}
-        <div className="flex flex-wrap items-center gap-2">
-          <Badge variant="outline" className="text-sm">
-            Balance: {formatBalance(walletBalance, 'USD')}
-          </Badge>
-          <div className="relative">
-            <Input
-              placeholder="Coupon code"
-              value={couponCode}
-              onChange={(e) => setCouponCode(e.target.value)}
-              className="h-8 w-32 text-xs sm:w-40"
-            />
-          </div>
-
-          {selectedService && (
-            <div className="border-border bg-card flex items-center gap-2 rounded-full border px-3 py-1.5 text-sm font-medium">
-              {selectedService.iconUrl ? (
-                <img
-                  src={selectedService.iconUrl}
-                  alt=""
-                  className="h-4 w-4"
-                />
-              ) : (
-                <span>📱</span>
-              )}
-              <span>{selectedService.name}</span>
-            </div>
-          )}
-
-          {selectedService && (
-            <Button
-              variant="ghost"
-              size="sm"
-              className="text-muted-foreground h-8 px-2"
-              onClick={() => {
-                setSelectedService(null);
-                setSelectedCountry(null);
-                setProducts([]);
-              }}
-            >
-              <X className="h-3.5 w-3.5" />
-            </Button>
-          )}
-        </div>
       </div>
 
       {/* Provider Toggle */}
