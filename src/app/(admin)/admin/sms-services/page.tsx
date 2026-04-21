@@ -30,6 +30,12 @@ import {
   adminBulkAddVipNumbers,
   adminGetVipNumbers,
   adminRemoveVipNumber,
+  adminGetUnifiedVipCategories,
+  adminToggleVip,
+  adminAutoPopulateVip,
+  adminRecalculatePopularity,
+  adminBulkLockProducts,
+  adminGetServices,
   getServices,
   getProductsRealtime,
   getCountries,
@@ -38,6 +44,7 @@ import {
   type SmsProduct,
   type SmsCountry,
   type VipNumber,
+  type UnifiedVipService,
 } from '@/lib/api/smsApi';
 import { apiClient } from '@/config/api-client.config';
 import { API_ENDPOINTS } from '@/config/server.config';
@@ -148,11 +155,34 @@ export default function AdminSmsServicesPage() {
   const [selectedVipCountryId, setSelectedVipCountryId] = useState<string>("");
   const [vipCountrySearch, setVipCountrySearch] = useState("");
 
-  // VIP numbers from API (3 tiers by rating)
+  // VIP numbers from API (3 tiers by rating) - Legacy
   const [vipPremium, setVipPremium] = useState<VipNumber[]>([]);
   const [vipStandard, setVipStandard] = useState<VipNumber[]>([]);
   const [vipBasic, setVipBasic] = useState<VipNumber[]>([]);
   const [isVipLoading, setIsVipLoading] = useState(false);
+
+  // Unified VIP (new - no duplicates)
+  const [unifiedVipServices, setUnifiedVipServices] = useState<UnifiedVipService[]>([]);
+  const [isVipEnabled, setIsVipEnabled] = useState(true);
+  const [isTogglingVip, setIsTogglingVip] = useState(false);
+  const [isAutoPopulating, setIsAutoPopulating] = useState(false);
+
+  // Bulk pricing selection
+  const [selectedProductIds, setSelectedProductIds] = useState<string[]>([]);
+  const [isBulkLocking, setIsBulkLocking] = useState(false);
+
+  const fetchUnifiedVip = useCallback(async () => {
+    setIsVipLoading(true);
+    try {
+      const response = await adminGetUnifiedVipCategories();
+      setUnifiedVipServices(response.services || []);
+      setIsVipEnabled(response.enabled);
+    } catch (error: any) {
+      toast.error(error?.response?.data?.message || "Failed to fetch VIP categories");
+    } finally {
+      setIsVipLoading(false);
+    }
+  }, []);
 
   const fetchVipNumbers = useCallback(async () => {
     setIsVipLoading(true);
@@ -172,11 +202,55 @@ export default function AdminSmsServicesPage() {
     }
   }, []);
 
+  const handleToggleVip = async () => {
+    setIsTogglingVip(true);
+    try {
+      const result = await adminToggleVip(!isVipEnabled);
+      setIsVipEnabled(result.enabled);
+      toast.success(result.message);
+    } catch (error: any) {
+      toast.error(error?.response?.data?.message || "Failed to toggle VIP");
+    } finally {
+      setIsTogglingVip(false);
+    }
+  };
+
+  const handleAutoPopulateVip = async () => {
+    setIsAutoPopulating(true);
+    try {
+      const result = await adminAutoPopulateVip({ minOrders: 10, limit: 20 });
+      toast.success(`${result.added} services added to VIP based on usage`);
+      fetchUnifiedVip();
+    } catch (error: any) {
+      toast.error(error?.response?.data?.message || "Failed to auto-populate VIP");
+    } finally {
+      setIsAutoPopulating(false);
+    }
+  };
+
+  const handleBulkLockProducts = async (lock: boolean) => {
+    if (selectedProductIds.length === 0) {
+      toast.error("Please select products to lock/unlock");
+      return;
+    }
+    setIsBulkLocking(true);
+    try {
+      const result = await adminBulkLockProducts(selectedProductIds, lock);
+      toast.success(`${result.updated} products ${lock ? 'locked' : 'unlocked'}`);
+      setSelectedProductIds([]);
+      fetchPricingProducts(pricingPage, pricingSearchQuery, showLockedOnly);
+    } catch (error: any) {
+      toast.error(error?.response?.data?.message || "Failed to bulk update");
+    } finally {
+      setIsBulkLocking(false);
+    }
+  };
+
   useEffect(() => {
     if (activeTab === 'vip') {
-      fetchVipNumbers();
+      fetchUnifiedVip();
     }
-  }, [activeTab, fetchVipNumbers]);
+  }, [activeTab, fetchUnifiedVip]);
 
   const handleRemoveVip = async (vipId: string) => {
     try {
@@ -832,79 +906,139 @@ export default function AdminSmsServicesPage() {
       {/* VIP Categories Tab */}
       {activeTab === "vip" && (
         <div className="space-y-6">
+          {/* VIP Controls */}
+          <div className="p-6 rounded-xl bg-[rgba(15,23,42,0.6)] border border-[rgba(255,255,255,0.1)] backdrop-blur-xl">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-white text-lg font-semibold mb-1">VIP Categories</h3>
+                <p className="text-[#94A3B8] text-sm">
+                  Unified view - each service appears once with all available providers
+                </p>
+              </div>
+              <div className="flex items-center gap-3">
+                {/* Toggle VIP On/Off */}
+                <div className="flex items-center gap-2">
+                  <span className="text-[#94A3B8] text-sm">VIP {isVipEnabled ? 'Enabled' : 'Disabled'}</span>
+                  <button
+                    onClick={handleToggleVip}
+                    disabled={isTogglingVip}
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                      isVipEnabled ? 'bg-[#22C55E]' : 'bg-[rgba(255,255,255,0.18)]'
+                    }`}
+                  >
+                    {isTogglingVip ? (
+                      <Loader2 className="w-4 h-4 text-white animate-spin mx-auto" />
+                    ) : (
+                      <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                        isVipEnabled ? 'translate-x-6' : 'translate-x-1'
+                      }`} />
+                    )}
+                  </button>
+                </div>
+                {/* Auto-populate from usage */}
+                <button
+                  onClick={handleAutoPopulateVip}
+                  disabled={isAutoPopulating}
+                  className="px-4 py-2 rounded-lg bg-[#F59E0B] hover:bg-[#D97706] text-white text-sm font-medium transition-colors flex items-center gap-2 disabled:opacity-50"
+                >
+                  {isAutoPopulating ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <TrendingUp className="w-4 h-4" />
+                  )}
+                  Auto-Populate from Usage
+                </button>
+                <button
+                  onClick={fetchUnifiedVip}
+                  disabled={isVipLoading}
+                  className="p-2 rounded-lg bg-[rgba(255,255,255,0.05)] hover:bg-[rgba(255,255,255,0.1)] text-[#94A3B8] transition-colors"
+                >
+                  <RefreshCw className={`w-4 h-4 ${isVipLoading ? 'animate-spin' : ''}`} />
+                </button>
+              </div>
+            </div>
+          </div>
+
           {isVipLoading ? (
             <div className="flex items-center justify-center py-20">
               <Loader2 className="w-8 h-8 text-[#3B82F6] animate-spin" />
-              <span className="ml-3 text-[#94A3B8]">Loading VIP numbers...</span>
+              <span className="ml-3 text-[#94A3B8]">Loading VIP categories...</span>
+            </div>
+          ) : !isVipEnabled ? (
+            <div className="flex flex-col items-center justify-center py-20 text-center">
+              <Star className="w-12 h-12 text-[#64748B] mb-4" />
+              <p className="text-white text-lg font-medium">VIP Categories Disabled</p>
+              <p className="text-[#94A3B8] text-sm mt-1">Enable VIP to show premium services to users</p>
+            </div>
+          ) : unifiedVipServices.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-20 text-center">
+              <Star className="w-12 h-12 text-[#64748B] mb-4" />
+              <p className="text-white text-lg font-medium">No VIP Services</p>
+              <p className="text-[#94A3B8] text-sm mt-1">Add services from providers or use auto-populate</p>
             </div>
           ) : (
-            <>
-              {[
-                { label: "V1 - Premium", color: "#F59E0B", data: vipPremium },
-                { label: "V2 - Standard", color: "#3B82F6", data: vipStandard },
-                { label: "V3 - Basic", color: "#64748B", data: vipBasic },
-              ].map((tier) => (
+            <div className="space-y-4">
+              {unifiedVipServices.map((service) => (
                 <div
-                  key={tier.label}
+                  key={service.slug}
                   className="p-6 rounded-xl bg-[rgba(15,23,42,0.6)] border border-[rgba(255,255,255,0.1)] backdrop-blur-xl"
                 >
-                  <div className="flex items-center justify-between mb-6">
-                    <div className="flex items-center gap-3">
-                      <Star className="w-5 h-5" style={{ color: tier.color }} />
-                      <h3 className="text-white text-lg font-semibold">{tier.label}</h3>
-                      <span className="px-3 py-1 rounded-full bg-[rgba(255,255,255,0.1)] text-[#94A3B8] text-xs">
-                        {tier.data.length} services
-                      </span>
+                  <div className="flex items-center gap-4 mb-4">
+                    {service.iconUrl ? (
+                      <img src={service.iconUrl} alt={service.name} className="w-10 h-10 rounded-lg object-cover" />
+                    ) : (
+                      <div className="w-10 h-10 rounded-lg bg-[rgba(255,255,255,0.1)] flex items-center justify-center">
+                        <Star className="w-5 h-5 text-[#F59E0B]" />
+                      </div>
+                    )}
+                    <div>
+                      <h4 className="text-white text-lg font-semibold">{service.name}</h4>
+                      <p className="text-[#94A3B8] text-sm">{service.category} • {service.countryCount} countries</p>
                     </div>
                   </div>
 
-                  {tier.data.length > 0 ? (
-                    <div className="overflow-x-auto">
-                      <table className="w-full">
-                        <thead>
-                          <tr className="border-b border-[rgba(255,255,255,0.1)]">
-                            <th className="px-4 py-3 text-left text-xs font-medium text-[#94A3B8] uppercase">Service</th>
-                            <th className="px-4 py-3 text-left text-xs font-medium text-[#94A3B8] uppercase">Country</th>
-                            <th className="px-4 py-3 text-left text-xs font-medium text-[#94A3B8] uppercase">Provider</th>
-                            <th className="px-4 py-3 text-left text-xs font-medium text-[#94A3B8] uppercase">Rating</th>
-                            <th className="px-4 py-3 text-left text-xs font-medium text-[#94A3B8] uppercase">Orders</th>
-                            <th className="px-4 py-3 text-left text-xs font-medium text-[#94A3B8] uppercase">Actions</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-[rgba(255,255,255,0.05)]">
-                          {tier.data.map((vip) => (
-                            <tr key={vip.id} className="hover:bg-[rgba(255,255,255,0.02)] transition-colors">
-                              <td className="px-4 py-3 text-white text-sm font-medium">{vip.service.name}</td>
-                              <td className="px-4 py-3 text-[#94A3B8] text-sm">{vip.country.name} ({vip.country.code})</td>
-                              <td className="px-4 py-3 text-[#94A3B8] text-sm">{vip.provider.displayName}</td>
-                              <td className="px-4 py-3">
-                                <span className="px-2 py-1 rounded-full text-xs font-medium" style={{ backgroundColor: `${tier.color}20`, color: tier.color }}>
-                                  {vip.rating}/5
-                                </span>
-                              </td>
-                              <td className="px-4 py-3 text-[#94A3B8] text-sm">{vip.orderCount.toLocaleString()}</td>
-                              <td className="px-4 py-3">
-                                <button
-                                  onClick={() => handleRemoveVip(vip.id)}
-                                  className="p-2 hover:bg-[rgba(239,68,68,0.2)] rounded-lg text-[#EF4444] transition-colors"
-                                  title="Remove"
-                                >
-                                  <X className="w-4 h-4" />
-                                </button>
-                              </td>
-                            </tr>
+                  {/* Countries accordion */}
+                  <div className="space-y-2">
+                    {service.countries.map((country) => (
+                      <div key={country.id} className="p-4 rounded-lg bg-[rgba(0,0,0,0.2)] border border-[rgba(255,255,255,0.05)]">
+                        <div className="flex items-center justify-between mb-2">
+                          <div className="flex items-center gap-2">
+                            {country.iconUrl && (
+                              <img src={country.iconUrl} alt={country.name} className="w-5 h-5 rounded" />
+                            )}
+                            <span className="text-white text-sm font-medium">{country.name}</span>
+                            <span className="text-[#64748B] text-xs">({country.code})</span>
+                          </div>
+                          <span className="px-2 py-1 rounded-full bg-[#F59E0B]/20 text-[#F59E0B] text-xs font-medium">
+                            Best Rating: {country.bestRating}/5
+                          </span>
+                        </div>
+                        {/* Providers for this country */}
+                        <div className="flex flex-wrap gap-2 mt-2">
+                          {country.providers.map((provider) => (
+                            <div
+                              key={provider.vipId}
+                              className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[rgba(255,255,255,0.05)] border border-[rgba(255,255,255,0.1)]"
+                            >
+                              <span className="text-[#94A3B8] text-xs">{provider.providerName}</span>
+                              <span className="text-[#3B82F6] text-xs font-medium">{provider.rating}/5</span>
+                              <span className="text-[#64748B] text-xs">({provider.orderCount} orders)</span>
+                              <button
+                                onClick={() => handleRemoveVip(provider.vipId)}
+                                className="p-1 hover:bg-[rgba(239,68,68,0.2)] rounded text-[#EF4444] transition-colors"
+                                title="Remove"
+                              >
+                                <X className="w-3 h-3" />
+                              </button>
+                            </div>
                           ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  ) : (
-                    <div className="text-center py-8 text-[#64748B] text-sm">
-                      No services in this category. Add services from providers.
-                    </div>
-                  )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               ))}
-            </>
+            </div>
           )}
         </div>
       )}
@@ -957,10 +1091,10 @@ export default function AdminSmsServicesPage() {
             )}
           </div>
 
-          {/* Search Bar + Lock Filter */}
+          {/* Search Bar + Lock Filter + Bulk Actions */}
           <div className="p-6 rounded-xl bg-[rgba(15,23,42,0.6)] border border-[rgba(255,255,255,0.1)] backdrop-blur-xl">
-            <div className="flex items-center gap-3">
-              <div className="relative flex-1">
+            <div className="flex items-center gap-3 flex-wrap">
+              <div className="relative flex-1 min-w-[250px]">
                 <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-[#64748B]" />
                 <input
                   type="text"
@@ -990,6 +1124,34 @@ export default function AdminSmsServicesPage() {
                 <Lock className="w-4 h-4" />
                 Locked Only
               </button>
+              
+              {/* Bulk Lock/Unlock Actions */}
+              {selectedProductIds.length > 0 && (
+                <div className="flex items-center gap-2 ml-auto">
+                  <span className="text-[#94A3B8] text-sm">{selectedProductIds.length} selected</span>
+                  <button
+                    onClick={() => handleBulkLockProducts(true)}
+                    disabled={isBulkLocking}
+                    className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[#F59E0B] hover:bg-[#D97706] text-white text-sm font-medium transition-colors disabled:opacity-50"
+                  >
+                    {isBulkLocking ? <Loader2 className="w-4 h-4 animate-spin" /> : <Lock className="w-4 h-4" />}
+                    Lock Selected
+                  </button>
+                  <button
+                    onClick={() => handleBulkLockProducts(false)}
+                    disabled={isBulkLocking}
+                    className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[rgba(255,255,255,0.1)] hover:bg-[rgba(255,255,255,0.15)] text-white text-sm font-medium transition-colors disabled:opacity-50"
+                  >
+                    Unlock Selected
+                  </button>
+                  <button
+                    onClick={() => setSelectedProductIds([])}
+                    className="p-2 rounded-lg hover:bg-[rgba(255,255,255,0.1)] text-[#94A3B8] transition-colors"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              )}
             </div>
           </div>
 
@@ -1021,28 +1183,61 @@ export default function AdminSmsServicesPage() {
                   <table className="w-full">
                     <thead>
                       <tr className="border-b border-[rgba(255,255,255,0.1)] bg-[rgba(0,0,0,0.2)]">
-                        <th className="px-6 py-4 text-left text-xs font-medium text-[#94A3B8] uppercase">Service</th>
-                        <th className="px-6 py-4 text-left text-xs font-medium text-[#94A3B8] uppercase">Country</th>
-                        <th className="px-6 py-4 text-left text-xs font-medium text-[#94A3B8] uppercase">Provider</th>
-                        <th className="px-6 py-4 text-left text-xs font-medium text-[#94A3B8] uppercase">Base Price</th>
-                        <th className="px-6 py-4 text-left text-xs font-medium text-[#94A3B8] uppercase">Markup</th>
-                        <th className="px-6 py-4 text-left text-xs font-medium text-[#94A3B8] uppercase">Final Price</th>
-                        <th className="px-6 py-4 text-left text-xs font-medium text-[#94A3B8] uppercase">Actions</th>
+                        <th className="px-4 py-4 text-left">
+                          <input
+                            type="checkbox"
+                            checked={selectedProductIds.length === pricingProducts.length && pricingProducts.length > 0}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setSelectedProductIds(pricingProducts.map(p => p.id));
+                              } else {
+                                setSelectedProductIds([]);
+                              }
+                            }}
+                            className="w-4 h-4 rounded border-[rgba(255,255,255,0.3)] bg-[rgba(0,0,0,0.4)] checked:bg-[#3B82F6]"
+                          />
+                        </th>
+                        <th className="px-4 py-4 text-left text-xs font-medium text-[#94A3B8] uppercase">Service</th>
+                        <th className="px-4 py-4 text-left text-xs font-medium text-[#94A3B8] uppercase">Country</th>
+                        <th className="px-4 py-4 text-left text-xs font-medium text-[#94A3B8] uppercase">Provider</th>
+                        <th className="px-4 py-4 text-left text-xs font-medium text-[#94A3B8] uppercase">Base Price</th>
+                        <th className="px-4 py-4 text-left text-xs font-medium text-[#94A3B8] uppercase">Markup</th>
+                        <th className="px-4 py-4 text-left text-xs font-medium text-[#94A3B8] uppercase">Final Price</th>
+                        <th className="px-4 py-4 text-left text-xs font-medium text-[#94A3B8] uppercase">Actions</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-[rgba(255,255,255,0.05)]">
                       {pricingProducts.map((product) => (
-                        <tr key={product.id} className="hover:bg-[rgba(255,255,255,0.02)] transition-colors">
-                          <td className="px-6 py-4 text-white text-sm font-medium">
+                        <tr 
+                          key={product.id} 
+                          className={`hover:bg-[rgba(255,255,255,0.02)] transition-colors ${
+                            selectedProductIds.includes(product.id) ? 'bg-[rgba(59,130,246,0.05)]' : ''
+                          }`}
+                        >
+                          <td className="px-4 py-4">
+                            <input
+                              type="checkbox"
+                              checked={selectedProductIds.includes(product.id)}
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  setSelectedProductIds([...selectedProductIds, product.id]);
+                                } else {
+                                  setSelectedProductIds(selectedProductIds.filter(id => id !== product.id));
+                                }
+                              }}
+                              className="w-4 h-4 rounded border-[rgba(255,255,255,0.3)] bg-[rgba(0,0,0,0.4)] checked:bg-[#3B82F6]"
+                            />
+                          </td>
+                          <td className="px-4 py-4 text-white text-sm font-medium">
                             <span className="flex items-center gap-2">
                               {product.service.name}
                               {product.isPriceLocked && <Lock className="w-3 h-3 text-[#F59E0B]" />}
                             </span>
                           </td>
-                          <td className="px-6 py-4 text-[#94A3B8] text-sm">{product.country.name}</td>
-                          <td className="px-6 py-4 text-[#94A3B8] text-sm">{product.provider.name}</td>
-                          <td className="px-6 py-4 text-white text-sm">${product.basePrice}</td>
-                          <td className="px-6 py-4">
+                          <td className="px-4 py-4 text-[#94A3B8] text-sm">{product.country.name}</td>
+                          <td className="px-4 py-4 text-[#94A3B8] text-sm">{product.provider.name}</td>
+                          <td className="px-4 py-4 text-white text-sm">${product.basePrice}</td>
+                          <td className="px-4 py-4">
                             <div className="flex flex-col gap-0.5">
                               {product.productMarkup !== 0 && (
                                 <span className="text-[#3B82F6] text-xs">Product: +{product.productMarkup}%</span>
@@ -1058,8 +1253,8 @@ export default function AdminSmsServicesPage() {
                               )}
                             </div>
                           </td>
-                          <td className="px-6 py-4 text-white text-sm font-semibold">${product.finalPrice}</td>
-                          <td className="px-6 py-4">
+                          <td className="px-4 py-4 text-white text-sm font-semibold">${product.finalPrice}</td>
+                          <td className="px-4 py-4">
                             <button
                               onClick={() => handleEditServicePrice(product)}
                               className="px-4 py-2 rounded-lg bg-[#3B82F6] hover:bg-[#2563EB] text-white text-xs font-medium transition-colors flex items-center gap-1"
