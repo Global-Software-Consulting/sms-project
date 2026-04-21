@@ -21,6 +21,8 @@ import {
   Loader2,
   RefreshCw,
   Lock,
+  CheckCircle,
+  XCircle,
 } from "lucide-react";
 import {
   adminGetProviders,
@@ -143,6 +145,16 @@ export default function AdminSmsServicesPage() {
   const [apiProviders, setApiProviders] = useState<SmsProvider[]>([]);
   const [isProvidersLoading, setIsProvidersLoading] = useState(true);
   const [isSyncing, setIsSyncing] = useState<string | null>(null);
+  
+  // Track sync status per provider for UI display
+  const [syncStatusMap, setSyncStatusMap] = useState<Record<string, {
+    status: 'syncing' | 'completed' | 'failed';
+    message?: string;
+    services?: number;
+    countries?: number;
+    products?: number;
+    error?: string;
+  }>>({});
 
   // Services & countries for provider details modal
   const [providerServices, setProviderServices] = useState<SmsService[]>([]);
@@ -522,9 +534,24 @@ export default function AdminSmsServicesPage() {
     }
   };
 
+  // Clear sync status for a provider after a delay
+  const clearSyncStatus = (providerId: string, delayMs = 10000) => {
+    setTimeout(() => {
+      setSyncStatusMap(prev => {
+        const updated = { ...prev };
+        delete updated[providerId];
+        return updated;
+      });
+    }, delayMs);
+  };
+
   // Sync provider with background polling
   const handleSyncProvider = async (providerId: string) => {
     setIsSyncing(providerId);
+    setSyncStatusMap(prev => ({
+      ...prev,
+      [providerId]: { status: 'syncing', message: 'Sync in progress...' }
+    }));
     
     try {
       // Start the sync (returns immediately)
@@ -544,20 +571,56 @@ export default function AdminSmsServicesPage() {
             const status = await adminGetSyncStatus(providerId);
             
             if (status.status === 'completed') {
-              toast.success(`Sync complete! ${status.services || 0} services, ${status.countries || 0} countries, ${status.products || 0} products`);
+              const successMsg = `Sync complete! ${status.services || 0} services, ${status.countries || 0} countries, ${status.products || 0} products`;
+              toast.success(successMsg, { duration: 5000 });
+              setSyncStatusMap(prev => ({
+                ...prev,
+                [providerId]: {
+                  status: 'completed',
+                  message: successMsg,
+                  services: status.services,
+                  countries: status.countries,
+                  products: status.products
+                }
+              }));
               fetchProviders();
               setIsSyncing(null);
+              clearSyncStatus(providerId, 15000); // Keep success visible for 15s
               return;
             } else if (status.status === 'failed') {
-              toast.error(`Sync failed: ${status.error || 'Unknown error'}`);
+              const errorMsg = status.error || 'Unknown error';
+              toast.error(`Sync failed: ${errorMsg}`, { duration: 8000 });
+              setSyncStatusMap(prev => ({
+                ...prev,
+                [providerId]: {
+                  status: 'failed',
+                  error: errorMsg
+                }
+              }));
               setIsSyncing(null);
+              clearSyncStatus(providerId, 30000); // Keep error visible for 30s
               return;
             } else if (status.status === 'syncing' && attempts < maxAttempts) {
-              // Still syncing, poll again after 5 seconds
+              // Still syncing, update progress message
+              setSyncStatusMap(prev => ({
+                ...prev,
+                [providerId]: {
+                  status: 'syncing',
+                  message: `Syncing... (${attempts * 5}s elapsed)`
+                }
+              }));
+              // Poll again after 5 seconds
               setTimeout(pollStatus, 5000);
             } else {
               // Max attempts reached
               toast.info("Sync is still running. Check back later or refresh the page.");
+              setSyncStatusMap(prev => ({
+                ...prev,
+                [providerId]: {
+                  status: 'syncing',
+                  message: 'Sync taking longer than expected. Refresh page to check status.'
+                }
+              }));
               setIsSyncing(null);
             }
           } catch (pollError) {
@@ -566,7 +629,15 @@ export default function AdminSmsServicesPage() {
               setTimeout(pollStatus, 5000);
             } else {
               toast.error("Could not get sync status. The sync may still be running.");
+              setSyncStatusMap(prev => ({
+                ...prev,
+                [providerId]: {
+                  status: 'failed',
+                  error: 'Could not get sync status'
+                }
+              }));
               setIsSyncing(null);
+              clearSyncStatus(providerId, 30000);
             }
           }
         };
@@ -576,13 +647,29 @@ export default function AdminSmsServicesPage() {
       } else {
         // Sync completed immediately or already had result
         toast.success(startResult.message);
+        setSyncStatusMap(prev => ({
+          ...prev,
+          [providerId]: {
+            status: 'completed',
+            message: startResult.message
+          }
+        }));
         fetchProviders();
         setIsSyncing(null);
+        clearSyncStatus(providerId, 15000);
       }
     } catch (error: any) {
       const message = error?.response?.data?.message || error?.message || "Failed to start sync";
-      toast.error(message);
+      toast.error(message, { duration: 8000 });
+      setSyncStatusMap(prev => ({
+        ...prev,
+        [providerId]: {
+          status: 'failed',
+          error: message
+        }
+      }));
       setIsSyncing(null);
+      clearSyncStatus(providerId, 30000);
     }
   };
 
@@ -995,6 +1082,48 @@ export default function AdminSmsServicesPage() {
                       </button>
                     </div>
                   </div>
+
+                  {/* Sync Status Banner */}
+                  {syncStatusMap[provider.id] && (
+                    <div className={`mb-4 p-3 rounded-lg border ${
+                      syncStatusMap[provider.id].status === 'syncing' 
+                        ? 'bg-blue-500/10 border-blue-500/30 text-blue-400' 
+                        : syncStatusMap[provider.id].status === 'completed'
+                        ? 'bg-green-500/10 border-green-500/30 text-green-400'
+                        : 'bg-red-500/10 border-red-500/30 text-red-400'
+                    }`}>
+                      <div className="flex items-center gap-2 text-sm font-medium">
+                        {syncStatusMap[provider.id].status === 'syncing' && (
+                          <>
+                            <RefreshCw className="w-4 h-4 animate-spin" />
+                            <span>{syncStatusMap[provider.id].message}</span>
+                          </>
+                        )}
+                        {syncStatusMap[provider.id].status === 'completed' && (
+                          <>
+                            <CheckCircle className="w-4 h-4" />
+                            <span>Sync Completed!</span>
+                          </>
+                        )}
+                        {syncStatusMap[provider.id].status === 'failed' && (
+                          <>
+                            <XCircle className="w-4 h-4" />
+                            <span>Sync Failed</span>
+                          </>
+                        )}
+                      </div>
+                      {syncStatusMap[provider.id].status === 'completed' && syncStatusMap[provider.id].services != null && (
+                        <div className="text-xs mt-1 opacity-80">
+                          {syncStatusMap[provider.id].services} services, {syncStatusMap[provider.id].countries} countries, {syncStatusMap[provider.id].products} products
+                        </div>
+                      )}
+                      {syncStatusMap[provider.id].status === 'failed' && syncStatusMap[provider.id].error && (
+                        <div className="text-xs mt-1 opacity-80 break-words">
+                          {syncStatusMap[provider.id].error}
+                        </div>
+                      )}
+                    </div>
+                  )}
 
                   <div className="space-y-3 mb-4">
                     {provider.balance && (
