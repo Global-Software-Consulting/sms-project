@@ -82,6 +82,11 @@ export const API_ENDPOINTS = {
   },
 
   // ========================
+  // Ranks (Public)
+  // ========================
+  RANKS: '/ranks',
+
+  // ========================
   // API Keys
   // ========================
   API_KEYS: {
@@ -436,6 +441,8 @@ export const API_ENDPOINTS = {
       ROOT: '/admin/ranks',
       DETAIL: (id: string) => `/admin/ranks/${id}`,
       REORDER: '/admin/ranks/reorder',
+      RECOMPUTE: '/admin/ranks/recompute',
+      RECOMPUTE_USER: (userId: string) => `/admin/ranks/recompute/${userId}`,
     },
 
     // Admin Tickets

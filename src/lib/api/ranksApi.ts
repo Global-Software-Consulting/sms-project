@@ -89,3 +89,25 @@ export const updateRank = async (id: string, data: UpdateRankRequest): Promise<R
 export const deleteRank = async (id: string): Promise<void> => {
   await apiClient.delete(API_ENDPOINTS.ADMIN.RANKS.DETAIL(id));
 };
+
+// Public endpoint - any authenticated user can fetch active ranks
+export const getPublicRanks = async (): Promise<Rank[]> => {
+  const response = await apiClient.get<Rank[]>(API_ENDPOINTS.RANKS);
+  return response.data;
+};
+
+// Admin: recompute all users' ranks
+export const recomputeAllRanks = async (): Promise<{ updated: number }> => {
+  const response = await apiClient.post<{ updated: number }>(
+    API_ENDPOINTS.ADMIN.RANKS.RECOMPUTE,
+  );
+  return response.data;
+};
+
+// Admin: recompute a single user's rank
+export const recomputeUserRank = async (userId: string): Promise<{ rankId: string | null }> => {
+  const response = await apiClient.post<{ rankId: string | null }>(
+    API_ENDPOINTS.ADMIN.RANKS.RECOMPUTE_USER(userId),
+  );
+  return response.data;
+};

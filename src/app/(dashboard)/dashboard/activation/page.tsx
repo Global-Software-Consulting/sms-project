@@ -1,5 +1,7 @@
 'use client';
 import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useAppDispatch } from '@/store/hooks';
+import { initializeAuth } from '@/store/slices/authSlice';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -55,6 +57,7 @@ type CountryFilterType = 'all' | 'favorites' | 'available';
 type PriceSortType = 'none' | 'low-high' | 'high-low';
 
 export default function Activation() {
+  const dispatch = useAppDispatch();
   // Data state
   const [providers, setProviders] = useState<SmsProvider[]>([]);
   const [services, setServices] = useState<SmsService[]>([]);
@@ -346,6 +349,9 @@ export default function Activation() {
         toast.success('Number activated!', {
           description: `${selectedService.name} / ${product.country.name} - Waiting for SMS...`,
         });
+
+        // Refetch user profile so rank updates instantly if the user crossed a threshold
+        dispatch(initializeAuth());
       } else {
         console.error('Unexpected response:', response);
         toast.error('Activation failed', {

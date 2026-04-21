@@ -8,12 +8,13 @@ import { AdminModal } from "@/components/admin/modal";
 import { AdminFormInput } from "@/components/admin/form-input";
 import { AdminToggleSwitch } from "@/components/admin/toggle-switch";
 import { toast } from "sonner";
-import { Plus, Edit, Trash2, Award, TrendingUp, DollarSign, Loader2 } from "lucide-react";
+import { Plus, Edit, Trash2, Award, TrendingUp, DollarSign, Loader2, RefreshCw } from "lucide-react";
 import {
   getRanks,
   createRank,
   updateRank,
   deleteRank,
+  recomputeAllRanks,
   type Rank,
 } from '@/lib/api/ranksApi';
 
@@ -50,17 +51,10 @@ export default function AdminRankSystemPage() {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [selectedRank, setSelectedRank] = useState<Rank | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [isRecomputing, setIsRecomputing] = useState(false);
 
   const [formData, setFormData] = useState(initialFormState);
   const [editFormData, setEditFormData] = useState(initialFormState);
-
-  const dummyRanks: Rank[] = [
-    { id: "R-001", name: "Bronze", slug: "bronze", description: "Starter rank", minSpending: 0, discountPercent: 1, orderLimitBonus: 0, prioritySupport: false, badge: "", color: "#CD7F32", sortOrder: 1, isActive: true, createdAt: "", updatedAt: "", _count: { users: 1245 } },
-    { id: "R-002", name: "Silver", slug: "silver", description: "Intermediate rank", minSpending: 100, discountPercent: 2, orderLimitBonus: 5, prioritySupport: false, badge: "", color: "#C0C0C0", sortOrder: 2, isActive: true, createdAt: "", updatedAt: "", _count: { users: 856 } },
-    { id: "R-003", name: "Gold", slug: "gold", description: "Premium tier", minSpending: 500, discountPercent: 3, orderLimitBonus: 10, prioritySupport: false, badge: "", color: "#FFD700", sortOrder: 3, isActive: true, createdAt: "", updatedAt: "", _count: { users: 342 } },
-    { id: "R-004", name: "Platinum", slug: "platinum", description: "Elite tier", minSpending: 2000, discountPercent: 4, orderLimitBonus: 15, prioritySupport: true, badge: "", color: "#E5E4E2", sortOrder: 4, isActive: true, createdAt: "", updatedAt: "", _count: { users: 128 } },
-    { id: "R-005", name: "Diamond", slug: "diamond", description: "Top tier", minSpending: 10000, discountPercent: 5, orderLimitBonus: 20, prioritySupport: true, badge: "", color: "#B9F2FF", sortOrder: 5, isActive: true, createdAt: "", updatedAt: "", _count: { users: 23 } },
-  ];
 
   const fetchRanks = useCallback(async () => {
     setIsPageLoading(true);
@@ -153,6 +147,20 @@ export default function AdminRankSystemPage() {
       toast.error(error?.response?.data?.message || "Failed to update rank");
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleRecomputeAll = async () => {
+    if (!confirm('This will recompute ranks for all users based on their spending. Continue?')) return;
+    setIsRecomputing(true);
+    try {
+      const res = await recomputeAllRanks();
+      toast.success(`Recomputed ranks for ${res.updated} users`);
+      fetchRanks();
+    } catch (error: any) {
+      toast.error(error?.response?.data?.message || 'Failed to recompute ranks');
+    } finally {
+      setIsRecomputing(false);
     }
   };
 
@@ -276,6 +284,13 @@ export default function AdminRankSystemPage() {
       <AdminPageHeader
         title="Rank System"
         description="Manage user ranks based on spending levels and rewards"
+        secondaryActions={[
+          {
+            label: isRecomputing ? 'Recomputing...' : 'Recompute All',
+            onClick: handleRecomputeAll,
+            icon: <RefreshCw className={`w-5 h-5 ${isRecomputing ? 'animate-spin' : ''}`} />,
+          },
+        ]}
         primaryAction={{
           label: "Create Rank",
           onClick: () => {

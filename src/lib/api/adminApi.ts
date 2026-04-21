@@ -26,6 +26,13 @@ export interface AdminUser {
   orderLimit: number | null;
   lastLoginAt: string | null;
   loginCount: number;
+  rank?: {
+    id: string;
+    name: string;
+    badge: string;
+    color: string;
+    discountPercent: number;
+  } | null;
   createdAt: string;
   updatedAt: string;
 }

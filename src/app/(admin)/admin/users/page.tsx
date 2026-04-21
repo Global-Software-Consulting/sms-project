@@ -34,14 +34,15 @@ import {
 import { type UserRole, type UserStatus } from '@/lib/api/authApi';
 
 const columns = [
-  { key: "id", label: "User ID", width: "8%" },
-  { key: "username", label: "Username", width: "12%" },
-  { key: "email", label: "Email", width: "18%" },
-  { key: "role", label: "Role", width: "8%" },
-  { key: "status", label: "Status", width: "9%" },
-  { key: "abuseScore", label: "Abuse Score", width: "8%" },
-  { key: "lastLoginAt", label: "Last Login", width: "12%" },
-  { key: "createdAt", label: "Signup Date", width: "10%" },
+  { key: "id", label: "User ID", width: "7%" },
+  { key: "username", label: "Username", width: "11%" },
+  { key: "email", label: "Email", width: "16%" },
+  { key: "role", label: "Role", width: "7%" },
+  { key: "rank", label: "Rank", width: "9%" },
+  { key: "status", label: "Status", width: "8%" },
+  { key: "abuseScore", label: "Abuse", width: "6%" },
+  { key: "lastLoginAt", label: "Last Login", width: "11%" },
+  { key: "createdAt", label: "Signup", width: "10%" },
   { key: "actions", label: "Actions", width: "15%" },
 ];
 
@@ -404,6 +405,16 @@ export default function AdminUsersPage() {
         return (
           <span className={`text-xs font-semibold ${roleColorMap[item.role] || 'text-white'}`}>
             {item.role}
+          </span>
+        );
+
+      case "rank":
+        if (!item.rank) {
+          return <span className="text-[#64748B] text-xs">—</span>;
+        }
+        return (
+          <span className="text-white text-sm" title={`${item.rank.discountPercent}% off`}>
+            {item.rank.name}
           </span>
         );
 

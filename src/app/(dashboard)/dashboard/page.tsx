@@ -257,13 +257,13 @@ export default function Dashboard() {
         </div>
         {user?.rank && (
           <Badge
-            className="px-3 py-1.5 text-sm"
+            className="flex items-center gap-1.5 px-3 py-1.5 text-sm"
             style={{ backgroundColor: `${user.rank.color}20`, color: user.rank.color, borderColor: `${user.rank.color}40` }}
             variant="outline"
           >
-            {user.rank.badge} {user.rank.name}
+            <span>{user.rank.name}</span>
             {user.rank.discountPercent > 0 && (
-              <span className="ml-1 opacity-75">({user.rank.discountPercent}% off)</span>
+              <span className="opacity-75">({user.rank.discountPercent}% off)</span>
             )}
           </Badge>
         )}
