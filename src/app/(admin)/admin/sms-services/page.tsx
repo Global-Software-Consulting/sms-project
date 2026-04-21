@@ -587,6 +587,40 @@ export default function AdminSmsServicesPage() {
               setIsSyncing(null);
               clearSyncStatus(providerId, 15000); // Keep success visible for 15s
               return;
+            } else if (status.status === 'idle' && status.completedAt) {
+              // Server restarted or sync finished - check if completedAt is recent (within last 2 minutes)
+              const completedTime = new Date(status.completedAt).getTime();
+              const now = Date.now();
+              const twoMinutesAgo = now - 2 * 60 * 1000;
+              
+              if (completedTime > twoMinutesAgo) {
+                // Sync likely completed recently, treat as success
+                const successMsg = `Sync completed! Refresh the page to see updated data.`;
+                toast.success(successMsg, { duration: 5000 });
+                setSyncStatusMap(prev => ({
+                  ...prev,
+                  [providerId]: {
+                    status: 'completed',
+                    message: successMsg
+                  }
+                }));
+                fetchProviders();
+                setIsSyncing(null);
+                clearSyncStatus(providerId, 15000);
+                return;
+              } else {
+                // Old completedAt, sync might still be running or failed silently
+                // Continue polling for a bit more
+                if (attempts < 10) {
+                  setTimeout(pollStatus, 5000);
+                  return;
+                }
+                // Give up, assume completed
+                toast.info("Sync status unknown. Refreshing data...");
+                fetchProviders();
+                setIsSyncing(null);
+                return;
+              }
             } else if (status.status === 'failed') {
               const errorMsg = status.error || 'Unknown error';
               toast.error(`Sync failed: ${errorMsg}`, { duration: 8000 });
