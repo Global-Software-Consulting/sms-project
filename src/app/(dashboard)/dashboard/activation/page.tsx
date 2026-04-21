@@ -47,6 +47,7 @@ import {
   getOrderStatusColor,
   getCountryFlag,
   getProviderBadge,
+  getServiceTypeLabel,
   canCancelOrder,
   getTimeRemaining,
   formatPrice,
@@ -89,6 +90,9 @@ export default function Activation() {
   // Active orders state
   const [activeOrders, setActiveOrders] = useState<SmsOrder[]>([]);
   const [pollingOrders, setPollingOrders] = useState<Set<string>>(new Set());
+  
+  // Timer tick state for real-time countdown (updates every second)
+  const [, setTimerTick] = useState(0);
 
   // Fetch initial data - optimized to load essential data first
   const fetchInitialData = useCallback(async () => {
@@ -176,6 +180,21 @@ export default function Activation() {
   useEffect(() => {
     fetchInitialData();
   }, [fetchInitialData]);
+
+  // Real-time countdown timer - update every second when there are active orders
+  useEffect(() => {
+    const hasActiveTimers = activeOrders.some(
+      order => order.expiresAt && (order.status === 'PENDING' || order.status === 'WAITING_SMS')
+    );
+    
+    if (!hasActiveTimers) return;
+    
+    const interval = setInterval(() => {
+      setTimerTick(tick => tick + 1);
+    }, 1000);
+    
+    return () => clearInterval(interval);
+  }, [activeOrders]);
 
   // Fetch services when provider changes
   useEffect(() => {
@@ -339,11 +358,8 @@ export default function Activation() {
       setActivatingProductId(product.id); // Track which specific product is being activated
       const response = await activateNumber(product.id);
 
-      // Backend may return { order: ... } or the order directly at top level
-      const order = response.order || (response as any);
-
-      if (order && order.id) {
-        setActiveOrders(prev => [order, ...prev]);
+      if (response.order && response.order.id) {
+        setActiveOrders(prev => [response.order, ...prev]);
         setWalletBalance(prev => (parseFloat(prev) - price).toFixed(2));
 
         toast.success('Number activated!', {
@@ -372,18 +388,16 @@ export default function Activation() {
   const handleCancelOrder = async (orderId: string) => {
     try {
       const response = await cancelOrder(orderId);
-      const cancelledOrder = response.order || (response as any);
-      const refundAmount = response.refundAmount || (response as any).refundAmount || '0';
       setActiveOrders(prev =>
-        prev.map(o => (o.id === orderId ? cancelledOrder : o))
+        prev.map(o => (o.id === orderId ? response.order : o))
       );
-      if (parseFloat(refundAmount) > 0) {
+      if (parseFloat(response.refundAmount) > 0) {
         setWalletBalance(prev =>
-          (parseFloat(prev) + parseFloat(refundAmount)).toFixed(2)
+          (parseFloat(prev) + parseFloat(response.refundAmount)).toFixed(2)
         );
       }
       toast.success('Order cancelled', {
-        description: refundAmount !== '0' ? `Refunded: ${formatPrice(refundAmount)}` : 'Order has been cancelled',
+        description: response.refundAmount !== '0' ? `Refunded: ${formatPrice(response.refundAmount)}` : 'Order has been cancelled',
       });
     } catch (err: any) {
       toast.error('Failed to cancel order', {
@@ -392,7 +406,7 @@ export default function Activation() {
     }
   };
 
-  // Handle toggle favorite
+  // Handle toggle favorite (with defensive null checks)
   const handleToggleFavorite = async (
     serviceId: string,
     countryId: string,
@@ -403,9 +417,9 @@ export default function Activation() {
 
     const existing = favorites.find(
       f =>
-        f.service.id === serviceId &&
-        f.country.id === countryId &&
-        f.provider.id === providerId
+        f.service?.id === serviceId &&
+        f.country?.id === countryId &&
+        f.provider?.id === providerId
     );
 
     try {
@@ -415,11 +429,15 @@ export default function Activation() {
         toast.success('Removed from favorites');
       } else {
         const response = await addFavorite(serviceId, countryId, providerId);
-        setFavorites(prev => [...prev, response.favorite]);
-        toast.success('Added to favorites');
+        if (response.favorite) {
+          setFavorites(prev => [...prev, response.favorite]);
+          toast.success('Added to favorites');
+        }
       }
-    } catch (err) {
-      toast.error('Failed to update favorites');
+    } catch (err: any) {
+      toast.error('Failed to update favorites', {
+        description: err.response?.data?.message || 'Please try again.',
+      });
     }
   };
 
@@ -434,13 +452,14 @@ export default function Activation() {
     setActiveOrders(prev => prev.filter(o => o.id !== id));
   };
 
-  // Check if country is favorite
+  // Check if country is favorite (with defensive null checks)
   const isFavorite = (countryId: string) => {
+    if (!selectedService?.id || !selectedProvider?.id) return false;
     return favorites.some(
       f =>
-        f.country.id === countryId &&
-        f.service.id === selectedService?.id &&
-        f.provider.id === selectedProvider?.id
+        f.country?.id === countryId &&
+        f.service?.id === selectedService.id &&
+        f.provider?.id === selectedProvider.id
     );
   };
 
@@ -552,6 +571,18 @@ export default function Activation() {
                           <span className="text-muted-foreground text-xs">
                             {order.country?.name || 'Country'}
                           </span>
+                          {/* Service Type Badge (Premium/Standard/Economy) */}
+                          {order.provider?.slug && (
+                            <span
+                              className="rounded-full px-2 py-0.5 text-[10px] font-medium"
+                              style={{
+                                backgroundColor: `${getServiceTypeLabel(order.provider.slug).color}20`,
+                                color: getServiceTypeLabel(order.provider.slug).color,
+                              }}
+                            >
+                              {getServiceTypeLabel(order.provider.slug).label}
+                            </span>
+                          )}
                           <Badge
                             variant={
                               order.status === 'COMPLETED'
@@ -590,16 +621,23 @@ export default function Activation() {
                     {/* Timer + Expiration */}
                     {(order.status === 'PENDING' ||
                       order.status === 'WAITING_SMS') && timeRemaining && (
-                      <div className="flex shrink-0 flex-col items-end gap-0.5">
-                        <div className="text-foreground flex items-center gap-1.5 text-sm font-semibold">
-                          <Clock className="h-3.5 w-3.5" />
+                      <div className="flex shrink-0 flex-col items-end gap-1">
+                        <div className={cn(
+                          "flex items-center gap-1.5 text-sm font-bold",
+                          timeRemaining.minutes < 2 ? "text-destructive" : 
+                          timeRemaining.minutes < 5 ? "text-warning" : "text-foreground"
+                        )}>
+                          <Clock className={cn(
+                            "h-4 w-4",
+                            timeRemaining.minutes < 2 && "animate-pulse"
+                          )} />
                           <span className="font-mono tabular-nums">
-                            {timeRemaining.minutes}:{timeRemaining.seconds.toString().padStart(2, '0')}
+                            {timeRemaining.minutes} min {timeRemaining.seconds.toString().padStart(2, '0')} sec
                           </span>
                         </div>
                         {order.expiresAt && (
-                          <span className="text-muted-foreground text-[10px]">
-                            Expires {new Date(order.expiresAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          <span className="text-muted-foreground text-xs">
+                            Expires at {new Date(order.expiresAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                           </span>
                         )}
                       </div>
@@ -885,6 +923,17 @@ export default function Activation() {
                       <ArrowUpDown className="mr-1.5 h-3 w-3" />
                       Low → High
                     </Button>
+                    <Button
+                      variant={priceSort === 'high-low' ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() =>
+                        setPriceSort(priceSort === 'high-low' ? 'none' : 'high-low')
+                      }
+                      className="h-8 text-xs"
+                    >
+                      <ArrowUpDown className="mr-1.5 h-3 w-3" />
+                      High → Low
+                    </Button>
                   </div>
                 </div>
 
@@ -961,10 +1010,26 @@ export default function Activation() {
                             </span>
                           </div>
 
-                          {/* Price */}
-                          <span className="shrink-0 text-sm font-bold tabular-nums">
-                            {formatPrice(bestProduct.yourPrice)}
-                          </span>
+                          {/* Price with discount indicator */}
+                          <div className="shrink-0 text-right">
+                            {bestProduct.discountPercent && bestProduct.discountPercent > 0 ? (
+                              <>
+                                <span className="text-muted-foreground line-through text-xs">
+                                  {formatPrice(bestProduct.price)}
+                                </span>
+                                <span className="ml-1 text-sm font-bold tabular-nums text-green-600 dark:text-green-400">
+                                  {formatPrice(bestProduct.yourPrice)}
+                                </span>
+                                <span className="ml-1 text-xs font-medium text-green-600 dark:text-green-400">
+                                  -{bestProduct.discountPercent}%
+                                </span>
+                              </>
+                            ) : (
+                              <span className="text-sm font-bold tabular-nums">
+                                {formatPrice(bestProduct.yourPrice)}
+                              </span>
+                            )}
+                          </div>
                         </div>
 
                         {/* Buy button */}

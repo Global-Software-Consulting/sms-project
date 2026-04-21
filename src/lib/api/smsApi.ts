@@ -391,8 +391,8 @@ export interface ProvidersResponse {
   providers: SmsProvider[];
 }
 
-export interface ActivateResponse extends SmsOrder {
-  order?: SmsOrder; // Backend may return order at top level or nested
+export interface ActivateResponse {
+  order: SmsOrder;
   message?: string;
 }
 
@@ -529,6 +529,13 @@ export const checkOrderStatus = async (
     API_ENDPOINTS.SMS.ACTIVATE_ORDER(orderId),
   );
   return response.data;
+};
+
+/**
+ * Type guard to check if an order response is valid
+ */
+export const isValidOrderResponse = (response: any): response is { order: SmsOrder } => {
+  return response && response.order && typeof response.order.id === 'string';
 };
 
 /**
@@ -1520,6 +1527,31 @@ export const getProviderBadge = (
       herosms: { label: 'V3', color: '#10B981', icon: '🛡️' },
     };
   return badges[slug] || { label: 'V?', color: '#666', icon: '📱' };
+};
+
+/**
+ * Get service type label based on provider slug or version
+ * Returns: Standard, Premium, Economy, etc.
+ */
+export const getServiceTypeLabel = (
+  slugOrVersion?: string,
+): { label: string; color: string } => {
+  if (!slugOrVersion) return { label: 'Standard', color: '#94A3B8' };
+  
+  const slug = slugOrVersion.toLowerCase();
+  
+  // Map provider slugs to service types
+  if (slug.includes('fivesim') || slug === '5sim' || slug.includes('v1')) {
+    return { label: 'Premium', color: '#C6A75E' };
+  }
+  if (slug.includes('smsman') || slug.includes('v2')) {
+    return { label: 'Standard', color: '#3B82F6' };
+  }
+  if (slug.includes('herosms') || slug.includes('hero') || slug.includes('v3')) {
+    return { label: 'Economy', color: '#10B981' };
+  }
+  
+  return { label: 'Standard', color: '#94A3B8' };
 };
 
 /**
