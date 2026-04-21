@@ -175,13 +175,13 @@ export default function AdminSmsServicesPage() {
   const [isUnifiedCountriesLoading, setIsUnifiedCountriesLoading] = useState(false);
   const [unifiedCountrySearchQuery, setUnifiedCountrySearchQuery] = useState("");
 
-  // Icon Management
+  // Icon Management (using unified services - no duplicates)
   const [showIconManagementModal, setShowIconManagementModal] = useState(false);
-  const [servicesForIcons, setServicesForIcons] = useState<SmsService[]>([]);
+  const [servicesForIcons, setServicesForIcons] = useState<UnifiedService[]>([]);
   const [isIconServicesLoading, setIsIconServicesLoading] = useState(false);
   const [iconFilterMissing, setIconFilterMissing] = useState(false);
   const [iconSearchQuery, setIconSearchQuery] = useState("");
-  const [editingIconService, setEditingIconService] = useState<SmsService | null>(null);
+  const [editingIconService, setEditingIconService] = useState<UnifiedService | null>(null);
   const [iconUrlInput, setIconUrlInput] = useState("");
   const [isUploadingIcon, setIsUploadingIcon] = useState(false);
 
@@ -318,12 +318,19 @@ export default function AdminSmsServicesPage() {
     fetchUnifiedServices();
   };
 
-  // Icon Management functions
+  // Icon Management functions - uses unified services (no duplicates across providers)
   const fetchServicesForIcons = useCallback(async (missingOnly: boolean = false) => {
     setIsIconServicesLoading(true);
     try {
-      const response = await adminGetServices({ limit: 200, hasIcon: missingOnly ? false : undefined });
-      setServicesForIcons(response.data || []);
+      const response = await getUnifiedServices({ limit: 500 });
+      let services = response.data || [];
+      
+      // Filter to missing icons only if requested
+      if (missingOnly) {
+        services = services.filter(s => !s.iconUrl);
+      }
+      
+      setServicesForIcons(services);
     } catch (error: any) {
       toast.error(error?.response?.data?.message || "Failed to fetch services");
     } finally {
@@ -345,7 +352,7 @@ export default function AdminSmsServicesPage() {
     fetchServicesForIcons(missingOnly);
   };
 
-  const handleEditIcon = (service: SmsService) => {
+  const handleEditIcon = (service: UnifiedService) => {
     setEditingIconService(service);
     setIconUrlInput(service.iconUrl || "");
   };
@@ -354,11 +361,17 @@ export default function AdminSmsServicesPage() {
     if (!editingIconService) return;
     setIsUploadingIcon(true);
     try {
-      await apiClient.patch(
-        API_ENDPOINTS.ADMIN.SMS.SERVICE_DETAIL(editingIconService.id),
-        { iconUrl: iconUrlInput || null }
+      // Update icon for ALL providers that have this service (using bulk update)
+      const updates = editingIconService.providers.map(p => ({
+        serviceId: p.serviceId,
+        iconUrl: iconUrlInput || null,
+      }));
+      
+      await apiClient.post(
+        API_ENDPOINTS.ADMIN.SMS.SERVICES_BULK_UPDATE_ICONS,
+        { updates }
       );
-      toast.success("Icon updated successfully");
+      toast.success(`Icon updated for ${updates.length} provider(s)`);
       setEditingIconService(null);
       setIconUrlInput("");
       fetchServicesForIcons(iconFilterMissing);
@@ -382,11 +395,17 @@ export default function AdminSmsServicesPage() {
       );
       const uploadedUrl = uploadResponse.data.url;
       
-      await apiClient.patch(
-        API_ENDPOINTS.ADMIN.SMS.SERVICE_DETAIL(editingIconService.id),
-        { iconUrl: uploadedUrl }
+      // Update icon for ALL providers that have this service (using bulk update)
+      const updates = editingIconService.providers.map(p => ({
+        serviceId: p.serviceId,
+        iconUrl: uploadedUrl,
+      }));
+      
+      await apiClient.post(
+        API_ENDPOINTS.ADMIN.SMS.SERVICES_BULK_UPDATE_ICONS,
+        { updates }
       );
-      toast.success("Icon uploaded and saved");
+      toast.success(`Icon uploaded and applied to ${updates.length} provider(s)`);
       setEditingIconService(null);
       setIconUrlInput("");
       fetchServicesForIcons(iconFilterMissing);
@@ -2676,7 +2695,7 @@ export default function AdminSmsServicesPage() {
                     .filter(s => s.name.toLowerCase().includes(iconSearchQuery.toLowerCase()))
                     .map((service) => (
                       <div
-                        key={service.id}
+                        key={service.slug}
                         className="p-4 rounded-lg bg-[rgba(255,255,255,0.02)] border border-[rgba(255,255,255,0.05)] hover:border-[rgba(139,92,246,0.3)] transition-all"
                       >
                         <div className="flex items-start gap-3">
@@ -2692,6 +2711,7 @@ export default function AdminSmsServicesPage() {
                           <div className="flex-1 min-w-0">
                             <h4 className="text-white text-sm font-medium truncate">{service.name}</h4>
                             <p className="text-[#64748B] text-xs mt-0.5">{service.category || 'Uncategorized'}</p>
+                            <p className="text-[#3B82F6] text-xs mt-0.5">{service.providers.length} provider(s)</p>
                             <button
                               onClick={() => handleEditIcon(service)}
                               className="mt-2 px-3 py-1.5 rounded-lg bg-[#8B5CF6]/20 hover:bg-[#8B5CF6]/30 text-[#8B5CF6] text-xs font-medium transition-colors"
@@ -2708,9 +2728,12 @@ export default function AdminSmsServicesPage() {
               {/* Edit Icon Panel */}
               {editingIconService && (
                 <div className="mt-6 p-4 rounded-lg bg-[rgba(139,92,246,0.1)] border border-[rgba(139,92,246,0.3)]">
-                  <h4 className="text-white text-sm font-medium mb-3">
+                  <h4 className="text-white text-sm font-medium mb-1">
                     Edit Icon: {editingIconService.name}
                   </h4>
+                  <p className="text-[#94A3B8] text-xs mb-3">
+                    Will update icon for: {editingIconService.providers.map(p => p.name).join(', ')}
+                  </p>
                   <div className="flex items-center gap-3 mb-4">
                     {editingIconService.iconUrl || iconUrlInput ? (
                       <img 
