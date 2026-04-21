@@ -1875,7 +1875,23 @@ export default function AdminSmsServicesPage() {
                                     onClick={(e) => e.stopPropagation()}
                                   />
                                 </td>
-                                <td className="px-4 py-3 text-white text-sm font-medium">{service.name}</td>
+                                <td className="px-4 py-3">
+                                  <div className="flex items-center gap-3">
+                                    {service.iconUrl ? (
+                                      <img 
+                                        src={service.iconUrl} 
+                                        alt={service.name} 
+                                        className="w-8 h-8 rounded-lg object-cover"
+                                        onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                                      />
+                                    ) : (
+                                      <div className="w-8 h-8 rounded-lg bg-[rgba(255,255,255,0.05)] border border-[rgba(255,255,255,0.1)] flex items-center justify-center">
+                                        <Globe className="w-4 h-4 text-[#64748B]" />
+                                      </div>
+                                    )}
+                                    <span className="text-white text-sm font-medium">{service.name}</span>
+                                  </div>
+                                </td>
                                 <td className="px-4 py-3 text-[#94A3B8] text-sm capitalize">{service.category || "—"}</td>
                                 <td className="px-4 py-3">
                                   <span className={`px-2 py-1 rounded-full text-xs font-medium ${
