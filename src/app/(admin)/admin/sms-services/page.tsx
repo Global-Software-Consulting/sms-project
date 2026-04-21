@@ -322,7 +322,7 @@ export default function AdminSmsServicesPage() {
   const fetchServicesForIcons = useCallback(async (missingOnly: boolean = false) => {
     setIsIconServicesLoading(true);
     try {
-      const response = await getUnifiedServices({ limit: 500 });
+      const response = await getUnifiedServices({ limit: 200 });
       let services = response.data || [];
       
       // Filter to missing icons only if requested
