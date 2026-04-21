@@ -37,6 +37,8 @@ import {
   adminBulkLockProducts,
   adminGetServices,
   getServices,
+  getUnifiedServices,
+  getCountriesForUnifiedService,
   getProductsRealtime,
   getCountries,
   type SmsProvider,
@@ -45,6 +47,8 @@ import {
   type SmsCountry,
   type VipNumber,
   type UnifiedVipService,
+  type UnifiedService,
+  type UnifiedServiceCountry,
 } from '@/lib/api/smsApi';
 import { apiClient } from '@/config/api-client.config';
 import { API_ENDPOINTS } from '@/config/server.config';
@@ -149,6 +153,26 @@ export default function AdminSmsServicesPage() {
   const [isCountriesLoading, setIsCountriesLoading] = useState(false);
   const [countrySearchQuery, setCountrySearchQuery] = useState("");
 
+  // Unified Services view (no duplicates across providers)
+  const [showUnifiedServicesModal, setShowUnifiedServicesModal] = useState(false);
+  const [unifiedServices, setUnifiedServices] = useState<UnifiedService[]>([]);
+  const [isUnifiedServicesLoading, setIsUnifiedServicesLoading] = useState(false);
+  const [unifiedServiceSearchQuery, setUnifiedServiceSearchQuery] = useState("");
+  const [selectedUnifiedService, setSelectedUnifiedService] = useState<UnifiedService | null>(null);
+  const [unifiedServiceCountries, setUnifiedServiceCountries] = useState<UnifiedServiceCountry[]>([]);
+  const [isUnifiedCountriesLoading, setIsUnifiedCountriesLoading] = useState(false);
+  const [unifiedCountrySearchQuery, setUnifiedCountrySearchQuery] = useState("");
+
+  // Icon Management
+  const [showIconManagementModal, setShowIconManagementModal] = useState(false);
+  const [servicesForIcons, setServicesForIcons] = useState<SmsService[]>([]);
+  const [isIconServicesLoading, setIsIconServicesLoading] = useState(false);
+  const [iconFilterMissing, setIconFilterMissing] = useState(false);
+  const [iconSearchQuery, setIconSearchQuery] = useState("");
+  const [editingIconService, setEditingIconService] = useState<SmsService | null>(null);
+  const [iconUrlInput, setIconUrlInput] = useState("");
+  const [isUploadingIcon, setIsUploadingIcon] = useState(false);
+
   // VIP modal country selection
   const [vipCountries, setVipCountries] = useState<SmsCountry[]>([]);
   const [isVipCountriesLoading, setIsVipCountriesLoading] = useState(false);
@@ -243,6 +267,121 @@ export default function AdminSmsServicesPage() {
       toast.error(error?.response?.data?.message || "Failed to bulk update");
     } finally {
       setIsBulkLocking(false);
+    }
+  };
+
+  // Fetch unified services (no duplicates across providers)
+  const fetchUnifiedServices = useCallback(async () => {
+    setIsUnifiedServicesLoading(true);
+    try {
+      const response = await getUnifiedServices({ limit: 200 });
+      setUnifiedServices(response.data || []);
+    } catch (error: any) {
+      toast.error(error?.response?.data?.message || "Failed to fetch services");
+    } finally {
+      setIsUnifiedServicesLoading(false);
+    }
+  }, []);
+
+  const handleViewUnifiedServiceCountries = async (service: UnifiedService) => {
+    setSelectedUnifiedService(service);
+    setUnifiedServiceCountries([]);
+    setUnifiedCountrySearchQuery("");
+    setIsUnifiedCountriesLoading(true);
+    try {
+      const response = await getCountriesForUnifiedService(service.name, { limit: 200 });
+      setUnifiedServiceCountries(response.data || []);
+    } catch (error: any) {
+      toast.error(error?.response?.data?.message || "Failed to fetch countries");
+    } finally {
+      setIsUnifiedCountriesLoading(false);
+    }
+  };
+
+  const handleOpenUnifiedServicesModal = () => {
+    setShowUnifiedServicesModal(true);
+    setSelectedUnifiedService(null);
+    setUnifiedServiceCountries([]);
+    setUnifiedServiceSearchQuery("");
+    fetchUnifiedServices();
+  };
+
+  // Icon Management functions
+  const fetchServicesForIcons = useCallback(async (missingOnly: boolean = false) => {
+    setIsIconServicesLoading(true);
+    try {
+      const response = await adminGetServices({ limit: 200, hasIcon: missingOnly ? false : undefined });
+      setServicesForIcons(response.data || []);
+    } catch (error: any) {
+      toast.error(error?.response?.data?.message || "Failed to fetch services");
+    } finally {
+      setIsIconServicesLoading(false);
+    }
+  }, []);
+
+  const handleOpenIconManagement = () => {
+    setShowIconManagementModal(true);
+    setIconFilterMissing(false);
+    setIconSearchQuery("");
+    setEditingIconService(null);
+    setIconUrlInput("");
+    fetchServicesForIcons(false);
+  };
+
+  const handleIconFilterChange = (missingOnly: boolean) => {
+    setIconFilterMissing(missingOnly);
+    fetchServicesForIcons(missingOnly);
+  };
+
+  const handleEditIcon = (service: SmsService) => {
+    setEditingIconService(service);
+    setIconUrlInput(service.iconUrl || "");
+  };
+
+  const handleSaveIcon = async () => {
+    if (!editingIconService) return;
+    setIsUploadingIcon(true);
+    try {
+      await apiClient.patch(
+        API_ENDPOINTS.ADMIN.SMS.SERVICE_DETAIL(editingIconService.id),
+        { iconUrl: iconUrlInput || null }
+      );
+      toast.success("Icon updated successfully");
+      setEditingIconService(null);
+      setIconUrlInput("");
+      fetchServicesForIcons(iconFilterMissing);
+    } catch (error: any) {
+      toast.error(error?.response?.data?.message || "Failed to update icon");
+    } finally {
+      setIsUploadingIcon(false);
+    }
+  };
+
+  const handleFileUpload = async (file: File) => {
+    if (!editingIconService) return;
+    setIsUploadingIcon(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      const uploadResponse = await apiClient.post<{ url: string }>(
+        `${API_ENDPOINTS.STORAGE.UPLOAD}?folder=icons`,
+        formData,
+        { headers: { 'Content-Type': 'multipart/form-data' } }
+      );
+      const uploadedUrl = uploadResponse.data.url;
+      
+      await apiClient.patch(
+        API_ENDPOINTS.ADMIN.SMS.SERVICE_DETAIL(editingIconService.id),
+        { iconUrl: uploadedUrl }
+      );
+      toast.success("Icon uploaded and saved");
+      setEditingIconService(null);
+      setIconUrlInput("");
+      fetchServicesForIcons(iconFilterMissing);
+    } catch (error: any) {
+      toast.error(error?.response?.data?.message || "Failed to upload icon");
+    } finally {
+      setIsUploadingIcon(false);
     }
   };
 
@@ -775,17 +914,33 @@ export default function AdminSmsServicesPage() {
       {/* Providers Tab */}
       {activeTab === "providers" && (
         <div className="space-y-6">
-          {/* Search Bar */}
+          {/* Search Bar + Actions */}
           <div className="p-6 rounded-xl bg-[rgba(15,23,42,0.6)] border border-[rgba(255,255,255,0.1)] backdrop-blur-xl">
-            <div className="relative">
-              <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-[#64748B]" />
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search providers..."
-                className="w-full bg-[rgba(0,0,0,0.4)] border border-[rgba(255,255,255,0.18)] rounded-lg pl-12 pr-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#3B82F6]"
-              />
+            <div className="flex items-center gap-3 flex-wrap">
+              <div className="relative flex-1 min-w-[250px]">
+                <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-[#64748B]" />
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Search providers..."
+                  className="w-full bg-[rgba(0,0,0,0.4)] border border-[rgba(255,255,255,0.18)] rounded-lg pl-12 pr-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#3B82F6]"
+                />
+              </div>
+              <button
+                onClick={handleOpenUnifiedServicesModal}
+                className="flex items-center gap-2 px-4 py-3 rounded-lg bg-[#3B82F6] hover:bg-[#2563EB] text-white text-sm font-medium transition-colors whitespace-nowrap"
+              >
+                <Globe className="w-4 h-4" />
+                All Services
+              </button>
+              <button
+                onClick={handleOpenIconManagement}
+                className="flex items-center gap-2 px-4 py-3 rounded-lg bg-[#8B5CF6] hover:bg-[#7C3AED] text-white text-sm font-medium transition-colors whitespace-nowrap"
+              >
+                <Edit2 className="w-4 h-4" />
+                Manage Icons
+              </button>
             </div>
           </div>
 
@@ -2146,6 +2301,310 @@ export default function AdminSmsServicesPage() {
               >
                 {isLoading ? "Deleting..." : "Delete"}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Unified Services Modal (No Duplicates) */}
+      {showUnifiedServicesModal && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-[#0F172A] border border-[rgba(255,255,255,0.1)] rounded-xl w-full max-w-5xl max-h-[90vh] overflow-hidden flex flex-col">
+            <div className="sticky top-0 bg-[#0F172A] border-b border-[rgba(255,255,255,0.1)] p-6 z-10">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-white text-2xl font-semibold mb-1">All Services</h2>
+                  <p className="text-[#94A3B8] text-sm">Unified view - each service appears once across all providers</p>
+                </div>
+                <button
+                  onClick={() => {
+                    setShowUnifiedServicesModal(false);
+                    setSelectedUnifiedService(null);
+                    setUnifiedServices([]);
+                    setUnifiedServiceCountries([]);
+                  }}
+                  className="p-2 hover:bg-[rgba(255,255,255,0.1)] rounded-lg text-[#94A3B8] transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+
+            <div className="p-6 overflow-y-auto flex-1">
+              {/* Search */}
+              <div className="relative mb-4">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#64748B]" />
+                <input
+                  type="text"
+                  placeholder="Search services..."
+                  value={unifiedServiceSearchQuery}
+                  onChange={(e) => setUnifiedServiceSearchQuery(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2.5 rounded-lg bg-[rgba(255,255,255,0.05)] border border-[rgba(255,255,255,0.1)] text-white text-sm placeholder:text-[#64748B] focus:outline-none focus:ring-2 focus:ring-[#3B82F6]"
+                />
+              </div>
+
+              {isUnifiedServicesLoading ? (
+                <div className="flex items-center justify-center py-16">
+                  <Loader2 className="w-6 h-6 text-[#3B82F6] animate-spin" />
+                  <span className="text-[#94A3B8] text-sm ml-3">Loading services...</span>
+                </div>
+              ) : unifiedServices.length === 0 ? (
+                <div className="text-center py-16 text-[#64748B]">No services found. Sync providers first.</div>
+              ) : (
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                  {/* Services List */}
+                  <div className="space-y-2 max-h-[500px] overflow-y-auto pr-2">
+                    <h3 className="text-white text-sm font-medium mb-2 sticky top-0 bg-[#0F172A] py-2">
+                      Services ({unifiedServices.filter(s => s.name.toLowerCase().includes(unifiedServiceSearchQuery.toLowerCase())).length})
+                    </h3>
+                    {unifiedServices
+                      .filter(s => s.name.toLowerCase().includes(unifiedServiceSearchQuery.toLowerCase()))
+                      .map((service) => (
+                        <div
+                          key={service.slug}
+                          onClick={() => handleViewUnifiedServiceCountries(service)}
+                          className={`p-4 rounded-lg border cursor-pointer transition-all ${
+                            selectedUnifiedService?.slug === service.slug
+                              ? 'bg-[rgba(59,130,246,0.1)] border-[#3B82F6]'
+                              : 'bg-[rgba(255,255,255,0.02)] border-[rgba(255,255,255,0.05)] hover:border-[rgba(255,255,255,0.15)]'
+                          }`}
+                        >
+                          <div className="flex items-center gap-3">
+                            {service.iconUrl ? (
+                              <img src={service.iconUrl} alt={service.name} className="w-8 h-8 rounded-lg object-cover" />
+                            ) : (
+                              <div className="w-8 h-8 rounded-lg bg-[rgba(255,255,255,0.1)] flex items-center justify-center">
+                                <Globe className="w-4 h-4 text-[#64748B]" />
+                              </div>
+                            )}
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2">
+                                <span className="text-white text-sm font-medium truncate">{service.name}</span>
+                                {service.isPopular && (
+                                  <span className="px-1.5 py-0.5 rounded bg-[#F59E0B]/20 text-[#F59E0B] text-xs">Popular</span>
+                                )}
+                              </div>
+                              <div className="flex items-center gap-2 mt-1">
+                                <span className="text-[#64748B] text-xs">{service.category}</span>
+                                <span className="text-[#64748B] text-xs">•</span>
+                                <span className="text-[#64748B] text-xs">{service.providers.length} providers</span>
+                                <span className="text-[#64748B] text-xs">•</span>
+                                <span className="text-[#64748B] text-xs">{service.totalCountries} countries</span>
+                              </div>
+                            </div>
+                            <ChevronRight className="w-4 h-4 text-[#64748B]" />
+                          </div>
+                        </div>
+                      ))}
+                  </div>
+
+                  {/* Countries for selected service */}
+                  <div className="max-h-[500px] overflow-y-auto pl-2 border-l border-[rgba(255,255,255,0.1)]">
+                    {selectedUnifiedService ? (
+                      <>
+                        <h3 className="text-white text-sm font-medium mb-2 sticky top-0 bg-[#0F172A] py-2">
+                          Countries for {selectedUnifiedService.name}
+                        </h3>
+                        {isUnifiedCountriesLoading ? (
+                          <div className="flex items-center justify-center py-8">
+                            <Loader2 className="w-5 h-5 text-[#3B82F6] animate-spin" />
+                          </div>
+                        ) : unifiedServiceCountries.length === 0 ? (
+                          <div className="text-center py-8 text-[#64748B] text-sm">No countries available</div>
+                        ) : (
+                          <div className="space-y-2">
+                            {unifiedServiceCountries
+                              .filter(c => c.name.toLowerCase().includes(unifiedCountrySearchQuery.toLowerCase()))
+                              .map((country) => (
+                                <div key={country.id} className="p-3 rounded-lg bg-[rgba(255,255,255,0.02)] border border-[rgba(255,255,255,0.05)]">
+                                  <div className="flex items-center justify-between mb-2">
+                                    <div className="flex items-center gap-2">
+                                      {country.iconUrl && <img src={country.iconUrl} alt="" className="w-5 h-5 rounded" />}
+                                      <span className="text-white text-sm font-medium">{country.name}</span>
+                                      <span className="text-[#64748B] text-xs">({country.code})</span>
+                                    </div>
+                                    <span className="text-[#22C55E] text-sm font-medium">${country.bestPrice}</span>
+                                  </div>
+                                  <div className="flex flex-wrap gap-1.5">
+                                    {country.providers.map((p) => (
+                                      <span key={p.productId} className="px-2 py-1 rounded bg-[rgba(255,255,255,0.05)] text-[#94A3B8] text-xs">
+                                        {p.name} - ${p.price} ({p.available})
+                                      </span>
+                                    ))}
+                                  </div>
+                                </div>
+                              ))}
+                          </div>
+                        )}
+                      </>
+                    ) : (
+                      <div className="flex items-center justify-center h-full text-[#64748B] text-sm">
+                        Select a service to view countries
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Icon Management Modal */}
+      {showIconManagementModal && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-[#0F172A] border border-[rgba(255,255,255,0.1)] rounded-xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
+            <div className="sticky top-0 bg-[#0F172A] border-b border-[rgba(255,255,255,0.1)] p-6 z-10">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-white text-2xl font-semibold mb-1">Manage Service Icons</h2>
+                  <p className="text-[#94A3B8] text-sm">Upload or set icon URLs for services</p>
+                </div>
+                <button
+                  onClick={() => {
+                    setShowIconManagementModal(false);
+                    setEditingIconService(null);
+                    setServicesForIcons([]);
+                  }}
+                  className="p-2 hover:bg-[rgba(255,255,255,0.1)] rounded-lg text-[#94A3B8] transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+
+            <div className="p-6 overflow-y-auto flex-1">
+              {/* Filters */}
+              <div className="flex items-center gap-3 mb-4">
+                <div className="relative flex-1">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#64748B]" />
+                  <input
+                    type="text"
+                    placeholder="Search services..."
+                    value={iconSearchQuery}
+                    onChange={(e) => setIconSearchQuery(e.target.value)}
+                    className="w-full pl-10 pr-4 py-2.5 rounded-lg bg-[rgba(255,255,255,0.05)] border border-[rgba(255,255,255,0.1)] text-white text-sm placeholder:text-[#64748B] focus:outline-none focus:ring-2 focus:ring-[#8B5CF6]"
+                  />
+                </div>
+                <button
+                  onClick={() => handleIconFilterChange(!iconFilterMissing)}
+                  className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all whitespace-nowrap ${
+                    iconFilterMissing
+                      ? 'bg-[#EF4444] text-white'
+                      : 'bg-[rgba(255,255,255,0.05)] border border-[rgba(255,255,255,0.18)] text-[#94A3B8] hover:bg-[rgba(255,255,255,0.08)]'
+                  }`}
+                >
+                  Missing Icons Only
+                </button>
+              </div>
+
+              {isIconServicesLoading ? (
+                <div className="flex items-center justify-center py-16">
+                  <Loader2 className="w-6 h-6 text-[#8B5CF6] animate-spin" />
+                  <span className="text-[#94A3B8] text-sm ml-3">Loading services...</span>
+                </div>
+              ) : servicesForIcons.length === 0 ? (
+                <div className="text-center py-16 text-[#64748B]">
+                  {iconFilterMissing ? 'All services have icons!' : 'No services found'}
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {servicesForIcons
+                    .filter(s => s.name.toLowerCase().includes(iconSearchQuery.toLowerCase()))
+                    .map((service) => (
+                      <div
+                        key={service.id}
+                        className="p-4 rounded-lg bg-[rgba(255,255,255,0.02)] border border-[rgba(255,255,255,0.05)] hover:border-[rgba(139,92,246,0.3)] transition-all"
+                      >
+                        <div className="flex items-start gap-3">
+                          <div className="relative">
+                            {service.iconUrl ? (
+                              <img src={service.iconUrl} alt={service.name} className="w-12 h-12 rounded-lg object-cover" />
+                            ) : (
+                              <div className="w-12 h-12 rounded-lg bg-[rgba(239,68,68,0.1)] border border-[rgba(239,68,68,0.3)] flex items-center justify-center">
+                                <X className="w-5 h-5 text-[#EF4444]" />
+                              </div>
+                            )}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <h4 className="text-white text-sm font-medium truncate">{service.name}</h4>
+                            <p className="text-[#64748B] text-xs mt-0.5">{service.category || 'Uncategorized'}</p>
+                            <button
+                              onClick={() => handleEditIcon(service)}
+                              className="mt-2 px-3 py-1.5 rounded-lg bg-[#8B5CF6]/20 hover:bg-[#8B5CF6]/30 text-[#8B5CF6] text-xs font-medium transition-colors"
+                            >
+                              {service.iconUrl ? 'Change Icon' : 'Add Icon'}
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                </div>
+              )}
+
+              {/* Edit Icon Panel */}
+              {editingIconService && (
+                <div className="mt-6 p-4 rounded-lg bg-[rgba(139,92,246,0.1)] border border-[rgba(139,92,246,0.3)]">
+                  <h4 className="text-white text-sm font-medium mb-3">
+                    Edit Icon: {editingIconService.name}
+                  </h4>
+                  <div className="flex items-center gap-3 mb-4">
+                    {editingIconService.iconUrl || iconUrlInput ? (
+                      <img 
+                        src={iconUrlInput || editingIconService.iconUrl || ''} 
+                        alt="Preview" 
+                        className="w-16 h-16 rounded-lg object-cover border border-[rgba(255,255,255,0.1)]"
+                        onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                      />
+                    ) : (
+                      <div className="w-16 h-16 rounded-lg bg-[rgba(255,255,255,0.05)] border border-[rgba(255,255,255,0.1)] flex items-center justify-center">
+                        <Globe className="w-6 h-6 text-[#64748B]" />
+                      </div>
+                    )}
+                    <div className="flex-1">
+                      <label className="text-[#94A3B8] text-xs mb-1 block">Icon URL</label>
+                      <input
+                        type="text"
+                        value={iconUrlInput}
+                        onChange={(e) => setIconUrlInput(e.target.value)}
+                        placeholder="https://example.com/icon.png"
+                        className="w-full bg-[rgba(0,0,0,0.4)] border border-[rgba(255,255,255,0.18)] rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#8B5CF6]"
+                      />
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <label className="flex-1">
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) handleFileUpload(file);
+                        }}
+                      />
+                      <span className="flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-[rgba(255,255,255,0.08)] hover:bg-[rgba(255,255,255,0.12)] text-white text-sm font-medium transition-colors cursor-pointer">
+                        <Plus className="w-4 h-4" />
+                        Upload File
+                      </span>
+                    </label>
+                    <button
+                      onClick={handleSaveIcon}
+                      disabled={isUploadingIcon}
+                      className="flex-1 px-4 py-2 rounded-lg bg-[#8B5CF6] hover:bg-[#7C3AED] text-white text-sm font-medium transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                    >
+                      {isUploadingIcon ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                      Save Icon
+                    </button>
+                    <button
+                      onClick={() => { setEditingIconService(null); setIconUrlInput(""); }}
+                      className="px-4 py-2 rounded-lg bg-[rgba(255,255,255,0.08)] hover:bg-[rgba(255,255,255,0.12)] text-white text-sm font-medium transition-colors"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>
