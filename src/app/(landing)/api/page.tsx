@@ -397,7 +397,10 @@ print(response.json())`}</code>
               <CardHeader>
                 <Badge className="mb-2 w-fit bg-blue-500">💰 V1 Standard</Badge>
                 <CardTitle className="text-lg">Standard Tier</CardTitle>
-                <CardDescription>Cost-effective option</CardDescription>
+                <CardDescription>
+                  Standard services - best price. Suitable for customers looking
+                  for basic and affordable options.
+                </CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="bg-muted overflow-x-auto rounded-lg p-3 font-mono text-xs">
@@ -406,13 +409,22 @@ print(response.json())`}</code>
                 <ul className="mt-4 space-y-2">
                   <li className="flex items-start space-x-2 text-sm">
                     <CheckCircle2 className="text-success mt-0.5 h-4 w-4" />
-                    <span>Lowest pricing</span>
+                    <span>Affordable pricing</span>
                   </li>
                   <li className="flex items-start space-x-2 text-sm">
                     <CheckCircle2 className="text-success mt-0.5 h-4 w-4" />
-                    <span>Standard speed</span>
+                    <span>Standard delivery speed</span>
+                  </li>
+                  <li className="flex items-start space-x-2 text-sm">
+                    <CheckCircle2 className="text-success mt-0.5 h-4 w-4" />
+                    <span>Wide service coverage</span>
+                  </li>
+                  <li className="flex items-start space-x-2 text-sm">
+                    <CheckCircle2 className="text-success mt-0.5 h-4 w-4" />
+                    <span>Regular priority</span>
                   </li>
                 </ul>
+                <p className="mt-4 text-sm font-semibold">From $1.50 per activation</p>
               </CardContent>
             </Card>
 
@@ -420,7 +432,10 @@ print(response.json())`}</code>
               <CardHeader>
                 <Badge className="bg-primary mb-2 w-fit">💎 V2 Premium</Badge>
                 <CardTitle className="text-lg">Premium Tier</CardTitle>
-                <CardDescription>Recommended for most users</CardDescription>
+                <CardDescription>
+                  Faster delivery and higher success rate. Ideal for customers
+                  looking for more reliable results and quicker processing.
+                </CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="bg-muted overflow-x-auto rounded-lg p-3 font-mono text-xs">
@@ -429,23 +444,36 @@ print(response.json())`}</code>
                 <ul className="mt-4 space-y-2">
                   <li className="flex items-start space-x-2 text-sm">
                     <CheckCircle2 className="text-primary mt-0.5 h-4 w-4" />
-                    <span>Fast delivery</span>
+                    <span>Lightning-fast delivery</span>
                   </li>
                   <li className="flex items-start space-x-2 text-sm">
                     <CheckCircle2 className="text-primary mt-0.5 h-4 w-4" />
                     <span>Higher success rate</span>
                   </li>
+                  <li className="flex items-start space-x-2 text-sm">
+                    <CheckCircle2 className="text-primary mt-0.5 h-4 w-4" />
+                    <span>Premium providers only</span>
+                  </li>
+                  <li className="flex items-start space-x-2 text-sm">
+                    <CheckCircle2 className="text-primary mt-0.5 h-4 w-4" />
+                    <span>VIP priority routing</span>
+                  </li>
                 </ul>
+                <p className="mt-4 text-sm font-semibold">From $2.50 per activation</p>
               </CardContent>
             </Card>
 
             <Card className="border-warning border-2">
               <CardHeader>
                 <Badge className="bg-warning text-warning-foreground mb-2 w-fit">
-                  👑 V3 Basic
+                  👑 V3 Elite
                 </Badge>
-                <CardTitle className="text-lg">Basic Tier</CardTitle>
-                <CardDescription>Budget-friendly option</CardDescription>
+                <CardTitle className="text-lg">Elite Tier</CardTitle>
+                <CardDescription>
+                  The highest quality service with priority routing and 99.9%
+                  success rate. Best for customers who demand the absolute best
+                  with premium providers and priority support.
+                </CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="bg-muted overflow-x-auto rounded-lg p-3 font-mono text-xs">
@@ -454,13 +482,22 @@ print(response.json())`}</code>
                 <ul className="mt-4 space-y-2">
                   <li className="flex items-start space-x-2 text-sm">
                     <CheckCircle2 className="text-warning mt-0.5 h-4 w-4" />
-                    <span>Guaranteed delivery</span>
+                    <span>Instant guaranteed delivery</span>
                   </li>
                   <li className="flex items-start space-x-2 text-sm">
                     <CheckCircle2 className="text-warning mt-0.5 h-4 w-4" />
                     <span>99.9% success rate</span>
                   </li>
+                  <li className="flex items-start space-x-2 text-sm">
+                    <CheckCircle2 className="text-warning mt-0.5 h-4 w-4" />
+                    <span>Basic providers only</span>
+                  </li>
+                  <li className="flex items-start space-x-2 text-sm">
+                    <CheckCircle2 className="text-warning mt-0.5 h-4 w-4" />
+                    <span>Maximum priority + support</span>
+                  </li>
                 </ul>
+                <p className="mt-4 text-sm font-semibold">From $3.50 per activation</p>
               </CardContent>
             </Card>
           </div>

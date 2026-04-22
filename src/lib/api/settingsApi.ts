@@ -72,9 +72,9 @@ export interface GeneralSettings {
 }
 
 export interface MaintenanceSettings {
-  isEnabled: boolean;
-  message: string;
-  allowedIPs: string[];
+  maintenanceMode: boolean;
+  maintenanceMessage: string;
+  maintenanceEndTime: string;
 }
 
 export interface LimitsSettings {

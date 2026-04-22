@@ -1,6 +1,8 @@
 import type { Metadata } from 'next';
 import { ThemeProvider } from '@/components/theme-provider';
 import { StoreProvider } from '@/components/providers/StoreProvider';
+import { BrandingProvider } from '@/contexts/BrandingContext';
+import { MaintenanceGuard } from '@/components/providers/MaintenanceGuard';
 import { Toaster } from '@/components/ui/sonner';
 import { GoogleTranslate } from '@/components/google-translate';
 import './globals.css';
@@ -24,9 +26,13 @@ export default function RootLayout({
       <body suppressHydrationWarning>
         <StoreProvider>
           <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
-            {children}
-            <Toaster />
-            <GoogleTranslate />
+            <BrandingProvider>
+              <MaintenanceGuard>
+                {children}
+                <Toaster />
+                <GoogleTranslate />
+              </MaintenanceGuard>
+            </BrandingProvider>
           </ThemeProvider>
         </StoreProvider>
       </body>

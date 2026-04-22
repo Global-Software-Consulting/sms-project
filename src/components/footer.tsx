@@ -1,8 +1,11 @@
+'use client';
 import Link from 'next/link';
 import { Twitter, Github, Linkedin } from 'lucide-react';
+import { useBranding } from '@/contexts/BrandingContext';
 
 export function Footer() {
   const currentYear = new Date().getFullYear();
+  const { siteLogo } = useBranding();
 
   return (
     <footer className="border-border bg-card border-t">
@@ -11,10 +14,13 @@ export function Footer() {
           {/* Brand — full width on smallest, half on sm */}
           <div className="col-span-2 space-y-4 sm:col-span-2 md:col-span-1">
             <div className="flex items-center space-x-2">
-              <div className="from-primary to-accent flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br sm:h-10 sm:w-10">
-                <span className="text-primary-foreground text-base font-bold sm:text-xl">
-                  S
-                </span>
+              <div className="from-primary to-accent flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br sm:h-10 sm:w-10 overflow-hidden">
+                {siteLogo ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={siteLogo} alt="Logo" className="w-full h-full object-contain" />
+                ) : (
+                  <span className="text-primary-foreground text-base font-bold sm:text-xl">S</span>
+                )}
               </div>
               <span className="text-lg font-bold sm:text-xl">BestSMSHQ</span>
             </div>

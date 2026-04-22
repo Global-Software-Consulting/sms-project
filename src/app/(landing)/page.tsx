@@ -243,7 +243,8 @@ export default function Home() {
                 <Badge className="mb-2 w-fit bg-blue-500">💰 Standard V1</Badge>
                 <CardTitle className="text-xl">Standard Activation</CardTitle>
                 <CardDescription>
-                  Cost-effective SMS verification
+                  Standard services - best price. Suitable for customers looking
+                  for basic and affordable options.
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -266,7 +267,7 @@ export default function Home() {
                   </div>
                 </div>
                 <div className="pt-4">
-                  <p className="text-2xl font-bold">From $0.50</p>
+                  <p className="text-2xl font-bold">From $1.50</p>
                   <p className="text-muted-foreground text-sm">
                     per activation
                   </p>
@@ -285,7 +286,8 @@ export default function Home() {
                 </Badge>
                 <CardTitle className="text-xl">Premium Activation</CardTitle>
                 <CardDescription>
-                  Fastest and most reliable service
+                  Faster delivery and higher success rate. Ideal for customers
+                  looking for more reliable results and quicker processing.
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -316,7 +318,7 @@ export default function Home() {
                   </div>
                 </div>
                 <div className="pt-4">
-                  <p className="text-primary text-2xl font-bold">From $1.50</p>
+                  <p className="text-primary text-2xl font-bold">From $2.50</p>
                   <p className="text-muted-foreground text-sm">
                     per activation
                   </p>
@@ -324,18 +326,20 @@ export default function Home() {
               </CardContent>
             </Card>
 
-            {/* Basic V3 */}
+            {/* Elite V3 */}
             <Card className="border-warning relative overflow-hidden border-2">
               <div className="bg-warning text-warning-foreground absolute top-0 right-0 px-3 py-1 text-xs font-semibold">
                 BEST
               </div>
               <CardHeader>
                 <Badge className="from-warning mb-2 w-fit bg-gradient-to-r to-amber-500">
-                  👑 Basic V3
+                  👑 Elite V3
                 </Badge>
-                <CardTitle className="text-xl">Basic Activation</CardTitle>
+                <CardTitle className="text-xl">Elite Activation</CardTitle>
                 <CardDescription>
-                  Ultimate tier with guaranteed delivery
+                  The highest quality service with priority routing and 99.9%
+                  success rate. Best for customers who demand the absolute best
+                  with premium providers and priority support.
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -366,7 +370,7 @@ export default function Home() {
                   </div>
                 </div>
                 <div className="pt-4">
-                  <p className="text-warning text-2xl font-bold">From $2.50</p>
+                  <p className="text-warning text-2xl font-bold">From $3.50</p>
                   <p className="text-muted-foreground text-sm">
                     per activation
                   </p>

@@ -13,6 +13,8 @@ export const API_ENDPOINTS = {
     LOGIN_OPTIONS: '/settings/login-options',
     SITE_INFO: '/settings/site-info',
     PAYMENT_GUIDE: '/settings/payment-guide',
+    BRANDING: '/settings/branding',
+    MAINTENANCE: '/settings/maintenance',
   },
 
   // ========================
@@ -357,6 +359,9 @@ export const API_ENDPOINTS = {
       MAINTENANCE: '/admin/settings/maintenance',
       LIMITS: '/admin/settings/limits',
       FEATURES: '/admin/settings/features',
+      BRANDING: '/admin/settings/branding',
+      BRANDING_LOGO: '/admin/settings/branding/logo',
+      BRANDING_FAVICON: '/admin/settings/branding/favicon',
     },
 
     // Admin Ads

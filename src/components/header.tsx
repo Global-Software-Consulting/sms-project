@@ -6,9 +6,11 @@ import { Moon, Sun, Menu, X } from 'lucide-react';
 import { Button } from './ui/button';
 import { useState, useEffect } from 'react';
 import { cn } from './ui/utils';
+import { useBranding } from '@/contexts/BrandingContext';
 
 export function Header() {
   const { theme, setTheme } = useTheme();
+  const { siteLogo } = useBranding();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
   const pathname = usePathname();
@@ -38,10 +40,13 @@ export function Header() {
       <div className="container mx-auto flex h-14 items-center justify-between gap-2 px-4 sm:h-16">
         {/* Logo */}
         <Link href="/" className="flex flex-shrink-0 items-center space-x-2">
-          <div className="from-primary to-accent flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-br sm:h-10 sm:w-10">
-            <span className="text-primary-foreground text-base font-bold sm:text-xl">
-              S
-            </span>
+          <div className="from-primary to-accent flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-br sm:h-10 sm:w-10 overflow-hidden">
+            {siteLogo ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={siteLogo} alt="Logo" className="w-full h-full object-contain" />
+            ) : (
+              <span className="text-primary-foreground text-base font-bold sm:text-xl">S</span>
+            )}
           </div>
           <span className="hidden text-base font-bold sm:inline-block sm:text-xl">
             BestSMSHQ

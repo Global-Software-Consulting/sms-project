@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import { cn } from './ui/utils';
 import { Button } from './ui/button';
+import { useBranding } from '@/contexts/BrandingContext';
 
 interface SidebarProps {
   isOpen: boolean;
@@ -29,6 +30,7 @@ interface SidebarProps {
 
 export function Sidebar({ isOpen, onToggle }: SidebarProps) {
   const pathname = usePathname();
+  const { siteLogo } = useBranding();
 
   const navItems = [
     { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
@@ -74,10 +76,13 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
                 href="/dashboard"
                 className="flex min-w-0 flex-1 items-center space-x-2"
               >
-                <div className="from-sidebar-primary to-accent flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-gradient-to-br">
-                  <span className="text-sidebar-primary-foreground text-sm font-bold">
-                    S
-                  </span>
+                <div className="from-sidebar-primary to-accent flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-gradient-to-br overflow-hidden">
+                  {siteLogo ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={siteLogo} alt="Logo" className="w-full h-full object-contain" />
+                  ) : (
+                    <span className="text-sidebar-primary-foreground text-sm font-bold">S</span>
+                  )}
                 </div>
                 <span className="truncate font-bold">BestSMSHQ</span>
               </Link>

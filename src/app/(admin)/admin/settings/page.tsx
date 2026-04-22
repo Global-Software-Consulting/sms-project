@@ -25,8 +25,24 @@ import {
 import {
   getGroupedSettings,
   bulkUpdateSettings,
+  getMaintenanceSettings,
+  updateSetting,
   type GroupedSettings,
 } from "@/lib/api/settingsApi";
+import { apiClient } from "@/config/api-client.config";
+import { API_ENDPOINTS } from "@/config/server.config";
+import { useBranding } from "@/contexts/BrandingContext";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { AlertTriangle } from "lucide-react";
 
 // Mock data for languages
 const languagesData = [
@@ -53,6 +69,7 @@ const validTabs: TabType[] = ["social", "contact", "page", "email", "addons", "t
 export default function AdminSettingsPage() {
   const searchParams = useSearchParams();
   const router = useRouter();
+  const { refresh: refreshBranding } = useBranding();
   
   // Get initial tab from URL or default to "social"
   const tabFromUrl = searchParams.get('tab') as TabType | null;
@@ -189,6 +206,15 @@ www.cheapstreamtv.com`
 
   // Languages State
   const [languages, setLanguages] = useState(languagesData);
+
+  // Branding State
+  const [logoUrl, setLogoUrl] = useState<string | null>(null);
+  const [faviconUrl, setFaviconUrl] = useState<string | null>(null);
+  const [isUploadingLogo, setIsUploadingLogo] = useState(false);
+  const [isUploadingFavicon, setIsUploadingFavicon] = useState(false);
+
+  // Maintenance confirmation dialog state
+  const [showMaintenanceConfirm, setShowMaintenanceConfirm] = useState(false);
 
   // Fetch settings from API
   const fetchSettings = useCallback(async () => {
@@ -452,12 +478,6 @@ www.cheapstreamtv.com`
             { key: 'contact_success_message', value: contactInfo.successMessage },
           ];
           break;
-        case "Site status":
-          settings = [
-            { key: 'maintenance_enabled', value: String(!siteStatus.isActive) },
-            { key: 'maintenance_message', value: siteStatus.maintenanceMessage },
-          ];
-          break;
         case "Addons":
           settings = [
             { key: 'addon_recaptcha_enabled', value: String(addons.recaptcha.enabled) },
@@ -569,6 +589,195 @@ www.cheapstreamtv.com`
     const newItems = [...freeTrial.items];
     newItems[index] = value;
     setFreeTrial({ ...freeTrial, items: newItems });
+  };
+
+  const fetchSiteStatus = useCallback(async () => {
+    try {
+      const data = await getMaintenanceSettings();
+      setSiteStatus({
+        isActive: !data.maintenanceMode,
+        maintenanceMessage: data.maintenanceMessage || '',
+      });
+    } catch {
+      // ignore silently
+    }
+  }, []);
+
+  useEffect(() => {
+    if (activeTab === 'status') {
+      fetchSiteStatus();
+    }
+  }, [activeTab, fetchSiteStatus]);
+
+  const handleToggleMaintenance = () => {
+    // Turning ON maintenance requires confirmation; turning OFF is immediate.
+    if (siteStatus.isActive) {
+      setShowMaintenanceConfirm(true);
+    } else {
+      void applyMaintenanceToggle(false);
+    }
+  };
+
+  const applyMaintenanceToggle = async (newMaintenanceMode: boolean) => {
+    // Optimistic UI update
+    setSiteStatus((prev) => ({ ...prev, isActive: !newMaintenanceMode }));
+    setIsLoading(true);
+    try {
+      await updateSetting('maintenance_mode', { value: newMaintenanceMode ? 'true' : 'false' });
+      toast.success(
+        newMaintenanceMode
+          ? 'Site is now under maintenance'
+          : 'Site is now active',
+      );
+    } catch {
+      // Revert on failure
+      setSiteStatus((prev) => ({ ...prev, isActive: !prev.isActive }));
+      toast.error('Failed to update site status');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const confirmEnableMaintenance = async () => {
+    setShowMaintenanceConfirm(false);
+    await applyMaintenanceToggle(true);
+  };
+
+  const handleUpdateMaintenanceMessage = async () => {
+    setIsLoading(true);
+    try {
+      await updateSetting('maintenance_message', { value: siteStatus.maintenanceMessage });
+      toast.success('Maintenance message updated');
+    } catch {
+      toast.error('Failed to update maintenance message');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const fetchBranding = useCallback(async () => {
+    try {
+      const response = await apiClient.get<{ siteLogo: string; siteFavicon: string }>(
+        API_ENDPOINTS.ADMIN.SETTINGS.BRANDING
+      );
+      setLogoUrl(response.data.siteLogo || null);
+      setFaviconUrl(response.data.siteFavicon || null);
+    } catch {
+      // branding may not be set yet, silently ignore
+    }
+  }, []);
+
+  useEffect(() => {
+    if (activeTab === 'logo') {
+      fetchBranding();
+    }
+  }, [activeTab, fetchBranding]);
+
+  const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/x-icon', 'image/vnd.microsoft.icon'];
+  const MAX_SIZE_BYTES = 5 * 1024 * 1024; // 5MB
+
+  const validateImageFile = (file: File): string | null => {
+    if (!ALLOWED_TYPES.includes(file.type)) {
+      return 'Invalid format. Allowed: JPG, PNG, WebP, ICO';
+    }
+    if (file.size > MAX_SIZE_BYTES) {
+      return `File too large. Maximum size is 5MB (current: ${(file.size / 1024 / 1024).toFixed(1)}MB)`;
+    }
+    return null;
+  };
+
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const validationError = validateImageFile(file);
+    if (validationError) {
+      toast.error(validationError);
+      e.target.value = '';
+      return;
+    }
+
+    // Show preview immediately from local file
+    const localPreview = URL.createObjectURL(file);
+    setLogoUrl(localPreview);
+    setIsUploadingLogo(true);
+    try {
+      const form = new FormData();
+      form.append('file', file);
+      const response = await apiClient.post<Record<string, unknown>>(
+        API_ENDPOINTS.ADMIN.SETTINGS.BRANDING_LOGO,
+        form,
+        { headers: { 'Content-Type': 'multipart/form-data' } }
+      );
+      // Replace local blob with the real server URL if present
+      const data = response.data as Record<string, unknown>;
+      const serverUrl =
+        (data.siteLogo as string) ||
+        (data.logoUrl as string) ||
+        (data.url as string) ||
+        ((data.data as Record<string, unknown>)?.siteLogo as string) ||
+        ((data.data as Record<string, unknown>)?.url as string);
+      if (serverUrl) {
+        URL.revokeObjectURL(localPreview);
+        setLogoUrl(serverUrl);
+      }
+      // Update global branding context so sidebars/headers refresh live
+      refreshBranding();
+      toast.success('Logo uploaded successfully!');
+    } catch {
+      URL.revokeObjectURL(localPreview);
+      setLogoUrl(null);
+      toast.error('Failed to upload logo');
+    } finally {
+      setIsUploadingLogo(false);
+      e.target.value = '';
+    }
+  };
+
+  const handleFaviconUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const validationError = validateImageFile(file);
+    if (validationError) {
+      toast.error(validationError);
+      e.target.value = '';
+      return;
+    }
+
+    const localPreview = URL.createObjectURL(file);
+    setFaviconUrl(localPreview);
+    setIsUploadingFavicon(true);
+    try {
+      const form = new FormData();
+      form.append('file', file);
+      const response = await apiClient.post<Record<string, unknown>>(
+        API_ENDPOINTS.ADMIN.SETTINGS.BRANDING_FAVICON,
+        form,
+        { headers: { 'Content-Type': 'multipart/form-data' } }
+      );
+      const data = response.data as Record<string, unknown>;
+      const serverUrl =
+        (data.siteFavicon as string) ||
+        (data.faviconUrl as string) ||
+        (data.url as string) ||
+        ((data.data as Record<string, unknown>)?.siteFavicon as string) ||
+        ((data.data as Record<string, unknown>)?.url as string);
+      if (serverUrl) {
+        URL.revokeObjectURL(localPreview);
+        setFaviconUrl(serverUrl);
+      }
+      // Update global branding context so the favicon link in <head> refreshes live
+      refreshBranding();
+      toast.success('Favicon uploaded successfully!');
+    } catch {
+      URL.revokeObjectURL(localPreview);
+      setFaviconUrl(null);
+      toast.error('Failed to upload favicon');
+    } finally {
+      setIsUploadingFavicon(false);
+      e.target.value = '';
+    }
   };
 
   const tabs = [
@@ -1009,6 +1218,7 @@ www.cheapstreamtv.com`
         <div className="max-w-5xl">
           <div className="p-8 rounded-xl bg-[rgba(15,23,42,0.6)] border border-[rgba(255,255,255,0.1)] backdrop-blur-xl mb-6">
             <h2 className="text-white text-2xl font-semibold mb-2">Logo Management</h2>
+            <p className="text-[#94A3B8] text-sm">Upload your site logo and favicon. Changes take effect immediately.</p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
@@ -1019,22 +1229,53 @@ www.cheapstreamtv.com`
                 Used in the navbar and header (Recommended: 100x103px)
               </p>
 
-              <div className="relative w-full h-48 rounded-lg bg-white flex items-center justify-center mb-4 border-2 border-dashed border-[rgba(255,255,255,0.2)]">
-                <div className="text-center">
-                  <div className="w-16 h-16 mx-auto mb-2 flex items-center justify-center">
-                    <span className="text-6xl">👑</span>
+              <div className="relative w-full h-48 rounded-lg bg-white flex items-center justify-center mb-4 border-2 border-dashed border-[rgba(255,255,255,0.2)] overflow-hidden">
+                {logoUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={logoUrl}
+                    alt="Main Logo"
+                    className="max-h-full max-w-full object-contain p-4"
+                  />
+                ) : (
+                  <div className="text-center">
+                    <div className="w-16 h-16 mx-auto mb-2 flex items-center justify-center">
+                      <span className="text-6xl">👑</span>
+                    </div>
+                    <p className="text-[#3B82F6] font-semibold text-sm">No logo uploaded</p>
                   </div>
-                  <p className="text-[#3B82F6] font-semibold">STREAM</p>
-                </div>
-                <button className="absolute top-2 right-2 w-8 h-8 rounded-full bg-[#EF4444] hover:bg-[#DC2626] flex items-center justify-center text-white transition-colors">
-                  <X className="w-4 h-4" />
-                </button>
+                )}
+                {logoUrl && (
+                  <button
+                    onClick={() => setLogoUrl(null)}
+                    className="absolute top-2 right-2 w-8 h-8 rounded-full bg-[#EF4444] hover:bg-[#DC2626] flex items-center justify-center text-white transition-colors"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                )}
               </div>
 
-              <button className="w-full px-4 py-3 rounded-lg bg-[#3B82F6] hover:bg-[#2563EB] text-white text-sm font-medium transition-colors flex items-center justify-center gap-2">
-                <Upload className="w-4 h-4" />
-                Upload Main Logo
-              </button>
+              <input
+                type="file"
+                id="logo-upload"
+                accept=".jpg,.jpeg,.png,.webp,.ico"
+                className="hidden"
+                onChange={handleLogoUpload}
+              />
+              <label
+                htmlFor="logo-upload"
+                className={`w-full px-4 py-3 rounded-lg text-white text-sm font-medium transition-colors flex items-center justify-center gap-2 cursor-pointer ${
+                  isUploadingLogo
+                    ? 'bg-[#3B82F6]/60 cursor-not-allowed'
+                    : 'bg-[#3B82F6] hover:bg-[#2563EB]'
+                }`}
+              >
+                {isUploadingLogo ? (
+                  <><Loader2 className="w-4 h-4 animate-spin" /> Uploading...</>
+                ) : (
+                  <><Upload className="w-4 h-4" /> Upload Main Logo</>
+                )}
+              </label>
             </div>
 
             {/* Favicon */}
@@ -1044,17 +1285,51 @@ www.cheapstreamtv.com`
                 Browser tab icon (Recommended: 32x32px, ico or png)
               </p>
 
-              <div className="relative w-full h-48 rounded-lg bg-white flex items-center justify-center mb-4 border-2 border-dashed border-[rgba(255,255,255,0.2)]">
-                <div className="text-6xl">👑</div>
-                <button className="absolute top-2 right-2 w-8 h-8 rounded-full bg-[#EF4444] hover:bg-[#DC2626] flex items-center justify-center text-white transition-colors">
-                  <X className="w-4 h-4" />
-                </button>
+              <div className="relative w-full h-48 rounded-lg bg-white flex items-center justify-center mb-4 border-2 border-dashed border-[rgba(255,255,255,0.2)] overflow-hidden">
+                {faviconUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={faviconUrl}
+                    alt="Favicon"
+                    className="max-h-full max-w-full object-contain p-4"
+                  />
+                ) : (
+                  <div className="text-center">
+                    <div className="text-6xl mb-2">👑</div>
+                    <p className="text-[#3B82F6] font-semibold text-sm">No favicon uploaded</p>
+                  </div>
+                )}
+                {faviconUrl && (
+                  <button
+                    onClick={() => setFaviconUrl(null)}
+                    className="absolute top-2 right-2 w-8 h-8 rounded-full bg-[#EF4444] hover:bg-[#DC2626] flex items-center justify-center text-white transition-colors"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                )}
               </div>
 
-              <button className="w-full px-4 py-3 rounded-lg bg-[#3B82F6] hover:bg-[#2563EB] text-white text-sm font-medium transition-colors flex items-center justify-center gap-2">
-                <Upload className="w-4 h-4" />
-                Upload Favicon
-              </button>
+              <input
+                type="file"
+                id="favicon-upload"
+                accept=".jpg,.jpeg,.png,.webp,.ico"
+                className="hidden"
+                onChange={handleFaviconUpload}
+              />
+              <label
+                htmlFor="favicon-upload"
+                className={`w-full px-4 py-3 rounded-lg text-white text-sm font-medium transition-colors flex items-center justify-center gap-2 cursor-pointer ${
+                  isUploadingFavicon
+                    ? 'bg-[#3B82F6]/60 cursor-not-allowed'
+                    : 'bg-[#3B82F6] hover:bg-[#2563EB]'
+                }`}
+              >
+                {isUploadingFavicon ? (
+                  <><Loader2 className="w-4 h-4 animate-spin" /> Uploading...</>
+                ) : (
+                  <><Upload className="w-4 h-4" /> Upload Favicon</>
+                )}
+              </label>
             </div>
           </div>
 
@@ -1062,22 +1337,12 @@ www.cheapstreamtv.com`
           <div className="p-6 rounded-xl bg-[rgba(59,130,246,0.1)] border border-[rgba(59,130,246,0.3)]">
             <h4 className="text-[#3B82F6] text-sm font-semibold mb-3">Important Notes:</h4>
             <ul className="text-[#3B82F6] text-sm space-y-1.5 list-disc list-inside">
-              <li>Logos are stored in the VPS</li>
+              <li>Logos are stored in Cloudflare R2 under the branding/ folder</li>
               <li>Supported formats: .JPG, .PNG, .WebP, .ICO</li>
               <li>Maximum file size: 5MB</li>
-              <li>Changes will reflect across the entire website</li>
+              <li>Changes will reflect across the entire website immediately</li>
               <li>Use transparent backgrounds for better integration</li>
             </ul>
-          </div>
-
-          <div className="flex items-center justify-end mt-6">
-            <button
-              onClick={() => handleSave("Logos")}
-              disabled={isLoading}
-              className="px-6 py-3 rounded-lg bg-[#3B82F6] hover:bg-[#2563EB] text-white transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {isLoading ? "Saving..." : "Save Changes"}
-            </button>
           </div>
         </div>
       )}
@@ -1120,8 +1385,9 @@ www.cheapstreamtv.com`
                   <p className="text-[#EF4444] text-sm">This will make your site inaccessible to users</p>
                 </div>
                 <button
-                  onClick={() => setSiteStatus({ ...siteStatus, isActive: !siteStatus.isActive })}
-                  className={`relative w-14 h-7 rounded-full transition-colors flex-shrink-0 ml-4 ${
+                  onClick={handleToggleMaintenance}
+                  disabled={isLoading}
+                  className={`relative w-14 h-7 rounded-full transition-colors flex-shrink-0 ml-4 disabled:opacity-50 disabled:cursor-not-allowed ${
                     !siteStatus.isActive ? "bg-[#EF4444]" : "bg-[rgba(255,255,255,0.18)]"
                   }`}
                 >
@@ -1148,7 +1414,7 @@ www.cheapstreamtv.com`
               />
 
               <button
-                onClick={() => handleSave("Site status")}
+                onClick={handleUpdateMaintenanceMessage}
                 disabled={isLoading}
                 className="mt-4 px-6 py-3 rounded-lg bg-[#3B82F6] hover:bg-[#2563EB] text-white transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
               >
@@ -1156,6 +1422,36 @@ www.cheapstreamtv.com`
               </button>
             </div>
           </div>
+
+          {/* Confirmation dialog before enabling maintenance */}
+          <AlertDialog open={showMaintenanceConfirm} onOpenChange={setShowMaintenanceConfirm}>
+            <AlertDialogContent className="bg-[#0F172A] border-[rgba(255,255,255,0.1)] text-white">
+              <AlertDialogHeader>
+                <div className="w-12 h-12 rounded-full bg-[#EF4444]/20 flex items-center justify-center mb-2">
+                  <AlertTriangle className="w-6 h-6 text-[#EF4444]" />
+                </div>
+                <AlertDialogTitle className="text-white text-xl">
+                  Enable maintenance mode?
+                </AlertDialogTitle>
+                <AlertDialogDescription className="text-[#94A3B8] text-sm leading-relaxed">
+                  This will make your site inaccessible to all users. Only admins will be
+                  able to sign in and reach the admin panel. You can turn it off again any
+                  time from this screen.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel className="bg-transparent border-[rgba(255,255,255,0.18)] text-white hover:bg-[rgba(255,255,255,0.08)] hover:text-white">
+                  Cancel
+                </AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={confirmEnableMaintenance}
+                  className="bg-[#EF4444] hover:bg-[#DC2626] text-white"
+                >
+                  Enable Maintenance
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </div>
       )}
 

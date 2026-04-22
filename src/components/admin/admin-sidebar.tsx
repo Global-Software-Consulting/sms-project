@@ -2,6 +2,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useState } from 'react';
+import { useBranding } from '@/contexts/BrandingContext';
 import {
   LayoutDashboard,
   Users,
@@ -61,6 +62,7 @@ const menuItems = [
 export function AdminSidebar() {
   const pathname = usePathname();
   const [isOpen, setIsOpen] = useState(false);
+  const { siteLogo: logoUrl } = useBranding();
 
   return (
     <>
@@ -88,8 +90,13 @@ export function AdminSidebar() {
       >
         <div className="p-6">
           <div className="flex items-center gap-3 mb-8">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#3B82F6] to-[#8B5CF6] flex items-center justify-center">
-              <MessageSquare className="w-6 h-6 text-white" />
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#3B82F6] to-[#8B5CF6] flex items-center justify-center overflow-hidden flex-shrink-0">
+              {logoUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={logoUrl} alt="Logo" className="w-full h-full object-contain" />
+              ) : (
+                <MessageSquare className="w-6 h-6 text-white" />
+              )}
             </div>
             <div>
               <h1 className="text-white font-semibold text-lg">BestSMSHQ</h1>

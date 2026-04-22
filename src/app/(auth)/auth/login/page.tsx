@@ -12,6 +12,7 @@ import {
 } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { useBranding } from '@/contexts/BrandingContext';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Eye, EyeOff, Lock, Mail, Sparkles } from 'lucide-react';
@@ -30,6 +31,7 @@ import { getLoginOptions, type LoginOptions } from '@/lib/api/settingsApi';
 
 export default function Login() {
   const router = useRouter();
+  const { siteLogo } = useBranding();
   const dispatch = useAppDispatch();
   const isLoading = useAppSelector(selectIsLoading);
   const authError = useAppSelector(selectAuthError);
@@ -158,11 +160,14 @@ export default function Login() {
             {/* Logo */}
             <Link
               href="/"
-              className="from-primary to-accent mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br transition-transform hover:scale-105"
+              className="from-primary to-accent mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br transition-transform hover:scale-105 overflow-hidden"
             >
-              <span className="text-primary-foreground text-2xl font-bold">
-                S
-              </span>
+              {siteLogo ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={siteLogo} alt="Logo" className="w-full h-full object-contain" />
+              ) : (
+                <span className="text-primary-foreground text-2xl font-bold">S</span>
+              )}
             </Link>
             <CardTitle className="text-2xl font-bold md:text-3xl">
               Welcome Back
