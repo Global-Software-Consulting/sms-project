@@ -168,18 +168,60 @@ export default function RentNumbers() {
         setWalletBalance(balanceRes.value.balance);
       }
 
-      // Load services and countries for the rental provider specifically
+      // Load services and countries for the rental provider with pagination
       if (rentalProviderId) {
+        // Fetch all services with pagination
+        const fetchAllServices = async (): Promise<SmsService[]> => {
+          let allServices: SmsService[] = [];
+          let page = 1;
+          const limit = 200;
+          let hasMore = true;
+          
+          while (hasMore) {
+            const response = await getServices({ providerId: rentalProviderId, limit, page });
+            const services = response.data || [];
+            allServices = [...allServices, ...services];
+            
+            if (services.length < limit) {
+              hasMore = false;
+            } else {
+              page++;
+            }
+          }
+          return allServices;
+        };
+        
+        // Fetch all countries with pagination
+        const fetchAllCountries = async (): Promise<SmsCountry[]> => {
+          let allCountries: SmsCountry[] = [];
+          let page = 1;
+          const limit = 200;
+          let hasMore = true;
+          
+          while (hasMore) {
+            const response = await getCountries({ providerId: rentalProviderId, limit, page });
+            const countries = response.data || [];
+            allCountries = [...allCountries, ...countries];
+            
+            if (countries.length < limit) {
+              hasMore = false;
+            } else {
+              page++;
+            }
+          }
+          return allCountries;
+        };
+
         const [servicesRes, countriesRes] = await Promise.allSettled([
-          getServices({ providerId: rentalProviderId, limit: 200 }),
-          getCountries({ providerId: rentalProviderId, limit: 300 }),
+          fetchAllServices(),
+          fetchAllCountries(),
         ]);
 
         if (servicesRes.status === 'fulfilled') {
-          setServices(servicesRes.value.data || []);
+          setServices(servicesRes.value);
         }
         if (countriesRes.status === 'fulfilled') {
-          setCountries(countriesRes.value.data || []);
+          setCountries(countriesRes.value);
         }
       }
 

@@ -196,18 +196,34 @@ export default function Activation() {
     return () => clearInterval(interval);
   }, [activeOrders]);
 
-  // Fetch services when provider changes
+  // Fetch services when provider changes (with pagination to get all services)
   useEffect(() => {
     if (!selectedProvider) return;
     
     const fetchServicesForProvider = async () => {
       try {
-        // Fetch services for the selected provider (up to 200)
-        const response = await getServices({ 
-          providerId: selectedProvider.id,
-          limit: 200 
-        });
-        setServices(response.data || []);
+        let allServices: SmsService[] = [];
+        let page = 1;
+        const limit = 200;
+        let hasMore = true;
+        
+        while (hasMore) {
+          const response = await getServices({ 
+            providerId: selectedProvider.id,
+            limit,
+            page
+          });
+          const services = response.data || [];
+          allServices = [...allServices, ...services];
+          
+          if (services.length < limit) {
+            hasMore = false;
+          } else {
+            page++;
+          }
+        }
+        
+        setServices(allServices);
         // Clear selected service when provider changes
         setSelectedService(null);
         setProducts([]);

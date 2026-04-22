@@ -282,12 +282,28 @@ export default function AdminSmsServicesPage() {
     }
   };
 
-  // Fetch unified services (no duplicates across providers)
+  // Fetch unified services (no duplicates across providers) with pagination
   const fetchUnifiedServices = useCallback(async () => {
     setIsUnifiedServicesLoading(true);
     try {
-      const response = await getUnifiedServices({ limit: 200 });
-      setUnifiedServices(response.data || []);
+      let allServices: UnifiedService[] = [];
+      let page = 1;
+      const limit = 200;
+      let hasMore = true;
+      
+      while (hasMore) {
+        const response = await getUnifiedServices({ limit, page });
+        const services = response.data || [];
+        allServices = [...allServices, ...services];
+        
+        if (services.length < limit) {
+          hasMore = false;
+        } else {
+          page++;
+        }
+      }
+      
+      setUnifiedServices(allServices);
     } catch (error: any) {
       toast.error(error?.response?.data?.message || "Failed to fetch services");
     } finally {
@@ -301,8 +317,24 @@ export default function AdminSmsServicesPage() {
     setUnifiedCountrySearchQuery("");
     setIsUnifiedCountriesLoading(true);
     try {
-      const response = await getCountriesForUnifiedService(service.name, { limit: 200 });
-      setUnifiedServiceCountries(response.data || []);
+      let allCountries: UnifiedServiceCountry[] = [];
+      let page = 1;
+      const limit = 200;
+      let hasMore = true;
+      
+      while (hasMore) {
+        const response = await getCountriesForUnifiedService(service.name, { limit, page });
+        const countries = response.data || [];
+        allCountries = [...allCountries, ...countries];
+        
+        if (countries.length < limit) {
+          hasMore = false;
+        } else {
+          page++;
+        }
+      }
+      
+      setUnifiedServiceCountries(allCountries);
     } catch (error: any) {
       toast.error(error?.response?.data?.message || "Failed to fetch countries");
     } finally {
@@ -318,19 +350,33 @@ export default function AdminSmsServicesPage() {
     fetchUnifiedServices();
   };
 
-  // Icon Management functions - uses unified services (no duplicates across providers)
+  // Icon Management functions - uses unified services (no duplicates across providers) with pagination
   const fetchServicesForIcons = useCallback(async (missingOnly: boolean = false) => {
     setIsIconServicesLoading(true);
     try {
-      const response = await getUnifiedServices({ limit: 200 });
-      let services = response.data || [];
+      let allServices: UnifiedService[] = [];
+      let page = 1;
+      const limit = 200;
+      let hasMore = true;
+      
+      while (hasMore) {
+        const response = await getUnifiedServices({ limit, page });
+        const services = response.data || [];
+        allServices = [...allServices, ...services];
+        
+        if (services.length < limit) {
+          hasMore = false;
+        } else {
+          page++;
+        }
+      }
       
       // Filter to missing icons only if requested
       if (missingOnly) {
-        services = services.filter(s => !s.iconUrl);
+        allServices = allServices.filter(s => !s.iconUrl);
       }
       
-      setServicesForIcons(services);
+      setServicesForIcons(allServices);
     } catch (error: any) {
       toast.error(error?.response?.data?.message || "Failed to fetch services");
     } finally {
@@ -779,8 +825,24 @@ export default function AdminSmsServicesPage() {
     setVipCountrySearch("");
     setIsVipCountriesLoading(true);
     try {
-      const response = await getCountries({ providerId: selectedProvider.id, limit: 200 });
-      setVipCountries(response.data || []);
+      let allCountries: SmsCountry[] = [];
+      let page = 1;
+      const limit = 200;
+      let hasMore = true;
+      
+      while (hasMore) {
+        const response = await getCountries({ providerId: selectedProvider.id, limit, page });
+        const countries = response.data || [];
+        allCountries = [...allCountries, ...countries];
+        
+        if (countries.length < limit) {
+          hasMore = false;
+        } else {
+          page++;
+        }
+      }
+      
+      setVipCountries(allCountries);
     } catch (error: any) {
       toast.error(error?.response?.data?.message || "Failed to fetch countries");
     } finally {
