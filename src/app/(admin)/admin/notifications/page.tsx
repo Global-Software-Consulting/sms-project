@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { AdminPageHeader } from '@/components/admin/page-header';
 import { AdminGlassCard } from '@/components/admin/glass-card';
 import { AdminFormInput } from '@/components/admin/form-input';
@@ -8,6 +8,7 @@ import { toast } from 'sonner';
 import { Send, Eye, Mail, Bell, X } from "lucide-react";
 import { apiClient } from '@/config/api-client.config';
 import { API_ENDPOINTS } from '@/config/server.config';
+import { getAdminUserCountries, type UserCountryCount } from '@/lib/api/adminApi';
 
 export default function AdminNotificationsPage() {
   const [isLoading, setIsLoading] = useState(false);
@@ -80,6 +81,8 @@ export default function AdminNotificationsPage() {
         activeUsersOnly: isActiveOnly || isAllUsers,
         membersOnly: isMembersOnly,
         userIds: [],
+        countries: formData.countries,
+        roles: formData.roles,
         registeredAfter: "",
         registeredBefore: "",
         minWalletBalance: formData.minSpent ? Number(formData.minSpent) : 0,
@@ -101,18 +104,29 @@ export default function AdminNotificationsPage() {
     }
   };
 
-  const countries = [
-    "United States",
-    "United Kingdom",
-    "Canada",
-    "Australia",
-    "Germany",
-    "France",
-    "Spain",
-    "Italy",
-  ];
+  const [countries, setCountries] = useState<UserCountryCount[]>([]);
+  const [isLoadingCountries, setIsLoadingCountries] = useState(true);
 
-  const roles = ["Admin", "User", "VIP", "Premium"];
+  useEffect(() => {
+    const fetchCountries = async () => {
+      try {
+        const list = await getAdminUserCountries();
+        setCountries(
+          list
+            .filter((c) => c.country)
+            .sort((a, b) => a.country.localeCompare(b.country))
+        );
+      } catch (error) {
+        console.error('Failed to fetch user countries:', error);
+        setCountries([]);
+      } finally {
+        setIsLoadingCountries(false);
+      }
+    };
+    fetchCountries();
+  }, []);
+
+  const roles = ["USER", "VIEWER", "SUPPORT", "FINANCE", "MANAGER", "ADMIN", "OWNER"];
 
   return (
     <div className="p-4 lg:p-8">
@@ -234,55 +248,155 @@ export default function AdminNotificationsPage() {
             <h3 className="text-white text-base font-semibold mb-4">Filters (Optional)</h3>
 
             <div className="space-y-4">
-              {/* Countries Multi-select */}
+              {/* Countries - Pill Multi-select */}
               <div>
-                <label className="text-white text-sm font-medium mb-2 block">
-                  Countries
-                </label>
-                <select
-                  multiple
-                  className="w-full bg-[rgba(255,255,255,0.08)] border border-[rgba(255,255,255,0.18)] rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#3B82F6] min-h-[120px]"
-                  onChange={(e) => {
-                    const selected = Array.from(e.target.selectedOptions, option => option.value);
-                    if (notificationType === "email") {
-                      setEmailFormData({ ...emailFormData, countries: selected });
-                    } else {
-                      setWebsiteFormData({ ...websiteFormData, countries: selected });
-                    }
-                  }}
-                >
-                  {countries.map((country) => (
-                    <option key={country} value={country}>
-                      {country}
-                    </option>
-                  ))}
-                </select>
-                <p className="text-[#64748B] text-xs mt-1">Hold Ctrl/Cmd to select multiple</p>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="text-white text-sm font-medium">
+                    Countries {countries.length > 0 && <span className="text-[#64748B]">({countries.length})</span>}
+                  </label>
+                  {!isLoadingCountries && countries.length > 0 && (
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const all = countries.map((c) => c.country);
+                          if (notificationType === "email") {
+                            setEmailFormData({ ...emailFormData, countries: all });
+                          } else {
+                            setWebsiteFormData({ ...websiteFormData, countries: all });
+                          }
+                        }}
+                        className="text-xs text-[#3B82F6] hover:underline"
+                      >
+                        Select all
+                      </button>
+                      <span className="text-[#64748B] text-xs">·</span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (notificationType === "email") {
+                            setEmailFormData({ ...emailFormData, countries: [] });
+                          } else {
+                            setWebsiteFormData({ ...websiteFormData, countries: [] });
+                          }
+                        }}
+                        className="text-xs text-[#64748B] hover:text-white"
+                      >
+                        Clear
+                      </button>
+                    </div>
+                  )}
+                </div>
+                {isLoadingCountries ? (
+                  <div className="p-4 rounded-xl bg-[rgba(255,255,255,0.05)] border border-[rgba(255,255,255,0.18)] text-[#64748B] text-sm">
+                    Loading countries...
+                  </div>
+                ) : countries.length === 0 ? (
+                  <div className="p-4 rounded-xl bg-[rgba(255,255,255,0.05)] border border-[rgba(255,255,255,0.18)] text-[#64748B] text-sm">
+                    No user countries available
+                  </div>
+                ) : (
+                  <div className="max-h-[200px] overflow-y-auto p-3 rounded-xl bg-[rgba(255,255,255,0.05)] border border-[rgba(255,255,255,0.18)]">
+                    <div className="flex flex-wrap gap-2">
+                      {countries.map((c) => {
+                        const selected = notificationType === "email" ? emailFormData.countries : websiteFormData.countries;
+                        const isSelected = selected.includes(c.country);
+                        return (
+                          <button
+                            key={c.country}
+                            type="button"
+                            onClick={() => {
+                              const current = notificationType === "email" ? emailFormData.countries : websiteFormData.countries;
+                              const next = isSelected
+                                ? current.filter((x) => x !== c.country)
+                                : [...current, c.country];
+                              if (notificationType === "email") {
+                                setEmailFormData({ ...emailFormData, countries: next });
+                              } else {
+                                setWebsiteFormData({ ...websiteFormData, countries: next });
+                              }
+                            }}
+                            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                              isSelected
+                                ? 'bg-[#3B82F6] text-white border border-[#3B82F6]'
+                                : 'bg-[rgba(255,255,255,0.05)] text-[#94A3B8] border border-[rgba(255,255,255,0.18)] hover:bg-[rgba(255,255,255,0.1)] hover:text-white'
+                            }`}
+                          >
+                            {c.country}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
               </div>
 
-              {/* Roles */}
+              {/* Roles - Pill Multi-select */}
               <div>
-                <label className="text-white text-sm font-medium mb-2 block">
-                  Roles
-                </label>
-                <select
-                  multiple
-                  className="w-full bg-[rgba(255,255,255,0.08)] border border-[rgba(255,255,255,0.18)] rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#3B82F6] min-h-[100px]"
-                  onChange={(e) => {
-                    const selected = Array.from(e.target.selectedOptions, option => option.value);
-                    if (notificationType === "email") {
-                      setEmailFormData({ ...emailFormData, roles: selected });
-                    } else {
-                      setWebsiteFormData({ ...websiteFormData, roles: selected });
-                    }
-                  }}
-                >
-                  {roles.map((role) => (
-                    <option key={role} value={role}>
-                      {role}
-                    </option>
-                  ))}
-                </select>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="text-white text-sm font-medium">Roles</label>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (notificationType === "email") {
+                          setEmailFormData({ ...emailFormData, roles: [...roles] });
+                        } else {
+                          setWebsiteFormData({ ...websiteFormData, roles: [...roles] });
+                        }
+                      }}
+                      className="text-xs text-[#3B82F6] hover:underline"
+                    >
+                      Select all
+                    </button>
+                    <span className="text-[#64748B] text-xs">·</span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (notificationType === "email") {
+                          setEmailFormData({ ...emailFormData, roles: [] });
+                        } else {
+                          setWebsiteFormData({ ...websiteFormData, roles: [] });
+                        }
+                      }}
+                      className="text-xs text-[#64748B] hover:text-white"
+                    >
+                      Clear
+                    </button>
+                  </div>
+                </div>
+                <div className="p-3 rounded-xl bg-[rgba(255,255,255,0.05)] border border-[rgba(255,255,255,0.18)]">
+                  <div className="flex flex-wrap gap-2">
+                    {roles.map((role) => {
+                      const selected = notificationType === "email" ? emailFormData.roles : websiteFormData.roles;
+                      const isSelected = selected.includes(role);
+                      return (
+                        <button
+                          key={role}
+                          type="button"
+                          onClick={() => {
+                            const current = notificationType === "email" ? emailFormData.roles : websiteFormData.roles;
+                            const next = isSelected
+                              ? current.filter((x) => x !== role)
+                              : [...current, role];
+                            if (notificationType === "email") {
+                              setEmailFormData({ ...emailFormData, roles: next });
+                            } else {
+                              setWebsiteFormData({ ...websiteFormData, roles: next });
+                            }
+                          }}
+                          className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                            isSelected
+                              ? 'bg-[#3B82F6] text-white border border-[#3B82F6]'
+                              : 'bg-[rgba(255,255,255,0.05)] text-[#94A3B8] border border-[rgba(255,255,255,0.18)] hover:bg-[rgba(255,255,255,0.1)] hover:text-white'
+                          }`}
+                        >
+                          {role}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
               </div>
 
               {/* Min Spent */}

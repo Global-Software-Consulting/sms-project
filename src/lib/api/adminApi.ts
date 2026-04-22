@@ -164,6 +164,22 @@ export const getAdminUsers = async (
   return response.data;
 };
 
+export interface UserCountryCount {
+  country: string;
+  count: number;
+}
+
+/**
+ * Get list of distinct countries that users belong to, with user counts
+ * GET /api/v1/admin/users/countries
+ */
+export const getAdminUserCountries = async (): Promise<UserCountryCount[]> => {
+  const response = await apiClient.get<UserCountryCount[]>(
+    API_ENDPOINTS.ADMIN.USERS.COUNTRIES,
+  );
+  return Array.isArray(response.data) ? response.data : [];
+};
+
 /**
  * Get user statistics
  * GET /api/v1/admin/users/statistics

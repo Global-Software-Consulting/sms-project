@@ -194,6 +194,7 @@ export const API_ENDPOINTS = {
     RATING: '/reviews/rating',
     MY_SLOTS: '/reviews/my-slots',
     MY_REVIEWS: '/reviews/my-reviews',
+    MY_REVIEW_DETAIL: (id: string) => `/reviews/my-reviews/${id}`,
     SUBMIT: '/reviews',
   },
 
@@ -205,6 +206,7 @@ export const API_ENDPOINTS = {
     USERS: {
       ROOT: '/admin/users',
       STATISTICS: '/admin/users/statistics',
+      COUNTRIES: '/admin/users/countries',
       DETAIL: (id: string) => `/admin/users/${id}`,
       BAN: (id: string) => `/admin/users/${id}/ban`,
       UNBAN: (id: string) => `/admin/users/${id}/unban`,

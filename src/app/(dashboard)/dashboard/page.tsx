@@ -77,6 +77,7 @@ export default function Dashboard() {
   });
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [, setTimerTick] = useState(0);
 
   // Fetch dashboard data
   const fetchDashboardData = useCallback(async () => {
@@ -167,6 +168,39 @@ export default function Dashboard() {
     }
   }, [isInitialized, hasFetched, fetchDashboardData]);
 
+  // Live countdown ticker - update every second when there are waiting orders
+  useEffect(() => {
+    const hasWaiting = data.recentOrders.some(
+      (o) =>
+        (o.status === 'PENDING' || o.status === 'WAITING_SMS') && o.expiresAt,
+    );
+    if (!hasWaiting) return;
+    const interval = setInterval(() => setTimerTick((t) => t + 1), 1000);
+    return () => clearInterval(interval);
+  }, [data.recentOrders]);
+
+  // Format countdown (e.g., "19 min 50 sec")
+  const formatCountdown = (expiresAt: string): string => {
+    const diffMs = new Date(expiresAt).getTime() - Date.now();
+    if (diffMs <= 0) return 'Expired';
+    const totalSec = Math.floor(diffMs / 1000);
+    const min = Math.floor(totalSec / 60);
+    const sec = totalSec % 60;
+    if (min >= 60) {
+      const hours = Math.floor(min / 60);
+      return `${hours}h ${min % 60}m`;
+    }
+    return `${min} min ${sec.toString().padStart(2, '0')} sec`;
+  };
+
+  // Format expiration time (e.g., "04:17 PM")
+  const formatExpiryTime = (expiresAt: string): string => {
+    return new Date(expiresAt).toLocaleTimeString([], {
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  };
+
   // Format time ago
   const formatTimeAgo = (dateString: string): string => {
     const date = new Date(dateString);
@@ -240,7 +274,9 @@ export default function Dashboard() {
     service: order.service?.name || 'Unknown',
     country: order.country?.name || 'Unknown',
     countryCode: order.country?.code || 'US',
-    code: order.smsCode || '------',
+    phoneNumber: order.phoneNumber,
+    code: order.smsCode,
+    expiresAt: order.expiresAt,
     time: formatTimeAgo(order.createdAt),
     status: order.status.toLowerCase(),
   }));
@@ -409,18 +445,48 @@ export default function Dashboard() {
                     )}
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="text-sm font-medium">{activity.service}</p>
-                    <p className="text-muted-foreground text-xs">
-                      {getCountryFlag(activity.countryCode)} {activity.country}
-                    </p>
-                    <div className="mt-1 flex items-center justify-between">
-                      <code className="bg-muted rounded px-2 py-1 text-xs">
-                        {activity.code}
-                      </code>
-                      <span className="text-muted-foreground flex items-center text-xs">
-                        <Clock className="mr-1 h-3 w-3" />
-                        {activity.time}
-                      </span>
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium">{activity.service}</p>
+                        <p className="text-muted-foreground text-xs">
+                          {getCountryFlag(activity.countryCode)} {activity.country}
+                        </p>
+                      </div>
+                      {(activity.status === 'pending' || activity.status === 'waiting_sms') && activity.expiresAt ? (
+                        <div className="flex shrink-0 flex-col items-end">
+                          <span className="text-foreground flex items-center text-xs font-semibold">
+                            <Clock className="mr-1 h-3 w-3" />
+                            <span className="font-mono tabular-nums">
+                              {formatCountdown(activity.expiresAt)}
+                            </span>
+                          </span>
+                          <span className="text-muted-foreground text-[10px]">
+                            Expires {formatExpiryTime(activity.expiresAt)}
+                          </span>
+                        </div>
+                      ) : (
+                        <span className="text-muted-foreground flex shrink-0 items-center text-xs">
+                          <Clock className="mr-1 h-3 w-3" />
+                          {activity.time}
+                        </span>
+                      )}
+                    </div>
+                    <div className="mt-1.5">
+                      {activity.phoneNumber && (
+                        <code className="text-foreground block font-mono text-xs font-semibold">
+                          {activity.phoneNumber}
+                        </code>
+                      )}
+                      {activity.code && (
+                        <code className="text-success mt-0.5 block font-mono text-xs font-bold">
+                          {activity.code}
+                        </code>
+                      )}
+                      {!activity.phoneNumber && !activity.code && (
+                        <code className="bg-muted rounded px-2 py-1 text-xs">
+                          Waiting for number...
+                        </code>
+                      )}
                     </div>
                   </div>
                 </div>

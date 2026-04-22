@@ -13,15 +13,23 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { Star, Loader2, AlertCircle, CheckCircle2, Clock, XCircle } from 'lucide-react';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Star, Loader2, AlertCircle, CheckCircle2, Clock, XCircle, Eye, Edit2, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import {
   getMySlots,
   getMyReviews,
   submitReview,
+  updateMyReview,
+  deleteMyReview,
   getReviewStatusLabel,
-  getReviewStatusColor,
-  formatRelativeTime,
   type ReviewSlotInfo,
   type UserReview,
 } from '@/lib/api/reviewsApi';
@@ -38,6 +46,16 @@ export default function ReviewsDashboard() {
   // API data
   const [slotInfo, setSlotInfo] = useState<ReviewSlotInfo | null>(null);
   const [myReviews, setMyReviews] = useState<UserReview[]>([]);
+
+  // Preview / Edit / Delete dialog state
+  const [selectedReview, setSelectedReview] = useState<UserReview | null>(null);
+  const [dialogMode, setDialogMode] = useState<'preview' | 'edit' | 'delete' | null>(null);
+  const [editRating, setEditRating] = useState(0);
+  const [editTitle, setEditTitle] = useState('');
+  const [editText, setEditText] = useState('');
+  const [editIsAnonymous, setEditIsAnonymous] = useState(false);
+  const [isUpdating, setIsUpdating] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // Fetch data
   const fetchData = useCallback(async () => {
@@ -74,12 +92,8 @@ export default function ReviewsDashboard() {
       toast.error('Please select a rating');
       return;
     }
-    if (reviewText.length < 10) {
-      toast.error('Review must be at least 10 characters long');
-      return;
-    }
-    if (reviewText.length > 2000) {
-      toast.error('Review cannot exceed 2000 characters');
+    if (!reviewText.trim()) {
+      toast.error('Please write your review');
       return;
     }
     if (!slotInfo || slotInfo.availableSlots <= 0) {
@@ -112,6 +126,74 @@ export default function ReviewsDashboard() {
       toast.error(err.response?.data?.message || 'Failed to submit review');
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const openPreview = (review: UserReview) => {
+    setSelectedReview(review);
+    setDialogMode('preview');
+  };
+
+  const openEdit = (review: UserReview) => {
+    setSelectedReview(review);
+    setEditRating(review.rating);
+    setEditTitle(review.title || '');
+    setEditText(review.text);
+    setEditIsAnonymous(review.isAnonymous);
+    setDialogMode('edit');
+  };
+
+  const openDelete = (review: UserReview) => {
+    setSelectedReview(review);
+    setDialogMode('delete');
+  };
+
+  const closeDialog = () => {
+    setDialogMode(null);
+    setSelectedReview(null);
+  };
+
+  const handleUpdateReview = async () => {
+    if (!selectedReview) return;
+    if (editRating === 0) {
+      toast.error('Please select a rating');
+      return;
+    }
+    if (!editText.trim()) {
+      toast.error('Please write your review');
+      return;
+    }
+
+    try {
+      setIsUpdating(true);
+      await updateMyReview(selectedReview.id, {
+        rating: editRating,
+        title: editTitle.trim() || null,
+        text: editText,
+        isAnonymous: editIsAnonymous,
+      });
+      toast.success('Review updated successfully');
+      closeDialog();
+      fetchData();
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || 'Failed to update review');
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  const handleDeleteReview = async () => {
+    if (!selectedReview) return;
+    try {
+      setIsDeleting(true);
+      await deleteMyReview(selectedReview.id);
+      toast.success('Review deleted successfully');
+      closeDialog();
+      fetchData();
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || 'Failed to delete review');
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -296,7 +378,7 @@ export default function ReviewsDashboard() {
           <Button
             size="lg"
             onClick={handleSubmitReview}
-            disabled={availableSlots === 0 || isSubmitting || rating === 0 || reviewText.length < 10}
+            disabled={availableSlots === 0 || isSubmitting || rating === 0 || !reviewText.trim()}
           >
             {isSubmitting ? (
               <>
@@ -327,13 +409,13 @@ export default function ReviewsDashboard() {
         <CardContent className="space-y-4">
           {myReviews.length > 0 ? (
             myReviews.map((review) => (
-              <div key={review.id} className="border-border rounded-lg border p-4">
-                <div className="mb-2 flex items-start justify-between">
-                  <div>
+              <div key={review.id} className="border-border rounded-lg border p-4 transition-colors hover:bg-muted/30">
+                <div className="mb-2 flex items-start justify-between gap-3">
+                  <div className="min-w-0 flex-1">
                     {review.title && (
-                      <h4 className="font-semibold">{review.title}</h4>
+                      <h4 className="font-semibold truncate">{review.title}</h4>
                     )}
-                    <div className="mt-1 flex items-center gap-2">
+                    <div className="mt-1 flex flex-wrap items-center gap-2">
                       <div className="flex space-x-0.5">
                         {Array.from({ length: 5 }).map((_, i) => (
                           <Star
@@ -360,11 +442,42 @@ export default function ReviewsDashboard() {
                       )}
                     </div>
                   </div>
-                  <span className="text-muted-foreground text-sm">
-                    {formatDate(review.createdAt)}
-                  </span>
+                  <div className="flex flex-col items-end gap-2 shrink-0">
+                    <span className="text-muted-foreground text-sm">
+                      {formatDate(review.createdAt)}
+                    </span>
+                    <div className="flex items-center gap-1">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7"
+                        onClick={() => openPreview(review)}
+                        title="Preview"
+                      >
+                        <Eye className="h-3.5 w-3.5" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 text-primary hover:text-primary"
+                        onClick={() => openEdit(review)}
+                        title="Edit"
+                      >
+                        <Edit2 className="h-3.5 w-3.5" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 text-destructive hover:text-destructive"
+                        onClick={() => openDelete(review)}
+                        title="Delete"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                  </div>
                 </div>
-                <p className="text-muted-foreground text-sm">{review.text}</p>
+                <p className="text-muted-foreground text-sm line-clamp-2">{review.text}</p>
                 {review.isAnonymous && (
                   <p className="text-muted-foreground mt-2 text-xs italic">
                     Submitted anonymously
@@ -386,6 +499,215 @@ export default function ReviewsDashboard() {
           )}
         </CardContent>
       </Card>
+
+      {/* Preview Dialog */}
+      <Dialog open={dialogMode === 'preview'} onOpenChange={(open) => !open && closeDialog()}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Review Preview</DialogTitle>
+            <DialogDescription>
+              Your review as submitted
+            </DialogDescription>
+          </DialogHeader>
+          {selectedReview && (
+            <div className="space-y-4">
+              <div className="flex items-center gap-2">
+                <div className="flex space-x-0.5">
+                  {Array.from({ length: 5 }).map((_, i) => (
+                    <Star
+                      key={i}
+                      className={`h-5 w-5 ${
+                        i < selectedReview.rating
+                          ? 'fill-warning text-warning'
+                          : 'text-muted-foreground'
+                      }`}
+                    />
+                  ))}
+                </div>
+                <Badge
+                  variant={selectedReview.status === 'APPROVED' ? 'default' : 'secondary'}
+                  className="flex items-center gap-1"
+                >
+                  {getStatusIcon(selectedReview.status)}
+                  {getReviewStatusLabel(selectedReview.status)}
+                </Badge>
+              </div>
+              {selectedReview.title && (
+                <div>
+                  <p className="text-muted-foreground mb-1 text-xs uppercase">Title</p>
+                  <h3 className="font-semibold">{selectedReview.title}</h3>
+                </div>
+              )}
+              <div>
+                <p className="text-muted-foreground mb-1 text-xs uppercase">Review</p>
+                <p className="text-sm whitespace-pre-wrap">{selectedReview.text}</p>
+              </div>
+              <div className="flex items-center justify-between text-xs text-muted-foreground">
+                <span>Submitted {formatDate(selectedReview.createdAt)}</span>
+                {selectedReview.isAnonymous && <span className="italic">Anonymous</span>}
+              </div>
+              {selectedReview.adminNote && (
+                <div className="rounded bg-yellow-500/10 p-3 text-xs">
+                  <span className="font-medium">Admin note:</span> {selectedReview.adminNote}
+                </div>
+              )}
+            </div>
+          )}
+          <DialogFooter className="gap-2">
+            <Button
+              variant="outline"
+              onClick={() => {
+                if (selectedReview) openEdit(selectedReview);
+              }}
+            >
+              <Edit2 className="mr-2 h-4 w-4" />
+              Edit
+            </Button>
+            <Button onClick={closeDialog}>Close</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Dialog */}
+      <Dialog open={dialogMode === 'edit'} onOpenChange={(open) => !open && closeDialog()}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Edit Review</DialogTitle>
+            <DialogDescription>
+              Update your review. It may need to be re-approved by our team.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            {/* Rating */}
+            <div className="space-y-2">
+              <Label>Rating *</Label>
+              <div className="flex space-x-2">
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <button
+                    key={star}
+                    type="button"
+                    onClick={() => setEditRating(star)}
+                    className="transition-transform hover:scale-110"
+                  >
+                    <Star
+                      className={`h-7 w-7 ${
+                        star <= editRating
+                          ? 'fill-warning text-warning'
+                          : 'text-muted-foreground'
+                      }`}
+                    />
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Title */}
+            <div className="space-y-2">
+              <Label>Title (Optional)</Label>
+              <Input
+                placeholder="Summarize your experience..."
+                value={editTitle}
+                onChange={(e) => setEditTitle(e.target.value)}
+                maxLength={200}
+              />
+            </div>
+
+            {/* Text */}
+            <div className="space-y-2">
+              <Label>Your Review *</Label>
+              <Textarea
+                placeholder="Share your experience..."
+                value={editText}
+                onChange={(e) => setEditText(e.target.value)}
+                rows={5}
+                maxLength={2000}
+              />
+              <p className="text-muted-foreground text-right text-xs">
+                {editText.length}/2000 characters
+              </p>
+            </div>
+
+            {/* Anonymous */}
+            <div className="flex items-center space-x-2">
+              <Switch
+                id="edit-anonymous"
+                checked={editIsAnonymous}
+                onCheckedChange={setEditIsAnonymous}
+              />
+              <Label htmlFor="edit-anonymous" className="cursor-pointer">
+                Submit anonymously
+              </Label>
+            </div>
+          </div>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={closeDialog} disabled={isUpdating}>
+              Cancel
+            </Button>
+            <Button onClick={handleUpdateReview} disabled={isUpdating}>
+              {isUpdating ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                'Save Changes'
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirm Dialog */}
+      <Dialog open={dialogMode === 'delete'} onOpenChange={(open) => !open && closeDialog()}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Delete Review?</DialogTitle>
+            <DialogDescription>
+              This action cannot be undone. The review will be permanently removed.
+            </DialogDescription>
+          </DialogHeader>
+          {selectedReview && (
+            <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-sm">
+              <div className="flex space-x-0.5 mb-1">
+                {Array.from({ length: 5 }).map((_, i) => (
+                  <Star
+                    key={i}
+                    className={`h-3.5 w-3.5 ${
+                      i < selectedReview.rating
+                        ? 'fill-warning text-warning'
+                        : 'text-muted-foreground'
+                    }`}
+                  />
+                ))}
+              </div>
+              {selectedReview.title && <p className="font-semibold">{selectedReview.title}</p>}
+              <p className="text-muted-foreground line-clamp-2">{selectedReview.text}</p>
+            </div>
+          )}
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={closeDialog} disabled={isDeleting}>
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleDeleteReview}
+              disabled={isDeleting}
+            >
+              {isDeleting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Deleting...
+                </>
+              ) : (
+                <>
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  Delete Review
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -14,12 +14,20 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Eye, EyeOff, Lock, Mail, User, Sparkles } from 'lucide-react';
+import { Eye, EyeOff, Globe, Lock, Mail, User, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { register, selectIsLoading, clearError } from '@/store/slices/authSlice';
 import { getGoogleOAuthUrl, getGithubOAuthUrl } from '@/lib/api';
 import { getLoginOptions, type LoginOptions } from '@/lib/api/settingsApi';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { COUNTRIES } from '@/lib/countries';
 
 function SignupContent() {
   const router = useRouter();
@@ -32,6 +40,7 @@ function SignupContent() {
   const [formData, setFormData] = useState({
     name: '',
     email: '',
+    country: '',
     password: '',
     confirmPassword: '',
   });
@@ -77,6 +86,11 @@ function SignupContent() {
       return;
     }
 
+    if (!formData.country) {
+      toast.error('Please select your country');
+      return;
+    }
+
     if (!agreeToTerms) {
       toast.error('Please agree to the terms', {
         description: 'You must agree to our Terms of Use and Privacy Policy',
@@ -90,6 +104,7 @@ function SignupContent() {
       register({
         name: formData.name,
         email: formData.email,
+        country: formData.country,
         password: formData.password,
         ...(referralCode ? { referralCode } : {}),
       }),
@@ -228,6 +243,27 @@ function SignupContent() {
                     required
                   />
                 </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="country">Country</Label>
+                <Select
+                  value={formData.country}
+                  onValueChange={(value) =>
+                    setFormData({ ...formData, country: value })
+                  }
+                >
+                  <SelectTrigger id="country" className="pl-9 relative">
+                    <Globe className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
+                    <SelectValue placeholder="Select your country" />
+                  </SelectTrigger>
+                  <SelectContent className="max-h-72">
+                    {COUNTRIES.map((country) => (
+                      <SelectItem key={country.code} value={country.name}>
+                        {country.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="password">Password</Label>

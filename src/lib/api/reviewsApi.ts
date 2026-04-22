@@ -79,6 +79,13 @@ export interface SubmitReviewRequest {
   isAnonymous?: boolean;
 }
 
+export interface UpdateReviewRequest {
+  rating?: number;
+  title?: string | null;
+  text?: string;
+  isAnonymous?: boolean;
+}
+
 export interface SubmitReviewResponse {
   id: string;
   rating: number;
@@ -164,6 +171,40 @@ export const submitReview = async (
     data,
   );
   return response.data;
+};
+
+/**
+ * Get a single user review by id
+ * GET /api/v1/reviews/my-reviews/:id
+ */
+export const getMyReview = async (id: string): Promise<UserReview> => {
+  const response = await apiClient.get<UserReview>(
+    API_ENDPOINTS.REVIEWS.MY_REVIEW_DETAIL(id),
+  );
+  return response.data;
+};
+
+/**
+ * Update a user review
+ * PATCH /api/v1/reviews/my-reviews/:id
+ */
+export const updateMyReview = async (
+  id: string,
+  data: UpdateReviewRequest,
+): Promise<UserReview> => {
+  const response = await apiClient.patch<UserReview>(
+    API_ENDPOINTS.REVIEWS.MY_REVIEW_DETAIL(id),
+    data,
+  );
+  return response.data;
+};
+
+/**
+ * Delete a user review
+ * DELETE /api/v1/reviews/my-reviews/:id
+ */
+export const deleteMyReview = async (id: string): Promise<void> => {
+  await apiClient.delete(API_ENDPOINTS.REVIEWS.MY_REVIEW_DETAIL(id));
 };
 
 // ============================================
