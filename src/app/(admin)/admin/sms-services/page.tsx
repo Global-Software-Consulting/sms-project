@@ -506,8 +506,26 @@ export default function AdminSmsServicesPage() {
     setCountrySearchQuery("");
     setIsServicesLoading(true);
     try {
-      const response = await getServices({ providerId: provider.id, limit: 200 });
-      setProviderServices(response.data || []);
+      // Fetch all services with pagination (API max limit is 200)
+      let allServices: SmsService[] = [];
+      let page = 1;
+      const limit = 200;
+      let hasMore = true;
+      
+      while (hasMore) {
+        const response = await getServices({ providerId: provider.id, limit, page });
+        const services = response.data || [];
+        allServices = [...allServices, ...services];
+        
+        // Check if there are more pages
+        if (services.length < limit) {
+          hasMore = false;
+        } else {
+          page++;
+        }
+      }
+      
+      setProviderServices(allServices);
     } catch (error: any) {
       toast.error(error?.response?.data?.message || "Failed to fetch services");
     } finally {
