@@ -26,7 +26,10 @@ import {
   Calendar,
   RefreshCw,
   HelpCircle,
+  Star,
 } from 'lucide-react';
+import { useAuth } from '@/hooks/useAuth';
+import { getPublicRanks, type Rank } from '@/lib/api/ranksApi';
 import { toast } from 'sonner';
 import {
   getPlans,
@@ -44,8 +47,10 @@ import {
 import Link from 'next/link';
 
 export default function MembershipDashboard() {
+  const { user } = useAuth();
   // Data state
   const [plans, setPlans] = useState<MembershipPlan[]>([]);
+  const [ranks, setRanks] = useState<Rank[]>([]);
   const [membership, setMembership] = useState<CurrentMembershipResponse | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -67,9 +72,10 @@ export default function MembershipDashboard() {
       setIsLoading(true);
       setError(null);
 
-      const [plansRes, membershipRes] = await Promise.allSettled([
+      const [plansRes, membershipRes, ranksRes] = await Promise.allSettled([
         getPlans(),
         getCurrentMembership(),
+        getPublicRanks(),
       ]);
 
       if (plansRes.status === 'fulfilled') {
@@ -81,6 +87,10 @@ export default function MembershipDashboard() {
 
       if (membershipRes.status === 'fulfilled') {
         setMembership(membershipRes.value);
+      }
+
+      if (ranksRes.status === 'fulfilled') {
+        setRanks(ranksRes.value || []);
       }
     } catch (err) {
       console.error('Failed to fetch membership data:', err);
@@ -225,6 +235,37 @@ export default function MembershipDashboard() {
     );
   }
 
+  // Resolve user's rank from the public ranks API (fresh data).
+  // Match by name (case-insensitive) since user.rank only carries name/badge/color/discountPercent.
+  const userRankName = user?.rank?.name?.toLowerCase().trim();
+  const apiRank = userRankName
+    ? ranks.find(
+        (r) =>
+          r.name.toLowerCase().trim() === userRankName ||
+          r.slug.toLowerCase().trim() === userRankName,
+      )
+    : undefined;
+
+  // Use API rank when found, otherwise fall back to the rank embedded on the user object.
+  const rank = apiRank || user?.rank || null;
+  const rankName = apiRank?.name || user?.rank?.name || '';
+  const rankColor = apiRank?.color || user?.rank?.color || '#3B82F6';
+  const discountPercent = apiRank?.discountPercent ?? user?.rank?.discountPercent ?? 0;
+  const rankDescription = apiRank?.description || '';
+  const hasRank = !!rank && discountPercent > 0;
+
+  // Price summary based on current plan
+  const currentPlanPriceRaw = membership?.currentPlan?.price;
+  const basePrice =
+    typeof currentPlanPriceRaw === 'string'
+      ? parseFloat(currentPlanPriceRaw)
+      : typeof currentPlanPriceRaw === 'number'
+        ? currentPlanPriceRaw
+        : 0;
+  const discountAmount = (basePrice * discountPercent) / 100;
+  const finalTotal = Math.max(basePrice - discountAmount, 0);
+  const currencySymbol = '$';
+
   return (
     <div className="space-y-6">
       <div>
@@ -233,6 +274,81 @@ export default function MembershipDashboard() {
           Upgrade your plan to save more
         </p>
       </div>
+
+      {/* Rank Discount banner — only when user has a rank with discount */}
+      {hasRank && (
+        <Card className="border-2" style={{ borderColor: `${rankColor}55` }}>
+          <CardContent className="p-6 text-center">
+            <div className="mb-3 flex items-center justify-center gap-2">
+              <div
+                className="flex h-8 w-8 items-center justify-center rounded-full"
+                style={{ backgroundColor: `${rankColor}33`, color: rankColor }}
+              >
+                <Star className="h-4 w-4 fill-current" />
+              </div>
+              <h3 className="text-lg font-semibold">{rankName} Rank Discount</h3>
+            </div>
+            <p className="text-muted-foreground mb-4 text-sm">
+              {rankDescription ||
+                `Congratulations! You've earned a ${discountPercent}% discount on all purchases.`}
+            </p>
+            <div
+              className="rounded-lg py-3 text-center text-2xl font-bold"
+              style={{
+                background: `${rankColor}1a`,
+                color: rankColor,
+              }}
+            >
+              {discountPercent}% OFF
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Price Summary — only when user has a rank and an active plan */}
+      {hasRank && membership?.currentPlan && basePrice > 0 && (
+        <Card>
+          <CardContent className="p-6">
+            <h3 className="mb-5 text-center text-lg font-semibold">Price Summary</h3>
+            <div className="space-y-3 text-sm">
+              <div className="flex items-center justify-between">
+                <span className="text-muted-foreground">Base Price:</span>
+                <span>
+                  {currencySymbol}
+                  {basePrice.toFixed(2)}
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-muted-foreground">Plan:</span>
+                <span>{membership.currentPlan.name}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-muted-foreground">Subtotal:</span>
+                <span>
+                  {currencySymbol}
+                  {basePrice.toFixed(2)}
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-success">
+                  Rank Discount ({rankName} - {discountPercent}% OFF):
+                </span>
+                <span className="text-success">
+                  -{currencySymbol}
+                  {discountAmount.toFixed(2)}
+                </span>
+              </div>
+              <div className="border-border mt-4 flex items-center justify-between border-t pt-4 text-base">
+                <span className="text-success font-semibold">Final Total:</span>
+                <span className="text-success font-bold">
+                  {currencySymbol}
+                  {finalTotal.toFixed(2)}
+                </span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Current Plan */}
       {membership?.currentPlan && membership.subscription && (

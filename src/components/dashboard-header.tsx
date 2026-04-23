@@ -1,6 +1,7 @@
 'use client';
 import { useTheme } from 'next-themes';
-import { Moon, Sun, Bell, User, Check, X, Menu, Loader2 } from 'lucide-react';
+import { Moon, Sun, Bell, User, Check, X, Menu, Loader2, Globe } from 'lucide-react';
+import { LanguagePickerDropdown } from './google-translate';
 import { Button } from './ui/button';
 import {
   DropdownMenu,
@@ -35,6 +36,7 @@ export function DashboardHeader({ onMenuClick }: DashboardHeaderProps = {}) {
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [walletBalance, setWalletBalance] = useState<WalletBalance | null>(null);
   const [membership, setMembership] = useState<CurrentMembershipResponse | null>(null);
+  const [langOpen, setLangOpen] = useState(false);
 
   const {
     notifications,
@@ -126,6 +128,23 @@ export function DashboardHeader({ onMenuClick }: DashboardHeaderProps = {}) {
                 ? formatBalance(walletBalance.balance, walletBalance.currency)
                 : '$0.00'}
             </span>
+          </div>
+
+          {/* Language Picker */}
+          <div className="relative notranslate">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-9 w-9"
+              onClick={(e) => {
+                e.stopPropagation();
+                setLangOpen((v) => !v);
+              }}
+              aria-label="Change language"
+            >
+              <Globe className="h-4 w-4" />
+            </Button>
+            <LanguagePickerDropdown isOpen={langOpen} onClose={() => setLangOpen(false)} />
           </div>
 
           {/* Theme Toggle */}

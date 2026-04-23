@@ -40,6 +40,9 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { toast } from 'sonner';
+import Link from 'next/link';
+import { BadgeCheck, Pencil } from 'lucide-react';
+import { useAuth } from '@/hooks/useAuth';
 import {
   Dialog,
   DialogContent,
@@ -79,6 +82,7 @@ import {
 } from '@/lib/api/referralsApi';
 
 export default function ReferralDashboard() {
+  const { user } = useAuth();
   const [copied, setCopied] = useState(false);
   const [withdrawModal, setWithdrawModal] = useState(false);
   const [withdrawAmount, setWithdrawAmount] = useState('');
@@ -256,6 +260,11 @@ export default function ReferralDashboard() {
   const paidEarnings = stats?.paidEarnings || profile?.paidEarnings || 0;
   const minPayoutAmount = profile?.minPayoutAmount || 10;
 
+  const displayName = user?.username || user?.firstName || user?.email?.split('@')[0] || 'User';
+  const handle = user?.username || user?.email?.split('@')[0] || '';
+  const totalReferredSales = stats?.totalSpending ?? 0;
+  const totalReferralCount = stats?.totalReferrals ?? profile?.totalReferrals ?? 0;
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -265,6 +274,92 @@ export default function ReferralDashboard() {
           Earn lifetime commissions by referring new users
         </p>
       </div>
+
+      {/* Your Affiliate Profile */}
+      <Card className="card-hover-lift">
+        <CardContent className="p-6">
+          <h2 className="text-muted-foreground mb-6 text-xs font-semibold tracking-[0.2em]">
+            <span className="from-primary to-accent bg-gradient-to-r bg-clip-text text-transparent">
+              Y
+            </span>
+            OUR AFFILIATE PROFILE
+          </h2>
+
+          <div className="mb-6 flex items-center justify-between gap-4">
+            <div className="flex items-center gap-4 min-w-0">
+              <div className="relative flex-shrink-0">
+                <div className="from-primary/30 to-accent/30 h-14 w-14 overflow-hidden rounded-full bg-gradient-to-br ring-2 ring-[var(--glass-border)]">
+                  {user?.avatar ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={user.avatar}
+                      alt={displayName}
+                      className="h-full w-full object-cover"
+                    />
+                  ) : (
+                    <div className="flex h-full w-full items-center justify-center text-lg font-semibold text-white">
+                      {displayName.charAt(0).toUpperCase()}
+                    </div>
+                  )}
+                </div>
+                <Link
+                  href="/dashboard/settings"
+                  className="bg-background hover:bg-muted border-border absolute -top-1 -left-1 flex h-6 w-6 items-center justify-center rounded-full border transition-colors"
+                  aria-label="Edit profile"
+                >
+                  <Pencil className="h-3 w-3" />
+                </Link>
+              </div>
+              <div className="min-w-0">
+                <div className="flex items-center gap-1.5">
+                  <span className="truncate text-base font-semibold">{displayName}</span>
+                  {user?.emailVerified && (
+                    <BadgeCheck className="h-4 w-4 flex-shrink-0 fill-[#3B82F6] text-white" />
+                  )}
+                </div>
+                {handle && (
+                  <p className="text-muted-foreground truncate text-sm">@{handle}</p>
+                )}
+              </div>
+            </div>
+
+            {tierInfo && (
+              <Badge
+                variant="outline"
+                className="flex-shrink-0 rounded-full border-2 px-4 py-1.5 text-sm font-medium"
+                style={{ borderColor: tierInfo.color, color: tierInfo.color }}
+              >
+                {tierInfo.name}
+              </Badge>
+            )}
+          </div>
+
+          <div className="border-border mb-6 border-t" />
+
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="text-muted-foreground text-sm">Total Referred Sales:</span>
+              <span className="text-base font-semibold">
+                {formatAmount(totalReferredSales)}
+              </span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-muted-foreground text-sm">Total Referrals:</span>
+              <span className="text-base font-semibold">{totalReferralCount}</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-muted-foreground text-sm">Current Rank:</span>
+              <span className="text-base font-semibold">{tierInfo?.name || '—'}</span>
+            </div>
+          </div>
+
+          <div className="mt-6 flex justify-center">
+            <Button variant="link" asChild className="text-primary">
+              <Link href="/dashboard/settings">Personalize your profile</Link>
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Main Balance Cards */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">

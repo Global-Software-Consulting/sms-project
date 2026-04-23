@@ -42,25 +42,13 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { AlertTriangle } from "lucide-react";
-
-// Mock data for languages
-const languagesData = [
-  { code: "GB", name: "English", langCode: "EN", isDefault: true },
-  { code: "SE", name: "Swedish", langCode: "SV", isDefault: false },
-  { code: "NO", name: "Norwegian", langCode: "NO", isDefault: false },
-  { code: "DK", name: "Danish", langCode: "DK", isDefault: false },
-  { code: "FI", name: "Finnish", langCode: "FI", isDefault: false },
-  { code: "FR", name: "French", langCode: "FR", isDefault: false },
-  { code: "DE", name: "German", langCode: "DE", isDefault: false },
-  { code: "ES", name: "Spanish", langCode: "ES", isDefault: false },
-  { code: "IT", name: "Italian", langCode: "IT", isDefault: false },
-  { code: "RU", name: "Russian", langCode: "RU", isDefault: false },
-  { code: "TR", name: "Turkish", langCode: "TR", isDefault: false },
-  { code: "SA", name: "Arabic", langCode: "AR", isDefault: false },
-  { code: "IN", name: "Hindi", langCode: "HI", isDefault: false },
-  { code: "CN", name: "Chinese", langCode: "ZH", isDefault: false },
-];
+import { AlertTriangle, Info } from "lucide-react";
+import {
+  getAllLanguages,
+  toggleLanguage,
+  updateLanguage,
+  type Language,
+} from "@/lib/api/languagesApi";
 
 type TabType = "social" | "contact" | "page" | "email" | "addons" | "trial" | "logo" | "status" | "language";
 
@@ -204,8 +192,9 @@ www.cheapstreamtv.com`
     tawkto: { enabled: false },
   });
 
-  // Languages State
-  const [languages, setLanguages] = useState(languagesData);
+  // Languages State (now API-driven)
+  const [languages, setLanguages] = useState<Language[]>([]);
+  const [isLanguagesLoading, setIsLanguagesLoading] = useState(false);
 
   // Branding State
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
@@ -366,29 +355,7 @@ www.cheapstreamtv.com`
         });
       }
 
-      // Parse language settings
-      const languageSettings = grouped['language'] || [];
-      const languageMap: Record<string, string> = {};
-      languageSettings.forEach((s) => {
-        languageMap[s.key] = s.value;
-      });
-      // Also check general for backward compatibility
-      generalSettings.forEach((s) => {
-        if (s.key.startsWith('language') && !languageMap[s.key]) {
-          languageMap[s.key] = s.value;
-        }
-      });
-
-      if (languageMap['languages_active']) {
-        try {
-          const parsedLanguages = JSON.parse(languageMap['languages_active']);
-          if (Array.isArray(parsedLanguages) && parsedLanguages.length > 0) {
-            setLanguages(parsedLanguages);
-          }
-        } catch (e) {
-          console.error('Failed to parse languages:', e);
-        }
-      }
+      // Languages are now loaded from a dedicated endpoint via fetchLanguages()
 
     } catch (error) {
       console.error('Failed to fetch settings:', error);
@@ -519,11 +486,6 @@ www.cheapstreamtv.com`
             { key: `page_${activePage}_og_description`, value: pageContent.ogDescription },
           ];
           break;
-        case "Language settings":
-          settings = [
-            { key: 'languages_active', value: JSON.stringify(languages) },
-          ];
-          break;
         default:
           break;
       }
@@ -549,19 +511,74 @@ www.cheapstreamtv.com`
     toast.success("Settings refreshed!");
   };
 
-  const handleDeactivateLanguage = (langCode: string) => {
-    setLanguages(languages.filter((lang) => lang.code !== langCode));
-    toast.success("Language deactivated successfully!");
+  const fetchLanguages = useCallback(async () => {
+    try {
+      setIsLanguagesLoading(true);
+      const list = await getAllLanguages();
+      setLanguages(Array.isArray(list) ? list : []);
+    } catch (err) {
+      console.error('Failed to fetch languages:', err);
+      toast.error('Failed to load languages');
+    } finally {
+      setIsLanguagesLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (activeTab === 'language') {
+      fetchLanguages();
+    }
+  }, [activeTab, fetchLanguages]);
+
+  const handleToggleLanguage = async (id: string, nextIsActive: boolean) => {
+    // Guard: cannot deactivate the default language
+    const target = languages.find((l) => l.id === id);
+    if (target?.isDefault && !nextIsActive) {
+      toast.error('The default language must stay active. Change the default first.');
+      return;
+    }
+    // Guard: cannot deactivate the last active language
+    if (!nextIsActive && languages.filter((l) => l.isActive).length <= 1) {
+      toast.error('At least one language must be active');
+      return;
+    }
+    // Optimistic update
+    setLanguages((prev) =>
+      prev.map((l) => (l.id === id ? { ...l, isActive: nextIsActive } : l)),
+    );
+    try {
+      await toggleLanguage(id, nextIsActive);
+      toast.success(
+        nextIsActive ? 'Language activated' : 'Language deactivated',
+      );
+    } catch {
+      // Revert on failure
+      setLanguages((prev) =>
+        prev.map((l) => (l.id === id ? { ...l, isActive: !nextIsActive } : l)),
+      );
+      toast.error('Failed to update language');
+    }
   };
 
-  const handleSetDefault = (langCode: string) => {
-    setLanguages(
-      languages.map((lang) => ({
-        ...lang,
-        isDefault: lang.code === langCode,
-      }))
+  const handleSetDefaultLanguage = async (id: string) => {
+    const target = languages.find((l) => l.id === id);
+    if (!target) return;
+    if (!target.isActive) {
+      toast.error('Default language must be active');
+      return;
+    }
+    // Optimistic update: mark chosen as default, unset others
+    const prev = languages;
+    setLanguages((list) =>
+      list.map((l) => ({ ...l, isDefault: l.id === id })),
     );
-    toast.success("Default language updated!");
+    try {
+      await updateLanguage(id, { isDefault: true });
+      toast.success('Default language updated');
+    } catch {
+      setLanguages(prev);
+      toast.error('Failed to set default language');
+    }
   };
 
   const toggleAddon = (addon: string) => {
@@ -1631,56 +1648,129 @@ www.cheapstreamtv.com`
             </p>
           </div>
 
-          <div className="p-8 rounded-xl bg-[rgba(15,23,42,0.6)] border border-[rgba(255,255,255,0.1)] backdrop-blur-xl mb-6">
-            <h3 className="text-white text-lg font-semibold mb-6">Active Languages ({languages.length})</h3>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {languages.map((lang) => (
-                <div
-                  key={lang.code}
-                  className="p-5 rounded-xl bg-[rgba(0,0,0,0.3)] border border-[rgba(255,255,255,0.1)] backdrop-blur-xl"
-                >
-                  <div className="flex items-start gap-4">
-                    <div className="w-12 h-12 rounded-lg bg-[rgba(59,130,246,0.2)] flex items-center justify-center flex-shrink-0 text-white text-lg font-bold">
-                      {lang.code}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <h4 className="text-white text-base font-semibold mb-1">{lang.name}</h4>
-                      <p className="text-[#64748B] text-sm mb-3">{lang.langCode}</p>
-
-                      <div className="flex items-center gap-2 mb-3">
-                        <input
-                          type="radio"
-                          checked={lang.isDefault}
-                          onChange={() => handleSetDefault(lang.code)}
-                          className="w-4 h-4 text-[#3B82F6] focus:ring-[#3B82F6]"
-                        />
-                        <label className="text-white text-sm">Default</label>
-                      </div>
-
-                      <button
-                        onClick={() => handleDeactivateLanguage(lang.code)}
-                        disabled={lang.isDefault}
-                        className="text-[#EF4444] hover:text-[#DC2626] text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        Deactivate
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              ))}
+          {isLanguagesLoading ? (
+            <div className="flex items-center justify-center py-20">
+              <Loader2 className="w-8 h-8 text-[#3B82F6] animate-spin" />
             </div>
-          </div>
+          ) : (
+            <>
+              {/* Active Languages */}
+              <div className="p-8 rounded-xl bg-[rgba(15,23,42,0.6)] border border-[rgba(255,255,255,0.1)] backdrop-blur-xl mb-6">
+                <h3 className="text-white text-lg font-semibold mb-6">
+                  Active Languages ({languages.filter((l) => l.isActive).length})
+                </h3>
 
-          <div className="flex items-center justify-end">
-            <button
-              onClick={() => handleSave("Language settings")}
-              disabled={isLoading}
-              className="px-6 py-3 rounded-lg bg-[#3B82F6] hover:bg-[#2563EB] text-white transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {isLoading ? "Saving..." : "Save Changes"}
-            </button>
-          </div>
+                {languages.filter((l) => l.isActive).length === 0 ? (
+                  <p className="text-[#64748B] text-sm">No active languages yet.</p>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {languages
+                      .filter((l) => l.isActive)
+                      .map((lang) => (
+                        <div
+                          key={lang.id}
+                          className="p-4 rounded-xl bg-[rgba(0,0,0,0.3)] border border-[rgba(255,255,255,0.1)]"
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-lg bg-[rgba(59,130,246,0.15)] flex items-center justify-center flex-shrink-0 text-white text-sm font-bold">
+                              {lang.code}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <h4 className="text-white text-sm font-semibold truncate">
+                                {lang.name}
+                              </h4>
+                              <p className="text-[#64748B] text-xs">{lang.langCode}</p>
+                            </div>
+                            <div className="flex items-center gap-3 flex-shrink-0">
+                              <button
+                                type="button"
+                                onClick={() => handleSetDefaultLanguage(lang.id)}
+                                className="flex items-center gap-1.5 text-white text-xs"
+                                title="Set as default"
+                              >
+                                <span
+                                  className={`w-4 h-4 rounded-full border-2 flex items-center justify-center transition-colors ${
+                                    lang.isDefault
+                                      ? 'border-[#3B82F6] bg-[#3B82F6]'
+                                      : 'border-[rgba(255,255,255,0.3)]'
+                                  }`}
+                                >
+                                  {lang.isDefault && (
+                                    <span className="w-1.5 h-1.5 rounded-full bg-white" />
+                                  )}
+                                </span>
+                                Default
+                              </button>
+                              <button
+                                onClick={() => handleToggleLanguage(lang.id, false)}
+                                disabled={lang.isDefault}
+                                className="text-[#EF4444] hover:text-[#DC2626] text-xs font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                              >
+                                Deactivate
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Inactive Languages */}
+              <div className="p-8 rounded-xl bg-[rgba(15,23,42,0.6)] border border-[rgba(255,255,255,0.1)] backdrop-blur-xl mb-6">
+                <h3 className="text-white text-lg font-semibold mb-6">
+                  Inactive Languages ({languages.filter((l) => !l.isActive).length})
+                </h3>
+
+                {languages.filter((l) => !l.isActive).length === 0 ? (
+                  <p className="text-[#64748B] text-sm">No inactive languages.</p>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {languages
+                      .filter((l) => !l.isActive)
+                      .map((lang) => (
+                        <div
+                          key={lang.id}
+                          className="p-4 rounded-xl bg-[rgba(0,0,0,0.3)] border border-[rgba(255,255,255,0.1)] opacity-75"
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-lg bg-[rgba(148,163,184,0.15)] flex items-center justify-center flex-shrink-0 text-[#94A3B8] text-sm font-bold">
+                              {lang.code}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <h4 className="text-white text-sm font-semibold truncate">
+                                {lang.name}
+                              </h4>
+                              <p className="text-[#64748B] text-xs">{lang.langCode}</p>
+                            </div>
+                            <button
+                              onClick={() => handleToggleLanguage(lang.id, true)}
+                              className="text-[#22C55E] hover:text-[#16A34A] text-xs font-medium transition-colors"
+                            >
+                              Activate
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Important Notes */}
+              <div className="p-6 rounded-xl bg-[rgba(59,130,246,0.1)] border border-[rgba(59,130,246,0.3)]">
+                <h4 className="text-[#3B82F6] text-sm font-semibold mb-3 flex items-center gap-2">
+                  <Info className="w-4 h-4" />
+                  Important Notes
+                </h4>
+                <ul className="text-[#3B82F6] text-sm space-y-1.5 list-disc list-inside">
+                  <li>At least one language must be active</li>
+                  <li>The default language must be active</li>
+                  <li>Changes will be reflected immediately on the website</li>
+                  <li>Users will only see active languages in the language selector</li>
+                </ul>
+              </div>
+            </>
+          )}
         </div>
       )}
 

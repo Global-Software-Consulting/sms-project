@@ -15,6 +15,7 @@ export const API_ENDPOINTS = {
     PAYMENT_GUIDE: '/settings/payment-guide',
     BRANDING: '/settings/branding',
     MAINTENANCE: '/settings/maintenance',
+    SOCIAL_LINKS: '/settings/social-links',
   },
 
   // ========================
@@ -87,6 +88,16 @@ export const API_ENDPOINTS = {
   // Ranks (Public)
   // ========================
   RANKS: '/ranks',
+
+  // ========================
+  // Ads (Public)
+  // ========================
+  ADS: '/ads',
+
+  // ========================
+  // Languages (Public)
+  // ========================
+  LANGUAGES: '/languages',
 
   // ========================
   // API Keys
@@ -362,6 +373,13 @@ export const API_ENDPOINTS = {
       BRANDING: '/admin/settings/branding',
       BRANDING_LOGO: '/admin/settings/branding/logo',
       BRANDING_FAVICON: '/admin/settings/branding/favicon',
+    },
+
+    // Admin Languages
+    LANGUAGES: {
+      ROOT: '/admin/languages',
+      DETAIL: (id: string) => `/admin/languages/${id}`,
+      TOGGLE: (id: string) => `/admin/languages/${id}/toggle`,
     },
 
     // Admin Ads

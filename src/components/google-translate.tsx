@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useRef } from 'react';
 import Script from 'next/script';
+import { getActiveLanguages } from '@/lib/api/languagesApi';
 
 declare global {
   interface Window {
@@ -17,27 +18,13 @@ declare global {
   }
 }
 
-const languages = [
+interface LanguageOption {
+  code: string; // Google Translate code (empty string = original/default)
+  label: string;
+}
+
+const FALLBACK_LANGUAGES: LanguageOption[] = [
   { code: '', label: 'English (Original)' },
-  { code: 'es', label: 'Spanish' },
-  { code: 'fr', label: 'French' },
-  { code: 'de', label: 'German' },
-  { code: 'pt', label: 'Portuguese' },
-  { code: 'ru', label: 'Russian' },
-  { code: 'zh-CN', label: 'Chinese (Simplified)' },
-  { code: 'ja', label: 'Japanese' },
-  { code: 'ko', label: 'Korean' },
-  { code: 'ar', label: 'Arabic' },
-  { code: 'hi', label: 'Hindi' },
-  { code: 'pa', label: 'Punjabi' },
-  { code: 'tr', label: 'Turkish' },
-  { code: 'it', label: 'Italian' },
-  { code: 'nl', label: 'Dutch' },
-  { code: 'pl', label: 'Polish' },
-  { code: 'vi', label: 'Vietnamese' },
-  { code: 'th', label: 'Thai' },
-  { code: 'id', label: 'Indonesian' },
-  { code: 'uk', label: 'Ukrainian' },
 ];
 
 export function GoogleTranslate() {
@@ -107,7 +94,32 @@ export function LanguagePickerDropdown({
 }) {
   const [search, setSearch] = useState('');
   const [currentLang, setCurrentLang] = useState('');
+  const [languages, setLanguages] = useState<LanguageOption[]>(FALLBACK_LANGUAGES);
   const ref = useRef<HTMLDivElement>(null);
+
+  // Fetch active languages from public API the first time the dropdown opens
+  useEffect(() => {
+    if (!isOpen) return;
+    getActiveLanguages()
+      .then((list) => {
+        if (!Array.isArray(list) || list.length === 0) return;
+        // Sort by sortOrder asc, put default first
+        const sorted = [...list].sort((a, b) => {
+          if (a.isDefault && !b.isDefault) return -1;
+          if (!a.isDefault && b.isDefault) return 1;
+          return (a.sortOrder ?? 0) - (b.sortOrder ?? 0);
+        });
+        const opts: LanguageOption[] = sorted.map((l) => ({
+          // Default language uses empty code (shows original text, no translation)
+          code: l.isDefault ? '' : (l.langCode || '').toLowerCase(),
+          label: l.isDefault ? `${l.name} (Original)` : l.name,
+        }));
+        setLanguages(opts);
+      })
+      .catch(() => {
+        // Keep fallback
+      });
+  }, [isOpen]);
 
   useEffect(() => {
     // Detect current language from cookie

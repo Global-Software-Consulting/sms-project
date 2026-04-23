@@ -48,6 +48,12 @@ export const getAds = async (params?: { position?: string; isActive?: boolean })
   return response.data;
 };
 
+// Public endpoint - no auth required; used in footer etc.
+export const getPublicAds = async (params?: { position?: string }): Promise<Ad[]> => {
+  const response = await apiClient.get<Ad[]>(API_ENDPOINTS.ADS, { params });
+  return response.data;
+};
+
 export const getAdStats = async (): Promise<AdStats> => {
   const response = await apiClient.get<AdStats>(API_ENDPOINTS.ADMIN.ADS.STATS);
   return response.data;

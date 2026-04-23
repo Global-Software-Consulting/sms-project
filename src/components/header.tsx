@@ -2,16 +2,18 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useTheme } from 'next-themes';
-import { Moon, Sun, Menu, X } from 'lucide-react';
+import { Moon, Sun, Menu, X, Globe } from 'lucide-react';
 import { Button } from './ui/button';
 import { useState, useEffect } from 'react';
 import { cn } from './ui/utils';
 import { useBranding } from '@/contexts/BrandingContext';
+import { LanguagePickerDropdown } from './google-translate';
 
 export function Header() {
   const { theme, setTheme } = useTheme();
   const { siteLogo } = useBranding();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [langOpen, setLangOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
   const pathname = usePathname();
 
@@ -73,6 +75,23 @@ export function Header() {
 
         {/* Actions */}
         <div className="flex flex-shrink-0 items-center gap-1.5 sm:gap-2">
+          {/* Language Picker */}
+          <div className="relative notranslate">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-9 w-9"
+              onClick={(e) => {
+                e.stopPropagation();
+                setLangOpen((v) => !v);
+              }}
+              aria-label="Change language"
+            >
+              <Globe className="h-4 w-4" />
+            </Button>
+            <LanguagePickerDropdown isOpen={langOpen} onClose={() => setLangOpen(false)} />
+          </div>
+
           {mounted && (
             <Button
               variant="ghost"
