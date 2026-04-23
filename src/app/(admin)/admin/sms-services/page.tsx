@@ -1941,7 +1941,7 @@ export default function AdminSmsServicesPage() {
                         setServicesLimit(Number(e.target.value));
                         setServicesPage(1);
                       }}
-                      className="px-3 py-2 rounded-lg bg-[rgba(255,255,255,0.05)] border border-[rgba(255,255,255,0.1)] text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#3B82F6] cursor-pointer"
+                      className="px-3 py-2 rounded-lg bg-[#1E293B] border border-[rgba(255,255,255,0.1)] text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#3B82F6] cursor-pointer [&>option]:bg-[#1E293B] [&>option]:text-white"
                     >
                       <option value={50}>50</option>
                       <option value={100}>100</option>
