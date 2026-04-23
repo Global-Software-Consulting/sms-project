@@ -16,6 +16,9 @@ import {
   Loader2,
   RefreshCw,
   Wallet,
+  Upload,
+  X,
+  Image as ImageIcon,
 } from "lucide-react";
 import {
   getPaymentGateways,
@@ -51,19 +54,21 @@ export default function AdminPaymentsPage() {
   const [paymentMethods, setPaymentMethods] = useState<PaymentGatewayConfig[]>([]);
   const [showEditMethodModal, setShowEditMethodModal] = useState(false);
   const [selectedMethod, setSelectedMethod] = useState<PaymentGatewayConfig | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [bonusRules, setBonusRules] = useState<{minAmount: number; bonusPercent: number}[]>([]);
   const [methodFormData, setMethodFormData] = useState({
     displayName: "",
     description: "",
     type: "crypto",
     isEnabled: true,
     minAmount: 1,
-    maxAmount: 100000,
     bonusSettings: "",
     polygonWallet: "",
     serviceFee: "",
     feeFixed: 0,
     feePercent: 0,
     serviceFeeEnabled: false,
+    serviceFeeType: "percentage" as "percentage" | "fixed",
     imageUrl: "",
     // Gateway-specific API settings
     settings: {
@@ -224,19 +229,44 @@ export default function AdminPaymentsPage() {
   const handleEditMethod = (method: PaymentGatewayConfig) => {
     setSelectedMethod(method);
     const settings = method.settings || {};
+    
+    // Parse bonus settings into rules array
+    const parsedBonusRules: {minAmount: number; bonusPercent: number}[] = [];
+    if (method.bonusSettings) {
+      try {
+        const parsed = JSON.parse(method.bonusSettings);
+        if (Array.isArray(parsed)) {
+          parsedBonusRules.push(...parsed);
+        }
+      } catch {
+        // If not JSON, try to parse text format like "$100 → 5%"
+        const matches = method.bonusSettings.match(/\$?(\d+)\s*[→→:]\s*(\d+)%/g);
+        if (matches) {
+          matches.forEach(match => {
+            const [, amt, pct] = match.match(/\$?(\d+)\s*[→→:]\s*(\d+)%/) || [];
+            if (amt && pct) {
+              parsedBonusRules.push({ minAmount: parseInt(amt), bonusPercent: parseInt(pct) });
+            }
+          });
+        }
+      }
+    }
+    setBonusRules(parsedBonusRules.length > 0 ? parsedBonusRules : [{ minAmount: 0, bonusPercent: 0 }]);
+    setImagePreview(method.imageUrl || null);
+    
     setMethodFormData({
       displayName: method.displayName,
       description: method.description || "",
       type: method.type || "crypto",
       isEnabled: method.isEnabled,
       minAmount: parseFloat(method.minAmount) || 1,
-      maxAmount: parseFloat(method.maxAmount) || 100000,
       bonusSettings: method.bonusSettings || "",
       polygonWallet: method.polygonWallet || "",
       serviceFee: method.serviceFee || "",
       feeFixed: parseFloat(method.feeFixed) || 0,
       feePercent: parseFloat(method.feePercent) || 0,
       serviceFeeEnabled: method.serviceFeeEnabled || false,
+      serviceFeeType: parseFloat(method.feeFixed) > 0 ? "fixed" : "percentage",
       imageUrl: method.imageUrl || "",
       settings: {
         // Stripe
@@ -285,18 +315,25 @@ export default function AdminPaymentsPage() {
         }
       }
 
+      // Serialize bonus rules to JSON string
+      const validBonusRules = bonusRules.filter(r => r.minAmount > 0 || r.bonusPercent > 0);
+      const bonusSettingsJson = validBonusRules.length > 0 ? JSON.stringify(validBonusRules) : undefined;
+
+      // Calculate fee based on fee type
+      const feeFixed = methodFormData.serviceFeeType === "fixed" ? methodFormData.feeFixed : 0;
+      const feePercent = methodFormData.serviceFeeType === "percentage" ? methodFormData.feePercent : 0;
+
       await updatePaymentGateway(selectedMethod.gateway, {
         displayName: methodFormData.displayName,
         description: methodFormData.description,
         type: methodFormData.type,
         isEnabled: methodFormData.isEnabled,
         minAmount: methodFormData.minAmount,
-        maxAmount: methodFormData.maxAmount,
-        bonusSettings: methodFormData.bonusSettings,
+        bonusSettings: bonusSettingsJson,
         polygonWallet: methodFormData.polygonWallet,
         serviceFee: methodFormData.serviceFee,
-        feeFixed: methodFormData.feeFixed,
-        feePercent: methodFormData.feePercent,
+        feeFixed: feeFixed,
+        feePercent: feePercent,
         serviceFeeEnabled: methodFormData.serviceFeeEnabled,
         imageUrl: methodFormData.imageUrl || undefined,
         settings: Object.keys(cleanSettings).length > 0 ? cleanSettings : undefined,
@@ -937,14 +974,52 @@ export default function AdminPaymentsPage() {
                     />
                   </div>
                   <div>
-                    <label className="text-white text-sm font-medium mb-2 block">Image URL</label>
-                    <input
-                      type="text"
-                      value={methodFormData.imageUrl}
-                      onChange={(e) => setMethodFormData({ ...methodFormData, imageUrl: e.target.value })}
-                      className="w-full bg-[rgba(0,0,0,0.4)] border border-[rgba(255,255,255,0.18)] rounded-lg px-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#3B82F6]"
-                      placeholder="https://..."
-                    />
+                    <label className="text-white text-sm font-medium mb-2 block">Upload Image</label>
+                    <div className="flex items-start gap-3">
+                      {/* Image Preview */}
+                      <div className="relative w-16 h-16 rounded-lg bg-[rgba(0,0,0,0.4)] border border-[rgba(255,255,255,0.18)] flex items-center justify-center overflow-hidden">
+                        {imagePreview ? (
+                          <>
+                            <img src={imagePreview} alt="Preview" className="w-full h-full object-cover" />
+                            <button
+                              onClick={() => {
+                                setImagePreview(null);
+                                setMethodFormData({ ...methodFormData, imageUrl: "" });
+                              }}
+                              className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-[#EF4444] flex items-center justify-center"
+                            >
+                              <X className="w-3 h-3 text-white" />
+                            </button>
+                          </>
+                        ) : (
+                          <ImageIcon className="w-6 h-6 text-[#64748B]" />
+                        )}
+                      </div>
+                      <div className="flex-1">
+                        <label className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[#3B82F6] hover:bg-[#2563EB] text-white text-sm font-medium cursor-pointer transition-colors">
+                          <Upload className="w-4 h-4" />
+                          Select Image File
+                          <input
+                            type="file"
+                            accept="image/jpeg,image/png,image/webp"
+                            className="hidden"
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              if (file) {
+                                const reader = new FileReader();
+                                reader.onload = (ev) => {
+                                  const dataUrl = ev.target?.result as string;
+                                  setImagePreview(dataUrl);
+                                  setMethodFormData({ ...methodFormData, imageUrl: dataUrl });
+                                };
+                                reader.readAsDataURL(file);
+                              }
+                            }}
+                          />
+                        </label>
+                        <p className="text-[#64748B] text-xs mt-1">Supported formats: JPEG, PNG, WebP. Max size: 5MB</p>
+                      </div>
+                    </div>
                   </div>
                 </div>
                 <div className="mt-4">
@@ -1280,88 +1355,82 @@ export default function AdminPaymentsPage() {
                 </div>
               )}
 
-              {/* Amount & Fee Settings */}
+              {/* Min Amount */}
               <div className="p-4 rounded-lg bg-[rgba(0,0,0,0.3)] border border-[rgba(255,255,255,0.1)]">
-                <h3 className="text-white text-sm font-semibold mb-4 flex items-center gap-2">
-                  <DollarSign className="w-4 h-4 text-[#22C55E]" />
-                  Amount & Fee Settings
-                </h3>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="text-white text-sm font-medium mb-2 block">Min Amount ($)</label>
-                    <input
-                      type="number"
-                      value={methodFormData.minAmount}
-                      onChange={(e) => setMethodFormData({ ...methodFormData, minAmount: parseFloat(e.target.value) || 0 })}
-                      className="w-full bg-[rgba(0,0,0,0.4)] border border-[rgba(255,255,255,0.18)] rounded-lg px-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#3B82F6]"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-white text-sm font-medium mb-2 block">Max Amount ($)</label>
-                    <input
-                      type="number"
-                      value={methodFormData.maxAmount}
-                      onChange={(e) => setMethodFormData({ ...methodFormData, maxAmount: parseFloat(e.target.value) || 0 })}
-                      className="w-full bg-[rgba(0,0,0,0.4)] border border-[rgba(255,255,255,0.18)] rounded-lg px-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#3B82F6]"
-                    />
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-4 mt-4">
-                  <div>
-                    <label className="text-white text-sm font-medium mb-2 block">Fixed Fee ($)</label>
-                    <input
-                      type="number"
-                      step="0.01"
-                      value={methodFormData.feeFixed}
-                      onChange={(e) => setMethodFormData({ ...methodFormData, feeFixed: parseFloat(e.target.value) || 0 })}
-                      className="w-full bg-[rgba(0,0,0,0.4)] border border-[rgba(255,255,255,0.18)] rounded-lg px-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#3B82F6]"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-white text-sm font-medium mb-2 block">Fee Percent (%)</label>
-                    <input
-                      type="number"
-                      step="0.1"
-                      max="100"
-                      value={methodFormData.feePercent}
-                      onChange={(e) => setMethodFormData({ ...methodFormData, feePercent: parseFloat(e.target.value) || 0 })}
-                      className="w-full bg-[rgba(0,0,0,0.4)] border border-[rgba(255,255,255,0.18)] rounded-lg px-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#3B82F6]"
-                    />
-                  </div>
+                <div>
+                  <label className="text-white text-sm font-medium mb-2 block">Min Amount *</label>
+                  <input
+                    type="number"
+                    value={methodFormData.minAmount}
+                    onChange={(e) => setMethodFormData({ ...methodFormData, minAmount: parseFloat(e.target.value) || 0 })}
+                    className="w-full bg-[rgba(0,0,0,0.4)] border border-[rgba(255,255,255,0.18)] rounded-lg px-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#3B82F6]"
+                  />
                 </div>
               </div>
 
-              {/* Bonus Settings */}
+              {/* Bonus Settings - Like CheapStreamTV */}
               <div className="p-4 rounded-lg bg-[rgba(0,0,0,0.3)] border border-[rgba(255,255,255,0.1)]">
-                <h3 className="text-white text-sm font-semibold mb-4 flex items-center gap-2">
-                  <Plus className="w-4 h-4 text-[#22C55E]" />
-                  Bonus Settings
-                </h3>
-                <div>
-                  <label className="text-white text-sm font-medium mb-2 block">Bonus Rules</label>
-                  <input
-                    type="text"
-                    value={methodFormData.bonusSettings}
-                    onChange={(e) => setMethodFormData({ ...methodFormData, bonusSettings: e.target.value })}
-                    className="w-full bg-[rgba(0,0,0,0.4)] border border-[rgba(255,255,255,0.18)] rounded-lg px-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#3B82F6]"
-                    placeholder="e.g., $100 → 5% bonus, $500 → 10% bonus"
-                  />
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-white text-sm font-semibold">Bonus Settings</h3>
+                  <button
+                    onClick={() => setBonusRules([...bonusRules, { minAmount: 0, bonusPercent: 0 }])}
+                    className="text-[#3B82F6] hover:text-[#60A5FA] text-sm font-medium flex items-center gap-1"
+                  >
+                    <Plus className="w-4 h-4" />
+                    Add Bonus
+                  </button>
                 </div>
-                <div className="mt-4">
-                  <label className="text-white text-sm font-medium mb-2 block">Service Fee Text</label>
-                  <input
-                    type="text"
-                    value={methodFormData.serviceFee}
-                    onChange={(e) => setMethodFormData({ ...methodFormData, serviceFee: e.target.value })}
-                    className="w-full bg-[rgba(0,0,0,0.4)] border border-[rgba(255,255,255,0.18)] rounded-lg px-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#3B82F6]"
-                    placeholder="e.g., 10% fee (e.g., $100 → $110.00)"
-                  />
+                <div className="space-y-3">
+                  {bonusRules.map((rule, index) => (
+                    <div key={index} className="flex items-center gap-3">
+                      <div className="flex-1">
+                        <label className="text-[#94A3B8] text-xs mb-1 block">Min Amount ($)</label>
+                        <input
+                          type="number"
+                          value={rule.minAmount}
+                          onChange={(e) => {
+                            const newRules = [...bonusRules];
+                            newRules[index].minAmount = parseFloat(e.target.value) || 0;
+                            setBonusRules(newRules);
+                          }}
+                          className="w-full bg-[rgba(0,0,0,0.4)] border border-[rgba(255,255,255,0.18)] rounded-lg px-4 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#3B82F6]"
+                          placeholder="0"
+                        />
+                      </div>
+                      <div className="flex-1">
+                        <label className="text-[#94A3B8] text-xs mb-1 block">Bonus (%)</label>
+                        <input
+                          type="number"
+                          step="0.1"
+                          value={rule.bonusPercent}
+                          onChange={(e) => {
+                            const newRules = [...bonusRules];
+                            newRules[index].bonusPercent = parseFloat(e.target.value) || 0;
+                            setBonusRules(newRules);
+                          }}
+                          className="w-full bg-[rgba(0,0,0,0.4)] border border-[rgba(255,255,255,0.18)] rounded-lg px-4 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#3B82F6]"
+                          placeholder="0"
+                        />
+                      </div>
+                      <button
+                        onClick={() => {
+                          if (bonusRules.length > 1) {
+                            setBonusRules(bonusRules.filter((_, i) => i !== index));
+                          }
+                        }}
+                        className="mt-5 p-2 text-[#EF4444] hover:bg-[rgba(239,68,68,0.1)] rounded-lg transition-colors"
+                        disabled={bonusRules.length <= 1}
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                  ))}
                 </div>
-                <div className="flex items-center justify-between mt-4 p-3 rounded-lg bg-[rgba(0,0,0,0.3)]">
-                  <div>
-                    <span className="text-white text-sm font-medium">Enable Service Fee</span>
-                    <p className="text-[#64748B] text-xs mt-1">Apply service fee to deposits</p>
-                  </div>
+              </div>
+
+              {/* Enable Service Fee - Like CheapStreamTV */}
+              <div className="p-4 rounded-lg bg-[rgba(0,0,0,0.3)] border border-[rgba(255,255,255,0.1)]">
+                <div className="flex items-center gap-3 mb-4">
                   <label className="relative inline-flex items-center cursor-pointer">
                     <input
                       type="checkbox"
@@ -1369,29 +1438,96 @@ export default function AdminPaymentsPage() {
                       onChange={(e) => setMethodFormData({ ...methodFormData, serviceFeeEnabled: e.target.checked })}
                       className="sr-only peer"
                     />
-                    <div className="w-11 h-6 bg-[#64748B] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#3B82F6]"></div>
+                    <div className="w-5 h-5 border-2 border-[rgba(255,255,255,0.3)] rounded bg-transparent peer-checked:bg-[#3B82F6] peer-checked:border-[#3B82F6] flex items-center justify-center">
+                      {methodFormData.serviceFeeEnabled && (
+                        <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                        </svg>
+                      )}
+                    </div>
                   </label>
+                  <span className="text-white text-sm font-medium">Enable Service Fee</span>
                 </div>
+
+                {methodFormData.serviceFeeEnabled && (
+                  <div className="space-y-4 mt-4 pt-4 border-t border-[rgba(255,255,255,0.1)]">
+                    <div>
+                      <label className="text-white text-sm font-medium mb-2 block">Fee Type</label>
+                      <select
+                        value={methodFormData.serviceFeeType}
+                        onChange={(e) => setMethodFormData({ ...methodFormData, serviceFeeType: e.target.value as "percentage" | "fixed" })}
+                        className="w-full bg-[rgba(0,0,0,0.4)] border border-[rgba(255,255,255,0.18)] rounded-lg px-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#3B82F6]"
+                      >
+                        <option value="percentage">Percentage (%)</option>
+                        <option value="fixed">Fixed ($)</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="text-white text-sm font-medium mb-2 block">
+                        {methodFormData.serviceFeeType === "percentage" ? "Fee Percentage (%)" : "Fee Amount ($)"}
+                      </label>
+                      <input
+                        type="number"
+                        step={methodFormData.serviceFeeType === "percentage" ? "0.1" : "0.01"}
+                        value={methodFormData.serviceFeeType === "percentage" ? methodFormData.feePercent : methodFormData.feeFixed}
+                        onChange={(e) => {
+                          const value = parseFloat(e.target.value) || 0;
+                          if (methodFormData.serviceFeeType === "percentage") {
+                            setMethodFormData({ ...methodFormData, feePercent: value });
+                          } else {
+                            setMethodFormData({ ...methodFormData, feeFixed: value });
+                          }
+                        }}
+                        className="w-full bg-[rgba(0,0,0,0.4)] border border-[rgba(255,255,255,0.18)] rounded-lg px-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#3B82F6]"
+                        placeholder="0"
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Active Toggle - Like CheapStreamTV */}
+              <div className="flex items-center gap-3 mt-2">
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={methodFormData.isEnabled}
+                    onChange={(e) => setMethodFormData({ ...methodFormData, isEnabled: e.target.checked })}
+                    className="sr-only peer"
+                  />
+                  <div className="w-5 h-5 border-2 border-[rgba(255,255,255,0.3)] rounded bg-transparent peer-checked:bg-[#3B82F6] peer-checked:border-[#3B82F6] flex items-center justify-center">
+                    {methodFormData.isEnabled && (
+                      <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                      </svg>
+                    )}
+                  </div>
+                </label>
+                <span className="text-white text-sm font-medium">Active</span>
               </div>
             </div>
 
-            <div className="flex items-center justify-end gap-3 mt-6 pt-4 border-t border-[rgba(255,255,255,0.1)]">
+            <div className="flex items-center gap-3 mt-6 pt-4 border-t border-[rgba(255,255,255,0.1)]">
+              <button
+                onClick={handleSaveMethod}
+                disabled={isLoading}
+                className="flex-1 px-5 py-2.5 rounded-lg bg-[#22C55E] hover:bg-[#16A34A] text-white text-sm font-medium transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {isLoading ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Save className="w-4 h-4" />
+                )}
+                Update
+              </button>
               <button
                 onClick={() => {
                   setShowEditMethodModal(false);
                   setSelectedMethod(null);
                 }}
-                className="px-5 py-2.5 rounded-lg bg-[rgba(255,255,255,0.08)] hover:bg-[rgba(255,255,255,0.12)] text-white text-sm font-medium transition-colors"
+                className="flex-1 px-5 py-2.5 rounded-lg bg-[rgba(255,255,255,0.08)] hover:bg-[rgba(255,255,255,0.12)] text-white text-sm font-medium transition-colors"
               >
                 Cancel
-              </button>
-              <button
-                onClick={handleSaveMethod}
-                disabled={isLoading}
-                className="px-5 py-2.5 rounded-lg bg-[#3B82F6] hover:bg-[#2563EB] text-white text-sm font-medium transition-colors disabled:opacity-50 flex items-center gap-2"
-              >
-                {isLoading && <Loader2 className="w-4 h-4 animate-spin" />}
-                Save Changes
               </button>
             </div>
           </div>
