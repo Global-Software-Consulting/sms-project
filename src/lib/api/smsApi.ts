@@ -1245,7 +1245,7 @@ export const adminAutoPopulateVip = async (params?: {
 }): Promise<{ message: string; added: number; criteria: { minOrders: number; limit: number } }> => {
   const response = await apiClient.post(
     API_ENDPOINTS.ADMIN.SMS.VIP_AUTO_POPULATE,
-    null,
+    {},
     { params },
   );
   return response.data;

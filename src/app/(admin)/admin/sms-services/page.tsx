@@ -123,7 +123,10 @@ export default function AdminSmsServicesPage() {
   const [pricingProducts, setPricingProducts] = useState<PricingProduct[]>([]);
   const [isPricingLoading, setIsPricingLoading] = useState(false);
   const [pricingPage, setPricingPage] = useState(1);
+  const [pricingLimit, setPricingLimit] = useState(50);
   const [pricingTotal, setPricingTotal] = useState(0);
+  const [pricingTotalPages, setPricingTotalPages] = useState(0);
+  const [debouncedPricingSearch, setDebouncedPricingSearch] = useState("");
   const [showLockedOnly, setShowLockedOnly] = useState(false);
 
   // Subscriptions State (from API)
@@ -279,7 +282,7 @@ export default function AdminSmsServicesPage() {
       const result = await adminBulkLockProducts(selectedProductIds, lock);
       toast.success(`${result.updated} products ${lock ? 'locked' : 'unlocked'}`);
       setSelectedProductIds([]);
-      fetchPricingProducts(pricingPage, pricingSearchQuery, showLockedOnly);
+      fetchPricingProducts(pricingPage, pricingLimit, debouncedPricingSearch, showLockedOnly);
     } catch (error: any) {
       toast.error(error?.response?.data?.message || "Failed to bulk update");
     } finally {
@@ -944,18 +947,19 @@ export default function AdminSmsServicesPage() {
   }, []);
 
   // Fetch pricing products
-  const fetchPricingProducts = useCallback(async (page = 1, search = "", lockedOnly = false) => {
+  const fetchPricingProducts = useCallback(async (page = 1, limit = 50, search = "", lockedOnly = false) => {
     setIsPricingLoading(true);
     try {
-      const params: Record<string, any> = { page, limit: 20 };
+      const params: Record<string, any> = { page, limit };
       if (search) params.search = search;
       if (lockedOnly) params.isPriceLocked = true;
-      const response = await apiClient.get<{ data: PricingProduct[]; total: number }>(
+      const response = await apiClient.get<{ data: PricingProduct[]; meta: { total: number; totalPages: number } }>(
         API_ENDPOINTS.ADMIN.SMS.PRICING_PRODUCTS,
         { params },
       );
       setPricingProducts(response.data.data || []);
-      setPricingTotal(response.data.total || 0);
+      setPricingTotal(response.data.meta?.total || 0);
+      setPricingTotalPages(response.data.meta?.totalPages || 0);
     } catch (error: any) {
       toast.error(error?.response?.data?.message || "Failed to fetch products");
     } finally {
@@ -963,33 +967,43 @@ export default function AdminSmsServicesPage() {
     }
   }, []);
 
+  // Debounce pricing search
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedPricingSearch(pricingSearchQuery);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [pricingSearchQuery]);
+
+  // Fetch when pagination/search/filter changes
+  useEffect(() => {
+    if (activeTab === 'pricing') {
+      fetchPricingProducts(pricingPage, pricingLimit, debouncedPricingSearch, showLockedOnly);
+    }
+  }, [activeTab, pricingPage, pricingLimit, debouncedPricingSearch, showLockedOnly, fetchPricingProducts]);
+
+  // Initial load for pricing tab
   useEffect(() => {
     if (activeTab === 'pricing') {
       fetchGlobalMarkup();
-      fetchPricingProducts(1, "");
       setPricingPage(1);
       setPricingSearchQuery("");
+      setDebouncedPricingSearch("");
     }
-  }, [activeTab, fetchGlobalMarkup, fetchPricingProducts]);
+  }, [activeTab, fetchGlobalMarkup]);
 
   const handleApplyGlobalMarkup = async () => {
     setIsLoading(true);
     try {
       await apiClient.put(API_ENDPOINTS.ADMIN.SMS.PRICING_GLOBAL_MARKUP, { markup: globalMarkup });
       toast.success(`Global markup of ${globalMarkup}% applied!`);
-      fetchPricingProducts(pricingPage, pricingSearchQuery, showLockedOnly);
+      fetchPricingProducts(pricingPage, pricingLimit, debouncedPricingSearch, showLockedOnly);
     } catch (error: any) {
       toast.error(error?.response?.data?.message || "Failed to apply markup");
     } finally {
       setIsLoading(false);
     }
   };
-
-  const handlePricingSearch = useCallback((query: string) => {
-    setPricingSearchQuery(query);
-    setPricingPage(1);
-    fetchPricingProducts(1, query, showLockedOnly);
-  }, [fetchPricingProducts]);
 
   const handleEditServicePrice = (product: PricingProduct) => {
     setSelectedServicePrice(product);
@@ -1013,7 +1027,7 @@ export default function AdminSmsServicesPage() {
       toast.success("Product price updated!");
       setShowEditPriceModal(false);
       setSelectedServicePrice(null);
-      fetchPricingProducts(pricingPage, pricingSearchQuery, showLockedOnly);
+      fetchPricingProducts(pricingPage, pricingLimit, debouncedPricingSearch, showLockedOnly);
     } catch (error: any) {
       toast.error(error?.response?.data?.message || "Failed to update price");
     } finally {
@@ -1551,20 +1565,38 @@ export default function AdminSmsServicesPage() {
                   type="text"
                   value={pricingSearchQuery}
                   onChange={(e) => {
-                    const val = e.target.value;
-                    setPricingSearchQuery(val);
-                    handlePricingSearch(val);
+                    setPricingSearchQuery(e.target.value);
+                    setPricingPage(1);
                   }}
                   placeholder="Search services by name, country, or provider..."
                   className="w-full bg-[rgba(0,0,0,0.4)] border border-[rgba(255,255,255,0.18)] rounded-lg pl-12 pr-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#3B82F6]"
                 />
+                {isPricingLoading && (
+                  <Loader2 className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#3B82F6] animate-spin" />
+                )}
+              </div>
+              
+              {/* Per page dropdown */}
+              <div className="flex items-center gap-2">
+                <span className="text-[#94A3B8] text-sm whitespace-nowrap">Per page:</span>
+                <select
+                  value={pricingLimit}
+                  onChange={(e) => {
+                    setPricingLimit(Number(e.target.value));
+                    setPricingPage(1);
+                  }}
+                  className="px-3 py-2.5 rounded-lg bg-[#1E293B] border border-[rgba(255,255,255,0.1)] text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#3B82F6] cursor-pointer [&>option]:bg-[#1E293B] [&>option]:text-white"
+                >
+                  <option value={50}>50</option>
+                  <option value={100}>100</option>
+                  <option value={150}>150</option>
+                  <option value={200}>200</option>
+                </select>
               </div>
               <button
                 onClick={() => {
-                  const newVal = !showLockedOnly;
-                  setShowLockedOnly(newVal);
+                  setShowLockedOnly(!showLockedOnly);
                   setPricingPage(1);
-                  fetchPricingProducts(1, pricingSearchQuery, newVal);
                 }}
                 className={`flex items-center gap-2 px-4 py-3 rounded-lg text-sm font-medium transition-all whitespace-nowrap ${
                   showLockedOnly
@@ -1721,25 +1753,67 @@ export default function AdminSmsServicesPage() {
                 </div>
 
                 {/* Pagination */}
-                {pricingTotal > 20 && (
+                {pricingTotalPages > 1 && (
                   <div className="flex items-center justify-between px-6 py-4 border-t border-[rgba(255,255,255,0.1)]">
-                    <p className="text-[#94A3B8] text-sm">
-                      Page {pricingPage} of {Math.ceil(pricingTotal / 20)}
-                    </p>
+                    <div className="text-[#94A3B8] text-sm">
+                      Showing {((pricingPage - 1) * pricingLimit) + 1}-{Math.min(pricingPage * pricingLimit, pricingTotal)} of {pricingTotal}
+                    </div>
                     <div className="flex items-center gap-2">
                       <button
-                        disabled={pricingPage <= 1}
-                        onClick={() => { setPricingPage(pricingPage - 1); fetchPricingProducts(pricingPage - 1, pricingSearchQuery, showLockedOnly); }}
-                        className="px-4 py-2 rounded-lg bg-[rgba(255,255,255,0.08)] text-white text-sm disabled:opacity-50 hover:bg-[rgba(255,255,255,0.12)] transition-colors"
+                        onClick={() => setPricingPage(1)}
+                        disabled={pricingPage === 1 || isPricingLoading}
+                        className="px-3 py-1.5 rounded-lg bg-[rgba(255,255,255,0.05)] hover:bg-[rgba(255,255,255,0.1)] text-[#94A3B8] text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        First
+                      </button>
+                      <button
+                        onClick={() => setPricingPage(p => Math.max(1, p - 1))}
+                        disabled={pricingPage === 1 || isPricingLoading}
+                        className="px-3 py-1.5 rounded-lg bg-[rgba(255,255,255,0.05)] hover:bg-[rgba(255,255,255,0.1)] text-[#94A3B8] text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         Previous
                       </button>
+                      <div className="flex items-center gap-1">
+                        {Array.from({ length: Math.min(5, pricingTotalPages) }, (_, i) => {
+                          let pageNum: number;
+                          if (pricingTotalPages <= 5) {
+                            pageNum = i + 1;
+                          } else if (pricingPage <= 3) {
+                            pageNum = i + 1;
+                          } else if (pricingPage >= pricingTotalPages - 2) {
+                            pageNum = pricingTotalPages - 4 + i;
+                          } else {
+                            pageNum = pricingPage - 2 + i;
+                          }
+                          return (
+                            <button
+                              key={pageNum}
+                              onClick={() => setPricingPage(pageNum)}
+                              disabled={isPricingLoading}
+                              className={`w-8 h-8 rounded-lg text-sm font-medium transition-colors ${
+                                pricingPage === pageNum
+                                  ? "bg-[#3B82F6] text-white"
+                                  : "bg-[rgba(255,255,255,0.05)] hover:bg-[rgba(255,255,255,0.1)] text-[#94A3B8]"
+                              } disabled:opacity-50`}
+                            >
+                              {pageNum}
+                            </button>
+                          );
+                        })}
+                      </div>
                       <button
-                        disabled={pricingPage >= Math.ceil(pricingTotal / 20)}
-                        onClick={() => { setPricingPage(pricingPage + 1); fetchPricingProducts(pricingPage + 1, pricingSearchQuery, showLockedOnly); }}
-                        className="px-4 py-2 rounded-lg bg-[rgba(255,255,255,0.08)] text-white text-sm disabled:opacity-50 hover:bg-[rgba(255,255,255,0.12)] transition-colors"
+                        onClick={() => setPricingPage(p => Math.min(pricingTotalPages, p + 1))}
+                        disabled={pricingPage === pricingTotalPages || isPricingLoading}
+                        className="px-3 py-1.5 rounded-lg bg-[rgba(255,255,255,0.05)] hover:bg-[rgba(255,255,255,0.1)] text-[#94A3B8] text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         Next
+                      </button>
+                      <button
+                        onClick={() => setPricingPage(pricingTotalPages)}
+                        disabled={pricingPage === pricingTotalPages || isPricingLoading}
+                        className="px-3 py-1.5 rounded-lg bg-[rgba(255,255,255,0.05)] hover:bg-[rgba(255,255,255,0.1)] text-[#94A3B8] text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        Last
                       </button>
                     </div>
                   </div>
