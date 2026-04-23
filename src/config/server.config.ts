@@ -80,6 +80,7 @@ export const API_ENDPOINTS = {
     ROOT: '/payments',
     GATEWAYS: '/payments/gateways',
     PAYGATE_PROVIDERS: '/payments/paygate-providers',
+    PREVIEW: '/payments/preview',
     DETAIL: (id: string) => `/payments/${id}`,
     CANCEL: (id: string) => `/payments/${id}/cancel`,
   },

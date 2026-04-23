@@ -189,6 +189,22 @@ export interface CreatePaymentRequest {
   couponCode?: string;
 }
 
+/**
+ * Payment preview response with fee breakdown
+ */
+export interface PaymentPreviewResponse {
+  requestedAmount: number;
+  fee: number;
+  feePassToUser: boolean;
+  totalCharge: number;
+  amountCredited: number;
+  feeDetails: {
+    fixed: number;
+    percent: number;
+    description: string;
+  };
+}
+
 export interface PaymentQueryParams {
   status?: PaymentStatus;
   gateway?: PaymentGateway;
@@ -212,6 +228,21 @@ export const createPayment = async (
   const response = await apiClient.post<PaymentInitResponse>(
     API_ENDPOINTS.PAYMENTS.ROOT,
     data,
+  );
+  return response.data;
+};
+
+/**
+ * Get payment preview with fee calculation
+ * GET /api/v1/payments/preview?amount=X&gateway=STRIPE
+ */
+export const getPaymentPreview = async (
+  amount: number,
+  gateway: PaymentGateway = 'STRIPE',
+): Promise<PaymentPreviewResponse> => {
+  const response = await apiClient.get<PaymentPreviewResponse>(
+    API_ENDPOINTS.PAYMENTS.PREVIEW,
+    { params: { amount, gateway } },
   );
   return response.data;
 };

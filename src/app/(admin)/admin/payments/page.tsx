@@ -63,6 +63,37 @@ export default function AdminPaymentsPage() {
     serviceFee: "",
     feeFixed: 0,
     feePercent: 0,
+    serviceFeeEnabled: false,
+    imageUrl: "",
+    // Gateway-specific API settings
+    settings: {
+      // Stripe
+      stripeSecretKey: "",
+      stripePublishableKey: "",
+      stripeWebhookSecret: "",
+      stripeAllowedIps: [] as string[],
+      // Plisio
+      plisioApiKey: "",
+      plisioApiSecret: "",
+      // Cryptomus
+      cryptomusMerchantId: "",
+      cryptomusApiKey: "",
+      // NOWPayments
+      nowpaymentsApiKey: "",
+      nowpaymentsIpnSecret: "",
+      // PayGate
+      paygateWalletAddress: "",
+      paygateApiKey: "",
+      // Volet
+      voletApiKey: "",
+      voletSecretKey: "",
+      voletMerchantId: "",
+      // Binance
+      binanceMerchantId: "",
+      binanceApiKey: "",
+      binanceSecretKey: "",
+      binancePayId: "",
+    },
   });
 
   // PayGate Providers State
@@ -192,6 +223,7 @@ export default function AdminPaymentsPage() {
   // Payment Method Handlers
   const handleEditMethod = (method: PaymentGatewayConfig) => {
     setSelectedMethod(method);
+    const settings = method.settings || {};
     setMethodFormData({
       displayName: method.displayName,
       description: method.description || "",
@@ -204,6 +236,36 @@ export default function AdminPaymentsPage() {
       serviceFee: method.serviceFee || "",
       feeFixed: parseFloat(method.feeFixed) || 0,
       feePercent: parseFloat(method.feePercent) || 0,
+      serviceFeeEnabled: method.serviceFeeEnabled || false,
+      imageUrl: method.imageUrl || "",
+      settings: {
+        // Stripe
+        stripeSecretKey: settings.stripeSecretKey || "",
+        stripePublishableKey: settings.stripePublishableKey || "",
+        stripeWebhookSecret: settings.stripeWebhookSecret || "",
+        stripeAllowedIps: settings.stripeAllowedIps || [],
+        // Plisio
+        plisioApiKey: settings.plisioApiKey || "",
+        plisioApiSecret: settings.plisioApiSecret || "",
+        // Cryptomus
+        cryptomusMerchantId: settings.cryptomusMerchantId || "",
+        cryptomusApiKey: settings.cryptomusApiKey || "",
+        // NOWPayments
+        nowpaymentsApiKey: settings.nowpaymentsApiKey || "",
+        nowpaymentsIpnSecret: settings.nowpaymentsIpnSecret || "",
+        // PayGate
+        paygateWalletAddress: settings.paygateWalletAddress || "",
+        paygateApiKey: settings.paygateApiKey || "",
+        // Volet
+        voletApiKey: settings.voletApiKey || "",
+        voletSecretKey: settings.voletSecretKey || "",
+        voletMerchantId: settings.voletMerchantId || "",
+        // Binance
+        binanceMerchantId: settings.binanceMerchantId || "",
+        binanceApiKey: settings.binanceApiKey || "",
+        binanceSecretKey: settings.binanceSecretKey || "",
+        binancePayId: settings.binancePayId || "",
+      },
     });
     setShowEditMethodModal(true);
   };
@@ -213,6 +275,16 @@ export default function AdminPaymentsPage() {
 
     setIsLoading(true);
     try {
+      // Build settings object with only non-empty values
+      const cleanSettings: Record<string, unknown> = {};
+      const settingsKeys = Object.keys(methodFormData.settings) as (keyof typeof methodFormData.settings)[];
+      for (const key of settingsKeys) {
+        const value = methodFormData.settings[key];
+        if (value && (typeof value === 'string' ? value.trim() !== '' : Array.isArray(value) ? value.length > 0 : true)) {
+          cleanSettings[key] = value;
+        }
+      }
+
       await updatePaymentGateway(selectedMethod.gateway, {
         displayName: methodFormData.displayName,
         description: methodFormData.description,
@@ -225,6 +297,9 @@ export default function AdminPaymentsPage() {
         serviceFee: methodFormData.serviceFee,
         feeFixed: methodFormData.feeFixed,
         feePercent: methodFormData.feePercent,
+        serviceFeeEnabled: methodFormData.serviceFeeEnabled,
+        imageUrl: methodFormData.imageUrl || undefined,
+        settings: Object.keys(cleanSettings).length > 0 ? cleanSettings : undefined,
       });
       
       toast.success("Payment method updated successfully!");
@@ -823,87 +898,484 @@ export default function AdminPaymentsPage() {
       {/* Edit Payment Method Modal */}
       {showEditMethodModal && selectedMethod && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-[#0F172A] border border-[rgba(255,255,255,0.1)] rounded-xl p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-            <h2 className="text-white text-xl font-semibold mb-6">
-              Edit {selectedMethod.displayName}
-            </h2>
-
-            <div className="space-y-4">
+          <div className="bg-[#0F172A] border border-[rgba(255,255,255,0.1)] rounded-xl p-6 w-full max-w-3xl max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-6">
               <div>
-                <label className="text-white text-sm font-medium mb-2 block">Display Name</label>
-                <input
-                  type="text"
-                  value={methodFormData.displayName}
-                  onChange={(e) => setMethodFormData({ ...methodFormData, displayName: e.target.value })}
-                  className="w-full bg-[rgba(0,0,0,0.4)] border border-[rgba(255,255,255,0.18)] rounded-lg px-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#3B82F6]"
-                />
+                <h2 className="text-white text-xl font-semibold">
+                  Edit {selectedMethod.displayName}
+                </h2>
+                <p className="text-[#64748B] text-sm mt-1">
+                  Gateway: {selectedMethod.gateway} • {selectedMethod.isConfigured ? '✓ Configured' : '⚠️ Not configured'}
+                </p>
               </div>
+              <button
+                onClick={() => {
+                  setShowEditMethodModal(false);
+                  setSelectedMethod(null);
+                }}
+                className="p-2 rounded-lg hover:bg-[rgba(255,255,255,0.08)] text-[#64748B] hover:text-white transition-colors"
+              >
+                ×
+              </button>
+            </div>
 
-              <div>
-                <label className="text-white text-sm font-medium mb-2 block">Description</label>
-                <input
-                  type="text"
-                  value={methodFormData.description}
-                  onChange={(e) => setMethodFormData({ ...methodFormData, description: e.target.value })}
-                  className="w-full bg-[rgba(0,0,0,0.4)] border border-[rgba(255,255,255,0.18)] rounded-lg px-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#3B82F6]"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="text-white text-sm font-medium mb-2 block">Min Amount ($)</label>
+            <div className="space-y-6">
+              {/* Basic Information */}
+              <div className="p-4 rounded-lg bg-[rgba(0,0,0,0.3)] border border-[rgba(255,255,255,0.1)]">
+                <h3 className="text-white text-sm font-semibold mb-4 flex items-center gap-2">
+                  <CreditCard className="w-4 h-4 text-[#3B82F6]" />
+                  Basic Information
+                </h3>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-white text-sm font-medium mb-2 block">Display Name *</label>
+                    <input
+                      type="text"
+                      value={methodFormData.displayName}
+                      onChange={(e) => setMethodFormData({ ...methodFormData, displayName: e.target.value })}
+                      className="w-full bg-[rgba(0,0,0,0.4)] border border-[rgba(255,255,255,0.18)] rounded-lg px-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#3B82F6]"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-white text-sm font-medium mb-2 block">Image URL</label>
+                    <input
+                      type="text"
+                      value={methodFormData.imageUrl}
+                      onChange={(e) => setMethodFormData({ ...methodFormData, imageUrl: e.target.value })}
+                      className="w-full bg-[rgba(0,0,0,0.4)] border border-[rgba(255,255,255,0.18)] rounded-lg px-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#3B82F6]"
+                      placeholder="https://..."
+                    />
+                  </div>
+                </div>
+                <div className="mt-4">
+                  <label className="text-white text-sm font-medium mb-2 block">Description</label>
                   <input
-                    type="number"
-                    value={methodFormData.minAmount}
-                    onChange={(e) => setMethodFormData({ ...methodFormData, minAmount: parseFloat(e.target.value) || 0 })}
+                    type="text"
+                    value={methodFormData.description}
+                    onChange={(e) => setMethodFormData({ ...methodFormData, description: e.target.value })}
                     className="w-full bg-[rgba(0,0,0,0.4)] border border-[rgba(255,255,255,0.18)] rounded-lg px-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#3B82F6]"
                   />
                 </div>
-                <div>
-                  <label className="text-white text-sm font-medium mb-2 block">Max Amount ($)</label>
-                  <input
-                    type="number"
-                    value={methodFormData.maxAmount}
-                    onChange={(e) => setMethodFormData({ ...methodFormData, maxAmount: parseFloat(e.target.value) || 0 })}
-                    className="w-full bg-[rgba(0,0,0,0.4)] border border-[rgba(255,255,255,0.18)] rounded-lg px-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#3B82F6]"
-                  />
+              </div>
+
+              {/* Gateway API Configuration - Stripe */}
+              {selectedMethod.gateway === 'STRIPE' && (
+                <div className="p-4 rounded-lg bg-[rgba(59,130,246,0.1)] border border-[rgba(59,130,246,0.3)]">
+                  <h3 className="text-white text-sm font-semibold mb-4 flex items-center gap-2">
+                    <CreditCard className="w-4 h-4 text-[#3B82F6]" />
+                    Stripe API Configuration
+                  </h3>
+                  <div className="space-y-4">
+                    <div>
+                      <label className="text-white text-sm font-medium mb-2 block">Secret Key *</label>
+                      <input
+                        type="password"
+                        value={methodFormData.settings.stripeSecretKey}
+                        onChange={(e) => setMethodFormData({ 
+                          ...methodFormData, 
+                          settings: { ...methodFormData.settings, stripeSecretKey: e.target.value }
+                        })}
+                        className="w-full bg-[rgba(0,0,0,0.4)] border border-[rgba(255,255,255,0.18)] rounded-lg px-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#3B82F6]"
+                        placeholder="sk_test_51... or sk_live_51..."
+                      />
+                      <p className="text-[#64748B] text-xs mt-1">Server-side API calls. Starts with sk_test_ or sk_live_</p>
+                    </div>
+                    <div>
+                      <label className="text-white text-sm font-medium mb-2 block">Publishable Key *</label>
+                      <input
+                        type="text"
+                        value={methodFormData.settings.stripePublishableKey}
+                        onChange={(e) => setMethodFormData({ 
+                          ...methodFormData, 
+                          settings: { ...methodFormData.settings, stripePublishableKey: e.target.value }
+                        })}
+                        className="w-full bg-[rgba(0,0,0,0.4)] border border-[rgba(255,255,255,0.18)] rounded-lg px-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#3B82F6]"
+                        placeholder="pk_test_51... or pk_live_51..."
+                      />
+                      <p className="text-[#64748B] text-xs mt-1">Frontend checkout. Starts with pk_test_ or pk_live_</p>
+                    </div>
+                    <div>
+                      <label className="text-white text-sm font-medium mb-2 block">Webhook Secret (Optional)</label>
+                      <input
+                        type="password"
+                        value={methodFormData.settings.stripeWebhookSecret}
+                        onChange={(e) => setMethodFormData({ 
+                          ...methodFormData, 
+                          settings: { ...methodFormData.settings, stripeWebhookSecret: e.target.value }
+                        })}
+                        className="w-full bg-[rgba(0,0,0,0.4)] border border-[rgba(255,255,255,0.18)] rounded-lg px-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#3B82F6]"
+                        placeholder="whsec_..."
+                      />
+                      <p className="text-[#64748B] text-xs mt-1">Get from Stripe Dashboard → Developers → Webhooks</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Gateway API Configuration - Plisio */}
+              {selectedMethod.gateway === 'PLISIO' && (
+                <div className="p-4 rounded-lg bg-[rgba(245,158,11,0.1)] border border-[rgba(245,158,11,0.3)]">
+                  <h3 className="text-white text-sm font-semibold mb-4 flex items-center gap-2">
+                    <Bitcoin className="w-4 h-4 text-[#F59E0B]" />
+                    Plisio API Configuration
+                  </h3>
+                  <div className="space-y-4">
+                    <div>
+                      <label className="text-white text-sm font-medium mb-2 block">API Key *</label>
+                      <input
+                        type="password"
+                        value={methodFormData.settings.plisioApiKey}
+                        onChange={(e) => setMethodFormData({ 
+                          ...methodFormData, 
+                          settings: { ...methodFormData.settings, plisioApiKey: e.target.value }
+                        })}
+                        className="w-full bg-[rgba(0,0,0,0.4)] border border-[rgba(255,255,255,0.18)] rounded-lg px-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#3B82F6]"
+                        placeholder="Enter your Plisio API Key"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-white text-sm font-medium mb-2 block">API Secret (Optional)</label>
+                      <input
+                        type="password"
+                        value={methodFormData.settings.plisioApiSecret}
+                        onChange={(e) => setMethodFormData({ 
+                          ...methodFormData, 
+                          settings: { ...methodFormData.settings, plisioApiSecret: e.target.value }
+                        })}
+                        className="w-full bg-[rgba(0,0,0,0.4)] border border-[rgba(255,255,255,0.18)] rounded-lg px-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#3B82F6]"
+                        placeholder="Enter your Plisio API Secret"
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Gateway API Configuration - Cryptomus */}
+              {selectedMethod.gateway === 'CRYPTOMUS' && (
+                <div className="p-4 rounded-lg bg-[rgba(245,158,11,0.1)] border border-[rgba(245,158,11,0.3)]">
+                  <h3 className="text-white text-sm font-semibold mb-4 flex items-center gap-2">
+                    <Bitcoin className="w-4 h-4 text-[#F59E0B]" />
+                    Cryptomus API Configuration
+                  </h3>
+                  <div className="space-y-4">
+                    <div>
+                      <label className="text-white text-sm font-medium mb-2 block">Merchant ID *</label>
+                      <input
+                        type="text"
+                        value={methodFormData.settings.cryptomusMerchantId}
+                        onChange={(e) => setMethodFormData({ 
+                          ...methodFormData, 
+                          settings: { ...methodFormData.settings, cryptomusMerchantId: e.target.value }
+                        })}
+                        className="w-full bg-[rgba(0,0,0,0.4)] border border-[rgba(255,255,255,0.18)] rounded-lg px-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#3B82F6]"
+                        placeholder="Enter your Cryptomus Merchant ID"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-white text-sm font-medium mb-2 block">API Key *</label>
+                      <input
+                        type="password"
+                        value={methodFormData.settings.cryptomusApiKey}
+                        onChange={(e) => setMethodFormData({ 
+                          ...methodFormData, 
+                          settings: { ...methodFormData.settings, cryptomusApiKey: e.target.value }
+                        })}
+                        className="w-full bg-[rgba(0,0,0,0.4)] border border-[rgba(255,255,255,0.18)] rounded-lg px-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#3B82F6]"
+                        placeholder="Enter your Cryptomus API Key"
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Gateway API Configuration - NOWPayments */}
+              {selectedMethod.gateway === 'NOWPAYMENTS' && (
+                <div className="p-4 rounded-lg bg-[rgba(245,158,11,0.1)] border border-[rgba(245,158,11,0.3)]">
+                  <h3 className="text-white text-sm font-semibold mb-4 flex items-center gap-2">
+                    <Bitcoin className="w-4 h-4 text-[#F59E0B]" />
+                    NOWPayments API Configuration
+                  </h3>
+                  <div className="space-y-4">
+                    <div>
+                      <label className="text-white text-sm font-medium mb-2 block">API Key *</label>
+                      <input
+                        type="password"
+                        value={methodFormData.settings.nowpaymentsApiKey}
+                        onChange={(e) => setMethodFormData({ 
+                          ...methodFormData, 
+                          settings: { ...methodFormData.settings, nowpaymentsApiKey: e.target.value }
+                        })}
+                        className="w-full bg-[rgba(0,0,0,0.4)] border border-[rgba(255,255,255,0.18)] rounded-lg px-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#3B82F6]"
+                        placeholder="Enter your NOWPayments API Key"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-white text-sm font-medium mb-2 block">IPN Secret Key *</label>
+                      <input
+                        type="password"
+                        value={methodFormData.settings.nowpaymentsIpnSecret}
+                        onChange={(e) => setMethodFormData({ 
+                          ...methodFormData, 
+                          settings: { ...methodFormData.settings, nowpaymentsIpnSecret: e.target.value }
+                        })}
+                        className="w-full bg-[rgba(0,0,0,0.4)] border border-[rgba(255,255,255,0.18)] rounded-lg px-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#3B82F6]"
+                        placeholder="Enter your NOWPayments IPN Secret"
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Gateway API Configuration - PayGate */}
+              {selectedMethod.gateway === 'PAYGATE' && (
+                <div className="p-4 rounded-lg bg-[rgba(34,197,94,0.1)] border border-[rgba(34,197,94,0.3)]">
+                  <h3 className="text-white text-sm font-semibold mb-4 flex items-center gap-2">
+                    <Wallet className="w-4 h-4 text-[#22C55E]" />
+                    PayGate.to Configuration
+                  </h3>
+                  <div className="space-y-4">
+                    <div>
+                      <label className="text-white text-sm font-medium mb-2 block">USDC Wallet Address *</label>
+                      <input
+                        type="text"
+                        value={methodFormData.settings.paygateWalletAddress}
+                        onChange={(e) => setMethodFormData({ 
+                          ...methodFormData, 
+                          settings: { ...methodFormData.settings, paygateWalletAddress: e.target.value }
+                        })}
+                        className="w-full bg-[rgba(0,0,0,0.4)] border border-[rgba(255,255,255,0.18)] rounded-lg px-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#3B82F6]"
+                        placeholder="0x..."
+                      />
+                    </div>
+                    <div>
+                      <label className="text-white text-sm font-medium mb-2 block">API Key (Optional)</label>
+                      <input
+                        type="password"
+                        value={methodFormData.settings.paygateApiKey}
+                        onChange={(e) => setMethodFormData({ 
+                          ...methodFormData, 
+                          settings: { ...methodFormData.settings, paygateApiKey: e.target.value }
+                        })}
+                        className="w-full bg-[rgba(0,0,0,0.4)] border border-[rgba(255,255,255,0.18)] rounded-lg px-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#3B82F6]"
+                        placeholder="Enter your PayGate API Key"
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Gateway API Configuration - Volet */}
+              {selectedMethod.gateway === 'VOLET' && (
+                <div className="p-4 rounded-lg bg-[rgba(59,130,246,0.1)] border border-[rgba(59,130,246,0.3)]">
+                  <h3 className="text-white text-sm font-semibold mb-4 flex items-center gap-2">
+                    <CreditCard className="w-4 h-4 text-[#3B82F6]" />
+                    Volet API Configuration
+                  </h3>
+                  <div className="space-y-4">
+                    <div>
+                      <label className="text-white text-sm font-medium mb-2 block">API Key *</label>
+                      <input
+                        type="password"
+                        value={methodFormData.settings.voletApiKey}
+                        onChange={(e) => setMethodFormData({ 
+                          ...methodFormData, 
+                          settings: { ...methodFormData.settings, voletApiKey: e.target.value }
+                        })}
+                        className="w-full bg-[rgba(0,0,0,0.4)] border border-[rgba(255,255,255,0.18)] rounded-lg px-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#3B82F6]"
+                        placeholder="Enter your Volet API Key"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-white text-sm font-medium mb-2 block">Secret Key *</label>
+                      <input
+                        type="password"
+                        value={methodFormData.settings.voletSecretKey}
+                        onChange={(e) => setMethodFormData({ 
+                          ...methodFormData, 
+                          settings: { ...methodFormData.settings, voletSecretKey: e.target.value }
+                        })}
+                        className="w-full bg-[rgba(0,0,0,0.4)] border border-[rgba(255,255,255,0.18)] rounded-lg px-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#3B82F6]"
+                        placeholder="Enter your Volet Secret Key"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-white text-sm font-medium mb-2 block">Merchant ID *</label>
+                      <input
+                        type="text"
+                        value={methodFormData.settings.voletMerchantId}
+                        onChange={(e) => setMethodFormData({ 
+                          ...methodFormData, 
+                          settings: { ...methodFormData.settings, voletMerchantId: e.target.value }
+                        })}
+                        className="w-full bg-[rgba(0,0,0,0.4)] border border-[rgba(255,255,255,0.18)] rounded-lg px-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#3B82F6]"
+                        placeholder="Enter your Volet Merchant ID"
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Gateway API Configuration - Binance */}
+              {selectedMethod.gateway === 'BINANCE' && (
+                <div className="p-4 rounded-lg bg-[rgba(245,158,11,0.1)] border border-[rgba(245,158,11,0.3)]">
+                  <h3 className="text-white text-sm font-semibold mb-4 flex items-center gap-2">
+                    <DollarSign className="w-4 h-4 text-[#F59E0B]" />
+                    Binance Internal Transfer Configuration
+                  </h3>
+                  <div className="space-y-4">
+                    <div>
+                      <label className="text-white text-sm font-medium mb-2 block">Pay ID *</label>
+                      <input
+                        type="text"
+                        value={methodFormData.settings.binancePayId}
+                        onChange={(e) => setMethodFormData({ 
+                          ...methodFormData, 
+                          settings: { ...methodFormData.settings, binancePayId: e.target.value }
+                        })}
+                        className="w-full bg-[rgba(0,0,0,0.4)] border border-[rgba(255,255,255,0.18)] rounded-lg px-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#3B82F6]"
+                        placeholder="Enter your Binance Pay ID"
+                      />
+                      <p className="text-[#64748B] text-xs mt-1">Users will transfer to this Pay ID</p>
+                    </div>
+                    <div>
+                      <label className="text-white text-sm font-medium mb-2 block">Merchant ID (Optional)</label>
+                      <input
+                        type="text"
+                        value={methodFormData.settings.binanceMerchantId}
+                        onChange={(e) => setMethodFormData({ 
+                          ...methodFormData, 
+                          settings: { ...methodFormData.settings, binanceMerchantId: e.target.value }
+                        })}
+                        className="w-full bg-[rgba(0,0,0,0.4)] border border-[rgba(255,255,255,0.18)] rounded-lg px-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#3B82F6]"
+                        placeholder="Enter your Binance Merchant ID"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-white text-sm font-medium mb-2 block">API Key (Optional)</label>
+                      <input
+                        type="password"
+                        value={methodFormData.settings.binanceApiKey}
+                        onChange={(e) => setMethodFormData({ 
+                          ...methodFormData, 
+                          settings: { ...methodFormData.settings, binanceApiKey: e.target.value }
+                        })}
+                        className="w-full bg-[rgba(0,0,0,0.4)] border border-[rgba(255,255,255,0.18)] rounded-lg px-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#3B82F6]"
+                        placeholder="Enter your Binance API Key"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-white text-sm font-medium mb-2 block">Secret Key (Optional)</label>
+                      <input
+                        type="password"
+                        value={methodFormData.settings.binanceSecretKey}
+                        onChange={(e) => setMethodFormData({ 
+                          ...methodFormData, 
+                          settings: { ...methodFormData.settings, binanceSecretKey: e.target.value }
+                        })}
+                        className="w-full bg-[rgba(0,0,0,0.4)] border border-[rgba(255,255,255,0.18)] rounded-lg px-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#3B82F6]"
+                        placeholder="Enter your Binance Secret Key"
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Amount & Fee Settings */}
+              <div className="p-4 rounded-lg bg-[rgba(0,0,0,0.3)] border border-[rgba(255,255,255,0.1)]">
+                <h3 className="text-white text-sm font-semibold mb-4 flex items-center gap-2">
+                  <DollarSign className="w-4 h-4 text-[#22C55E]" />
+                  Amount & Fee Settings
+                </h3>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-white text-sm font-medium mb-2 block">Min Amount ($)</label>
+                    <input
+                      type="number"
+                      value={methodFormData.minAmount}
+                      onChange={(e) => setMethodFormData({ ...methodFormData, minAmount: parseFloat(e.target.value) || 0 })}
+                      className="w-full bg-[rgba(0,0,0,0.4)] border border-[rgba(255,255,255,0.18)] rounded-lg px-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#3B82F6]"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-white text-sm font-medium mb-2 block">Max Amount ($)</label>
+                    <input
+                      type="number"
+                      value={methodFormData.maxAmount}
+                      onChange={(e) => setMethodFormData({ ...methodFormData, maxAmount: parseFloat(e.target.value) || 0 })}
+                      className="w-full bg-[rgba(0,0,0,0.4)] border border-[rgba(255,255,255,0.18)] rounded-lg px-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#3B82F6]"
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4 mt-4">
+                  <div>
+                    <label className="text-white text-sm font-medium mb-2 block">Fixed Fee ($)</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      value={methodFormData.feeFixed}
+                      onChange={(e) => setMethodFormData({ ...methodFormData, feeFixed: parseFloat(e.target.value) || 0 })}
+                      className="w-full bg-[rgba(0,0,0,0.4)] border border-[rgba(255,255,255,0.18)] rounded-lg px-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#3B82F6]"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-white text-sm font-medium mb-2 block">Fee Percent (%)</label>
+                    <input
+                      type="number"
+                      step="0.1"
+                      max="100"
+                      value={methodFormData.feePercent}
+                      onChange={(e) => setMethodFormData({ ...methodFormData, feePercent: parseFloat(e.target.value) || 0 })}
+                      className="w-full bg-[rgba(0,0,0,0.4)] border border-[rgba(255,255,255,0.18)] rounded-lg px-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#3B82F6]"
+                    />
+                  </div>
                 </div>
               </div>
 
-              <div>
-                <label className="text-white text-sm font-medium mb-2 block">Bonus Settings</label>
-                <input
-                  type="text"
-                  value={methodFormData.bonusSettings}
-                  onChange={(e) => setMethodFormData({ ...methodFormData, bonusSettings: e.target.value })}
-                  className="w-full bg-[rgba(0,0,0,0.4)] border border-[rgba(255,255,255,0.18)] rounded-lg px-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#3B82F6]"
-                  placeholder="e.g., $100 → 5% bonus"
-                />
-              </div>
-
-              <div>
-                <label className="text-white text-sm font-medium mb-2 block">Polygon Wallet (Optional)</label>
-                <input
-                  type="text"
-                  value={methodFormData.polygonWallet}
-                  onChange={(e) => setMethodFormData({ ...methodFormData, polygonWallet: e.target.value })}
-                  className="w-full bg-[rgba(0,0,0,0.4)] border border-[rgba(255,255,255,0.18)] rounded-lg px-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#3B82F6]"
-                />
-              </div>
-
-              <div>
-                <label className="text-white text-sm font-medium mb-2 block">Service Fee (Optional)</label>
-                <input
-                  type="text"
-                  value={methodFormData.serviceFee}
-                  onChange={(e) => setMethodFormData({ ...methodFormData, serviceFee: e.target.value })}
-                  className="w-full bg-[rgba(0,0,0,0.4)] border border-[rgba(255,255,255,0.18)] rounded-lg px-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#3B82F6]"
-                  placeholder="e.g., 10% fee"
-                />
+              {/* Bonus Settings */}
+              <div className="p-4 rounded-lg bg-[rgba(0,0,0,0.3)] border border-[rgba(255,255,255,0.1)]">
+                <h3 className="text-white text-sm font-semibold mb-4 flex items-center gap-2">
+                  <Plus className="w-4 h-4 text-[#22C55E]" />
+                  Bonus Settings
+                </h3>
+                <div>
+                  <label className="text-white text-sm font-medium mb-2 block">Bonus Rules</label>
+                  <input
+                    type="text"
+                    value={methodFormData.bonusSettings}
+                    onChange={(e) => setMethodFormData({ ...methodFormData, bonusSettings: e.target.value })}
+                    className="w-full bg-[rgba(0,0,0,0.4)] border border-[rgba(255,255,255,0.18)] rounded-lg px-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#3B82F6]"
+                    placeholder="e.g., $100 → 5% bonus, $500 → 10% bonus"
+                  />
+                </div>
+                <div className="mt-4">
+                  <label className="text-white text-sm font-medium mb-2 block">Service Fee Text</label>
+                  <input
+                    type="text"
+                    value={methodFormData.serviceFee}
+                    onChange={(e) => setMethodFormData({ ...methodFormData, serviceFee: e.target.value })}
+                    className="w-full bg-[rgba(0,0,0,0.4)] border border-[rgba(255,255,255,0.18)] rounded-lg px-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#3B82F6]"
+                    placeholder="e.g., 10% fee (e.g., $100 → $110.00)"
+                  />
+                </div>
+                <div className="flex items-center justify-between mt-4 p-3 rounded-lg bg-[rgba(0,0,0,0.3)]">
+                  <div>
+                    <span className="text-white text-sm font-medium">Enable Service Fee</span>
+                    <p className="text-[#64748B] text-xs mt-1">Apply service fee to deposits</p>
+                  </div>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={methodFormData.serviceFeeEnabled}
+                      onChange={(e) => setMethodFormData({ ...methodFormData, serviceFeeEnabled: e.target.checked })}
+                      className="sr-only peer"
+                    />
+                    <div className="w-11 h-6 bg-[#64748B] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#3B82F6]"></div>
+                  </label>
+                </div>
               </div>
             </div>
 
-            <div className="flex items-center justify-end gap-3 mt-6">
+            <div className="flex items-center justify-end gap-3 mt-6 pt-4 border-t border-[rgba(255,255,255,0.1)]">
               <button
                 onClick={() => {
                   setShowEditMethodModal(false);

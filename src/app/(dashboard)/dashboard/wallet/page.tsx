@@ -61,8 +61,10 @@ import {
 import {
   createPayment,
   getGateways,
+  getPaymentPreview,
   GatewayInfo,
   PaymentGateway,
+  PaymentPreviewResponse,
   PRESET_AMOUNTS,
   MIN_AMOUNT,
   MAX_AMOUNT,
@@ -101,6 +103,8 @@ export default function WalletPage() {
   const [showPaymentDialog, setShowPaymentDialog] = useState(false);
   const [checkoutUrl, setCheckoutUrl] = useState<string | null>(null);
   const [couponCode, setCouponCode] = useState('');
+  const [paymentPreview, setPaymentPreview] = useState<PaymentPreviewResponse | null>(null);
+  const [isLoadingPreview, setIsLoadingPreview] = useState(false);
 
   // Fetch wallet data
   const fetchWalletData = useCallback(async () => {
@@ -199,6 +203,31 @@ export default function WalletPage() {
   useEffect(() => {
     fetchWalletData();
   }, [fetchWalletData]);
+
+  // Fetch payment preview when amount or gateway changes
+  useEffect(() => {
+    const numAmount = parseFloat(amount);
+    if (!numAmount || numAmount < MIN_AMOUNT) {
+      setPaymentPreview(null);
+      return;
+    }
+
+    const fetchPreview = async () => {
+      setIsLoadingPreview(true);
+      try {
+        const preview = await getPaymentPreview(numAmount, selectedGateway);
+        setPaymentPreview(preview);
+      } catch (err) {
+        console.error('Failed to fetch payment preview:', err);
+        setPaymentPreview(null);
+      } finally {
+        setIsLoadingPreview(false);
+      }
+    };
+
+    const debounceTimeout = setTimeout(fetchPreview, 300);
+    return () => clearTimeout(debounceTimeout);
+  }, [amount, selectedGateway]);
 
   // Refetch when filters change
   useEffect(() => {
@@ -321,17 +350,18 @@ export default function WalletPage() {
       </div>
 
       <div className="grid gap-6 md:grid-cols-3">
-        {/* Add Funds Card */}
+        {/* Add Funds Card - CheapStreamTV Style */}
         <Card className="md:col-span-2">
           <CardHeader>
             <CardTitle>Add Funds</CardTitle>
-            <CardDescription>Top up your wallet balance</CardDescription>
+            <CardDescription>Enter amount and select your preferred payment method</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Amount (USD)</label>
+          <CardContent className="space-y-6">
+            {/* Amount Input */}
+            <div className="space-y-3">
+              <label className="text-sm font-medium">Amount ($)</label>
               <div className="relative">
-                <span className="text-muted-foreground absolute top-1/2 left-3 -translate-y-1/2">
+                <span className="text-muted-foreground absolute top-1/2 left-4 -translate-y-1/2 text-lg font-medium">
                   $
                 </span>
                 <Input
@@ -339,18 +369,19 @@ export default function WalletPage() {
                   placeholder="0.00"
                   value={amount}
                   onChange={(e) => setAmount(e.target.value)}
-                  className="pl-7"
+                  className="pl-8 text-lg h-12 font-medium"
                   min={MIN_AMOUNT}
                   max={MAX_AMOUNT}
                 />
               </div>
-              <div className="mt-2 flex flex-wrap gap-2">
+              <div className="flex flex-wrap gap-2">
                 {PRESET_AMOUNTS.map((value) => (
                   <Button
                     key={value}
-                    variant="outline"
+                    variant={amount === value.toString() ? "default" : "outline"}
                     size="sm"
                     onClick={() => setAmount(value.toString())}
+                    className="min-w-[60px]"
                   >
                     ${value}
                   </Button>
@@ -361,115 +392,184 @@ export default function WalletPage() {
               </p>
             </div>
 
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Payment Method</label>
-              <Select
-                value={selectedGateway}
-                onValueChange={(v) => setSelectedGateway(v as PaymentGateway)}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select payment method" />
-                </SelectTrigger>
-                <SelectContent>
-                  {gateways.length > 0 ? (
-                    gateways.map((gateway) => (
-                      <SelectItem 
-                        key={gateway.gateway} 
-                        value={gateway.gateway}
-                        disabled={!gateway.enabled}
-                      >
-                        <span className="flex items-center gap-2">
-                          <span>{getGatewayIcon(gateway.gateway)}</span>
-                          <span>{gateway.name || getGatewayName(gateway.gateway)}</span>
-                          {gateway.minAmount > 0 && (
-                            <span className="text-muted-foreground text-xs">
-                              (min ${gateway.minAmount})
-                            </span>
-                          )}
-                          {!gateway.enabled && (
-                            <span className="text-muted-foreground text-xs">(unavailable)</span>
-                          )}
-                        </span>
-                      </SelectItem>
-                    ))
-                  ) : (
-                    <SelectItem value="STRIPE">
-                      <span className="flex items-center gap-2">
-                        <span>{getGatewayIcon('STRIPE')}</span>
-                        <span>Stripe</span>
-                      </span>
-                    </SelectItem>
-                  )}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* PayGate Provider Selection */}
-            {selectedGateway === 'PAYGATE' && (
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Payment Provider</label>
-                <Select
-                  value={paygateProvider}
-                  onValueChange={(v) => setPaygateProvider(v as PaygateProvider)}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {PAYGATE_PROVIDERS.map((provider) => (
-                      <SelectItem key={provider.id} value={provider.id}>
-                        <div className="flex flex-col">
-                          <span className="flex items-center gap-2">
-                            {provider.name}
-                            {provider.recommended && (
-                              <Badge variant="secondary" className="text-xs">
-                                Recommended
-                              </Badge>
-                            )}
-                          </span>
-                          <span className="text-muted-foreground text-xs">
-                            {provider.description}
-                          </span>
-                        </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
-
+            {/* Coupon Code */}
             <div className="space-y-2">
               <label className="text-sm font-medium">Coupon Code (optional)</label>
               <Input
-                placeholder="Enter coupon code"
+                placeholder="Enter coupon code for bonus"
                 value={couponCode}
                 onChange={(e) => setCouponCode(e.target.value)}
               />
             </div>
 
-            <Button
-              size="lg"
-              className="w-full"
-              onClick={handleAddFunds}
-              disabled={isProcessing || wallet?.isLocked}
-            >
-              {isProcessing ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Processing...
-                </>
-              ) : wallet?.isLocked ? (
-                <>
-                  <Lock className="mr-2 h-4 w-4" />
-                  Wallet Locked
-                </>
-              ) : (
-                <>
-                  <Plus className="mr-2 h-4 w-4" />
-                  Add Funds
-                </>
-              )}
-            </Button>
+            {/* Payment Preview - Show fee breakdown */}
+            {paymentPreview && parseFloat(amount) >= MIN_AMOUNT && (
+              <div className="p-4 rounded-xl bg-muted/50 border space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Amount</span>
+                  <span className="font-medium">${paymentPreview.requestedAmount.toFixed(2)}</span>
+                </div>
+                {paymentPreview.fee > 0 && (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">
+                      Processing Fee ({paymentPreview.feeDetails.percent}% + ${paymentPreview.feeDetails.fixed.toFixed(2)})
+                    </span>
+                    <span className={paymentPreview.feePassToUser ? 'text-destructive' : 'text-success'}>
+                      {paymentPreview.feePassToUser ? `+$${paymentPreview.fee.toFixed(2)}` : `$${paymentPreview.fee.toFixed(2)} (we cover)`}
+                    </span>
+                  </div>
+                )}
+                <div className="border-t pt-2 flex justify-between font-medium">
+                  <span>You Pay</span>
+                  <span className="text-primary">${paymentPreview.totalCharge.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">You Receive</span>
+                  <span className="text-success font-medium">${paymentPreview.amountCredited.toFixed(2)}</span>
+                </div>
+                {couponCode && (
+                  <p className="text-xs text-muted-foreground italic">
+                    Coupon bonus will be calculated when payment is processed
+                  </p>
+                )}
+              </div>
+            )}
+
+            {/* Payment Methods - Show when amount is entered */}
+            {parseFloat(amount) > 0 ? (
+              <div className="space-y-3">
+                <label className="text-sm font-medium">Select Payment Method</label>
+                {isLoadingPreview && (
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <span>Calculating fees...</span>
+                  </div>
+                )}
+                <div className="grid gap-3">
+                  {gateways.filter(g => g.enabled && parseFloat(amount) >= g.minAmount).length > 0 ? (
+                    gateways
+                      .filter(g => g.enabled && parseFloat(amount) >= g.minAmount)
+                      .map((gateway) => {
+                        const numAmount = parseFloat(amount);
+                        const isSelected = selectedGateway === gateway.gateway;
+                        const showPreviewAmount = isSelected && paymentPreview;
+                        
+                        return (
+                          <button
+                            key={gateway.gateway}
+                            onClick={() => {
+                              setSelectedGateway(gateway.gateway);
+                              if (gateway.gateway !== 'PAYGATE') {
+                                handleAddFunds();
+                              }
+                            }}
+                            disabled={isProcessing || wallet?.isLocked}
+                            className={`w-full p-4 rounded-xl border-2 transition-all text-left flex items-center justify-between ${
+                              isSelected
+                                ? 'border-primary bg-primary/5'
+                                : 'border-border hover:border-primary/50 hover:bg-muted/50'
+                            } ${isProcessing ? 'opacity-50 cursor-not-allowed' : ''}`}
+                          >
+                            <div className="flex items-center gap-3">
+                              <span className="text-2xl">{getGatewayIcon(gateway.gateway)}</span>
+                              <div>
+                                <p className="font-medium">{gateway.name || getGatewayName(gateway.gateway)}</p>
+                                {gateway.description && (
+                                  <p className="text-muted-foreground text-xs mt-0.5">{gateway.description}</p>
+                                )}
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <p className="text-lg font-bold text-primary">
+                                ${showPreviewAmount ? paymentPreview.totalCharge.toFixed(2) : numAmount.toFixed(2)}
+                              </p>
+                              {gateway.minAmount > 0 && (
+                                <p className="text-muted-foreground text-xs">
+                                  min ${gateway.minAmount}
+                                </p>
+                              )}
+                            </div>
+                          </button>
+                        );
+                      })
+                  ) : (
+                    <div className="p-4 rounded-xl border border-dashed border-muted-foreground/30 text-center">
+                      <p className="text-muted-foreground text-sm">
+                        No payment methods available for this amount.
+                        {gateways.length > 0 && (
+                          <span className="block mt-1">
+                            Minimum amount: ${Math.min(...gateways.filter(g => g.enabled).map(g => g.minAmount))}
+                          </span>
+                        )}
+                      </p>
+                    </div>
+                  )}
+                </div>
+
+                {/* PayGate Provider Selection - Show when PayGate is selected */}
+                {selectedGateway === 'PAYGATE' && (
+                  <div className="mt-4 p-4 rounded-xl bg-muted/50 border space-y-3">
+                    <label className="text-sm font-medium">Select Card Provider</label>
+                    <div className="grid gap-2">
+                      {PAYGATE_PROVIDERS.map((provider) => (
+                        <button
+                          key={provider.id}
+                          onClick={() => {
+                            setPaygateProvider(provider.id);
+                            handleAddFunds();
+                          }}
+                          disabled={isProcessing || parseFloat(amount) < provider.minAmount}
+                          className={`w-full p-3 rounded-lg border transition-all text-left flex items-center justify-between ${
+                            paygateProvider === provider.id
+                              ? 'border-primary bg-primary/5'
+                              : 'border-border hover:border-primary/50'
+                          } ${parseFloat(amount) < provider.minAmount ? 'opacity-50' : ''}`}
+                        >
+                          <div>
+                            <p className="font-medium flex items-center gap-2">
+                              {provider.name}
+                              {provider.recommended && (
+                                <Badge variant="secondary" className="text-[10px]">
+                                  Recommended
+                                </Badge>
+                              )}
+                            </p>
+                            <p className="text-muted-foreground text-xs">{provider.description}</p>
+                          </div>
+                          <div className="text-right">
+                            <p className="font-bold text-primary">
+                              ${parseFloat(amount).toFixed(2)}
+                            </p>
+                            {provider.minAmount > 0 && (
+                              <p className="text-muted-foreground text-[10px]">
+                                min ${provider.minAmount}
+                              </p>
+                            )}
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="p-6 rounded-xl border border-dashed border-muted-foreground/30 text-center">
+                <p className="text-muted-foreground">
+                  Enter amount above to see available payment methods
+                </p>
+              </div>
+            )}
+
+            {/* Wallet Locked Warning */}
+            {wallet?.isLocked && (
+              <div className="p-4 rounded-xl bg-destructive/10 border border-destructive/30 flex items-center gap-3">
+                <Lock className="h-5 w-5 text-destructive" />
+                <div>
+                  <p className="font-medium text-destructive">Wallet Locked</p>
+                  <p className="text-sm text-muted-foreground">{wallet.lockedReason}</p>
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
 

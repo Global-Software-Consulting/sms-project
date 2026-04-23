@@ -974,17 +974,58 @@ export const deleteCoupon = async (id: string): Promise<void> => {
 
 export type PaymentGatewayType = 'STRIPE' | 'PAYGATE' | 'PLISIO' | 'CRYPTOMUS' | 'NOWPAYMENTS' | 'VOLET' | 'BINANCE';
 
+/**
+ * Gateway-specific API settings
+ * These are stored in the 'settings' JSON field and used to configure each gateway
+ */
+export interface GatewayApiSettings {
+  // Stripe settings
+  stripeSecretKey?: string;
+  stripePublishableKey?: string;
+  stripeWebhookSecret?: string;
+  stripeAllowedIps?: string[];
+  
+  // Plisio settings
+  plisioApiKey?: string;
+  plisioApiSecret?: string;
+  
+  // Cryptomus settings
+  cryptomusMerchantId?: string;
+  cryptomusApiKey?: string;
+  
+  // NOWPayments settings
+  nowpaymentsApiKey?: string;
+  nowpaymentsIpnSecret?: string;
+  
+  // PayGate.to settings
+  paygateWalletAddress?: string;
+  paygateApiKey?: string;
+  
+  // Volet settings
+  voletApiKey?: string;
+  voletSecretKey?: string;
+  voletMerchantId?: string;
+  
+  // Binance settings
+  binanceMerchantId?: string;
+  binanceApiKey?: string;
+  binanceSecretKey?: string;
+  binancePayId?: string;
+}
+
 export interface PaymentGatewayConfig {
   id: string;
   gateway: PaymentGatewayType;
   displayName: string;
   description?: string;
   icon?: string;
+  imageUrl?: string;
   type: string; // crypto, card, multi, transfer
   isEnabled: boolean;
   feeFixed: string;
   feePercent: string;
   feePassToUser: boolean;
+  serviceFeeEnabled?: boolean;
   minAmount: string;
   maxAmount: string;
   priority: number;
@@ -992,10 +1033,11 @@ export interface PaymentGatewayConfig {
   bonusSettings?: string;
   polygonWallet?: string;
   serviceFee?: string;
-  settings?: Record<string, unknown>;
+  settings?: GatewayApiSettings;
   createdAt?: string;
   updatedAt?: string;
   isConfigured?: boolean;
+  configuredFields?: string[];
   isVirtual?: boolean;
 }
 
@@ -1003,11 +1045,13 @@ export interface UpdateGatewayConfigRequest {
   displayName?: string;
   description?: string;
   icon?: string;
+  imageUrl?: string;
   type?: string;
   isEnabled?: boolean;
   feeFixed?: number;
   feePercent?: number;
   feePassToUser?: boolean;
+  serviceFeeEnabled?: boolean;
   minAmount?: number;
   maxAmount?: number;
   priority?: number;
@@ -1015,7 +1059,7 @@ export interface UpdateGatewayConfigRequest {
   bonusSettings?: string;
   polygonWallet?: string;
   serviceFee?: string;
-  settings?: Record<string, unknown>;
+  settings?: GatewayApiSettings;
 }
 
 export interface GatewayConfigsResponse {
