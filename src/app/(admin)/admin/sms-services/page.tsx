@@ -28,6 +28,7 @@ import {
   adminGetProviders,
   adminUpdateProvider,
   adminSyncProvider,
+  adminSyncProviderPrices,
   adminGetSyncStatus,
   adminBulkAddVipNumbers,
   adminGetVipNumbers,
@@ -148,6 +149,7 @@ export default function AdminSmsServicesPage() {
   const [apiProviders, setApiProviders] = useState<SmsProvider[]>([]);
   const [isProvidersLoading, setIsProvidersLoading] = useState(true);
   const [isSyncing, setIsSyncing] = useState<string | null>(null);
+  const [isSyncingPrices, setIsSyncingPrices] = useState<string | null>(null);
   
   // Track sync status per provider for UI display
   const [syncStatusMap, setSyncStatusMap] = useState<Record<string, {
@@ -827,6 +829,22 @@ export default function AdminSmsServicesPage() {
     }
   };
 
+  // Sync prices only (fetches real-time prices from provider)
+  const handleSyncPrices = async (providerId: string) => {
+    setIsSyncingPrices(providerId);
+    
+    try {
+      const result = await adminSyncProviderPrices(providerId);
+      toast.success(result.message, { duration: 5000 });
+      toast.info("Price sync is running in background. It may take 2-5 minutes.", { duration: 8000 });
+    } catch (error: any) {
+      const message = error?.response?.data?.message || error?.message || "Failed to start price sync";
+      toast.error(message, { duration: 8000 });
+    } finally {
+      setIsSyncingPrices(null);
+    }
+  };
+
   const handleConfirmDelete = async () => {
     if (!selectedProvider) return;
 
@@ -1257,9 +1275,17 @@ export default function AdminSmsServicesPage() {
                         onClick={() => handleSyncProvider(provider.id)}
                         disabled={isSyncing === provider.id}
                         className="p-2 hover:bg-[rgba(34,197,94,0.2)] rounded-lg text-[#22C55E] transition-colors disabled:opacity-50"
-                        title="Sync Provider"
+                        title="Sync Catalog (Services & Countries)"
                       >
                         <RefreshCw className={`w-4 h-4 ${isSyncing === provider.id ? 'animate-spin' : ''}`} />
+                      </button>
+                      <button
+                        onClick={() => handleSyncPrices(provider.id)}
+                        disabled={isSyncingPrices === provider.id}
+                        className="p-2 hover:bg-[rgba(245,158,11,0.2)] rounded-lg text-[#F59E0B] transition-colors disabled:opacity-50"
+                        title="Sync Prices (Fetches real-time prices, takes 2-5 min)"
+                      >
+                        <DollarSign className={`w-4 h-4 ${isSyncingPrices === provider.id ? 'animate-pulse' : ''}`} />
                       </button>
                     </div>
                   </div>

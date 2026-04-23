@@ -895,6 +895,18 @@ export const adminGetSyncStatus = async (id: string): Promise<SyncStatusResponse
   return response.data;
 };
 
+/**
+ * Sync prices for a provider (fetches real-time prices from provider API)
+ * POST /api/v1/admin/sms/providers/:id/sync-prices
+ * Returns immediately - price sync runs in background on server (2-5 min)
+ */
+export const adminSyncProviderPrices = async (id: string): Promise<{ message: string; startedAt: string }> => {
+  const response = await apiClient.post<{ message: string; startedAt: string }>(
+    API_ENDPOINTS.ADMIN.SMS.PROVIDER_SYNC_PRICES(id),
+  );
+  return response.data;
+};
+
 // --- Admin Services ---
 
 /**
