@@ -28,7 +28,6 @@ import {
   adminGetProviders,
   adminUpdateProvider,
   adminSyncProvider,
-  adminSyncProviderPrices,
   adminGetSyncStatus,
   adminBulkAddVipNumbers,
   adminGetVipNumbers,
@@ -39,7 +38,6 @@ import {
   adminRecalculatePopularity,
   adminBulkLockProducts,
   adminGetServices,
-  adminGetPriceSyncStatus,
   getServices,
   getUnifiedServices,
   getCountriesForUnifiedService,
@@ -150,7 +148,6 @@ export default function AdminSmsServicesPage() {
   const [apiProviders, setApiProviders] = useState<SmsProvider[]>([]);
   const [isProvidersLoading, setIsProvidersLoading] = useState(true);
   const [isSyncing, setIsSyncing] = useState<string | null>(null);
-  const [isSyncingPrices, setIsSyncingPrices] = useState<string | null>(null);
   
   // Track sync status per provider for UI display
   const [syncStatusMap, setSyncStatusMap] = useState<Record<string, {
@@ -830,103 +827,6 @@ export default function AdminSmsServicesPage() {
     }
   };
 
-  // Track price sync status per provider
-  const [priceSyncStatusMap, setPriceSyncStatusMap] = useState<Record<string, {
-    status: 'syncing' | 'completed' | 'failed';
-    productCount?: number;
-    error?: string;
-  }>>({});
-
-  // Sync prices only (fetches real-time prices from provider)
-  const handleSyncPrices = async (providerId: string) => {
-    setIsSyncingPrices(providerId);
-    setPriceSyncStatusMap(prev => ({
-      ...prev,
-      [providerId]: { status: 'syncing' }
-    }));
-    
-    try {
-      const result = await adminSyncProviderPrices(providerId);
-      toast.info(result.message, { duration: 5000 });
-      
-      // Poll for price sync status every 5 seconds until complete
-      const pollInterval = setInterval(async () => {
-        try {
-          const status = await adminGetPriceSyncStatus(providerId);
-          
-          if (status.status === 'completed') {
-            clearInterval(pollInterval);
-            setIsSyncingPrices(null);
-            setPriceSyncStatusMap(prev => ({
-              ...prev,
-              [providerId]: { 
-                status: 'completed', 
-                productCount: status.productCount 
-              }
-            }));
-            toast.success(`Price sync completed! ${status.productCount?.toLocaleString() || 0} products synced.`, { duration: 8000 });
-            
-            // Clear status after 30 seconds
-            setTimeout(() => {
-              setPriceSyncStatusMap(prev => {
-                const newMap = { ...prev };
-                delete newMap[providerId];
-                return newMap;
-              });
-            }, 30000);
-          } else if (status.status === 'failed') {
-            clearInterval(pollInterval);
-            setIsSyncingPrices(null);
-            setPriceSyncStatusMap(prev => ({
-              ...prev,
-              [providerId]: { 
-                status: 'failed', 
-                error: status.error 
-              }
-            }));
-            toast.error(`Price sync failed: ${status.error}`, { duration: 8000 });
-            
-            // Clear status after 30 seconds
-            setTimeout(() => {
-              setPriceSyncStatusMap(prev => {
-                const newMap = { ...prev };
-                delete newMap[providerId];
-                return newMap;
-              });
-            }, 30000);
-          }
-          // If still syncing, continue polling
-        } catch (pollError) {
-          console.error('Error polling price sync status:', pollError);
-        }
-      }, 5000);
-      
-      // Stop polling after 10 minutes (max timeout)
-      setTimeout(() => {
-        clearInterval(pollInterval);
-        if (isSyncingPrices === providerId) {
-          setIsSyncingPrices(null);
-          setPriceSyncStatusMap(prev => ({
-            ...prev,
-            [providerId]: { 
-              status: 'failed', 
-              error: 'Polling timeout - check server logs' 
-            }
-          }));
-        }
-      }, 600000);
-      
-    } catch (error: any) {
-      const message = error?.response?.data?.message || error?.message || "Failed to start price sync";
-      toast.error(message, { duration: 8000 });
-      setIsSyncingPrices(null);
-      setPriceSyncStatusMap(prev => ({
-        ...prev,
-        [providerId]: { status: 'failed', error: message }
-      }));
-    }
-  };
-
   const handleConfirmDelete = async () => {
     if (!selectedProvider) return;
 
@@ -1361,14 +1261,6 @@ export default function AdminSmsServicesPage() {
                       >
                         <RefreshCw className={`w-4 h-4 ${isSyncing === provider.id ? 'animate-spin' : ''}`} />
                       </button>
-                      <button
-                        onClick={() => handleSyncPrices(provider.id)}
-                        disabled={isSyncingPrices === provider.id}
-                        className="p-2 hover:bg-[rgba(245,158,11,0.2)] rounded-lg text-[#F59E0B] transition-colors disabled:opacity-50"
-                        title="Sync Prices (Fetches real-time prices, takes 2-5 min)"
-                      >
-                        <DollarSign className={`w-4 h-4 ${isSyncingPrices === provider.id ? 'animate-pulse' : ''}`} />
-                      </button>
                     </div>
                   </div>
 
@@ -1414,42 +1306,6 @@ export default function AdminSmsServicesPage() {
                     </div>
                   )}
 
-                  {/* Price Sync Status Banner */}
-                  {priceSyncStatusMap[provider.id] && (
-                    <div className={`mb-4 p-3 rounded-lg border ${
-                      priceSyncStatusMap[provider.id].status === 'syncing' 
-                        ? 'bg-orange-500/10 border-orange-500/30 text-orange-400' 
-                        : priceSyncStatusMap[provider.id].status === 'completed'
-                        ? 'bg-green-500/10 border-green-500/30 text-green-400'
-                        : 'bg-red-500/10 border-red-500/30 text-red-400'
-                    }`}>
-                      <div className="flex items-center gap-2 text-sm font-medium">
-                        {priceSyncStatusMap[provider.id].status === 'syncing' && (
-                          <>
-                            <DollarSign className="w-4 h-4 animate-pulse" />
-                            <span>Syncing prices... (may take 2-5 minutes)</span>
-                          </>
-                        )}
-                        {priceSyncStatusMap[provider.id].status === 'completed' && (
-                          <>
-                            <CheckCircle className="w-4 h-4" />
-                            <span>Price Sync Completed! {priceSyncStatusMap[provider.id].productCount?.toLocaleString()} products synced</span>
-                          </>
-                        )}
-                        {priceSyncStatusMap[provider.id].status === 'failed' && (
-                          <>
-                            <XCircle className="w-4 h-4" />
-                            <span>Price Sync Failed</span>
-                          </>
-                        )}
-                      </div>
-                      {priceSyncStatusMap[provider.id].status === 'failed' && priceSyncStatusMap[provider.id].error && (
-                        <div className="text-xs mt-1 opacity-80 break-words">
-                          {priceSyncStatusMap[provider.id].error}
-                        </div>
-                      )}
-                    </div>
-                  )}
 
                   <div className="space-y-3 mb-4">
                     {provider.balance && (

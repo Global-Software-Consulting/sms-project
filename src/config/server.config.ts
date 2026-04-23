@@ -319,8 +319,6 @@ export const API_ENDPOINTS = {
       PROVIDER_DETAIL: (id: string) => `/admin/sms/providers/${id}`,
       PROVIDER_SYNC: (id: string) => `/admin/sms/providers/${id}/sync`,
       PROVIDER_SYNC_STATUS: (id: string) => `/admin/sms/providers/${id}/sync-status`,
-      PROVIDER_SYNC_PRICES: (id: string) => `/admin/sms/providers/${id}/sync-prices`,
-      PROVIDER_PRICE_SYNC_STATUS: (id: string) => `/admin/sms/providers/${id}/price-sync-status`,
       SERVICES: '/admin/sms/services',
       SERVICE_DETAIL: (id: string) => `/admin/sms/services/${id}`,
       SERVICES_BULK_DISABLE: '/admin/sms/services/bulk-disable',
