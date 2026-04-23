@@ -40,6 +40,7 @@ import {
   AdminWallet,
   PaymentGatewayType,
 } from '@/lib/api/adminModulesApi';
+import { uploadFile } from '@/lib/api/storageApi';
 
 export default function AdminPaymentsPage() {
   const [activeTab, setActiveTab] = useState<
@@ -55,6 +56,7 @@ export default function AdminPaymentsPage() {
   const [showEditMethodModal, setShowEditMethodModal] = useState(false);
   const [selectedMethod, setSelectedMethod] = useState<PaymentGatewayConfig | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [bonusRules, setBonusRules] = useState<{minAmount: number; bonusPercent: number}[]>([]);
   const [methodFormData, setMethodFormData] = useState({
     displayName: "",
@@ -996,23 +998,29 @@ export default function AdminPaymentsPage() {
                         )}
                       </div>
                       <div className="flex-1">
-                        <label className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[#3B82F6] hover:bg-[#2563EB] text-white text-sm font-medium cursor-pointer transition-colors">
-                          <Upload className="w-4 h-4" />
-                          Select Image File
+                        <label className={`flex items-center gap-2 px-4 py-2 rounded-lg bg-[#3B82F6] hover:bg-[#2563EB] text-white text-sm font-medium transition-colors ${isUploadingImage ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}>
+                          {isUploadingImage ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
+                          {isUploadingImage ? 'Uploading...' : 'Select Image File'}
                           <input
                             type="file"
                             accept="image/jpeg,image/png,image/webp"
                             className="hidden"
-                            onChange={(e) => {
+                            disabled={isUploadingImage}
+                            onChange={async (e) => {
                               const file = e.target.files?.[0];
                               if (file) {
-                                const reader = new FileReader();
-                                reader.onload = (ev) => {
-                                  const dataUrl = ev.target?.result as string;
-                                  setImagePreview(dataUrl);
-                                  setMethodFormData({ ...methodFormData, imageUrl: dataUrl });
-                                };
-                                reader.readAsDataURL(file);
+                                setIsUploadingImage(true);
+                                try {
+                                  const result = await uploadFile(file, 'payment-icons');
+                                  setImagePreview(result.url);
+                                  setMethodFormData({ ...methodFormData, imageUrl: result.url });
+                                  toast.success('Image uploaded successfully');
+                                } catch (error) {
+                                  console.error('Failed to upload image:', error);
+                                  toast.error('Failed to upload image');
+                                } finally {
+                                  setIsUploadingImage(false);
+                                }
                               }
                             }}
                           />

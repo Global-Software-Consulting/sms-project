@@ -79,6 +79,7 @@ interface BackendGatewayInfo {
   maxAmount: number;
   currencies: string[];
   icon?: string;
+  imageUrl?: string;
   feeFixed?: number;
   feePercent?: number;
   feePassToUser?: boolean;
@@ -98,6 +99,7 @@ export interface GatewayInfo {
   description?: string;
   type?: string;
   icon?: string;
+  imageUrl?: string;
 }
 
 /**
@@ -279,6 +281,7 @@ const normalizeGateway = (backendGateway: BackendGatewayInfo): GatewayInfo => {
     description: backendGateway.description,
     type: backendGateway.type,
     icon: backendGateway.icon,
+    imageUrl: backendGateway.imageUrl,
   };
 };
 

@@ -471,7 +471,15 @@ export default function WalletPage() {
                             } ${isProcessing ? 'opacity-50 cursor-not-allowed' : ''}`}
                           >
                             <div className="flex items-center gap-3">
-                              <span className="text-2xl">{getGatewayIcon(gateway.gateway)}</span>
+                              {gateway.imageUrl ? (
+                                <img 
+                                  src={gateway.imageUrl} 
+                                  alt={gateway.name} 
+                                  className="w-8 h-8 rounded-lg object-cover"
+                                />
+                              ) : (
+                                <span className="text-2xl">{getGatewayIcon(gateway.gateway)}</span>
+                              )}
                               <div>
                                 <p className="font-medium">{gateway.name || getGatewayName(gateway.gateway)}</p>
                                 {gateway.description && (
