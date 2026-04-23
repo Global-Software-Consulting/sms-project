@@ -117,8 +117,13 @@ export default function AdminPaymentsPage() {
     isEnabled: true,
   });
 
-  // Card Payment State (STRIPE toggle)
+  // Card Payment State (STRIPE toggle + configuration)
   const [cardPaymentEnabled, setCardPaymentEnabled] = useState(false);
+  const [cardPaymentConfig, setCardPaymentConfig] = useState({
+    minAmount: 1,
+    maxAmount: 1000,
+    description: "Pay securely with your credit or debit card",
+  });
 
   // User Guide State
   const [guideTitle, setGuideTitle] = useState("Payment Information");
@@ -144,10 +149,15 @@ export default function AdminPaymentsPage() {
       const response = await getPaymentGateways();
       setPaymentMethods(response.data);
       
-      // Set card payment enabled based on STRIPE gateway
+      // Set card payment enabled and config based on STRIPE gateway
       const stripeGateway = response.data.find(g => g.gateway === 'STRIPE');
       if (stripeGateway) {
         setCardPaymentEnabled(stripeGateway.isEnabled);
+        setCardPaymentConfig({
+          minAmount: parseFloat(stripeGateway.minAmount) || 1,
+          maxAmount: parseFloat(stripeGateway.maxAmount) || 1000,
+          description: stripeGateway.description || "Pay securely with your credit or debit card",
+        });
       }
     } catch (error) {
       console.error('Failed to fetch payment gateways:', error);
@@ -478,7 +488,8 @@ export default function AdminPaymentsPage() {
       }
 
       const action = balanceFormData.transactionType === "add" ? "added to" : "deducted from";
-      toast.success(`$${amount.toFixed(2)} ${action} ${selectedUser.user?.username || 'user'}'s balance`);
+      const userName = selectedUser.user?.username || selectedUser.user?.firstName || selectedUser.user?.email?.split('@')[0] || 'user';
+      toast.success(`$${amount.toFixed(2)} ${action} ${userName}'s balance`);
       
       await fetchUserBalances(balanceSearchQuery, balancePage);
       setShowBalanceModal(false);
@@ -755,41 +766,100 @@ export default function AdminPaymentsPage() {
 
       {/* Card Payment Tab */}
       {activeTab === "card" && (
-        <div>
-          <div className="p-8 rounded-xl bg-[rgba(15,23,42,0.6)] border border-[rgba(255,255,255,0.1)] backdrop-blur-xl">
-            <div className="flex items-center gap-3 mb-4">
-              <CreditCard className="w-6 h-6 text-[#3B82F6]" />
-              <h2 className="text-white text-xl font-semibold">Card Payment Settings (Stripe)</h2>
+        <div className="space-y-6">
+          {/* Card Payment Settings Header */}
+          <div className="p-6 rounded-xl bg-[rgba(15,23,42,0.6)] border border-[rgba(255,255,255,0.1)] backdrop-blur-xl">
+            <div className="flex items-center gap-3 mb-2">
+              <CreditCard className="w-6 h-6 text-[#22C55E]" />
+              <h2 className="text-white text-xl font-semibold">Card Payment Settings</h2>
             </div>
-            <p className="text-[#94A3B8] text-sm mb-8">
-              Enable or disable Stripe card payments globally
+            <p className="text-[#94A3B8] text-sm">
+              Manage card payment options and settings
             </p>
+          </div>
 
-            <div className="p-6 rounded-lg bg-[rgba(0,0,0,0.3)] border border-[rgba(255,255,255,0.1)] flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <div className={`p-3 rounded-lg ${cardPaymentEnabled ? 'bg-[rgba(34,197,94,0.1)] border border-[rgba(34,197,94,0.3)]' : 'bg-[rgba(239,68,68,0.1)] border border-[rgba(239,68,68,0.3)]'}`}>
-                  <CreditCard className={`w-5 h-5 ${cardPaymentEnabled ? 'text-[#22C55E]' : 'text-[#EF4444]'}`} />
-                </div>
-                <div>
-                  <h3 className="text-white text-base font-semibold mb-1">
-                    Stripe Card Payment
-                  </h3>
-                  <p className="text-[#64748B] text-sm">
-                    Card payment is currently {cardPaymentEnabled ? "enabled" : "disabled"}
-                  </p>
-                </div>
+          {/* Enable Card Payment Toggle */}
+          <div className="p-6 rounded-xl bg-[rgba(15,23,42,0.6)] border border-[rgba(255,255,255,0.1)] backdrop-blur-xl flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div className={`p-3 rounded-full ${cardPaymentEnabled ? 'bg-[rgba(34,197,94,0.2)]' : 'bg-[rgba(100,116,139,0.2)]'}`}>
+                <CreditCard className={`w-5 h-5 ${cardPaymentEnabled ? 'text-[#22C55E]' : 'text-[#64748B]'}`} />
               </div>
-              <button
-                onClick={handleToggleCardPayment}
-                className={`px-6 py-2.5 rounded-lg text-white text-sm font-medium transition-colors ${
-                  cardPaymentEnabled
-                    ? "bg-[#EF4444] hover:bg-[#DC2626]"
-                    : "bg-[#22C55E] hover:bg-[#16A34A]"
-                }`}
-              >
-                {cardPaymentEnabled ? "Disable" : "Enable"}
-              </button>
+              <div>
+                <h3 className="text-white text-base font-semibold">Enable Card Payment</h3>
+                <p className="text-[#64748B] text-sm">
+                  Card payment is currently {cardPaymentEnabled ? "enabled" : "disabled"}
+                </p>
+              </div>
             </div>
+            <button
+              onClick={handleToggleCardPayment}
+              className={`px-6 py-2.5 rounded-lg text-white text-sm font-medium transition-colors ${
+                cardPaymentEnabled
+                  ? "bg-[#EF4444] hover:bg-[#DC2626]"
+                  : "bg-[#22C55E] hover:bg-[#16A34A]"
+              }`}
+            >
+              {cardPaymentEnabled ? "Disable" : "Enable"}
+            </button>
+          </div>
+
+          {/* Card Payment Configuration */}
+          <div className="p-6 rounded-xl bg-[rgba(15,23,42,0.6)] border border-[rgba(255,255,255,0.1)] backdrop-blur-xl">
+            <h3 className="text-white text-lg font-semibold mb-6">Card Payment Configuration</h3>
+            
+            <div className="grid grid-cols-2 gap-6 mb-6">
+              <div>
+                <label className="text-white text-sm font-medium mb-2 block">Minimum Amount</label>
+                <input
+                  type="number"
+                  value={cardPaymentConfig.minAmount}
+                  onChange={(e) => setCardPaymentConfig({ ...cardPaymentConfig, minAmount: parseFloat(e.target.value) || 0 })}
+                  className="w-full bg-[rgba(0,0,0,0.4)] border border-[rgba(255,255,255,0.18)] rounded-lg px-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#3B82F6]"
+                />
+              </div>
+              <div>
+                <label className="text-white text-sm font-medium mb-2 block">Maximum Amount</label>
+                <input
+                  type="number"
+                  value={cardPaymentConfig.maxAmount}
+                  onChange={(e) => setCardPaymentConfig({ ...cardPaymentConfig, maxAmount: parseFloat(e.target.value) || 0 })}
+                  className="w-full bg-[rgba(0,0,0,0.4)] border border-[rgba(255,255,255,0.18)] rounded-lg px-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#3B82F6]"
+                />
+              </div>
+            </div>
+
+            <div className="mb-6">
+              <label className="text-white text-sm font-medium mb-2 block">Description</label>
+              <textarea
+                value={cardPaymentConfig.description}
+                onChange={(e) => setCardPaymentConfig({ ...cardPaymentConfig, description: e.target.value })}
+                className="w-full bg-[rgba(0,0,0,0.4)] border border-[rgba(255,255,255,0.18)] rounded-lg px-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#3B82F6] min-h-[100px] resize-none"
+                placeholder="Pay securely with your credit or debit card"
+              />
+            </div>
+
+            <button
+              onClick={async () => {
+                try {
+                  const stripeMethod = paymentMethods.find(m => m.gateway === 'STRIPE');
+                  if (stripeMethod) {
+                    await updatePaymentGateway('STRIPE', {
+                      minAmount: cardPaymentConfig.minAmount,
+                      maxAmount: cardPaymentConfig.maxAmount,
+                      description: cardPaymentConfig.description,
+                    });
+                    toast.success('Card payment settings saved');
+                    await fetchPaymentGateways();
+                  }
+                } catch (error) {
+                  toast.error('Failed to save settings');
+                }
+              }}
+              className="px-6 py-2.5 rounded-lg bg-[#3B82F6] hover:bg-[#2563EB] text-white text-sm font-medium transition-colors flex items-center gap-2"
+            >
+              <Save className="w-4 h-4" />
+              Save Settings
+            </button>
           </div>
         </div>
       )}
@@ -884,7 +954,12 @@ export default function AdminPaymentsPage() {
                   {userBalances.map((user) => (
                     <tr key={user.id} className="hover:bg-[rgba(255,255,255,0.02)] transition-colors">
                       <td className="px-6 py-4">
-                        <div className="text-white text-sm font-medium">{user.user?.username || 'Unknown'}</div>
+                        <div className="text-white text-sm font-medium">
+                          {user.user?.username || user.user?.firstName || user.user?.email?.split('@')[0] || 'Unknown'}
+                        </div>
+                        {user.user?.firstName && user.user?.lastName && (
+                          <div className="text-[#64748B] text-xs">{user.user.firstName} {user.user.lastName}</div>
+                        )}
                       </td>
                       <td className="px-6 py-4">
                         <div className="text-[#94A3B8] text-sm">{user.user?.email || '-'}</div>
@@ -897,7 +972,7 @@ export default function AdminPaymentsPage() {
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-2">
                           <button
-                            onClick={() => toast.info(`View history for ${user.user?.username}`)}
+                            onClick={() => toast.info(`View history for ${user.user?.username || user.user?.firstName || user.user?.email?.split('@')[0] || 'user'}`)}
                             className="px-4 py-2 rounded-lg bg-[#22C55E] hover:bg-[#16A34A] text-white text-xs font-medium transition-colors flex items-center gap-1"
                           >
                             <Eye className="w-3.5 h-3.5" />
@@ -1548,7 +1623,7 @@ export default function AdminPaymentsPage() {
           <div className="bg-[#0F172A] border border-[rgba(255,255,255,0.1)] rounded-xl p-6 w-full max-w-md">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-white text-xl font-semibold">
-                Update Balance - {selectedUser.user?.username || 'User'}
+                Update Balance - {selectedUser.user?.username || selectedUser.user?.firstName || selectedUser.user?.email?.split('@')[0] || 'User'}
               </h2>
               <button
                 onClick={() => {
