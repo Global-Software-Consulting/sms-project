@@ -28,7 +28,6 @@ import {
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
@@ -42,6 +41,12 @@ import {
   ExternalLink,
   RefreshCw,
   Lock,
+  X,
+  CreditCard,
+  Bitcoin,
+  ArrowLeft,
+  CheckCircle2,
+  ChevronRight,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { BinancePaymentDialog } from '@/components/payments/BinancePaymentDialog';
@@ -77,6 +82,8 @@ import {
 } from '@/lib/api/paymentsApi';
 import { getCurrentMembership, CurrentMembershipResponse } from '@/lib/api/membershipApi';
 
+type DepositStep = 'amount' | 'methods' | 'paygate-providers' | 'summary';
+
 export default function WalletPage() {
   // Wallet state
   const [wallet, setWallet] = useState<Wallet | null>(null);
@@ -96,16 +103,20 @@ export default function WalletPage() {
   const [typeFilter, setTypeFilter] = useState<TransactionType | 'all'>('all');
   const [statusFilter, setStatusFilter] = useState<TransactionStatus | 'all'>('all');
 
-  // Add funds state
+  // Deposit modal state
+  const [showDepositModal, setShowDepositModal] = useState(false);
+  const [depositStep, setDepositStep] = useState<DepositStep>('amount');
   const [amount, setAmount] = useState('');
-  const [selectedGateway, setSelectedGateway] = useState<PaymentGateway>('STRIPE');
+  const [selectedGateway, setSelectedGateway] = useState<PaymentGateway | null>(null);
   const [paygateProvider, setPaygateProvider] = useState<PaygateProvider>('multi');
   const [isProcessing, setIsProcessing] = useState(false);
-  const [showPaymentDialog, setShowPaymentDialog] = useState(false);
-  const [checkoutUrl, setCheckoutUrl] = useState<string | null>(null);
   const [couponCode, setCouponCode] = useState('');
   const [paymentPreview, setPaymentPreview] = useState<PaymentPreviewResponse | null>(null);
   const [isLoadingPreview, setIsLoadingPreview] = useState(false);
+  
+  // Payment completion state
+  const [showPaymentDialog, setShowPaymentDialog] = useState(false);
+  const [checkoutUrl, setCheckoutUrl] = useState<string | null>(null);
   
   // Binance payment state
   const [showBinanceDialog, setShowBinanceDialog] = useState(false);
@@ -140,13 +151,7 @@ export default function WalletPage() {
 
       if (gatewaysRes.status === 'fulfilled' && gatewaysRes.value.length > 0) {
         setGateways(gatewaysRes.value);
-        // Set default gateway to first enabled one
-        const enabledGateway = gatewaysRes.value.find(g => g.enabled);
-        if (enabledGateway) {
-          setSelectedGateway(enabledGateway.gateway);
-        }
       } else {
-        // Fallback to default gateways if API returns empty
         const defaultGateways: GatewayInfo[] = [
           { gateway: 'STRIPE', name: 'Stripe', enabled: true, minAmount: 5, maxAmount: 10000, currencies: ['USD'] },
           { gateway: 'PAYGATE', name: 'PayGate', enabled: true, minAmount: 10, maxAmount: 5000, currencies: ['USD'] },
@@ -155,7 +160,6 @@ export default function WalletPage() {
           { gateway: 'NOWPAYMENTS', name: 'NOWPayments', enabled: true, minAmount: 10, maxAmount: 10000, currencies: ['USD'] },
         ];
         setGateways(defaultGateways);
-        setSelectedGateway('STRIPE');
       }
     } catch (err) {
       console.error('Failed to fetch wallet data:', err);
@@ -212,7 +216,7 @@ export default function WalletPage() {
   // Fetch payment preview when amount or gateway changes
   useEffect(() => {
     const numAmount = parseFloat(amount);
-    if (!numAmount || numAmount < MIN_AMOUNT) {
+    if (!numAmount || numAmount < MIN_AMOUNT || !selectedGateway) {
       setPaymentPreview(null);
       return;
     }
@@ -241,18 +245,60 @@ export default function WalletPage() {
     }
   }, [typeFilter, statusFilter]);
 
-  // Handle add funds - accepts optional gateway override to avoid stale state
-  const handleAddFunds = async (gatewayOverride?: PaymentGateway, providerOverride?: PaygateProvider) => {
-    const numAmount = parseFloat(amount);
-    const gatewayToUse = gatewayOverride || selectedGateway;
-    const providerToUse = providerOverride || paygateProvider;
+  // Reset deposit modal state
+  const resetDepositModal = () => {
+    setDepositStep('amount');
+    setAmount('');
+    setSelectedGateway(null);
+    setPaygateProvider('multi');
+    setCouponCode('');
+    setPaymentPreview(null);
+  };
 
-    if (!amount || isNaN(numAmount)) {
-      toast.error('Please enter a valid amount');
+  // Open deposit modal
+  const openDepositModal = () => {
+    resetDepositModal();
+    setShowDepositModal(true);
+  };
+
+  // Close deposit modal
+  const closeDepositModal = () => {
+    setShowDepositModal(false);
+    resetDepositModal();
+  };
+
+  // Handle amount continue
+  const handleAmountContinue = () => {
+    const numAmount = parseFloat(amount);
+    if (!amount || isNaN(numAmount) || !isValidAmount(numAmount)) {
+      toast.error(`Please enter a valid amount between $${MIN_AMOUNT} and $${MAX_AMOUNT.toLocaleString()}`);
       return;
     }
+    setDepositStep('methods');
+  };
 
-    if (!isValidAmount(numAmount)) {
+  // Handle gateway selection
+  const handleGatewaySelect = (gateway: GatewayInfo) => {
+    setSelectedGateway(gateway.gateway);
+    if (gateway.gateway === 'PAYGATE') {
+      setDepositStep('paygate-providers');
+    } else {
+      setDepositStep('summary');
+    }
+  };
+
+  // Handle PayGate provider selection
+  const handlePaygateProviderSelect = (provider: PaygateProvider) => {
+    setPaygateProvider(provider);
+    setDepositStep('summary');
+  };
+
+  // Handle payment confirmation
+  const handleConfirmPayment = async () => {
+    if (!selectedGateway) return;
+    
+    const numAmount = parseFloat(amount);
+    if (!amount || isNaN(numAmount) || !isValidAmount(numAmount)) {
       toast.error(`Amount must be between $${MIN_AMOUNT} and $${MAX_AMOUNT.toLocaleString()}`);
       return;
     }
@@ -262,15 +308,18 @@ export default function WalletPage() {
 
       const response = await createPayment({
         amount: numAmount,
-        gateway: gatewayToUse,
-        paygateProvider: gatewayToUse === 'PAYGATE' ? providerToUse : undefined,
+        gateway: selectedGateway,
+        paygateProvider: selectedGateway === 'PAYGATE' ? paygateProvider : undefined,
         successUrl: `${window.location.origin}/dashboard/wallet?payment=success`,
         cancelUrl: `${window.location.origin}/dashboard/wallet?payment=cancelled`,
         ...(couponCode ? { couponCode } : {}),
       });
 
-      // Handle Binance payments differently - show Order ID verification dialog
-      if (gatewayToUse === 'BINANCE') {
+      // Close deposit modal
+      closeDepositModal();
+
+      // Handle Binance payments differently
+      if (selectedGateway === 'BINANCE') {
         setBinancePaymentId(response.paymentId);
         setShowBinanceDialog(true);
         toast.info('Please complete the Binance transfer and enter your Order ID');
@@ -280,7 +329,6 @@ export default function WalletPage() {
       if (response.checkoutUrl) {
         setCheckoutUrl(response.checkoutUrl);
         setShowPaymentDialog(true);
-        // Open in new tab
         window.open(response.checkoutUrl, '_blank');
       } else {
         toast.success('Payment initiated', {
@@ -324,6 +372,12 @@ export default function WalletPage() {
     );
   };
 
+  // Get enabled gateways for current amount
+  const getAvailableGateways = () => {
+    const numAmount = parseFloat(amount) || 0;
+    return gateways.filter(g => g.enabled && numAmount >= g.minAmount);
+  };
+
   // Loading state
   if (isLoading) {
     return (
@@ -351,6 +405,7 @@ export default function WalletPage() {
 
   return (
     <div className="space-y-6">
+      {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
           <h1 className="text-2xl font-bold sm:text-3xl">Wallet</h1>
@@ -358,298 +413,76 @@ export default function WalletPage() {
             Manage your balance and transactions
           </p>
         </div>
-        <Button variant="outline" size="sm" onClick={fetchWalletData}>
-          <RefreshCw className="mr-2 h-4 w-4" />
-          Refresh
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" size="sm" onClick={fetchWalletData}>
+            <RefreshCw className="mr-2 h-4 w-4" />
+            Refresh
+          </Button>
+        </div>
       </div>
 
+      {/* Balance and Quick Actions */}
       <div className="grid gap-6 md:grid-cols-3">
-        {/* Add Funds Card - CheapStreamTV Style */}
-        <Card className="md:col-span-2">
-          <CardHeader>
-            <CardTitle>Add Funds</CardTitle>
-            <CardDescription>Enter amount and select your preferred payment method</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            {/* Amount Input */}
-            <div className="space-y-3">
-              <label className="text-sm font-medium">Amount ($)</label>
-              <div className="relative">
-                <span className="text-muted-foreground absolute top-1/2 left-4 -translate-y-1/2 text-lg font-medium">
-                  $
-                </span>
-                <Input
-                  type="number"
-                  placeholder="0.00"
-                  value={amount}
-                  onChange={(e) => setAmount(e.target.value)}
-                  className="pl-8 text-lg h-12 font-medium"
-                  min={MIN_AMOUNT}
-                  max={MAX_AMOUNT}
-                />
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {PRESET_AMOUNTS.map((value) => (
-                  <Button
-                    key={value}
-                    variant={amount === value.toString() ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => setAmount(value.toString())}
-                    className="min-w-[60px]"
-                  >
-                    ${value}
-                  </Button>
-                ))}
-              </div>
-              <p className="text-muted-foreground text-xs">
-                Min: ${MIN_AMOUNT} • Max: ${MAX_AMOUNT.toLocaleString()}
-              </p>
-            </div>
-
-            {/* Coupon Code */}
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Coupon Code (optional)</label>
-              <Input
-                placeholder="Enter coupon code for bonus"
-                value={couponCode}
-                onChange={(e) => setCouponCode(e.target.value)}
-              />
-            </div>
-
-            {/* Payment Preview - Show fee breakdown */}
-            {paymentPreview && parseFloat(amount) >= MIN_AMOUNT && (
-              <div className="p-4 rounded-xl bg-muted/50 border space-y-2">
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Amount</span>
-                  <span className="font-medium">${paymentPreview.requestedAmount.toFixed(2)}</span>
-                </div>
-                {paymentPreview.fee > 0 && (
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">
-                      Processing Fee ({paymentPreview.feeDetails.percent}% + ${paymentPreview.feeDetails.fixed.toFixed(2)})
-                    </span>
-                    <span className={paymentPreview.feePassToUser ? 'text-destructive' : 'text-success'}>
-                      {paymentPreview.feePassToUser ? `+$${paymentPreview.fee.toFixed(2)}` : `$${paymentPreview.fee.toFixed(2)} (we cover)`}
-                    </span>
-                  </div>
-                )}
-                <div className="border-t pt-2 flex justify-between font-medium">
-                  <span>You Pay</span>
-                  <span className="text-primary">${paymentPreview.totalCharge.toFixed(2)}</span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">You Receive</span>
-                  <span className="text-success font-medium">${paymentPreview.amountCredited.toFixed(2)}</span>
-                </div>
-                {couponCode && (
-                  <p className="text-xs text-muted-foreground italic">
-                    Coupon bonus will be calculated when payment is processed
+        {/* Balance Card */}
+        <Card className="md:col-span-2 bg-gradient-to-br from-primary/10 via-background to-background border-primary/20">
+          <CardContent className="p-6">
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
+              <div>
+                <p className="text-muted-foreground text-sm font-medium mb-1">Available Balance</p>
+                <p className="text-4xl md:text-5xl font-bold text-primary">
+                  {wallet ? formatBalance(wallet.balance, wallet.currency) : '$0.00'}
+                </p>
+                {wallet?.isLocked && (
+                  <p className="text-destructive flex items-center gap-1 mt-2 text-sm">
+                    <Lock className="h-3 w-3" />
+                    Wallet locked: {wallet.lockedReason}
                   </p>
                 )}
               </div>
-            )}
-
-            {/* Payment Methods - Show when amount is entered */}
-            {parseFloat(amount) > 0 ? (
-              <div className="space-y-3">
-                <label className="text-sm font-medium">Select Payment Method</label>
-                {isLoadingPreview && (
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    <span>Calculating fees...</span>
-                  </div>
-                )}
-                <div className="grid gap-3">
-                  {gateways.filter(g => g.enabled && parseFloat(amount) >= g.minAmount).length > 0 ? (
-                    gateways
-                      .filter(g => g.enabled && parseFloat(amount) >= g.minAmount)
-                      .map((gateway) => {
-                        const numAmount = parseFloat(amount);
-                        const isSelected = selectedGateway === gateway.gateway;
-                        const showPreviewAmount = isSelected && paymentPreview;
-                        
-                        return (
-                          <button
-                            key={gateway.gateway}
-                            onClick={() => {
-                              setSelectedGateway(gateway.gateway);
-                              if (gateway.gateway !== 'PAYGATE') {
-                                handleAddFunds(gateway.gateway);
-                              }
-                            }}
-                            disabled={isProcessing || wallet?.isLocked}
-                            className={`w-full p-4 rounded-xl border-2 transition-all text-left flex items-center justify-between ${
-                              isSelected
-                                ? 'border-primary bg-primary/5'
-                                : 'border-border hover:border-primary/50 hover:bg-muted/50'
-                            } ${isProcessing ? 'opacity-50 cursor-not-allowed' : ''}`}
-                          >
-                            <div className="flex items-center gap-3">
-                              {gateway.imageUrl ? (
-                                <img 
-                                  src={gateway.imageUrl} 
-                                  alt={gateway.name} 
-                                  className="w-8 h-8 rounded-lg object-cover"
-                                />
-                              ) : (
-                                <span className="text-2xl">{getGatewayIcon(gateway.gateway)}</span>
-                              )}
-                              <div>
-                                <p className="font-medium">{gateway.name || getGatewayName(gateway.gateway)}</p>
-                                {gateway.description && (
-                                  <p className="text-muted-foreground text-xs mt-0.5">{gateway.description}</p>
-                                )}
-                              </div>
-                            </div>
-                            <div className="text-right">
-                              <p className="text-lg font-bold text-primary">
-                                ${showPreviewAmount ? paymentPreview.totalCharge.toFixed(2) : numAmount.toFixed(2)}
-                              </p>
-                              {gateway.minAmount > 0 && (
-                                <p className="text-muted-foreground text-xs">
-                                  min ${gateway.minAmount}
-                                </p>
-                              )}
-                            </div>
-                          </button>
-                        );
-                      })
-                  ) : (
-                    <div className="p-4 rounded-xl border border-dashed border-muted-foreground/30 text-center">
-                      <p className="text-muted-foreground text-sm">
-                        No payment methods available for this amount.
-                        {gateways.length > 0 && (
-                          <span className="block mt-1">
-                            Minimum amount: ${Math.min(...gateways.filter(g => g.enabled).map(g => g.minAmount))}
-                          </span>
-                        )}
-                      </p>
-                    </div>
-                  )}
-                </div>
-
-                {/* PayGate Provider Selection - Show when PayGate is selected */}
-                {selectedGateway === 'PAYGATE' && (
-                  <div className="mt-4 p-4 rounded-xl bg-muted/50 border space-y-3">
-                    <label className="text-sm font-medium">Select Card Provider</label>
-                    <div className="grid gap-2">
-                      {PAYGATE_PROVIDERS.map((provider) => (
-                        <button
-                          key={provider.id}
-                          onClick={() => {
-                            setPaygateProvider(provider.id);
-                            handleAddFunds('PAYGATE', provider.id);
-                          }}
-                          disabled={isProcessing || parseFloat(amount) < provider.minAmount}
-                          className={`w-full p-3 rounded-lg border transition-all text-left flex items-center justify-between ${
-                            paygateProvider === provider.id
-                              ? 'border-primary bg-primary/5'
-                              : 'border-border hover:border-primary/50'
-                          } ${parseFloat(amount) < provider.minAmount ? 'opacity-50' : ''}`}
-                        >
-                          <div>
-                            <p className="font-medium flex items-center gap-2">
-                              {provider.name}
-                              {provider.recommended && (
-                                <Badge variant="secondary" className="text-[10px]">
-                                  Recommended
-                                </Badge>
-                              )}
-                            </p>
-                            <p className="text-muted-foreground text-xs">{provider.description}</p>
-                          </div>
-                          <div className="text-right">
-                            <p className="font-bold text-primary">
-                              ${parseFloat(amount).toFixed(2)}
-                            </p>
-                            {provider.minAmount > 0 && (
-                              <p className="text-muted-foreground text-[10px]">
-                                min ${provider.minAmount}
-                              </p>
-                            )}
-                          </div>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-            ) : (
-              <div className="p-6 rounded-xl border border-dashed border-muted-foreground/30 text-center">
-                <p className="text-muted-foreground">
-                  Enter amount above to see available payment methods
-                </p>
-              </div>
-            )}
-
-            {/* Wallet Locked Warning */}
-            {wallet?.isLocked && (
-              <div className="p-4 rounded-xl bg-destructive/10 border border-destructive/30 flex items-center gap-3">
-                <Lock className="h-5 w-5 text-destructive" />
-                <div>
-                  <p className="font-medium text-destructive">Wallet Locked</p>
-                  <p className="text-sm text-muted-foreground">{wallet.lockedReason}</p>
-                </div>
-              </div>
-            )}
+              <Button 
+                size="lg" 
+                onClick={openDepositModal}
+                disabled={wallet?.isLocked}
+                className="h-14 px-8 text-lg font-semibold"
+              >
+                <Plus className="mr-2 h-5 w-5" />
+                Add Funds
+              </Button>
+            </div>
           </CardContent>
         </Card>
 
-        {/* Balance Card */}
+        {/* Stats Card */}
         <Card>
-          <CardHeader>
-            <CardTitle>Current Balance</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-6">
-              <div>
-                <p className="text-primary text-4xl font-bold">
-                  {wallet ? formatBalance(wallet.balance, wallet.currency) : '$0.00'}
-                </p>
-                <p className="text-muted-foreground mt-1 text-sm">
-                  {wallet?.isLocked ? (
-                    <span className="text-destructive flex items-center gap-1">
-                      <Lock className="h-3 w-3" />
-                      Wallet locked: {wallet.lockedReason}
-                    </span>
-                  ) : (
-                    'Available balance'
-                  )}
-                </p>
-              </div>
-
-              <div className="border-border space-y-3 border-t pt-4">
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Total Spent</span>
-                  <span className="font-medium">
-                    {wallet ? formatBalance(wallet.totalSpent, wallet.currency) : '$0.00'}
-                  </span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Total Deposited</span>
-                  <span className="font-medium">
-                    {wallet ? formatBalance(wallet.totalDeposited, wallet.currency) : '$0.00'}
-                  </span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Total Refunded</span>
-                  <span className="font-medium">
-                    {wallet ? formatBalance(wallet.totalRefunded, wallet.currency) : '$0.00'}
-                  </span>
-                </div>
-                {membership?.currentPlan && membership.discount > 0 && (
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">
-                      Savings ({membership.currentPlan.name} {membership.discount}%)
-                    </span>
-                    <span className="text-success font-medium">
-                      {wallet ? formatBalance(wallet.totalBonus, wallet.currency) : '$0.00'}
-                    </span>
-                  </div>
-                )}
-              </div>
+          <CardContent className="p-6 space-y-4">
+            <div className="flex justify-between items-center">
+              <span className="text-muted-foreground text-sm">Total Deposited</span>
+              <span className="font-semibold text-success">
+                {wallet ? formatBalance(wallet.totalDeposited, wallet.currency) : '$0.00'}
+              </span>
             </div>
+            <div className="flex justify-between items-center">
+              <span className="text-muted-foreground text-sm">Total Spent</span>
+              <span className="font-semibold">
+                {wallet ? formatBalance(wallet.totalSpent, wallet.currency) : '$0.00'}
+              </span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-muted-foreground text-sm">Total Refunded</span>
+              <span className="font-semibold">
+                {wallet ? formatBalance(wallet.totalRefunded, wallet.currency) : '$0.00'}
+              </span>
+            </div>
+            {membership?.currentPlan && membership.discount > 0 && (
+              <div className="flex justify-between items-center pt-2 border-t">
+                <span className="text-muted-foreground text-sm">
+                  {membership.currentPlan.name} Savings
+                </span>
+                <span className="font-semibold text-success">
+                  {wallet ? formatBalance(wallet.totalBonus, wallet.currency) : '$0.00'}
+                </span>
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
@@ -709,6 +542,10 @@ export default function WalletPage() {
               <p className="text-muted-foreground mt-1 text-sm">
                 Add funds to get started
               </p>
+              <Button className="mt-4" onClick={openDepositModal}>
+                <Plus className="mr-2 h-4 w-4" />
+                Add Funds
+              </Button>
             </div>
           ) : (
             <>
@@ -791,7 +628,6 @@ export default function WalletPage() {
                 </Table>
               </div>
 
-              {/* Load More */}
               {hasMore && (
                 <div className="flex justify-center p-4">
                   <Button
@@ -815,23 +651,321 @@ export default function WalletPage() {
         </CardContent>
       </Card>
 
-      {/* Payment Dialog */}
+      {/* Deposit Modal - CheapStreamTV Style */}
+      <Dialog open={showDepositModal} onOpenChange={setShowDepositModal}>
+        <DialogContent className="sm:max-w-[500px] p-0 gap-0 overflow-hidden">
+          {/* Modal Header */}
+          <DialogHeader className="p-6 pb-4 border-b bg-muted/30">
+            <div className="flex items-center justify-between">
+              <DialogTitle className="text-xl font-bold">Add Funds</DialogTitle>
+            </div>
+          </DialogHeader>
+
+          <div className="p-6">
+            {/* Step: Amount Input */}
+            {depositStep === 'amount' && (
+              <div className="space-y-6">
+                <div className="space-y-3">
+                  <label className="text-sm font-medium text-muted-foreground">Amount ($)</label>
+                  <div className="relative">
+                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-xl font-semibold text-muted-foreground">
+                      $
+                    </span>
+                    <Input
+                      type="number"
+                      placeholder="Enter amount"
+                      value={amount}
+                      onChange={(e) => setAmount(e.target.value)}
+                      className="pl-9 h-14 text-xl font-semibold border-2 focus:border-primary"
+                      min={MIN_AMOUNT}
+                      max={MAX_AMOUNT}
+                      autoFocus
+                    />
+                  </div>
+                  
+                  {/* Preset Amounts */}
+                  <div className="flex flex-wrap gap-2 pt-2">
+                    {PRESET_AMOUNTS.map((value) => (
+                      <Button
+                        key={value}
+                        variant={amount === value.toString() ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => setAmount(value.toString())}
+                        className="flex-1 min-w-[70px]"
+                      >
+                        ${value}
+                      </Button>
+                    ))}
+                  </div>
+
+                  {/* Validation Message */}
+                  {amount && parseFloat(amount) >= MIN_AMOUNT && (
+                    <p className="text-sm text-success flex items-center gap-1.5 mt-2">
+                      <CheckCircle2 className="h-4 w-4" />
+                      Amount is valid! Select a payment method below.
+                    </p>
+                  )}
+                  {amount && parseFloat(amount) > 0 && parseFloat(amount) < MIN_AMOUNT && (
+                    <p className="text-sm text-destructive mt-2">
+                      Minimum amount is ${MIN_AMOUNT}
+                    </p>
+                  )}
+                </div>
+
+                {/* Coupon Code */}
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-muted-foreground">Coupon Code (optional)</label>
+                  <Input
+                    placeholder="Enter coupon code for bonus"
+                    value={couponCode}
+                    onChange={(e) => setCouponCode(e.target.value)}
+                    className="h-12"
+                  />
+                </div>
+
+                <Button
+                  className="w-full h-12 text-base font-semibold"
+                  onClick={handleAmountContinue}
+                  disabled={!amount || parseFloat(amount) < MIN_AMOUNT}
+                >
+                  Continue
+                  <ChevronRight className="ml-2 h-4 w-4" />
+                </Button>
+              </div>
+            )}
+
+            {/* Step: Payment Methods */}
+            {depositStep === 'methods' && (
+              <div className="space-y-4">
+                <button
+                  onClick={() => setDepositStep('amount')}
+                  className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  <ArrowLeft className="h-4 w-4" />
+                  Change Amount (${parseFloat(amount).toFixed(2)})
+                </button>
+
+                <p className="text-sm font-medium text-muted-foreground">Select Payment Method</p>
+
+                <div className="space-y-3">
+                  {getAvailableGateways().length > 0 ? (
+                    getAvailableGateways().map((gateway) => (
+                      <button
+                        key={gateway.gateway}
+                        onClick={() => handleGatewaySelect(gateway)}
+                        className="w-full p-4 rounded-xl border-2 border-border hover:border-primary/50 bg-card hover:bg-muted/50 transition-all text-left group"
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            {gateway.imageUrl ? (
+                              <img 
+                                src={gateway.imageUrl} 
+                                alt={gateway.name} 
+                                className="w-10 h-10 rounded-lg object-cover"
+                              />
+                            ) : (
+                              <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center text-xl">
+                                {getGatewayIcon(gateway.gateway)}
+                              </div>
+                            )}
+                            <div>
+                              <p className="font-semibold group-hover:text-primary transition-colors">
+                                {gateway.name || getGatewayName(gateway.gateway)}
+                              </p>
+                              {gateway.description && (
+                                <p className="text-muted-foreground text-xs mt-0.5">{gateway.description}</p>
+                              )}
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-lg font-bold text-primary">
+                              ${parseFloat(amount).toFixed(2)}
+                            </p>
+                            {gateway.minAmount > 0 && (
+                              <p className="text-muted-foreground text-xs">
+                                min ${gateway.minAmount}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      </button>
+                    ))
+                  ) : (
+                    <div className="p-6 rounded-xl border border-dashed text-center">
+                      <p className="text-muted-foreground text-sm">
+                        No payment methods available for this amount.
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Step: PayGate Providers */}
+            {depositStep === 'paygate-providers' && (
+              <div className="space-y-4">
+                <button
+                  onClick={() => setDepositStep('methods')}
+                  className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  <ArrowLeft className="h-4 w-4" />
+                  Change Payment Method
+                </button>
+
+                <p className="text-sm font-medium text-muted-foreground">Select Card Provider</p>
+
+                <div className="grid gap-3 grid-cols-1 sm:grid-cols-2">
+                  {PAYGATE_PROVIDERS.map((provider) => {
+                    const isDisabled = parseFloat(amount) < provider.minAmount;
+                    return (
+                      <button
+                        key={provider.id}
+                        onClick={() => !isDisabled && handlePaygateProviderSelect(provider.id)}
+                        disabled={isDisabled}
+                        className={`p-4 rounded-xl border-2 text-left transition-all ${
+                          isDisabled 
+                            ? 'opacity-50 cursor-not-allowed border-border' 
+                            : 'border-border hover:border-primary/50 hover:bg-muted/50'
+                        }`}
+                      >
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex-1 min-w-0">
+                            <p className="font-semibold flex items-center gap-2 flex-wrap">
+                              {provider.name}
+                              {provider.recommended && (
+                                <Badge variant="secondary" className="text-[10px]">
+                                  Recommended
+                                </Badge>
+                              )}
+                            </p>
+                            <p className="text-muted-foreground text-xs mt-1 line-clamp-2">
+                              {provider.description}
+                            </p>
+                            {provider.minAmount > 0 && (
+                              <p className="text-muted-foreground text-xs mt-1">
+                                Min ${provider.minAmount}
+                              </p>
+                            )}
+                          </div>
+                          <CreditCard className="h-6 w-6 text-primary/60 flex-shrink-0" />
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Step: Payment Summary */}
+            {depositStep === 'summary' && selectedGateway && (
+              <div className="space-y-6">
+                <button
+                  onClick={() => setDepositStep(selectedGateway === 'PAYGATE' ? 'paygate-providers' : 'methods')}
+                  className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  <ArrowLeft className="h-4 w-4" />
+                  Change Payment Method
+                </button>
+
+                <div className="space-y-4">
+                  <p className="text-sm font-medium text-muted-foreground">Payment Summary</p>
+                  
+                  <div className="p-4 rounded-xl bg-muted/50 border space-y-3">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Method</span>
+                      <span className="font-medium">
+                        {getGatewayName(selectedGateway)}
+                        {selectedGateway === 'PAYGATE' && (
+                          <span className="text-muted-foreground ml-1">
+                            ({PAYGATE_PROVIDERS.find(p => p.id === paygateProvider)?.name || paygateProvider})
+                          </span>
+                        )}
+                      </span>
+                    </div>
+
+                    {isLoadingPreview ? (
+                      <div className="flex items-center justify-center py-4">
+                        <Loader2 className="h-5 w-5 animate-spin text-primary" />
+                      </div>
+                    ) : paymentPreview ? (
+                      <>
+                        <div className="flex justify-between text-sm">
+                          <span className="text-muted-foreground">Deposit Amount</span>
+                          <span className="font-medium">${paymentPreview.requestedAmount.toFixed(2)}</span>
+                        </div>
+                        {paymentPreview.fee > 0 && (
+                          <div className="flex justify-between text-sm">
+                            <span className="text-muted-foreground">Processing Fee</span>
+                            <span className={paymentPreview.feePassToUser ? '' : 'text-success'}>
+                              {paymentPreview.feePassToUser 
+                                ? `+$${paymentPreview.fee.toFixed(2)}` 
+                                : `$${paymentPreview.fee.toFixed(2)} (covered)`}
+                            </span>
+                          </div>
+                        )}
+                        <div className="border-t pt-3 flex justify-between font-semibold">
+                          <span>Total to Pay</span>
+                          <span className="text-lg text-primary">
+                            ${paymentPreview.totalCharge.toFixed(2)}
+                          </span>
+                        </div>
+                        <div className="flex justify-between text-sm">
+                          <span className="text-muted-foreground">You'll Receive</span>
+                          <span className="text-success font-medium">
+                            ${paymentPreview.amountCredited.toFixed(2)}
+                          </span>
+                        </div>
+                        {couponCode && (
+                          <p className="text-xs text-muted-foreground italic pt-2 border-t">
+                            Coupon "{couponCode}" will be applied during payment
+                          </p>
+                        )}
+                      </>
+                    ) : (
+                      <div className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">Deposit Amount</span>
+                        <span className="font-medium text-lg text-primary">
+                          ${parseFloat(amount).toFixed(2)}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <Button
+                  className="w-full h-12 text-base font-semibold"
+                  onClick={handleConfirmPayment}
+                  disabled={isProcessing}
+                >
+                  {isProcessing ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Processing...
+                    </>
+                  ) : (
+                    'Confirm Payment'
+                  )}
+                </Button>
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Payment Completion Dialog */}
       <Dialog open={showPaymentDialog} onOpenChange={setShowPaymentDialog}>
-        <DialogContent>
+        <DialogContent className="sm:max-w-[400px]">
           <DialogHeader>
             <DialogTitle>Complete Your Payment</DialogTitle>
-            <DialogDescription>
-              A new window has been opened for you to complete the payment.
-              Once completed, your balance will be updated automatically.
-            </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
-            <div className="bg-muted rounded-lg p-4 text-center">
+            <p className="text-muted-foreground text-sm">
+              A new window has been opened for you to complete the payment.
+              Once completed, your balance will be updated automatically.
+            </p>
+            <div className="p-4 rounded-xl bg-muted/50 text-center">
               <p className="text-muted-foreground text-sm">Amount</p>
-              <p className="text-2xl font-bold">${amount}</p>
-              <p className="text-muted-foreground text-sm">
-                via {getGatewayName(selectedGateway)}
-              </p>
+              <p className="text-3xl font-bold text-primary">${amount}</p>
             </div>
             {checkoutUrl && (
               <Button
@@ -847,7 +981,7 @@ export default function WalletPage() {
               className="w-full"
               onClick={() => {
                 setShowPaymentDialog(false);
-                setAmount('');
+                setCheckoutUrl(null);
                 fetchWalletData();
               }}
             >
