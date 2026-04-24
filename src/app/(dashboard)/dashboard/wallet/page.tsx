@@ -236,9 +236,11 @@ export default function WalletPage() {
     }
   }, [typeFilter, statusFilter]);
 
-  // Handle add funds
-  const handleAddFunds = async () => {
+  // Handle add funds - accepts optional gateway override to avoid stale state
+  const handleAddFunds = async (gatewayOverride?: PaymentGateway, providerOverride?: PaygateProvider) => {
     const numAmount = parseFloat(amount);
+    const gatewayToUse = gatewayOverride || selectedGateway;
+    const providerToUse = providerOverride || paygateProvider;
 
     if (!amount || isNaN(numAmount)) {
       toast.error('Please enter a valid amount');
@@ -255,8 +257,8 @@ export default function WalletPage() {
 
       const response = await createPayment({
         amount: numAmount,
-        gateway: selectedGateway,
-        paygateProvider: selectedGateway === 'PAYGATE' ? paygateProvider : undefined,
+        gateway: gatewayToUse,
+        paygateProvider: gatewayToUse === 'PAYGATE' ? providerToUse : undefined,
         successUrl: `${window.location.origin}/dashboard/wallet?payment=success`,
         cancelUrl: `${window.location.origin}/dashboard/wallet?payment=cancelled`,
         ...(couponCode ? { couponCode } : {}),
@@ -460,7 +462,7 @@ export default function WalletPage() {
                             onClick={() => {
                               setSelectedGateway(gateway.gateway);
                               if (gateway.gateway !== 'PAYGATE') {
-                                handleAddFunds();
+                                handleAddFunds(gateway.gateway);
                               }
                             }}
                             disabled={isProcessing || wallet?.isLocked}
@@ -524,7 +526,7 @@ export default function WalletPage() {
                           key={provider.id}
                           onClick={() => {
                             setPaygateProvider(provider.id);
-                            handleAddFunds();
+                            handleAddFunds('PAYGATE', provider.id);
                           }}
                           disabled={isProcessing || parseFloat(amount) < provider.minAmount}
                           className={`w-full p-3 rounded-lg border transition-all text-left flex items-center justify-between ${
