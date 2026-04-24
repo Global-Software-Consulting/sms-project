@@ -122,6 +122,7 @@ export interface RegisterRequest {
   country?: string;
   password: string;
   referralCode?: string;
+  recaptchaToken?: string;
 }
 
 export interface VerifyEmailRequest {

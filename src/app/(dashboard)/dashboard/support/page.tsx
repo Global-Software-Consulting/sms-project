@@ -335,10 +335,10 @@ export default function Support() {
                   className="border-border rounded-lg border overflow-hidden"
                 >
                   {/* Ticket header row */}
-                  <div className="p-4 flex items-center justify-between">
-                    <div>
-                      <h4 className="font-semibold text-base">{ticket.subject}</h4>
-                      <div className="flex items-center gap-3 mt-1 text-sm text-muted-foreground">
+                  <div className="p-3 sm:p-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="min-w-0 flex-1">
+                      <h4 className="font-semibold text-base break-words">{ticket.subject}</h4>
+                      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1 text-xs sm:text-sm text-muted-foreground">
                         <Badge
                           variant={ticket.status === 'OPEN' ? 'default' : 'outline'}
                           className="text-xs"
@@ -357,6 +357,7 @@ export default function Support() {
                       variant="default"
                       size="sm"
                       onClick={() => handleToggleChat(ticket)}
+                      className="w-full sm:w-auto shrink-0"
                     >
                       {openChatId === ticket.id ? 'Hide Chat' : 'Open Chat'}
                     </Button>
@@ -366,7 +367,7 @@ export default function Support() {
                   {openChatId === ticket.id && (
                     <div className="border-t border-border">
                       {/* Messages area */}
-                      <div className="h-[400px] overflow-y-auto bg-background/50 p-4">
+                      <div className="h-[320px] sm:h-[400px] overflow-y-auto bg-background/50 p-3 sm:p-4">
                         {chatLoading ? (
                           <div className="flex items-center justify-center h-full">
                             <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
@@ -383,16 +384,16 @@ export default function Support() {
                                 className={`flex ${msg.isStaff ? 'justify-start' : 'justify-end'}`}
                               >
                                 <div
-                                  className={`max-w-[80%] rounded-lg px-4 py-2 text-sm ${
+                                  className={`max-w-[85%] sm:max-w-[80%] rounded-lg px-3 py-2 sm:px-4 text-sm ${
                                     msg.isStaff
                                       ? 'bg-muted text-foreground'
                                       : 'bg-primary text-primary-foreground'
                                   }`}
                                 >
-                                  <p className="text-xs font-medium mb-1 opacity-70">
+                                  <p className="text-xs font-medium mb-1 opacity-70 break-words">
                                     {msg.isStaff ? msg.senderName || 'Support' : 'You'} &bull; {formatDateTime(msg.createdAt)}
                                   </p>
-                                  <p className="whitespace-pre-wrap">{msg.message}</p>
+                                  <p className="whitespace-pre-wrap break-words">{msg.message}</p>
                                   {msg.imageUrl && (
                                     <img
                                       src={msg.imageUrl}
@@ -423,7 +424,7 @@ export default function Support() {
 
                       {/* Chat input area */}
                       {ticket.status !== 'CLOSED' && ticket.status !== 'RESOLVED' && (
-                        <div className="border-t border-border p-4">
+                        <div className="border-t border-border p-3 sm:p-4">
                           {chatImagePreview && (
                             <div className="relative inline-block mb-2">
                               <img
@@ -445,6 +446,7 @@ export default function Support() {
                               size="icon"
                               onClick={() => chatFileInputRef.current?.click()}
                               disabled={chatSending}
+                              className="shrink-0"
                             >
                               <Upload className="h-4 w-4" />
                             </Button>
@@ -466,11 +468,25 @@ export default function Support() {
                                 }
                               }}
                               disabled={chatSending}
-                              className="flex-1"
+                              className="flex-1 min-w-0"
                             />
                             <Button
                               onClick={handleSendMessage}
                               disabled={chatSending || (!chatMessage.trim() && !chatImage)}
+                              size="icon"
+                              className="shrink-0 sm:hidden"
+                              aria-label="Send"
+                            >
+                              {chatSending ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                              ) : (
+                                <Send className="h-4 w-4" />
+                              )}
+                            </Button>
+                            <Button
+                              onClick={handleSendMessage}
+                              disabled={chatSending || (!chatMessage.trim() && !chatImage)}
+                              className="shrink-0 hidden sm:inline-flex"
                             >
                               {chatSending ? (
                                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />

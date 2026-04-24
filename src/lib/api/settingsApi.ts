@@ -12,6 +12,16 @@ export interface LoginOptions {
   telegram: boolean;
 }
 
+export interface AddonSetting {
+  id: string;
+  key: string;
+  value: string;
+  category: string;
+  description?: string | null;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
 // ============================================
 // Public API Functions (no auth required)
 // ============================================
@@ -23,6 +33,24 @@ export interface LoginOptions {
 export const getLoginOptions = async (): Promise<LoginOptions> => {
   const response = await apiClient.get<LoginOptions>(API_ENDPOINTS.PUBLIC.LOGIN_OPTIONS);
   return response.data;
+};
+
+/**
+ * Get public addon settings as an array of setting rows.
+ * GET /api/v1/settings/addons
+ */
+export const getAddons = async (): Promise<AddonSetting[]> => {
+  const response = await apiClient.get<AddonSetting[]>(API_ENDPOINTS.PUBLIC.ADDONS);
+  return response.data;
+};
+
+/**
+ * Flatten an addon settings array into a key → value map for easy lookup.
+ */
+export const addonsToMap = (addons: AddonSetting[]): Record<string, string> => {
+  const map: Record<string, string> = {};
+  for (const a of addons) map[a.key] = a.value;
+  return map;
 };
 
 // ============================================

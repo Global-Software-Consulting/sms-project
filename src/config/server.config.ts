@@ -16,6 +16,7 @@ export const API_ENDPOINTS = {
     BRANDING: '/settings/branding',
     MAINTENANCE: '/settings/maintenance',
     SOCIAL_LINKS: '/settings/social-links',
+    ADDONS: '/settings/addons',
   },
 
   // ========================

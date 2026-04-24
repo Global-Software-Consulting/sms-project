@@ -1,7 +1,8 @@
 'use client';
-import { useState, useEffect, Suspense } from 'react';
+import { useState, useEffect, useRef, Suspense } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { useTheme } from 'next-themes';
 import {
   Card,
   CardContent,
@@ -19,7 +20,13 @@ import { toast } from 'sonner';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { register, selectIsLoading, clearError } from '@/store/slices/authSlice';
 import { getGoogleOAuthUrl, getGithubOAuthUrl } from '@/lib/api';
-import { getLoginOptions, type LoginOptions } from '@/lib/api/settingsApi';
+import {
+  getLoginOptions,
+  getAddons,
+  addonsToMap,
+  type LoginOptions,
+} from '@/lib/api/settingsApi';
+import { Recaptcha, type RecaptchaHandle } from '@/components/recaptcha';
 import {
   Select,
   SelectContent,
@@ -52,6 +59,11 @@ function SignupContent() {
     telegram: false,
   });
   const [isLoadingOptions, setIsLoadingOptions] = useState(true);
+  const [recaptchaSiteKey, setRecaptchaSiteKey] = useState('');
+  const [recaptchaToken, setRecaptchaToken] = useState<string | null>(null);
+  const recaptchaRef = useRef<RecaptchaHandle>(null);
+  const { resolvedTheme } = useTheme();
+  const showRecaptcha = Boolean(recaptchaSiteKey);
 
   // Fetch login options on mount
   useEffect(() => {
@@ -66,6 +78,26 @@ function SignupContent() {
       }
     };
     fetchLoginOptions();
+  }, []);
+
+  // Fetch addon settings on mount to decide whether to render reCAPTCHA
+  useEffect(() => {
+    const fetchAddons = async () => {
+      try {
+        const addons = await getAddons();
+        const map = addonsToMap(addons);
+        const enabled = map['addon_recaptcha_enabled'] === 'true';
+        const siteKey = map['addon_recaptcha_site_key'] ?? '';
+        if (enabled && siteKey) {
+          setRecaptchaSiteKey(siteKey);
+        } else if (enabled && !siteKey) {
+          console.warn('[recaptcha] enabled on admin but addon_recaptcha_site_key is empty');
+        }
+      } catch (error) {
+        console.error('[recaptcha] failed to fetch /settings/addons:', error);
+      }
+    };
+    fetchAddons();
   }, []);
 
   const handleGoogleLogin = () => {
@@ -98,6 +130,13 @@ function SignupContent() {
       return;
     }
 
+    if (showRecaptcha && !recaptchaToken) {
+      toast.error('Please complete the reCAPTCHA', {
+        description: 'Verify you are not a robot to continue.',
+      });
+      return;
+    }
+
     dispatch(clearError());
 
     const result = await dispatch(
@@ -107,6 +146,7 @@ function SignupContent() {
         country: formData.country,
         password: formData.password,
         ...(referralCode ? { referralCode } : {}),
+        ...(showRecaptcha && recaptchaToken ? { recaptchaToken } : {}),
       }),
     );
 
@@ -116,6 +156,8 @@ function SignupContent() {
       });
       router.push('/auth/verify-email');
     } else {
+      recaptchaRef.current?.reset();
+      setRecaptchaToken(null);
       toast.error('Registration failed', {
         description: (result.payload as string) || 'Something went wrong. Please try again.',
       });
@@ -349,7 +391,21 @@ function SignupContent() {
                   </Link>
                 </Label>
               </div>
-              <Button type="submit" className="w-full" disabled={isLoading}>
+              {showRecaptcha && (
+                <div className="flex justify-center">
+                  <Recaptcha
+                    ref={recaptchaRef}
+                    siteKey={recaptchaSiteKey}
+                    theme={resolvedTheme === 'dark' ? 'dark' : 'light'}
+                    onChange={setRecaptchaToken}
+                  />
+                </div>
+              )}
+              <Button
+                type="submit"
+                className="w-full"
+                disabled={isLoading || (showRecaptcha && !recaptchaToken)}
+              >
                 {isLoading ? 'Creating account...' : 'Create Account'}
               </Button>
             </form>
