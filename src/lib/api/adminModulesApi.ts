@@ -1266,3 +1266,129 @@ export const getPaymentGuide = async (): Promise<{ title: string; content: strin
   const response = await apiClient.get<{ title: string; content: string; updatedAt: string }>(API_ENDPOINTS.PUBLIC.PAYMENT_GUIDE);
   return response.data;
 };
+
+// ============================================
+// ADMIN BINANCE Types & Functions
+// ============================================
+
+export interface BinanceSessionStatus {
+  isConfigured: boolean;
+  payId: string | null;
+  session: {
+    isValid: boolean;
+    email: string;
+    lastUsedAt: string | null;
+    createdAt: string;
+    updatedAt: string;
+    expiresApprox: string | null;
+  } | null;
+  bootstrapRequired: boolean;
+  autoVerificationAvailable: boolean;
+}
+
+export interface BinanceStatistics {
+  total: number;
+  verified: number;
+  pending: number;
+  failed: number;
+  totalVerifiedAmount: number;
+  last24Hours: number;
+  successRate: string | number;
+}
+
+export interface BinancePendingVerification {
+  id: string;
+  paymentId: string;
+  orderId: string;
+  amount: number;
+  currency: string;
+  attempts: number;
+  ipAddress: string | null;
+  createdAt: string;
+  user: {
+    id: string;
+    email: string;
+    name: string;
+  } | null;
+}
+
+export interface BinanceVerificationHistory {
+  id: string;
+  paymentId: string;
+  orderId: string;
+  amount: number;
+  currency: string;
+  status: 'PENDING' | 'VERIFIED' | 'FAILED';
+  txHash: string | null;
+  attempts: number;
+  ipAddress: string | null;
+  verifiedAt: string | null;
+  createdAt: string;
+  user: {
+    id: string;
+    email: string;
+    name: string;
+  } | null;
+}
+
+export interface BinanceAuditLog {
+  id: string;
+  action: string;
+  resource: string;
+  resourceId: string | null;
+  details: Record<string, unknown>;
+  ipAddress: string | null;
+  createdAt: string;
+  user: {
+    id: string;
+    email: string;
+    name: string;
+  } | null;
+}
+
+export const getBinanceSessionStatus = async (): Promise<BinanceSessionStatus> => {
+  const response = await apiClient.get<BinanceSessionStatus>('/api/v1/admin/binance/session');
+  return response.data;
+};
+
+export const getBinanceStatistics = async (): Promise<BinanceStatistics> => {
+  const response = await apiClient.get<BinanceStatistics>('/api/v1/admin/binance/statistics');
+  return response.data;
+};
+
+export const getBinancePendingVerifications = async (): Promise<{ data: BinancePendingVerification[]; count: number }> => {
+  const response = await apiClient.get<{ data: BinancePendingVerification[]; count: number }>('/api/v1/admin/binance/pending');
+  return response.data;
+};
+
+export const getBinanceVerificationHistory = async (): Promise<{ data: BinanceVerificationHistory[] }> => {
+  const response = await apiClient.get<{ data: BinanceVerificationHistory[] }>('/api/v1/admin/binance/history');
+  return response.data;
+};
+
+export const getBinanceAuditLogs = async (): Promise<{ data: BinanceAuditLog[] }> => {
+  const response = await apiClient.get<{ data: BinanceAuditLog[] }>('/api/v1/admin/binance/audit-logs');
+  return response.data;
+};
+
+export const adminVerifyBinancePayment = async (data: {
+  verificationId: string;
+  txHash?: string;
+  notes?: string;
+}): Promise<{ success: boolean; message: string }> => {
+  const response = await apiClient.post<{ success: boolean; message: string }>('/api/v1/admin/binance/verify', data);
+  return response.data;
+};
+
+export const adminRejectBinanceVerification = async (data: {
+  verificationId: string;
+  reason: string;
+}): Promise<{ success: boolean; message: string }> => {
+  const response = await apiClient.post<{ success: boolean; message: string }>('/api/v1/admin/binance/reject', data);
+  return response.data;
+};
+
+export const invalidateBinanceSession = async (): Promise<{ success: boolean; message: string }> => {
+  const response = await apiClient.post<{ success: boolean; message: string }>('/api/v1/admin/binance/invalidate-session');
+  return response.data;
+};

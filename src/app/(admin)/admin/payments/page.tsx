@@ -19,6 +19,11 @@ import {
   Upload,
   X,
   Image as ImageIcon,
+  AlertTriangle,
+  CheckCircle,
+  Clock,
+  Shield,
+  Activity,
 } from "lucide-react";
 import {
   getPaymentGateways,
@@ -39,12 +44,25 @@ import {
   PaygateProvider,
   AdminWallet,
   PaymentGatewayType,
+  getBinanceSessionStatus,
+  getBinanceStatistics,
+  getBinancePendingVerifications,
+  getBinanceVerificationHistory,
+  getBinanceAuditLogs,
+  adminVerifyBinancePayment,
+  adminRejectBinanceVerification,
+  invalidateBinanceSession,
+  BinanceSessionStatus,
+  BinanceStatistics,
+  BinancePendingVerification,
+  BinanceVerificationHistory,
+  BinanceAuditLog,
 } from '@/lib/api/adminModulesApi';
 import { uploadFile } from '@/lib/api/storageApi';
 
 export default function AdminPaymentsPage() {
   const [activeTab, setActiveTab] = useState<
-    "methods" | "paygate" | "card" | "guide" | "balances"
+    "methods" | "paygate" | "card" | "guide" | "balances" | "binance"
   >("methods");
 
   // Loading states
@@ -143,6 +161,20 @@ export default function AdminPaymentsPage() {
   const [balancePage, setBalancePage] = useState(1);
   const [balanceTotal, setBalanceTotal] = useState(0);
 
+  // Binance Admin State
+  const [binanceSession, setBinanceSession] = useState<BinanceSessionStatus | null>(null);
+  const [binanceStats, setBinanceStats] = useState<BinanceStatistics | null>(null);
+  const [binancePending, setBinancePending] = useState<BinancePendingVerification[]>([]);
+  const [binanceHistory, setBinanceHistory] = useState<BinanceVerificationHistory[]>([]);
+  const [binanceAuditLogs, setBinanceAuditLogs] = useState<BinanceAuditLog[]>([]);
+  const [binanceActiveSubTab, setBinanceActiveSubTab] = useState<"session" | "pending" | "history" | "logs">("session");
+  const [selectedVerification, setSelectedVerification] = useState<BinancePendingVerification | null>(null);
+  const [showVerifyModal, setShowVerifyModal] = useState(false);
+  const [showRejectModal, setShowRejectModal] = useState(false);
+  const [verifyTxHash, setVerifyTxHash] = useState("");
+  const [verifyNotes, setVerifyNotes] = useState("");
+  const [rejectReason, setRejectReason] = useState("");
+
   // Fetch Payment Gateways
   const fetchPaymentGateways = useCallback(async () => {
     try {
@@ -205,6 +237,97 @@ export default function AdminPaymentsPage() {
     }
   }, []);
 
+  // Fetch Binance Admin Data
+  const fetchBinanceData = useCallback(async () => {
+    try {
+      const [sessionRes, statsRes, pendingRes, historyRes, logsRes] = await Promise.all([
+        getBinanceSessionStatus(),
+        getBinanceStatistics(),
+        getBinancePendingVerifications(),
+        getBinanceVerificationHistory(),
+        getBinanceAuditLogs(),
+      ]);
+      setBinanceSession(sessionRes);
+      setBinanceStats(statsRes);
+      setBinancePending(pendingRes.data);
+      setBinanceHistory(historyRes.data);
+      setBinanceAuditLogs(logsRes.data);
+    } catch (error) {
+      console.error('Failed to fetch Binance data:', error);
+    }
+  }, []);
+
+  // Handle Binance verify
+  const handleBinanceVerify = async () => {
+    if (!selectedVerification) return;
+    setIsLoading(true);
+    try {
+      const result = await adminVerifyBinancePayment({
+        verificationId: selectedVerification.id,
+        txHash: verifyTxHash || undefined,
+        notes: verifyNotes || undefined,
+      });
+      if (result.success) {
+        toast.success('Payment verified and balance credited');
+        setShowVerifyModal(false);
+        setSelectedVerification(null);
+        setVerifyTxHash("");
+        setVerifyNotes("");
+        await fetchBinanceData();
+      } else {
+        toast.error(result.message);
+      }
+    } catch (error) {
+      toast.error('Failed to verify payment');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Handle Binance reject
+  const handleBinanceReject = async () => {
+    if (!selectedVerification || !rejectReason) return;
+    setIsLoading(true);
+    try {
+      const result = await adminRejectBinanceVerification({
+        verificationId: selectedVerification.id,
+        reason: rejectReason,
+      });
+      if (result.success) {
+        toast.success('Verification rejected');
+        setShowRejectModal(false);
+        setSelectedVerification(null);
+        setRejectReason("");
+        await fetchBinanceData();
+      } else {
+        toast.error(result.message);
+      }
+    } catch (error) {
+      toast.error('Failed to reject verification');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Handle invalidate Binance session
+  const handleInvalidateSession = async () => {
+    if (!confirm('Are you sure you want to invalidate the Binance session? This will require re-running the bootstrap script.')) return;
+    setIsLoading(true);
+    try {
+      const result = await invalidateBinanceSession();
+      if (result.success) {
+        toast.success(result.message);
+        await fetchBinanceData();
+      } else {
+        toast.error(result.message);
+      }
+    } catch (error) {
+      toast.error('Failed to invalidate session');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   // Initial data load
   useEffect(() => {
     const loadInitialData = async () => {
@@ -214,11 +337,12 @@ export default function AdminPaymentsPage() {
         fetchPaygateProviders(),
         fetchUserBalances(),
         fetchPaymentGuide(),
+        fetchBinanceData(),
       ]);
       setIsInitialLoading(false);
     };
     loadInitialData();
-  }, [fetchPaymentGateways, fetchPaygateProviders, fetchUserBalances, fetchPaymentGuide]);
+  }, [fetchPaymentGateways, fetchPaygateProviders, fetchUserBalances, fetchPaymentGuide, fetchBinanceData]);
 
   // Seed defaults if no data
   const handleSeedDefaults = async () => {
@@ -552,6 +676,7 @@ export default function AdminPaymentsPage() {
           { id: "methods", label: "Payment Methods" },
           { id: "paygate", label: "PayGate Providers" },
           { id: "card", label: "Card Payment" },
+          { id: "binance", label: "Binance" },
           { id: "guide", label: "User Guide" },
           { id: "balances", label: "Users Balances" },
         ].map((tab) => (
@@ -908,6 +1033,459 @@ export default function AdminPaymentsPage() {
                   Save Guide
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Binance Tab */}
+      {activeTab === "binance" && (
+        <div className="space-y-6">
+          {/* Binance Payment Settings Header */}
+          <div className="p-6 rounded-xl bg-[rgba(15,23,42,0.6)] border border-[rgba(255,255,255,0.1)] backdrop-blur-xl">
+            <div className="flex items-center gap-3 mb-2">
+              <span className="text-2xl">🔶</span>
+              <h2 className="text-white text-xl font-semibold">Binance Payment Settings</h2>
+            </div>
+            <p className="text-[#94A3B8] text-sm">
+              Manage Binance internal transfer verification and session settings
+            </p>
+          </div>
+
+          {/* Sub-tabs */}
+          <div className="flex items-center gap-1 overflow-x-auto pb-2">
+            {[
+              { id: "session", label: "Session Status", icon: Shield },
+              { id: "pending", label: `Pending (${binancePending.length})`, icon: Clock },
+              { id: "history", label: "History", icon: Activity },
+              { id: "logs", label: "Audit Logs", icon: Eye },
+            ].map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => setBinanceActiveSubTab(tab.id as typeof binanceActiveSubTab)}
+                className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors flex items-center gap-2 ${
+                  binanceActiveSubTab === tab.id
+                    ? "bg-[rgba(245,158,11,0.2)] text-[#F59E0B]"
+                    : "text-[#94A3B8] hover:bg-[rgba(255,255,255,0.05)]"
+                }`}
+              >
+                <tab.icon className="w-4 h-4" />
+                {tab.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Session Status Sub-tab */}
+          {binanceActiveSubTab === "session" && (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Session Status Card */}
+              <div className="p-6 rounded-xl bg-[rgba(15,23,42,0.6)] border border-[rgba(255,255,255,0.1)]">
+                <h3 className="text-white text-lg font-semibold mb-4 flex items-center gap-2">
+                  <Shield className="w-5 h-5 text-[#F59E0B]" />
+                  Session Status
+                </h3>
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[#94A3B8] text-sm">Status</span>
+                    <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+                      binanceSession?.session?.isValid 
+                        ? 'bg-[#22C55E]/20 text-[#22C55E]' 
+                        : 'bg-[#EF4444]/20 text-[#EF4444]'
+                    }`}>
+                      {binanceSession?.session?.isValid ? '✓ Active' : '✗ Expired'}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-[#94A3B8] text-sm">Session Email</span>
+                    <span className="text-white text-sm">{binanceSession?.session?.email || 'Not configured'}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-[#94A3B8] text-sm">Last Used</span>
+                    <span className="text-white text-sm">
+                      {binanceSession?.session?.lastUsedAt 
+                        ? new Date(binanceSession.session.lastUsedAt).toLocaleString() 
+                        : 'Never'}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-[#94A3B8] text-sm">Expires (Approx)</span>
+                    <span className="text-white text-sm">
+                      {binanceSession?.session?.expiresApprox 
+                        ? new Date(binanceSession.session.expiresApprox).toLocaleString() 
+                        : 'N/A'}
+                    </span>
+                  </div>
+                </div>
+                {binanceSession?.bootstrapRequired && (
+                  <div className="mt-4 p-3 rounded-lg bg-[#F59E0B]/10 border border-[#F59E0B]/30">
+                    <div className="flex items-start gap-2">
+                      <AlertTriangle className="w-4 h-4 text-[#F59E0B] mt-0.5" />
+                      <div>
+                        <p className="text-[#F59E0B] text-sm font-medium">Bootstrap Login Required</p>
+                        <p className="text-[#94A3B8] text-xs mt-1">Run: <code className="bg-[rgba(0,0,0,0.4)] px-2 py-0.5 rounded">npm run binance:bootstrap</code></p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+                <button
+                  onClick={handleInvalidateSession}
+                  disabled={isLoading || !binanceSession?.session?.isValid}
+                  className="mt-4 w-full px-4 py-2 rounded-lg bg-[#EF4444]/10 border border-[#EF4444]/30 text-[#EF4444] text-sm font-medium hover:bg-[#EF4444]/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Invalidate Session
+                </button>
+              </div>
+
+              {/* Verification Statistics Card */}
+              <div className="p-6 rounded-xl bg-[rgba(15,23,42,0.6)] border border-[rgba(255,255,255,0.1)]">
+                <h3 className="text-white text-lg font-semibold mb-4 flex items-center gap-2">
+                  <Activity className="w-5 h-5 text-[#3B82F6]" />
+                  Verification Statistics
+                </h3>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="p-4 rounded-lg bg-[rgba(0,0,0,0.3)]">
+                    <p className="text-[#64748B] text-xs">Total</p>
+                    <p className="text-white text-2xl font-bold">{binanceStats?.total || 0}</p>
+                  </div>
+                  <div className="p-4 rounded-lg bg-[rgba(34,197,94,0.1)] border border-[rgba(34,197,94,0.3)]">
+                    <p className="text-[#22C55E] text-xs">Verified</p>
+                    <p className="text-[#22C55E] text-2xl font-bold">{binanceStats?.verified || 0}</p>
+                  </div>
+                  <div className="p-4 rounded-lg bg-[rgba(245,158,11,0.1)] border border-[rgba(245,158,11,0.3)]">
+                    <p className="text-[#F59E0B] text-xs">Pending</p>
+                    <p className="text-[#F59E0B] text-2xl font-bold">{binanceStats?.pending || 0}</p>
+                  </div>
+                  <div className="p-4 rounded-lg bg-[rgba(239,68,68,0.1)] border border-[rgba(239,68,68,0.3)]">
+                    <p className="text-[#EF4444] text-xs">Failed</p>
+                    <p className="text-[#EF4444] text-2xl font-bold">{binanceStats?.failed || 0}</p>
+                  </div>
+                </div>
+                <div className="mt-4 flex items-center justify-between text-sm">
+                  <span className="text-[#94A3B8]">Success Rate</span>
+                  <span className="text-[#22C55E] font-medium">{binanceStats?.successRate || 0}%</span>
+                </div>
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-[#94A3B8]">Total Verified Amount</span>
+                  <span className="text-white font-medium">${Number(binanceStats?.totalVerifiedAmount || 0).toFixed(2)} USDT</span>
+                </div>
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-[#94A3B8]">Last 24 Hours</span>
+                  <span className="text-white font-medium">{binanceStats?.last24Hours || 0} verifications</span>
+                </div>
+              </div>
+
+              {/* Pay ID Configuration Card */}
+              <div className="p-6 rounded-xl bg-[rgba(15,23,42,0.6)] border border-[rgba(255,255,255,0.1)] lg:col-span-2">
+                <h3 className="text-white text-lg font-semibold mb-4">Current Configuration</h3>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="flex items-center justify-between p-4 rounded-lg bg-[rgba(0,0,0,0.3)]">
+                    <span className="text-[#94A3B8] text-sm">Pay ID</span>
+                    <span className="text-white font-mono">{binanceSession?.payId || 'Not set'}</span>
+                  </div>
+                  <div className="flex items-center justify-between p-4 rounded-lg bg-[rgba(0,0,0,0.3)]">
+                    <span className="text-[#94A3B8] text-sm">Auto-Verification</span>
+                    <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+                      binanceSession?.autoVerificationAvailable 
+                        ? 'bg-[#22C55E]/20 text-[#22C55E]' 
+                        : 'bg-[#64748B]/20 text-[#64748B]'
+                    }`}>
+                      {binanceSession?.autoVerificationAvailable ? 'Available' : 'Disabled'}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between p-4 rounded-lg bg-[rgba(0,0,0,0.3)]">
+                    <span className="text-[#94A3B8] text-sm">Gateway Configured</span>
+                    <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+                      binanceSession?.isConfigured 
+                        ? 'bg-[#22C55E]/20 text-[#22C55E]' 
+                        : 'bg-[#EF4444]/20 text-[#EF4444]'
+                    }`}>
+                      {binanceSession?.isConfigured ? 'Yes' : 'No'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Pending Verifications Sub-tab */}
+          {binanceActiveSubTab === "pending" && (
+            <div className="rounded-xl bg-[rgba(15,23,42,0.6)] border border-[rgba(255,255,255,0.1)] overflow-hidden">
+              <div className="p-4 border-b border-[rgba(255,255,255,0.1)] flex items-center justify-between">
+                <h3 className="text-white font-semibold">Pending Verifications</h3>
+                <button
+                  onClick={fetchBinanceData}
+                  className="px-3 py-1.5 rounded-lg bg-[rgba(255,255,255,0.08)] hover:bg-[rgba(255,255,255,0.12)] text-white text-sm transition-colors flex items-center gap-2"
+                >
+                  <RefreshCw className="w-4 h-4" />
+                  Refresh
+                </button>
+              </div>
+              {binancePending.length === 0 ? (
+                <div className="p-16 text-center">
+                  <CheckCircle className="w-12 h-12 mx-auto text-[#22C55E] mb-4" />
+                  <p className="text-white text-lg font-medium">All caught up!</p>
+                  <p className="text-[#94A3B8] text-sm">No pending verifications</p>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-b border-[rgba(255,255,255,0.1)] bg-[rgba(0,0,0,0.2)]">
+                        <th className="px-4 py-3 text-left text-xs font-medium text-[#94A3B8] uppercase">Order ID</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-[#94A3B8] uppercase">Amount</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-[#94A3B8] uppercase">User</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-[#94A3B8] uppercase">Attempts</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-[#94A3B8] uppercase">Created</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-[#94A3B8] uppercase">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-[rgba(255,255,255,0.05)]">
+                      {binancePending.map((v) => (
+                        <tr key={v.id} className="hover:bg-[rgba(255,255,255,0.02)]">
+                          <td className="px-4 py-3 font-mono text-white text-sm">{v.orderId}</td>
+                          <td className="px-4 py-3 text-white font-medium">${v.amount} {v.currency}</td>
+                          <td className="px-4 py-3">
+                            <div className="text-white text-sm">{v.user?.name || 'Unknown'}</div>
+                            <div className="text-[#64748B] text-xs">{v.user?.email}</div>
+                          </td>
+                          <td className="px-4 py-3 text-[#94A3B8]">{v.attempts}</td>
+                          <td className="px-4 py-3 text-[#94A3B8] text-sm">{new Date(v.createdAt).toLocaleString()}</td>
+                          <td className="px-4 py-3">
+                            <div className="flex items-center gap-2">
+                              <button
+                                onClick={() => {
+                                  setSelectedVerification(v);
+                                  setShowVerifyModal(true);
+                                }}
+                                className="px-3 py-1.5 rounded-lg bg-[#22C55E] hover:bg-[#16A34A] text-white text-xs font-medium transition-colors"
+                              >
+                                Verify
+                              </button>
+                              <button
+                                onClick={() => {
+                                  setSelectedVerification(v);
+                                  setShowRejectModal(true);
+                                }}
+                                className="px-3 py-1.5 rounded-lg bg-[#EF4444] hover:bg-[#DC2626] text-white text-xs font-medium transition-colors"
+                              >
+                                Reject
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* History Sub-tab */}
+          {binanceActiveSubTab === "history" && (
+            <div className="rounded-xl bg-[rgba(15,23,42,0.6)] border border-[rgba(255,255,255,0.1)] overflow-hidden">
+              <div className="p-4 border-b border-[rgba(255,255,255,0.1)]">
+                <h3 className="text-white font-semibold">Verification History</h3>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b border-[rgba(255,255,255,0.1)] bg-[rgba(0,0,0,0.2)]">
+                      <th className="px-4 py-3 text-left text-xs font-medium text-[#94A3B8] uppercase">Order ID</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-[#94A3B8] uppercase">Amount</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-[#94A3B8] uppercase">User</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-[#94A3B8] uppercase">Status</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-[#94A3B8] uppercase">Date</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-[rgba(255,255,255,0.05)]">
+                    {binanceHistory.map((v) => (
+                      <tr key={v.id} className="hover:bg-[rgba(255,255,255,0.02)]">
+                        <td className="px-4 py-3 font-mono text-white text-sm">{v.orderId}</td>
+                        <td className="px-4 py-3 text-white font-medium">${v.amount} {v.currency}</td>
+                        <td className="px-4 py-3">
+                          <div className="text-white text-sm">{v.user?.name || 'Unknown'}</div>
+                          <div className="text-[#64748B] text-xs">{v.user?.email}</div>
+                        </td>
+                        <td className="px-4 py-3">
+                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                            v.status === 'VERIFIED' 
+                              ? 'bg-[#22C55E]/20 text-[#22C55E]' 
+                              : v.status === 'PENDING'
+                              ? 'bg-[#F59E0B]/20 text-[#F59E0B]'
+                              : 'bg-[#EF4444]/20 text-[#EF4444]'
+                          }`}>
+                            {v.status}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-[#94A3B8] text-sm">{new Date(v.createdAt).toLocaleString()}</td>
+                      </tr>
+                    ))}
+                    {binanceHistory.length === 0 && (
+                      <tr>
+                        <td colSpan={5} className="py-16 text-center">
+                          <p className="text-[#94A3B8]">No verification history</p>
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {/* Audit Logs Sub-tab */}
+          {binanceActiveSubTab === "logs" && (
+            <div className="rounded-xl bg-[rgba(15,23,42,0.6)] border border-[rgba(255,255,255,0.1)] overflow-hidden">
+              <div className="p-4 border-b border-[rgba(255,255,255,0.1)]">
+                <h3 className="text-white font-semibold">Audit Logs</h3>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b border-[rgba(255,255,255,0.1)] bg-[rgba(0,0,0,0.2)]">
+                      <th className="px-4 py-3 text-left text-xs font-medium text-[#94A3B8] uppercase">Date</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-[#94A3B8] uppercase">Action</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-[#94A3B8] uppercase">User</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-[#94A3B8] uppercase">Details</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-[rgba(255,255,255,0.05)]">
+                    {binanceAuditLogs.map((log) => (
+                      <tr key={log.id} className="hover:bg-[rgba(255,255,255,0.02)]">
+                        <td className="px-4 py-3 text-[#94A3B8] text-sm">{new Date(log.createdAt).toLocaleString()}</td>
+                        <td className="px-4 py-3">
+                          <span className={`px-2 py-1 rounded text-xs font-medium ${
+                            log.action.includes('VERIFY') 
+                              ? 'bg-[#22C55E]/20 text-[#22C55E]' 
+                              : log.action.includes('REJECT')
+                              ? 'bg-[#EF4444]/20 text-[#EF4444]'
+                              : 'bg-[#F59E0B]/20 text-[#F59E0B]'
+                          }`}>
+                            {log.action.replace('BINANCE_', '').replace(/_/g, ' ')}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-white text-sm">{log.user?.email || 'System'}</td>
+                        <td className="px-4 py-3 text-[#94A3B8] text-xs font-mono max-w-xs truncate">
+                          {JSON.stringify(log.details)}
+                        </td>
+                      </tr>
+                    ))}
+                    {binanceAuditLogs.length === 0 && (
+                      <tr>
+                        <td colSpan={4} className="py-16 text-center">
+                          <p className="text-[#94A3B8]">No audit logs</p>
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Verify Modal */}
+      {showVerifyModal && selectedVerification && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-[#0F172A] border border-[rgba(255,255,255,0.1)] rounded-xl p-6 w-full max-w-md">
+            <h2 className="text-white text-xl font-semibold mb-4">Verify Payment</h2>
+            <div className="space-y-4">
+              <div className="p-3 rounded-lg bg-[rgba(0,0,0,0.3)]">
+                <p className="text-[#94A3B8] text-xs">Order ID</p>
+                <p className="text-white font-mono">{selectedVerification.orderId}</p>
+              </div>
+              <div className="p-3 rounded-lg bg-[rgba(0,0,0,0.3)]">
+                <p className="text-[#94A3B8] text-xs">Amount</p>
+                <p className="text-white font-bold">${selectedVerification.amount} {selectedVerification.currency}</p>
+              </div>
+              <div>
+                <label className="text-white text-sm font-medium mb-2 block">Transaction Hash (Optional)</label>
+                <input
+                  type="text"
+                  value={verifyTxHash}
+                  onChange={(e) => setVerifyTxHash(e.target.value)}
+                  className="w-full bg-[rgba(0,0,0,0.4)] border border-[rgba(255,255,255,0.18)] rounded-lg px-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#3B82F6]"
+                  placeholder="Enter tx hash if available"
+                />
+              </div>
+              <div>
+                <label className="text-white text-sm font-medium mb-2 block">Notes (Optional)</label>
+                <textarea
+                  value={verifyNotes}
+                  onChange={(e) => setVerifyNotes(e.target.value)}
+                  className="w-full bg-[rgba(0,0,0,0.4)] border border-[rgba(255,255,255,0.18)] rounded-lg px-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#3B82F6] resize-none"
+                  rows={2}
+                  placeholder="Add any notes..."
+                />
+              </div>
+            </div>
+            <div className="flex items-center gap-3 mt-6">
+              <button
+                onClick={handleBinanceVerify}
+                disabled={isLoading}
+                className="flex-1 px-4 py-2.5 rounded-lg bg-[#22C55E] hover:bg-[#16A34A] text-white text-sm font-medium transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {isLoading && <Loader2 className="w-4 h-4 animate-spin" />}
+                Verify & Credit Balance
+              </button>
+              <button
+                onClick={() => {
+                  setShowVerifyModal(false);
+                  setSelectedVerification(null);
+                  setVerifyTxHash("");
+                  setVerifyNotes("");
+                }}
+                className="flex-1 px-4 py-2.5 rounded-lg bg-[rgba(255,255,255,0.08)] hover:bg-[rgba(255,255,255,0.12)] text-white text-sm font-medium transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Reject Modal */}
+      {showRejectModal && selectedVerification && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-[#0F172A] border border-[rgba(255,255,255,0.1)] rounded-xl p-6 w-full max-w-md">
+            <h2 className="text-white text-xl font-semibold mb-4">Reject Verification</h2>
+            <div className="space-y-4">
+              <div className="p-3 rounded-lg bg-[rgba(0,0,0,0.3)]">
+                <p className="text-[#94A3B8] text-xs">Order ID</p>
+                <p className="text-white font-mono">{selectedVerification.orderId}</p>
+              </div>
+              <div>
+                <label className="text-white text-sm font-medium mb-2 block">Rejection Reason *</label>
+                <textarea
+                  value={rejectReason}
+                  onChange={(e) => setRejectReason(e.target.value)}
+                  className="w-full bg-[rgba(0,0,0,0.4)] border border-[rgba(255,255,255,0.18)] rounded-lg px-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#3B82F6] resize-none"
+                  rows={3}
+                  placeholder="Enter reason for rejection..."
+                />
+              </div>
+            </div>
+            <div className="flex items-center gap-3 mt-6">
+              <button
+                onClick={handleBinanceReject}
+                disabled={isLoading || !rejectReason}
+                className="flex-1 px-4 py-2.5 rounded-lg bg-[#EF4444] hover:bg-[#DC2626] text-white text-sm font-medium transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {isLoading && <Loader2 className="w-4 h-4 animate-spin" />}
+                Reject
+              </button>
+              <button
+                onClick={() => {
+                  setShowRejectModal(false);
+                  setSelectedVerification(null);
+                  setRejectReason("");
+                }}
+                className="flex-1 px-4 py-2.5 rounded-lg bg-[rgba(255,255,255,0.08)] hover:bg-[rgba(255,255,255,0.12)] text-white text-sm font-medium transition-colors"
+              >
+                Cancel
+              </button>
             </div>
           </div>
         </div>

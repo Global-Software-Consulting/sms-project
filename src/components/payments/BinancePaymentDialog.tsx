@@ -16,8 +16,7 @@ import {
   Copy,
   CheckCircle2,
   AlertCircle,
-  QrCode,
-  ExternalLink,
+  RefreshCw,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import {
@@ -45,6 +44,7 @@ export function BinancePaymentDialog({
   const [isLoading, setIsLoading] = useState(true);
   const [orderId, setOrderId] = useState('');
   const [isVerifying, setIsVerifying] = useState(false);
+  const [isCheckingStatus, setIsCheckingStatus] = useState(false);
   const [verificationStatus, setVerificationStatus] = useState<'idle' | 'pending' | 'success' | 'error'>('idle');
   const [statusMessage, setStatusMessage] = useState('');
   const [copied, setCopied] = useState<string | null>(null);
@@ -53,6 +53,10 @@ export function BinancePaymentDialog({
   useEffect(() => {
     if (open && amount > 0) {
       fetchBinanceInfo();
+      // Reset state when dialog opens
+      setOrderId('');
+      setVerificationStatus('idle');
+      setStatusMessage('');
     }
   }, [open, amount]);
 
@@ -77,6 +81,34 @@ export function BinancePaymentDialog({
       setTimeout(() => setCopied(null), 2000);
     } catch {
       toast.error('Failed to copy');
+    }
+  };
+
+  const handleCheckStatus = async () => {
+    try {
+      setIsCheckingStatus(true);
+      // Re-verify with existing Order ID if available, or just check status
+      if (orderId.trim()) {
+        const result = await verifyBinancePayment(paymentId, orderId.trim());
+        if (result.success && result.status === 'VERIFIED') {
+          setVerificationStatus('success');
+          setStatusMessage(result.message);
+          toast.success('Payment verified!');
+          setTimeout(() => {
+            onSuccess?.();
+            onOpenChange(false);
+          }, 2000);
+        } else {
+          setStatusMessage(result.message);
+          toast.info(result.message);
+        }
+      } else {
+        toast.info('Please enter your Order ID first, then verify');
+      }
+    } catch (error) {
+      toast.error('Failed to check status');
+    } finally {
+      setIsCheckingStatus(false);
     }
   };
 
@@ -151,65 +183,79 @@ export function BinancePaymentDialog({
             </p>
           </div>
         ) : (
-          <div className="space-y-6">
-            {/* Amount to pay */}
-            <div className="text-center p-4 bg-primary/10 rounded-xl">
-              <p className="text-sm text-muted-foreground">Amount to Pay</p>
-              <p className="text-3xl font-bold text-primary">{amount} USDT</p>
+          <div className="space-y-5">
+            {/* Top-up Request Header */}
+            <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg border">
+              <div>
+                <p className="text-xs text-muted-foreground">Top-up Request</p>
+                <p className="font-mono font-medium text-sm">#{paymentId.slice(-8).toUpperCase()}</p>
+              </div>
+              <div className="text-right">
+                <p className="text-xs text-muted-foreground">Amount</p>
+                <p className="font-bold text-primary">{amount} USDT</p>
+              </div>
             </div>
 
-            {/* Step 1: Pay ID and QR Code */}
-            <div className="space-y-4">
-              <div className="flex items-center gap-2">
-                <Badge variant="outline" className="rounded-full">1</Badge>
-                <span className="font-medium">Send USDT to this Pay ID</span>
-              </div>
-
-              {/* Pay ID */}
-              <div className="flex items-center gap-2">
-                <Input
-                  value={binanceInfo.payId || ''}
-                  readOnly
-                  className="font-mono text-lg"
-                />
+            {/* Binance Pay ID Section */}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="font-medium text-sm">Binance Pay ID</span>
                 <Button
                   variant="outline"
-                  size="icon"
-                  onClick={() => copyToClipboard(binanceInfo.payId || '', 'Pay ID')}
+                  size="sm"
+                  onClick={() => copyToClipboard(binanceInfo.payId || '', 'Binance ID')}
+                  className="h-8"
                 >
-                  {copied === 'Pay ID' ? (
-                    <CheckCircle2 className="h-4 w-4 text-success" />
+                  {copied === 'Binance ID' ? (
+                    <>
+                      <CheckCircle2 className="mr-1.5 h-3.5 w-3.5 text-success" />
+                      Copied
+                    </>
                   ) : (
-                    <Copy className="h-4 w-4" />
+                    <>
+                      <Copy className="mr-1.5 h-3.5 w-3.5" />
+                      Copy Binance ID
+                    </>
                   )}
                 </Button>
               </div>
+              
+              <div className="p-4 bg-primary/5 border border-primary/20 rounded-xl text-center">
+                <p className="font-mono text-2xl font-bold text-primary tracking-wider">
+                  {binanceInfo.payId}
+                </p>
+              </div>
+            </div>
 
-              {/* QR Code */}
-              {binanceInfo.qrCodeUrl && (
-                <div className="flex justify-center">
-                  <div className="p-3 bg-white rounded-xl">
-                    <img
-                      src={binanceInfo.qrCodeUrl}
-                      alt="Binance Pay QR Code"
-                      className="w-48 h-48"
-                    />
-                  </div>
+            {/* QR Code (Optional) */}
+            {binanceInfo.qrCodeUrl && (
+              <div className="flex justify-center">
+                <div className="p-2 bg-white rounded-lg border">
+                  <img
+                    src={binanceInfo.qrCodeUrl}
+                    alt="Binance Pay QR Code"
+                    className="w-32 h-32"
+                  />
                 </div>
-              )}
+              </div>
+            )}
 
-              <p className="text-xs text-muted-foreground text-center">
-                Scan with Binance app or enter Pay ID manually
+            {/* Instructions */}
+            <div className="space-y-2 text-sm">
+              <p className="text-muted-foreground">
+                <span className="font-medium text-foreground">1.</span> Open Binance and send the amount to the Binance ID above.
+              </p>
+              <p className="text-muted-foreground">
+                <span className="font-medium text-foreground">2.</span> After payment, copy your Binance Order ID from the successful transfer.
+              </p>
+              <p className="text-muted-foreground">
+                <span className="font-medium text-foreground">3.</span> Paste it below and verify to credit your wallet balance.
               </p>
             </div>
 
-            {/* Step 2: Enter Order ID */}
-            <div className="space-y-4">
-              <div className="flex items-center gap-2">
-                <Badge variant="outline" className="rounded-full">2</Badge>
-                <span className="font-medium">Enter your Binance Order ID</span>
-              </div>
-
+            {/* Order ID Input */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Enter your Binance Order ID</label>
               <Input
                 placeholder="e.g. 1234567890123456"
                 value={orderId}
@@ -217,15 +263,11 @@ export function BinancePaymentDialog({
                 className="font-mono"
                 disabled={isVerifying || verificationStatus === 'success'}
               />
-
-              <p className="text-xs text-muted-foreground">
-                Find your Order ID in: Binance App → Wallet → Transaction History → Select your transfer
-              </p>
             </div>
 
             {/* Verification Status */}
             {verificationStatus !== 'idle' && (
-              <div className={`p-4 rounded-xl flex items-start gap-3 ${
+              <div className={`p-3 rounded-lg flex items-start gap-3 ${
                 verificationStatus === 'success' 
                   ? 'bg-success/10 border border-success/30' 
                   : verificationStatus === 'pending'
@@ -233,14 +275,14 @@ export function BinancePaymentDialog({
                   : 'bg-destructive/10 border border-destructive/30'
               }`}>
                 {verificationStatus === 'success' ? (
-                  <CheckCircle2 className="h-5 w-5 text-success flex-shrink-0 mt-0.5" />
+                  <CheckCircle2 className="h-5 w-5 text-success flex-shrink-0" />
                 ) : verificationStatus === 'pending' ? (
-                  <Loader2 className="h-5 w-5 text-warning animate-spin flex-shrink-0 mt-0.5" />
+                  <Loader2 className="h-5 w-5 text-warning animate-spin flex-shrink-0" />
                 ) : (
-                  <AlertCircle className="h-5 w-5 text-destructive flex-shrink-0 mt-0.5" />
+                  <AlertCircle className="h-5 w-5 text-destructive flex-shrink-0" />
                 )}
                 <div>
-                  <p className={`font-medium ${
+                  <p className={`text-sm font-medium ${
                     verificationStatus === 'success' 
                       ? 'text-success' 
                       : verificationStatus === 'pending'
@@ -253,38 +295,51 @@ export function BinancePaymentDialog({
                       ? 'Verification Pending'
                       : 'Verification Failed'}
                   </p>
-                  <p className="text-sm text-muted-foreground">{statusMessage}</p>
+                  <p className="text-xs text-muted-foreground">{statusMessage}</p>
                 </div>
               </div>
             )}
 
-            {/* Verify Button */}
-            <Button
-              onClick={handleVerify}
-              disabled={!orderId.trim() || isVerifying || verificationStatus === 'success'}
-              className="w-full"
-              size="lg"
-            >
-              {isVerifying ? (
-                <>
+            {/* Action Buttons */}
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                onClick={handleCheckStatus}
+                disabled={isCheckingStatus || verificationStatus === 'success'}
+                className="flex-1"
+              >
+                {isCheckingStatus ? (
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Verifying...
-                </>
-              ) : verificationStatus === 'success' ? (
-                <>
-                  <CheckCircle2 className="mr-2 h-4 w-4" />
-                  Verified
-                </>
-              ) : (
-                'Verify Payment'
-              )}
-            </Button>
+                ) : (
+                  <RefreshCw className="mr-2 h-4 w-4" />
+                )}
+                Check Status
+              </Button>
+              <Button
+                onClick={handleVerify}
+                disabled={!orderId.trim() || isVerifying || verificationStatus === 'success'}
+                className="flex-1"
+              >
+                {isVerifying ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Verifying...
+                  </>
+                ) : verificationStatus === 'success' ? (
+                  <>
+                    <CheckCircle2 className="mr-2 h-4 w-4" />
+                    Verified
+                  </>
+                ) : (
+                  'Verify Payment'
+                )}
+              </Button>
+            </div>
 
             {/* Help text */}
             <p className="text-xs text-muted-foreground text-center">
               Payment will be credited automatically after verification.
-              <br />
-              If you have issues, contact support with your Order ID.
+              If pending, our team will verify within 15 minutes.
             </p>
           </div>
         )}
