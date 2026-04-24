@@ -44,6 +44,7 @@ import {
   Lock,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { BinancePaymentDialog } from '@/components/payments/BinancePaymentDialog';
 import {
   getWallet,
   getTransactions,
@@ -105,6 +106,10 @@ export default function WalletPage() {
   const [couponCode, setCouponCode] = useState('');
   const [paymentPreview, setPaymentPreview] = useState<PaymentPreviewResponse | null>(null);
   const [isLoadingPreview, setIsLoadingPreview] = useState(false);
+  
+  // Binance payment state
+  const [showBinanceDialog, setShowBinanceDialog] = useState(false);
+  const [binancePaymentId, setBinancePaymentId] = useState<string | null>(null);
 
   // Fetch wallet data
   const fetchWalletData = useCallback(async () => {
@@ -263,6 +268,14 @@ export default function WalletPage() {
         cancelUrl: `${window.location.origin}/dashboard/wallet?payment=cancelled`,
         ...(couponCode ? { couponCode } : {}),
       });
+
+      // Handle Binance payments differently - show Order ID verification dialog
+      if (gatewayToUse === 'BINANCE') {
+        setBinancePaymentId(response.paymentId);
+        setShowBinanceDialog(true);
+        toast.info('Please complete the Binance transfer and enter your Order ID');
+        return;
+      }
 
       if (response.checkoutUrl) {
         setCheckoutUrl(response.checkoutUrl);
@@ -843,6 +856,21 @@ export default function WalletPage() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Binance Payment Dialog */}
+      <BinancePaymentDialog
+        open={showBinanceDialog}
+        onOpenChange={setShowBinanceDialog}
+        paymentId={binancePaymentId || ''}
+        amount={parseFloat(amount) || 0}
+        onSuccess={() => {
+          setShowBinanceDialog(false);
+          setBinancePaymentId(null);
+          setAmount('');
+          fetchWalletData();
+          toast.success('Payment verified! Your balance has been credited.');
+        }}
+      />
     </div>
   );
 }

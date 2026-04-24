@@ -429,3 +429,54 @@ export const PAYMENT_EXPIRY_MINUTES = 60;
 export const isValidAmount = (amount: number): boolean => {
   return amount >= MIN_AMOUNT && amount <= MAX_AMOUNT;
 };
+
+// ============================================
+// Binance Internal Transfer API
+// ============================================
+
+/**
+ * Binance payment info response
+ */
+export interface BinancePaymentInfo {
+  payId: string | null;
+  qrCodeUrl: string;
+  isConfigured: boolean;
+  autoVerificationAvailable: boolean;
+  instructions: string;
+}
+
+/**
+ * Binance verification result
+ */
+export interface BinanceVerificationResult {
+  success: boolean;
+  status: 'PENDING' | 'VERIFIED' | 'FAILED' | 'EXPIRED';
+  message: string;
+}
+
+/**
+ * Get Binance payment info (Pay ID, QR code, instructions)
+ * GET /api/v1/payments/binance/info?amount=X
+ */
+export const getBinanceInfo = async (amount: number): Promise<BinancePaymentInfo> => {
+  const response = await apiClient.get<BinancePaymentInfo>(
+    `${API_ENDPOINTS.PAYMENTS.ROOT}/binance/info`,
+    { params: { amount } },
+  );
+  return response.data;
+};
+
+/**
+ * Verify Binance payment with Order ID
+ * POST /api/v1/payments/binance/verify
+ */
+export const verifyBinancePayment = async (
+  paymentId: string,
+  orderId: string,
+): Promise<BinanceVerificationResult> => {
+  const response = await apiClient.post<BinanceVerificationResult>(
+    `${API_ENDPOINTS.PAYMENTS.ROOT}/binance/verify`,
+    { paymentId, orderId },
+  );
+  return response.data;
+};
