@@ -2,6 +2,14 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { ArrowLeft, ArrowRight, CheckCircle } from 'lucide-react';
 import Link from 'next/link';
+import { buildMetadata } from '@/lib/seo/metadata';
+
+export const metadata = buildMetadata({
+  title: 'Standard vs Premium SMS — Knowledge Base',
+  description:
+    'Compare Standard (V1) and Premium (V2) SMS activation tiers on BestSMSHQ. Pricing, success rates, speed, and when to choose each.',
+  path: '/knowledge-base/sms-activation/standard-vs-premium',
+});
 
 export default function StandardVsPremium() {
   const comparison = [

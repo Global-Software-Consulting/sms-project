@@ -1,9 +1,10 @@
-'use client';
-
-import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { apiClient } from '@/config/api-client.config';
-import { API_ENDPOINTS } from '@/config/server.config';
+import { buildMetadata } from '@/lib/seo/metadata';
+import {
+  JsonLd,
+  breadcrumbSchema,
+  faqSchema,
+} from '@/lib/seo/structured-data';
 
 interface FaqItem {
   id: string;
@@ -40,48 +41,63 @@ const FALLBACK_FAQS: FaqItem[] = [
   },
 ];
 
-export default function FAQ() {
-  const [faqs, setFaqs] = useState<FaqItem[]>([]);
-  const [loading, setLoading] = useState(true);
+export const metadata = buildMetadata({
+  title: 'Frequently Asked Questions',
+  description:
+    'Answers to common questions about SMS verification, pricing, refunds, virtual numbers, rentals, and getting started with BestSMSHQ.',
+  path: '/faq',
+  keywords: [
+    'SMS verification FAQ',
+    'BestSMSHQ help',
+    'how to receive SMS online',
+    'SMS activation help',
+  ],
+});
 
-  useEffect(() => {
-    const fetchFaqs = async () => {
-      try {
-        const response = await apiClient.get(API_ENDPOINTS.FAQ.ROOT);
-        const items: FaqItem[] = response.data?.data ?? response.data ?? [];
-        setFaqs(items.length > 0 ? items : FALLBACK_FAQS);
-      } catch {
-        setFaqs(FALLBACK_FAQS);
-      } finally {
-        setLoading(false);
-      }
-    };
+async function fetchFaqs(): Promise<FaqItem[]> {
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+  if (!apiUrl) return FALLBACK_FAQS;
+  try {
+    const res = await fetch(`${apiUrl}/faq`, { next: { revalidate: 3600 } });
+    if (!res.ok) return FALLBACK_FAQS;
+    const json = (await res.json()) as { data?: FaqItem[] } | FaqItem[];
+    const items = Array.isArray(json) ? json : (json.data ?? []);
+    return items.length > 0 ? items : FALLBACK_FAQS;
+  } catch {
+    return FALLBACK_FAQS;
+  }
+}
 
-    fetchFaqs();
-  }, []);
+export default async function FAQ() {
+  const faqs = await fetchFaqs();
 
   return (
     <div className="container mx-auto px-4 py-12 sm:py-20">
+      <JsonLd
+        data={faqSchema(
+          faqs.map((f) => ({ question: f.question, answer: f.answer })),
+        )}
+      />
+      <JsonLd
+        data={breadcrumbSchema([
+          { name: 'Home', path: '/' },
+          { name: 'FAQ', path: '/faq' },
+        ])}
+      />
       <div className="mx-auto max-w-4xl space-y-6">
         <h1 className="text-3xl font-bold sm:text-4xl md:text-5xl">
           Frequently Asked Questions
         </h1>
-        {loading ? (
-          <div className="flex justify-center py-12">
-            <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
-          </div>
-        ) : (
-          faqs.map((faq) => (
-            <Card key={faq.id}>
-              <CardHeader>
-                <CardTitle>{faq.question}</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-muted-foreground">{faq.answer}</p>
-              </CardContent>
-            </Card>
-          ))
-        )}
+        {faqs.map((faq) => (
+          <Card key={faq.id}>
+            <CardHeader>
+              <CardTitle>{faq.question}</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-muted-foreground">{faq.answer}</p>
+            </CardContent>
+          </Card>
+        ))}
       </div>
     </div>
   );

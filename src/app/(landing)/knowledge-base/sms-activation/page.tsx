@@ -2,6 +2,19 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
+import { buildMetadata } from '@/lib/seo/metadata';
+
+export const metadata = buildMetadata({
+  title: 'SMS Activation — Knowledge Base',
+  description:
+    'Everything you need to know about SMS activation: what it is, how to use it, supported services and countries, success rates, and best practices.',
+  path: '/knowledge-base/sms-activation',
+  keywords: [
+    'SMS activation guide',
+    'how SMS verification works',
+    'OTP receive SMS',
+  ],
+});
 
 export default function SMSActivationArticle() {
   const articles = [

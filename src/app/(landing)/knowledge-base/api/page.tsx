@@ -2,6 +2,14 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
+import { buildMetadata } from '@/lib/seo/metadata';
+
+export const metadata = buildMetadata({
+  title: 'API Knowledge Base',
+  description:
+    'Learn how to integrate with the BestSMSHQ API — quick start, authentication, endpoints, error handling and code examples.',
+  path: '/knowledge-base/api',
+});
 
 export default function APIArticle() {
   const articles = [

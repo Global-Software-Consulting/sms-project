@@ -9,6 +9,14 @@ import {
   CheckCircle,
 } from 'lucide-react';
 import Link from 'next/link';
+import { buildMetadata } from '@/lib/seo/metadata';
+
+export const metadata = buildMetadata({
+  title: 'Review Unlock System — Knowledge Base',
+  description:
+    'How the BestSMSHQ review unlock system works — earn unlock credits, contribute reviews, and access premium services through community participation.',
+  path: '/knowledge-base/reviews/review-unlock-system',
+});
 
 export default function ReviewUnlockSystem() {
   return (

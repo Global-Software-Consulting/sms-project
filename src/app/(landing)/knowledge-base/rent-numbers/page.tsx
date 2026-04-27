@@ -2,6 +2,19 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
+import { buildMetadata } from '@/lib/seo/metadata';
+
+export const metadata = buildMetadata({
+  title: 'Renting Numbers — Knowledge Base',
+  description:
+    'How to rent virtual phone numbers on BestSMSHQ. Choose duration, country, and service. Manage rentals and receive multiple SMS over time.',
+  path: '/knowledge-base/rent-numbers',
+  keywords: [
+    'rent virtual phone number',
+    'long-term SMS rental',
+    'BestSMSHQ rentals',
+  ],
+});
 
 export default function RentNumbersArticle() {
   const articles = [

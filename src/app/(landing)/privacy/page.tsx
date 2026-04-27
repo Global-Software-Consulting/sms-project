@@ -5,6 +5,14 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
+import { buildMetadata } from '@/lib/seo/metadata';
+
+export const metadata = buildMetadata({
+  title: 'Privacy Policy',
+  description:
+    'How BestSMSHQ collects, uses and protects your personal data. Read our privacy policy and data handling practices.',
+  path: '/privacy',
+});
 
 export default function Privacy() {
   return (

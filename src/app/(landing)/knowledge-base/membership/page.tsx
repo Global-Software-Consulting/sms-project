@@ -2,6 +2,14 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
+import { buildMetadata } from '@/lib/seo/metadata';
+
+export const metadata = buildMetadata({
+  title: 'Membership — Knowledge Base',
+  description:
+    'Understand BestSMSHQ membership plans, benefits, billing, and how to get more value from your subscription.',
+  path: '/knowledge-base/membership',
+});
 
 export default function MembershipArticle() {
   const articles = [

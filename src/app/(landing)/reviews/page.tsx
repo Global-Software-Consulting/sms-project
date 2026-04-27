@@ -1,5 +1,20 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Star } from 'lucide-react';
+import { buildMetadata } from '@/lib/seo/metadata';
+import { JsonLd, breadcrumbSchema } from '@/lib/seo/structured-data';
+
+export const metadata = buildMetadata({
+  title: 'Customer Reviews',
+  description:
+    'Read what real customers say about BestSMSHQ — our SMS verification service, reliability, support and value across thousands of users worldwide.',
+  path: '/reviews',
+  keywords: [
+    'BestSMSHQ reviews',
+    'SMS service reviews',
+    'customer testimonials',
+    'SMS verification reviews',
+  ],
+});
 
 export default function Reviews() {
   const reviews = [
@@ -10,6 +25,12 @@ export default function Reviews() {
 
   return (
     <div className="container mx-auto px-4 py-12 sm:py-20">
+      <JsonLd
+        data={breadcrumbSchema([
+          { name: 'Home', path: '/' },
+          { name: 'Reviews', path: '/reviews' },
+        ])}
+      />
       <div className="mx-auto max-w-4xl space-y-6">
         <h1 className="text-3xl font-bold sm:text-4xl md:text-5xl">Customer Reviews</h1>
         <div className="grid gap-6 md:grid-cols-2">

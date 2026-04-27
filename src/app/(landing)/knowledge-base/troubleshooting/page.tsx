@@ -2,6 +2,14 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
+import { buildMetadata } from '@/lib/seo/metadata';
+
+export const metadata = buildMetadata({
+  title: 'Troubleshooting — Knowledge Base',
+  description:
+    'Common issues and fixes for SMS verification on BestSMSHQ — code not received, payment failures, account access and more.',
+  path: '/knowledge-base/troubleshooting',
+});
 
 export default function TroubleshootingArticle() {
   const articles = [

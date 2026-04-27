@@ -9,6 +9,26 @@ import {
   TrendingUp,
   Code,
 } from 'lucide-react';
+import { buildMetadata } from '@/lib/seo/metadata';
+import {
+  JsonLd,
+  breadcrumbSchema,
+  productServiceSchema,
+} from '@/lib/seo/structured-data';
+
+export const metadata = buildMetadata({
+  title: 'Features',
+  description:
+    'Instant SMS activation across 180+ countries, virtual number rentals, secure API access, and 24/7 support — all the features that make BestSMSHQ the leading SMS verification platform.',
+  path: '/features',
+  keywords: [
+    'SMS verification features',
+    'virtual number rental',
+    'instant SMS activation',
+    'SMS API',
+    'OTP verification',
+  ],
+});
 
 export default function Features() {
   const features = [
@@ -64,6 +84,13 @@ export default function Features() {
 
   return (
     <div className="container mx-auto px-4 py-12 sm:py-16 md:py-20">
+      <JsonLd data={productServiceSchema()} />
+      <JsonLd
+        data={breadcrumbSchema([
+          { name: 'Home', path: '/' },
+          { name: 'Features', path: '/features' },
+        ])}
+      />
       <div className="mx-auto max-w-6xl">
         <div className="mb-10 space-y-4 text-center sm:mb-16">
           <h1 className="text-3xl font-bold sm:text-4xl md:text-5xl">Powerful Features</h1>

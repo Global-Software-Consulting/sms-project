@@ -2,6 +2,14 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
+import { buildMetadata } from '@/lib/seo/metadata';
+
+export const metadata = buildMetadata({
+  title: 'Wallet — Knowledge Base',
+  description:
+    'Manage your BestSMSHQ wallet — adding funds, supported payment methods, transaction history, and using your balance for SMS activations.',
+  path: '/knowledge-base/wallet',
+});
 
 export default function WalletArticle() {
   const articles = [

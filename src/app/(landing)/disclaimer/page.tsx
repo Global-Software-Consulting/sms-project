@@ -1,5 +1,13 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { AlertCircle } from 'lucide-react';
+import { buildMetadata } from '@/lib/seo/metadata';
+
+export const metadata = buildMetadata({
+  title: 'Legal Disclaimer',
+  description:
+    'Legal disclaimer for BestSMSHQ — usage limitations, liability terms and important notices for users of our SMS verification platform.',
+  path: '/disclaimer',
+});
 
 export default function Disclaimer() {
   return (

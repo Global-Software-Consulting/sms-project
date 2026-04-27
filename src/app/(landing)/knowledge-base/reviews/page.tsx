@@ -2,6 +2,14 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
+import { buildMetadata } from '@/lib/seo/metadata';
+
+export const metadata = buildMetadata({
+  title: 'Reviews — Knowledge Base',
+  description:
+    'Learn how the BestSMSHQ review system works — submitting reviews, the unlock system, and how reviews benefit our community.',
+  path: '/knowledge-base/reviews',
+});
 
 export default function ReviewsArticle() {
   const articles = [

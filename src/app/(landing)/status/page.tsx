@@ -1,6 +1,14 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { CheckCircle2, Clock } from 'lucide-react';
+import { buildMetadata } from '@/lib/seo/metadata';
+
+export const metadata = buildMetadata({
+  title: 'System Status',
+  description:
+    'Real-time status of BestSMSHQ services — API, SMS gateway, payment processing and dashboard. Live uptime and incident history.',
+  path: '/status',
+});
 
 export default function Status() {
   const services = [
