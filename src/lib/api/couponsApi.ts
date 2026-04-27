@@ -133,3 +133,40 @@ export const updateCoupon = async (id: string, data: UpdateCouponRequest): Promi
 export const deleteCoupon = async (id: string): Promise<void> => {
   await apiClient.delete(API_ENDPOINTS.ADMIN.COUPONS.DETAIL(id));
 };
+
+// ============================================
+// User-facing Coupon Validation
+// ============================================
+
+export interface ValidateCouponRequest {
+  code: string;
+  orderType: 'DEPOSIT' | 'SMS_ORDER' | 'RENTAL' | 'MEMBERSHIP';
+  orderAmount: number;
+}
+
+export interface CouponValidationResult {
+  valid: boolean;
+  coupon?: {
+    id: string;
+    code: string;
+    name: string;
+    type: CouponType;
+    value: number;
+    maxDiscount?: number;
+  };
+  discount: number;
+  finalAmount: number;
+  message?: string;
+}
+
+/**
+ * Validate a coupon code for a specific order type and amount
+ * Returns discount information if valid
+ */
+export const validateCoupon = async (data: ValidateCouponRequest): Promise<CouponValidationResult> => {
+  const response = await apiClient.post<CouponValidationResult>(
+    '/coupons/validate',
+    data,
+  );
+  return response.data;
+};

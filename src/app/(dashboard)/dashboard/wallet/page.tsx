@@ -78,6 +78,7 @@ import {
   PaygateProvider,
 } from '@/lib/api/paymentsApi';
 import { getCurrentMembership, CurrentMembershipResponse } from '@/lib/api/membershipApi';
+import { validateCoupon, CouponValidationResult } from '@/lib/api/couponsApi';
 
 export default function WalletPage() {
   // Wallet state
@@ -97,6 +98,10 @@ export default function WalletPage() {
   // Filters
   const [typeFilter, setTypeFilter] = useState<TransactionType | 'all'>('all');
   const [statusFilter, setStatusFilter] = useState<TransactionStatus | 'all'>('all');
+
+  // Coupon validation state
+  const [couponValidation, setCouponValidation] = useState<CouponValidationResult | null>(null);
+  const [isValidatingCoupon, setIsValidatingCoupon] = useState(false);
 
   // Deposit modal state
   const [showDepositModal, setShowDepositModal] = useState(false);
@@ -240,6 +245,40 @@ export default function WalletPage() {
     }
   }, [typeFilter, statusFilter]);
 
+  // Validate coupon when code or amount changes
+  useEffect(() => {
+    const numAmount = parseFloat(amount);
+    if (!couponCode || couponCode.length < 3 || !numAmount || numAmount < MIN_AMOUNT) {
+      setCouponValidation(null);
+      return;
+    }
+
+    const validateCouponCode = async () => {
+      setIsValidatingCoupon(true);
+      try {
+        const result = await validateCoupon({
+          code: couponCode,
+          orderType: 'DEPOSIT',
+          orderAmount: numAmount,
+        });
+        setCouponValidation(result);
+      } catch (err) {
+        console.error('Failed to validate coupon:', err);
+        setCouponValidation({
+          valid: false,
+          discount: 0,
+          finalAmount: numAmount,
+          message: 'Failed to validate coupon',
+        });
+      } finally {
+        setIsValidatingCoupon(false);
+      }
+    };
+
+    const debounceTimeout = setTimeout(validateCouponCode, 500);
+    return () => clearTimeout(debounceTimeout);
+  }, [couponCode, amount]);
+
   // Reset deposit modal state
   const resetDepositModal = () => {
     setAmount('');
@@ -248,6 +287,7 @@ export default function WalletPage() {
     setShowPaygateProviders(false);
     setCouponCode('');
     setPaymentPreview(null);
+    setCouponValidation(null);
   };
 
   // Open deposit modal
@@ -723,12 +763,38 @@ export default function WalletPage() {
             {/* Coupon Code - Always visible, right after amount like CheapStreamTV */}
             <div className="space-y-2">
               <label className="text-sm font-medium text-muted-foreground">Coupon Code (optional)</label>
-              <Input
-                placeholder="Enter coupon code for bonus"
-                value={couponCode}
-                onChange={(e) => setCouponCode(e.target.value)}
-                className="h-12"
-              />
+              <div className="relative">
+                <Input
+                  placeholder="Enter coupon code for bonus"
+                  value={couponCode}
+                  onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
+                  className={`h-12 pr-10 ${
+                    couponValidation?.valid 
+                      ? 'border-success focus:border-success' 
+                      : couponValidation && !couponValidation.valid 
+                        ? 'border-destructive focus:border-destructive'
+                        : ''
+                  }`}
+                />
+                {isValidatingCoupon && (
+                  <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground" />
+                )}
+                {!isValidatingCoupon && couponValidation?.valid && (
+                  <CheckCircle2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-success" />
+                )}
+                {!isValidatingCoupon && couponValidation && !couponValidation.valid && (
+                  <AlertCircle className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-destructive" />
+                )}
+              </div>
+              {/* Coupon validation message */}
+              {couponValidation && (
+                <p className={`text-sm ${couponValidation.valid ? 'text-success' : 'text-destructive'}`}>
+                  {couponValidation.valid 
+                    ? `Coupon valid! You'll get +$${couponValidation.discount.toFixed(2)} bonus (${couponValidation.coupon?.type === 'PERCENTAGE' ? `${couponValidation.coupon.value}%` : `$${couponValidation.coupon?.value}`})`
+                    : couponValidation.message || 'Invalid coupon code'
+                  }
+                </p>
+              )}
             </div>
 
             {/* Payment Methods Grid - Always Visible */}
@@ -916,7 +982,23 @@ export default function WalletPage() {
                     
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Deposit Amount:</span>
-                      <span className="font-semibold">${numAmount.toFixed(2)}</span>
+                      <span className="font-medium">${numAmount.toFixed(2)}</span>
+                    </div>
+
+                    {/* Coupon Bonus - Show if valid coupon applied */}
+                    {couponValidation?.valid && couponValidation.discount > 0 && (
+                      <div className="flex justify-between text-success">
+                        <span>Coupon Bonus ({couponCode}):</span>
+                        <span className="font-medium">+${couponValidation.discount.toFixed(2)}</span>
+                      </div>
+                    )}
+
+                    {/* Total to receive */}
+                    <div className="flex justify-between pt-2 border-t border-border/50">
+                      <span className="text-muted-foreground">You'll Receive:</span>
+                      <span className="font-semibold text-lg text-primary">
+                        ${(numAmount + (couponValidation?.valid ? couponValidation.discount : 0)).toFixed(2)}
+                      </span>
                     </div>
                   </div>
 
