@@ -720,6 +720,17 @@ export default function WalletPage() {
               )}
             </div>
 
+            {/* Coupon Code - Always visible, right after amount like CheapStreamTV */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-muted-foreground">Coupon Code (optional)</label>
+              <Input
+                placeholder="Enter coupon code for bonus"
+                value={couponCode}
+                onChange={(e) => setCouponCode(e.target.value)}
+                className="h-12"
+              />
+            </div>
+
             {/* Payment Methods Grid - Always Visible */}
             {!showPaygateProviders && (
               <div className="grid grid-cols-3 gap-3">
@@ -936,18 +947,6 @@ export default function WalletPage() {
               </div>
             )}
 
-            {/* Coupon Code - Only show when not in payment summary */}
-            {!showPaymentSummary && (
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-muted-foreground">Coupon Code (optional)</label>
-                <Input
-                  placeholder="Enter coupon code for bonus"
-                  value={couponCode}
-                  onChange={(e) => setCouponCode(e.target.value)}
-                  className="h-12"
-                />
-              </div>
-            )}
           </div>
         </DialogContent>
       </Dialog>
