@@ -128,8 +128,24 @@ export interface UpdateReferralProfileRequest {
   minPayoutAmount?: number;
 }
 
+export type CryptoCurrency = 'USDT_TRC20' | 'SOL' | 'TRX' | 'LTC';
+export type PayoutMethod = 'WALLET' | 'CRYPTO';
+
 export interface RequestPayoutRequest {
   amount?: number;
+  method?: PayoutMethod;
+  cryptoCurrency?: CryptoCurrency;
+  walletAddress?: string;
+  message?: string;
+}
+
+export interface AddToMainBalanceRequest {
+  amount: number;
+}
+
+export interface AddToMainBalanceResponse {
+  success: boolean;
+  newBalance: number;
 }
 
 // ============================================
@@ -226,7 +242,7 @@ export const getPayouts = async (
 };
 
 /**
- * Request a payout
+ * Request a payout (WALLET or CRYPTO)
  * POST /api/v1/referrals/payouts/request
  */
 export const requestPayout = async (
@@ -235,6 +251,21 @@ export const requestPayout = async (
   const response = await apiClient.post<Payout>(
     API_ENDPOINTS.REFERRALS.REQUEST_PAYOUT,
     data || {},
+  );
+  return response.data;
+};
+
+/**
+ * Add referral earnings to main wallet balance
+ * WARNING: This is non-reversible - balance cannot be withdrawn back
+ * POST /api/v1/referrals/add-to-balance
+ */
+export const addToMainBalance = async (
+  data: AddToMainBalanceRequest,
+): Promise<AddToMainBalanceResponse> => {
+  const response = await apiClient.post<AddToMainBalanceResponse>(
+    '/referrals/add-to-balance',
+    data,
   );
   return response.data;
 };

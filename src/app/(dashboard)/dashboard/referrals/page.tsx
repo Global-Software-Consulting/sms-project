@@ -58,6 +58,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
+import { AlertTriangle, Send, PlusCircle, Ticket } from 'lucide-react';
 import {
   getReferralProfile,
   getReferralLink,
@@ -66,6 +68,7 @@ import {
   getCommissions,
   getPayouts,
   requestPayout,
+  addToMainBalance,
   formatReferralAmount as formatAmount,
   getTierInfo,
   getReferralStatusLabel,
@@ -79,15 +82,36 @@ import {
   type Referral,
   type Commission,
   type Payout,
+  type CryptoCurrency,
 } from '@/lib/api/referralsApi';
+import { getAvailableCoupons, type AvailableCoupon } from '@/lib/api/couponsApi';
+
+// Crypto currency options for withdrawal
+const CRYPTO_OPTIONS: { value: CryptoCurrency; label: string }[] = [
+  { value: 'USDT_TRC20', label: 'USDT (TRC20)' },
+  { value: 'SOL', label: 'Solana (SOL)' },
+  { value: 'TRX', label: 'Tron (TRX)' },
+  { value: 'LTC', label: 'Litecoin (LTC)' },
+];
 
 export default function ReferralDashboard() {
   const { user } = useAuth();
   const [copied, setCopied] = useState(false);
+  
+  // Withdraw Funds Modal (Crypto)
   const [withdrawModal, setWithdrawModal] = useState(false);
   const [withdrawAmount, setWithdrawAmount] = useState('');
-  const [isLoading, setIsLoading] = useState(true);
+  const [withdrawCrypto, setWithdrawCrypto] = useState<CryptoCurrency>('USDT_TRC20');
+  const [withdrawAddress, setWithdrawAddress] = useState('');
+  const [withdrawMessage, setWithdrawMessage] = useState('');
   const [isWithdrawing, setIsWithdrawing] = useState(false);
+
+  // Add to Main Balance Modal
+  const [addBalanceModal, setAddBalanceModal] = useState(false);
+  const [addBalanceAmount, setAddBalanceAmount] = useState('');
+  const [isAddingBalance, setIsAddingBalance] = useState(false);
+
+  const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   // API data
@@ -97,6 +121,7 @@ export default function ReferralDashboard() {
   const [referrals, setReferrals] = useState<Referral[]>([]);
   const [commissions, setCommissions] = useState<Commission[]>([]);
   const [payouts, setPayouts] = useState<Payout[]>([]);
+  const [availableCoupons, setAvailableCoupons] = useState<AvailableCoupon[]>([]);
 
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
@@ -111,7 +136,7 @@ export default function ReferralDashboard() {
       setIsLoading(true);
       setError(null);
 
-      const [profileRes, linkRes, statsRes, referralsRes, commissionsRes, payoutsRes] =
+      const [profileRes, linkRes, statsRes, referralsRes, commissionsRes, payoutsRes, couponsRes] =
         await Promise.allSettled([
           getReferralProfile(),
           getReferralLink(),
@@ -119,6 +144,7 @@ export default function ReferralDashboard() {
           getReferrals({ limit: 20 }),
           getCommissions({ limit: 20 }),
           getPayouts({ limit: 20 }),
+          getAvailableCoupons(),
         ]);
 
       if (profileRes.status === 'fulfilled') {
@@ -144,6 +170,10 @@ export default function ReferralDashboard() {
       if (payoutsRes.status === 'fulfilled') {
         setPayouts(payoutsRes.value.data || []);
       }
+
+      if (couponsRes.status === 'fulfilled') {
+        setAvailableCoupons(couponsRes.value || []);
+      }
     } catch (err) {
       console.error('Failed to fetch referral data:', err);
       setError('Failed to load referral data. Please try again.');
@@ -156,36 +186,72 @@ export default function ReferralDashboard() {
     fetchData();
   }, [fetchData]);
 
+  // Handle Crypto Withdrawal
   const handleWithdraw = async () => {
     const amount = parseFloat(withdrawAmount);
-    if (!amount || amount <= 0) {
-      toast.error('Please enter a valid amount');
+    if (!amount || amount < 5) {
+      toast.error('Minimum withdrawal amount is $5');
       return;
     }
     if (!profile || amount > profile.pendingEarnings) {
       toast.error('Insufficient balance');
       return;
     }
-    if (amount < (profile?.minPayoutAmount || 10)) {
-      toast.error(`Minimum withdrawal amount is ${formatAmount(profile?.minPayoutAmount || 10)}`);
+    if (!withdrawAddress.trim()) {
+      toast.error('Please enter your wallet address');
       return;
     }
 
     try {
       setIsWithdrawing(true);
-      const payout = await requestPayout({ amount });
+      const payout = await requestPayout({
+        amount,
+        method: 'CRYPTO',
+        cryptoCurrency: withdrawCrypto,
+        walletAddress: withdrawAddress.trim(),
+        message: withdrawMessage.trim() || undefined,
+      });
       setPayouts((prev) => [payout, ...prev]);
       setWithdrawModal(false);
       setWithdrawAmount('');
+      setWithdrawAddress('');
+      setWithdrawMessage('');
       toast.success('Withdrawal request submitted!', {
-        description: `${formatAmount(amount)} withdrawal is being processed.`,
+        description: `${formatAmount(amount)} withdrawal to ${withdrawCrypto} is pending admin approval.`,
       });
-      // Refresh data
       fetchData();
     } catch (err: any) {
-      toast.error(err.response?.data?.message || 'Failed to request payout');
+      toast.error(err.response?.data?.message || 'Failed to request withdrawal');
     } finally {
       setIsWithdrawing(false);
+    }
+  };
+
+  // Handle Add to Main Balance
+  const handleAddToBalance = async () => {
+    const amount = parseFloat(addBalanceAmount);
+    if (!amount || amount <= 0) {
+      toast.error('Please enter a valid amount');
+      return;
+    }
+    if (!profile || amount > profile.pendingEarnings) {
+      toast.error('Insufficient referral earnings');
+      return;
+    }
+
+    try {
+      setIsAddingBalance(true);
+      const result = await addToMainBalance({ amount });
+      setAddBalanceModal(false);
+      setAddBalanceAmount('');
+      toast.success('Funds added to main balance!', {
+        description: `${formatAmount(amount)} has been added to your wallet. New balance: ${formatAmount(result.newBalance)}`,
+      });
+      fetchData();
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || 'Failed to add funds to balance');
+    } finally {
+      setIsAddingBalance(false);
     }
   };
 
@@ -873,53 +939,75 @@ export default function ReferralDashboard() {
         </Card>
       )}
 
-      {/* ===== WITHDRAWALS SECTION ===== */}
-      <Card className="border-success/30">
+      {/* ===== WALLET & EARNINGS SECTION (Like CheapStreamTV) ===== */}
+      <Card className="border-primary/30">
         <CardHeader>
-          <div className="flex flex-wrap items-center justify-between gap-4">
-            <div>
-              <CardTitle className="flex items-center gap-2">
-                <ArrowDownToLine className="text-success h-5 w-5" />
-                Withdraw Referral Earnings
-              </CardTitle>
-              <CardDescription>
-                Transfer your referral balance to your wallet
-              </CardDescription>
-            </div>
-            <Button
-              onClick={() => setWithdrawModal(true)}
-              className="bg-success hover:bg-success/90 text-success-foreground"
-              disabled={availableBalance < minPayoutAmount}
-            >
-              <Wallet className="mr-2 h-4 w-4" />
-              Withdraw Funds
-            </Button>
-          </div>
+          <CardTitle className="text-muted-foreground text-xs font-semibold tracking-[0.2em]">
+            WALLET & EARNINGS
+          </CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
-          {/* Balance Summary */}
-          <div className="grid gap-4 sm:grid-cols-3">
-            <div className="bg-success/5 border-success/20 rounded-lg border p-4 text-center">
-              <p className="text-muted-foreground mb-1 text-xs">
-                Available to Withdraw
-              </p>
-              <p className="text-success text-2xl font-bold">
+          {/* Balance Display - Like CheapStreamTV */}
+          <div className="space-y-4">
+            <div>
+              <p className="text-muted-foreground mb-2 text-sm">Total Withdrawable Funds:</p>
+              <div className="bg-primary rounded-lg px-4 py-3 text-center">
+                <p className="text-primary-foreground text-2xl font-bold">
+                  {formatAmount(availableBalance)}
+                </p>
+              </div>
+            </div>
+            <div>
+              <p className="text-muted-foreground mb-2 text-sm">Total Referral Earnings:</p>
+              <div className="bg-primary rounded-lg px-4 py-3 text-center">
+                <p className="text-primary-foreground text-2xl font-bold">
+                  {formatAmount(totalEarnings)}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Action Buttons - Like CheapStreamTV */}
+          <div className="space-y-3">
+            <Button
+              onClick={() => setWithdrawModal(true)}
+              className="bg-primary hover:bg-primary/90 w-full"
+              disabled={availableBalance < 5}
+            >
+              Withdraw Funds
+            </Button>
+            <Button
+              onClick={() => setAddBalanceModal(true)}
+              variant="outline"
+              className="border-primary text-primary hover:bg-primary/10 w-full"
+              disabled={availableBalance <= 0}
+            >
+              Add Funds to Main Balance
+            </Button>
+          </div>
+
+          {/* Info Text */}
+          <p className="text-muted-foreground text-center text-xs">
+            *You can use your main balance to buy plans or withdraw referral earnings to your preferred payment method.
+          </p>
+
+          {/* Balance Summary Grid */}
+          <div className="border-border grid grid-cols-3 gap-2 border-t pt-4">
+            <div className="text-center">
+              <p className="text-muted-foreground text-xs">Available</p>
+              <p className="text-success text-sm font-semibold">
                 {formatAmount(availableBalance)}
               </p>
             </div>
-            <div className="bg-warning/5 border-warning/20 rounded-lg border p-4 text-center">
-              <p className="text-muted-foreground mb-1 text-xs">
-                Pending (not withdrawable)
-              </p>
-              <p className="text-warning text-2xl font-bold">
+            <div className="text-center">
+              <p className="text-muted-foreground text-xs">Pending</p>
+              <p className="text-warning text-sm font-semibold">
                 {formatAmount(pendingEarnings)}
               </p>
             </div>
-            <div className="bg-muted/50 border-border rounded-lg border p-4 text-center">
-              <p className="text-muted-foreground mb-1 text-xs">
-                Minimum Withdrawal
-              </p>
-              <p className="text-2xl font-bold">{formatAmount(minPayoutAmount)}</p>
+            <div className="text-center">
+              <p className="text-muted-foreground text-xs">Min Withdraw</p>
+              <p className="text-sm font-semibold">$5.00</p>
             </div>
           </div>
 
@@ -979,88 +1067,281 @@ export default function ReferralDashboard() {
         </CardContent>
       </Card>
 
-      {/* Withdraw Modal */}
+      {/* ===== BUY PLANS WITH COUPONS SECTION ===== */}
+      <Card className="border-primary/30">
+        <CardHeader>
+          <CardTitle className="text-muted-foreground flex items-center gap-2 text-xs font-semibold tracking-[0.2em]">
+            <Ticket className="h-4 w-4" />
+            BUY PLANS WITH COUPONS
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {availableCoupons.length > 0 ? (
+            <div className="space-y-3">
+              {availableCoupons.map((coupon) => (
+                <div
+                  key={coupon.id}
+                  className="bg-muted/30 hover:bg-muted/50 border-border flex items-center justify-between rounded-lg border p-4 transition-colors"
+                >
+                  <div className="flex-1">
+                    <div className="mb-1 flex items-center gap-2">
+                      <Badge variant="secondary" className="font-mono text-xs">
+                        {coupon.code}
+                      </Badge>
+                      <Badge
+                        variant={coupon.type === 'PERCENTAGE' ? 'default' : 'outline'}
+                        className="text-xs"
+                      >
+                        {coupon.type === 'PERCENTAGE'
+                          ? `${coupon.value}% OFF`
+                          : `$${coupon.value} OFF`}
+                      </Badge>
+                    </div>
+                    <p className="text-sm font-medium">{coupon.name}</p>
+                    {coupon.description && (
+                      <p className="text-muted-foreground mt-0.5 text-xs">
+                        {coupon.description}
+                      </p>
+                    )}
+                    <div className="mt-2 flex flex-wrap gap-2 text-xs">
+                      {coupon.minOrderAmount && (
+                        <span className="text-muted-foreground">
+                          Min: ${coupon.minOrderAmount}
+                        </span>
+                      )}
+                      {coupon.maxDiscount && (
+                        <span className="text-muted-foreground">
+                          Max Discount: ${coupon.maxDiscount}
+                        </span>
+                      )}
+                      {coupon.expiresAt && (
+                        <span className="text-warning">
+                          Expires: {new Date(coupon.expiresAt).toLocaleDateString()}
+                        </span>
+                      )}
+                      <span className="text-muted-foreground">
+                        Uses left: {coupon.usageRemaining}
+                      </span>
+                    </div>
+                  </div>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="border-primary text-primary hover:bg-primary/10 ml-4 shrink-0"
+                    onClick={() => {
+                      navigator.clipboard.writeText(coupon.code);
+                      toast.success(`Coupon code "${coupon.code}" copied!`);
+                    }}
+                  >
+                    Copy
+                  </Button>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-muted-foreground py-8 text-center">
+              <Ticket className="mx-auto mb-2 h-8 w-8 opacity-50" />
+              <p className="text-sm">No coupons available at the moment</p>
+              <p className="mt-1 text-xs">Check back later for special offers!</p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Withdraw Funds Modal (Crypto) - Like CheapStreamTV */}
       <Dialog open={withdrawModal} onOpenChange={setWithdrawModal}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Withdraw Referral Balance</DialogTitle>
-            <DialogDescription>
-              Transfer your earnings to your wallet balance
-            </DialogDescription>
+            <DialogTitle>WITHDRAW FUNDS</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
-            <div className="bg-success/10 border-success/20 rounded-lg border p-3">
-              <p className="text-muted-foreground text-sm">Available Balance</p>
-              <p className="text-success text-2xl font-bold">
-                {formatAmount(availableBalance)}
+            {/* Available Balance */}
+            <div className="bg-primary/10 border-primary/20 rounded-lg border p-3">
+              <p className="text-sm">
+                <span className="text-primary">Available Balance:</span>{' '}
+                <span className="font-semibold">{formatAmount(availableBalance)}</span>
               </p>
             </div>
 
+            {/* Amount */}
             <div className="space-y-2">
-              <Label>Withdrawal Amount</Label>
-              <div className="relative">
-                <span className="text-muted-foreground absolute top-1/2 left-3 -translate-y-1/2">
-                  $
-                </span>
-                <Input
-                  type="number"
-                  placeholder="0.00"
-                  value={withdrawAmount}
-                  onChange={(e) => setWithdrawAmount(e.target.value)}
-                  className="pl-7"
-                  min={minPayoutAmount}
-                  max={availableBalance}
-                  step="0.01"
-                />
-              </div>
+              <Label>Amount:</Label>
+              <Input
+                type="text"
+                placeholder="Minimum: $5"
+                value={withdrawAmount}
+                onChange={(e) => setWithdrawAmount(e.target.value)}
+              />
               <p className="text-muted-foreground text-xs">
-                Minimum: {formatAmount(minPayoutAmount)} • Maximum: {formatAmount(availableBalance)}
+                Minimum withdrawal: $5 USD
               </p>
+            </div>
+
+            {/* Currency Selection */}
+            <div className="space-y-2">
+              <Label>Currency:</Label>
+              <Select
+                value={withdrawCrypto}
+                onValueChange={(value) => setWithdrawCrypto(value as CryptoCurrency)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select currency" />
+                </SelectTrigger>
+                <SelectContent>
+                  {CRYPTO_OPTIONS.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Wallet Address */}
+            <div className="space-y-2">
+              <Label>Wallet Address:</Label>
+              <Input
+                type="text"
+                placeholder="Enter your wallet address"
+                value={withdrawAddress}
+                onChange={(e) => setWithdrawAddress(e.target.value)}
+              />
+            </div>
+
+            {/* Message (Optional) */}
+            <div className="space-y-2">
+              <Label>Message (Optional):</Label>
+              <Textarea
+                placeholder="Please fill out this field."
+                value={withdrawMessage}
+                onChange={(e) => setWithdrawMessage(e.target.value)}
+                className="min-h-[80px]"
+              />
+            </div>
+
+            {/* Actions */}
+            <div className="flex gap-3 pt-2">
+              <Button
+                variant="outline"
+                className="flex-1"
+                onClick={() => {
+                  setWithdrawModal(false);
+                  setWithdrawAmount('');
+                  setWithdrawAddress('');
+                  setWithdrawMessage('');
+                }}
+              >
+                Cancel
+              </Button>
+              <Button
+                className="bg-primary hover:bg-primary/90 flex-1"
+                onClick={handleWithdraw}
+                disabled={
+                  !withdrawAmount ||
+                  parseFloat(withdrawAmount) < 5 ||
+                  parseFloat(withdrawAmount) > availableBalance ||
+                  !withdrawAddress.trim() ||
+                  isWithdrawing
+                }
+              >
+                {isWithdrawing ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <Send className="mr-2 h-4 w-4" />
+                )}
+                Submit Request
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add Funds to Main Balance Modal - Like CheapStreamTV */}
+      <Dialog open={addBalanceModal} onOpenChange={setAddBalanceModal}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>ADD FUNDS TO MAIN BALANCE</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            {/* Available Referral Earnings */}
+            <div className="bg-primary/10 border-primary/20 rounded-lg border p-3">
+              <p className="text-sm">
+                <span className="text-primary">Available Referral Earnings:</span>{' '}
+                <span className="font-semibold">{formatAmount(availableBalance)}</span>
+              </p>
+            </div>
+
+            {/* Amount */}
+            <div className="space-y-2">
+              <Label>Amount:</Label>
+              <Input
+                type="number"
+                placeholder="0.00"
+                value={addBalanceAmount}
+                onChange={(e) => setAddBalanceAmount(e.target.value)}
+                min={0.01}
+                max={availableBalance}
+                step="0.01"
+              />
               <div className="flex gap-2">
-                {[10, 25, 50, 100].map((amt) => (
+                {[10, 25, 50].map((amt) => (
                   <button
                     key={amt}
                     onClick={() =>
-                      setWithdrawAmount(
-                        Math.min(amt, availableBalance).toString(),
-                      )
+                      setAddBalanceAmount(Math.min(amt, availableBalance).toString())
                     }
                     disabled={amt > availableBalance}
-                    className="border-border bg-muted/50 hover:bg-muted disabled:opacity-50 rounded border px-2 py-1 text-xs transition-colors"
+                    className="border-border bg-muted/50 hover:bg-muted disabled:opacity-50 rounded border px-3 py-1 text-xs transition-colors"
                   >
                     ${amt}
                   </button>
                 ))}
                 <button
-                  onClick={() =>
-                    setWithdrawAmount(availableBalance.toString())
-                  }
-                  className="border-success/50 bg-success/10 text-success hover:bg-success/20 rounded border px-2 py-1 text-xs transition-colors"
+                  onClick={() => setAddBalanceAmount(availableBalance.toString())}
+                  disabled={availableBalance <= 0}
+                  className="border-primary/50 bg-primary/10 text-primary hover:bg-primary/20 disabled:opacity-50 rounded border px-3 py-1 text-xs transition-colors"
                 >
                   Max
                 </button>
               </div>
             </div>
 
-            <div className="flex gap-2 pt-2">
+            {/* Warning Notice */}
+            <div className="bg-warning/10 border-warning/30 text-warning-foreground flex items-start gap-2 rounded-lg border p-3">
+              <AlertTriangle className="text-warning mt-0.5 h-4 w-4 flex-shrink-0" />
+              <p className="text-xs">
+                <strong>Warning:</strong> Once added to your main balance, these funds cannot be withdrawn back to referral earnings. You can use your main balance to buy plans or withdraw to your preferred payment method.
+              </p>
+            </div>
+
+            {/* Actions */}
+            <div className="flex gap-3 pt-2">
               <Button
                 variant="outline"
                 className="flex-1"
-                onClick={() => setWithdrawModal(false)}
+                onClick={() => {
+                  setAddBalanceModal(false);
+                  setAddBalanceAmount('');
+                }}
               >
                 Cancel
               </Button>
               <Button
-                className="bg-success hover:bg-success/90 text-success-foreground flex-1"
-                onClick={handleWithdraw}
-                disabled={!withdrawAmount || parseFloat(withdrawAmount) < minPayoutAmount || isWithdrawing}
+                className="bg-primary hover:bg-primary/90 flex-1"
+                onClick={handleAddToBalance}
+                disabled={
+                  !addBalanceAmount ||
+                  parseFloat(addBalanceAmount) <= 0 ||
+                  parseFloat(addBalanceAmount) > availableBalance ||
+                  isAddingBalance
+                }
               >
-                {isWithdrawing ? (
+                {isAddingBalance ? (
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 ) : (
-                  <ArrowDownToLine className="mr-2 h-4 w-4" />
+                  <PlusCircle className="mr-2 h-4 w-4" />
                 )}
-                Confirm Withdrawal
+                Add Funds
               </Button>
             </div>
           </div>

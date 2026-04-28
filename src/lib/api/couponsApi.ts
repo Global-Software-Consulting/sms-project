@@ -170,3 +170,34 @@ export const validateCoupon = async (data: ValidateCouponRequest): Promise<Coupo
   );
   return response.data;
 };
+
+// ============================================
+// User Available Coupons
+// ============================================
+
+export interface AvailableCoupon {
+  id: string;
+  code: string;
+  name: string;
+  description?: string;
+  type: CouponType;
+  value: number;
+  maxDiscount?: number;
+  minOrderAmount?: number;
+  applicableTo: CouponApplicableTo;
+  expiresAt?: string;
+  usageRemaining: number;
+}
+
+/**
+ * Get available coupons for the current user
+ * @param applicableTo - Filter by coupon type (DEPOSIT, SMS_ORDER, RENTAL, MEMBERSHIP)
+ */
+export const getAvailableCoupons = async (applicableTo?: string): Promise<AvailableCoupon[]> => {
+  const params = applicableTo ? { applicableTo } : {};
+  const response = await apiClient.get<AvailableCoupon[]>(
+    '/coupons/available',
+    { params },
+  );
+  return response.data;
+};
