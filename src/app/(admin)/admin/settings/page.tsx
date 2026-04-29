@@ -571,15 +571,20 @@ www.cheapstreamtv.com`
     try {
       setIsEmailTemplatesLoading(true);
       const response = await getAllEmailTemplates();
-      setEmailTemplates(response.templates);
-
-      // Select first template if none selected
-      if (!selectedTemplate && response.templates.length > 0) {
+      console.log('Email templates response:', response);
+      
+      if (response.templates && response.templates.length > 0) {
+        setEmailTemplates(response.templates);
+        
+        // Select first template automatically
         const firstTemplate = response.templates[0];
         setSelectedTemplate(firstTemplate);
         setEditedSubject(firstTemplate.subject);
         setEditedBody(firstTemplate.bodyHtml);
         setIsTemplateActive(firstTemplate.isActive);
+      } else {
+        console.warn('No email templates found in response');
+        setEmailTemplates([]);
       }
     } catch (error) {
       console.error('Failed to fetch email templates:', error);
@@ -587,7 +592,7 @@ www.cheapstreamtv.com`
     } finally {
       setIsEmailTemplatesLoading(false);
     }
-  }, [selectedTemplate]);
+  }, []);
 
   useEffect(() => {
     if (activeTab === 'email') {
