@@ -368,6 +368,7 @@ export const API_ENDPOINTS = {
       BY_KEY: (key: string) => `/admin/settings/key/${key}`,
       BULK: '/admin/settings/bulk',
       SEED: '/admin/settings/seed',
+      LOGIN: '/admin/settings/login',
       GENERAL: '/admin/settings/general',
       MAINTENANCE: '/admin/settings/maintenance',
       LIMITS: '/admin/settings/limits',

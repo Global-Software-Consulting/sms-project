@@ -10,6 +10,32 @@ export interface LoginOptions {
   twitter: boolean;
   github: boolean;
   telegram: boolean;
+  telegramBotUsername?: string | null;
+}
+
+/**
+ * Admin-only typed login settings (toggles + credentials).
+ * GET /api/v1/admin/settings/login
+ */
+export interface LoginSettings {
+  googleEnabled: boolean;
+  googleClientId: string;
+  googleClientSecret: string;
+  googleCallbackUrl: string;
+
+  twitterEnabled: boolean;
+  twitterConsumerKey: string;
+  twitterConsumerSecret: string;
+  twitterCallbackUrl: string;
+
+  githubEnabled: boolean;
+  githubClientId: string;
+  githubClientSecret: string;
+  githubCallbackUrl: string;
+
+  telegramEnabled: boolean;
+  telegramBotToken: string;
+  telegramBotUsername: string;
 }
 
 export interface AddonSetting {
@@ -140,6 +166,15 @@ export const getAllSettings = async (): Promise<SystemSetting[]> => {
  */
 export const getGroupedSettings = async (): Promise<GroupedSettings> => {
   const response = await apiClient.get<GroupedSettings>(API_ENDPOINTS.ADMIN.SETTINGS.GROUPED);
+  return response.data;
+};
+
+/**
+ * Get typed admin login settings (toggles + credentials).
+ * GET /api/v1/admin/settings/login
+ */
+export const getLoginSettings = async (): Promise<LoginSettings> => {
+  const response = await apiClient.get<LoginSettings>(API_ENDPOINTS.ADMIN.SETTINGS.LOGIN);
   return response.data;
 };
 

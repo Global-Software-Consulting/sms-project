@@ -5,7 +5,7 @@ import HelpClient from './help.client';
 export const metadata = buildMetadata({
   title: 'Help Center',
   description:
-    'Find answers, guides and how-tos for using BestSMSHQ. Browse the help center for SMS activation, rentals, billing and account topics.',
+    'Find answers, guides and how-tos for using BestSMSHQ. Browse the public help center for SMS activation, rentals, billing and account topics.',
   path: '/help',
   keywords: [
     'BestSMSHQ help',

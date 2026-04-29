@@ -26,7 +26,7 @@ import {
   selectUserRole,
   clearError,
 } from '@/store/slices/authSlice';
-import { getGoogleOAuthUrl, getGithubOAuthUrl } from '@/lib/api';
+import { getGoogleOAuthUrl, getGithubOAuthUrl, preflightOAuth } from '@/lib/api';
 import { getLoginOptions, type LoginOptions } from '@/lib/api/settingsApi';
 
 export default function Login() {
@@ -83,6 +83,22 @@ export default function Login() {
     }
   }, [authError, dispatch]);
 
+  // Surface OAuth errors that arrive as `?error=...` (e.g. when the backend
+  // bounces the user back to /auth/login after a 403/503 from the OAuth start
+  // endpoint).
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    const oauthError = params.get('error');
+    if (oauthError) {
+      toast.error('Social login failed', { description: oauthError });
+      params.delete('error');
+      const qs = params.toString();
+      const newUrl = window.location.pathname + (qs ? `?${qs}` : '');
+      window.history.replaceState({}, '', newUrl);
+    }
+  }, []);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -97,11 +113,21 @@ export default function Login() {
     }
   };
 
-  const handleGoogleLogin = () => {
+  const handleGoogleLogin = async () => {
+    const check = await preflightOAuth('google');
+    if (!check.ok) {
+      toast.error('Google login unavailable', { description: check.message });
+      return;
+    }
     window.location.href = getGoogleOAuthUrl();
   };
 
-  const handleGithubLogin = () => {
+  const handleGithubLogin = async () => {
+    const check = await preflightOAuth('github');
+    if (!check.ok) {
+      toast.error('GitHub login unavailable', { description: check.message });
+      return;
+    }
     window.location.href = getGithubOAuthUrl();
   };
 

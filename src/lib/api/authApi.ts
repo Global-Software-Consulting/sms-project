@@ -325,3 +325,39 @@ export const getTelegramOAuthUrl = (): string => {
 export const getTwitterOAuthUrl = (): string => {
   return `${apiClient.defaults.baseURL}${API_ENDPOINTS.AUTH.TWITTER}`;
 };
+
+/**
+ * Pre-flight an OAuth start endpoint before doing a full-page navigate.
+ *
+ * The OAuth start endpoint normally responds with a 302 to the provider; when
+ * the provider is disabled or unconfigured, the server returns 403 / 503 JSON.
+ * Without this pre-flight the browser would render that JSON as a blank-looking
+ * error page.
+ *
+ * Returns `{ ok: true }` if the endpoint is ready to redirect (caller should
+ * then set `window.location.href`), otherwise `{ ok: false, status, message }`.
+ */
+export const preflightOAuth = async (
+  provider: 'google' | 'github' | 'twitter' | 'telegram',
+): Promise<{ ok: true } | { ok: false; status: number; message: string }> => {
+  const path = API_ENDPOINTS.AUTH[provider.toUpperCase() as 'GOOGLE' | 'GITHUB' | 'TWITTER' | 'TELEGRAM'];
+  const url = `${apiClient.defaults.baseURL}${path}`;
+  try {
+    const res = await fetch(url, { method: 'GET', redirect: 'manual', credentials: 'omit' });
+    // `opaqueredirect` (status 0) = the server is redirecting us to the provider — good.
+    // 2xx is also fine (some flows return a JSON with a redirect URL).
+    if (res.type === 'opaqueredirect' || (res.status >= 200 && res.status < 400)) {
+      return { ok: true };
+    }
+    let message = `${provider.charAt(0).toUpperCase() + provider.slice(1)} login is unavailable`;
+    try {
+      const data = await res.json();
+      if (data?.message && typeof data.message === 'string') message = data.message;
+    } catch {
+      // body wasn't JSON — keep the default message
+    }
+    return { ok: false, status: res.status, message };
+  } catch {
+    return { ok: false, status: 0, message: 'Could not reach login server' };
+  }
+};
