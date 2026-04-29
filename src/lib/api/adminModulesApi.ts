@@ -87,9 +87,12 @@ export const deleteAd = async (id: string): Promise<void> => {
 // LEGAL Types & Functions
 // ============================================
 
+export type LegalCategory = 'LEGAL' | 'OTHER';
+
 export interface LegalPage {
   id: string;
   type: string;
+  category: LegalCategory;
   title: string;
   content: string;
   isPublished: boolean;
@@ -100,6 +103,7 @@ export interface LegalPage {
 
 export interface CreateLegalPageRequest {
   type: string;
+  category?: LegalCategory;
   title: string;
   content: string;
   isPublished?: boolean;
@@ -108,11 +112,15 @@ export interface CreateLegalPageRequest {
 export interface UpdateLegalPageRequest {
   title?: string;
   content?: string;
+  category?: LegalCategory;
   isPublished?: boolean;
 }
 
-export const getLegalPages = async (): Promise<LegalPage[]> => {
-  const response = await apiClient.get<LegalPage[]>(API_ENDPOINTS.ADMIN.LEGAL.ROOT);
+export const getLegalPages = async (category?: LegalCategory): Promise<LegalPage[]> => {
+  const response = await apiClient.get<LegalPage[]>(
+    API_ENDPOINTS.ADMIN.LEGAL.ROOT,
+    category ? { params: { category } } : undefined,
+  );
   return response.data;
 };
 
