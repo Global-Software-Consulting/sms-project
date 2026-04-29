@@ -244,3 +244,6 @@ export * from './adminReferralsApi';
 export * from './ranksApi';
 export * from './adminTicketsApi';
 export * from './adminContactApi';
+
+// Email Templates API
+export * from './emailTemplatesApi';

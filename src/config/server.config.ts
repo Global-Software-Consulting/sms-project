@@ -506,5 +506,15 @@ export const API_ENDPOINTS = {
       REPLY: (id: string) => `/admin/contact/${id}/reply`,
       ARCHIVE: (id: string) => `/admin/contact/${id}/archive`,
     },
+
+    // Admin Email Templates
+    EMAIL_TEMPLATES: {
+      ROOT: '/admin/email-templates',
+      DETAIL: (id: string) => `/admin/email-templates/${id}`,
+      RESET: (id: string) => `/admin/email-templates/${id}/reset`,
+      PREVIEW: (id: string) => `/admin/email-templates/${id}/preview`,
+      SEND_TEST: (id: string) => `/admin/email-templates/${id}/send-test`,
+      DEFAULTS: '/admin/email-templates/defaults/list',
+    },
   },
 } as const;

@@ -21,6 +21,7 @@ import {
   X,
   Plus,
   Loader2,
+  Mail,
 } from "lucide-react";
 import {
   getGroupedSettings,
@@ -42,13 +43,23 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { AlertTriangle, Info } from "lucide-react";
+import { AlertTriangle, Info, Save, RotateCcw, EyeOff, ChevronDown, Copy, Code } from "lucide-react";
 import {
   getAllLanguages,
   toggleLanguage,
   updateLanguage,
   type Language,
 } from "@/lib/api/languagesApi";
+import {
+  getAllEmailTemplates,
+  updateEmailTemplate,
+  resetEmailTemplate,
+  previewEmailTemplate,
+  sendTestEmail,
+  groupTemplatesByCategory,
+  type EmailTemplate,
+  type PreviewEmailTemplateResponse,
+} from "@/lib/api/emailTemplatesApi";
 
 type TabType = "social" | "contact" | "page" | "email" | "addons" | "trial" | "logo" | "status" | "language";
 
@@ -204,6 +215,31 @@ www.cheapstreamtv.com`
 
   // Maintenance confirmation dialog state
   const [showMaintenanceConfirm, setShowMaintenanceConfirm] = useState(false);
+
+  // Email Templates State
+  const [emailTemplates, setEmailTemplates] = useState<EmailTemplate[]>([]);
+  const [selectedTemplate, setSelectedTemplate] = useState<EmailTemplate | null>(null);
+  const [isEmailTemplatesLoading, setIsEmailTemplatesLoading] = useState(false);
+  const [isSavingTemplate, setIsSavingTemplate] = useState(false);
+  const [isPreviewLoading, setIsPreviewLoading] = useState(false);
+  const [isSendingTestEmail, setIsSendingTestEmail] = useState(false);
+  const [editedSubject, setEditedSubject] = useState('');
+  const [editedBody, setEditedBody] = useState('');
+  const [isTemplateActive, setIsTemplateActive] = useState(true);
+  const [showTemplatePreview, setShowTemplatePreview] = useState(false);
+  const [templatePreviewData, setTemplatePreviewData] = useState<PreviewEmailTemplateResponse | null>(null);
+  const [showTestEmailDialog, setShowTestEmailDialog] = useState(false);
+  const [testEmailAddress, setTestEmailAddress] = useState('');
+  const [showResetTemplateConfirm, setShowResetTemplateConfirm] = useState(false);
+  const [expandedCategories, setExpandedCategories] = useState<Record<string, boolean>>({
+    Authentication: true,
+    User: true,
+    Payments: true,
+    Orders: true,
+    Membership: true,
+    Referrals: true,
+    Support: true,
+  });
 
   // Fetch settings from API
   const fetchSettings = useCallback(async () => {
@@ -529,6 +565,182 @@ www.cheapstreamtv.com`
       fetchLanguages();
     }
   }, [activeTab, fetchLanguages]);
+
+  // Email Templates Functions
+  const fetchEmailTemplates = useCallback(async () => {
+    try {
+      setIsEmailTemplatesLoading(true);
+      const response = await getAllEmailTemplates();
+      setEmailTemplates(response.templates);
+
+      // Select first template if none selected
+      if (!selectedTemplate && response.templates.length > 0) {
+        const firstTemplate = response.templates[0];
+        setSelectedTemplate(firstTemplate);
+        setEditedSubject(firstTemplate.subject);
+        setEditedBody(firstTemplate.bodyHtml);
+        setIsTemplateActive(firstTemplate.isActive);
+      }
+    } catch (error) {
+      console.error('Failed to fetch email templates:', error);
+      toast.error('Failed to load email templates');
+    } finally {
+      setIsEmailTemplatesLoading(false);
+    }
+  }, [selectedTemplate]);
+
+  useEffect(() => {
+    if (activeTab === 'email') {
+      fetchEmailTemplates();
+    }
+  }, [activeTab, fetchEmailTemplates]);
+
+  const handleSelectTemplate = (template: EmailTemplate) => {
+    setSelectedTemplate(template);
+    setEditedSubject(template.subject);
+    setEditedBody(template.bodyHtml);
+    setIsTemplateActive(template.isActive);
+    setShowTemplatePreview(false);
+    setTemplatePreviewData(null);
+  };
+
+  const handleSaveTemplate = async () => {
+    if (!selectedTemplate) return;
+
+    setIsSavingTemplate(true);
+    try {
+      const updated = await updateEmailTemplate(selectedTemplate.id, {
+        subject: editedSubject,
+        bodyHtml: editedBody,
+        isActive: isTemplateActive,
+      });
+
+      setEmailTemplates((prev) =>
+        prev.map((t) => (t.id === updated.id ? updated : t))
+      );
+      setSelectedTemplate(updated);
+
+      toast.success('Template saved successfully');
+    } catch (error) {
+      console.error('Failed to save template:', error);
+      toast.error('Failed to save template');
+    } finally {
+      setIsSavingTemplate(false);
+    }
+  };
+
+  const handlePreviewTemplate = async () => {
+    if (!selectedTemplate) return;
+
+    setIsPreviewLoading(true);
+    try {
+      await updateEmailTemplate(selectedTemplate.id, {
+        subject: editedSubject,
+        bodyHtml: editedBody,
+      });
+
+      const preview = await previewEmailTemplate(selectedTemplate.id);
+      setTemplatePreviewData(preview);
+      setShowTemplatePreview(true);
+    } catch (error) {
+      console.error('Failed to generate preview:', error);
+      toast.error('Failed to generate preview');
+    } finally {
+      setIsPreviewLoading(false);
+    }
+  };
+
+  const handleResetTemplate = async () => {
+    if (!selectedTemplate) return;
+
+    try {
+      const reset = await resetEmailTemplate(selectedTemplate.id);
+
+      setEmailTemplates((prev) =>
+        prev.map((t) => (t.id === reset.id ? reset : t))
+      );
+      setSelectedTemplate(reset);
+      setEditedSubject(reset.subject);
+      setEditedBody(reset.bodyHtml);
+      setIsTemplateActive(reset.isActive);
+
+      toast.success('Template reset to default');
+      setShowResetTemplateConfirm(false);
+    } catch (error) {
+      console.error('Failed to reset template:', error);
+      toast.error('Failed to reset template');
+    }
+  };
+
+  const handleSendTestTemplateEmail = async () => {
+    if (!selectedTemplate || !testEmailAddress) return;
+
+    setIsSendingTestEmail(true);
+    try {
+      await updateEmailTemplate(selectedTemplate.id, {
+        subject: editedSubject,
+        bodyHtml: editedBody,
+      });
+
+      const result = await sendTestEmail(selectedTemplate.id, { testEmail: testEmailAddress });
+
+      if (result.success) {
+        toast.success(`Test email sent to ${testEmailAddress}`);
+        setShowTestEmailDialog(false);
+        setTestEmailAddress('');
+      } else {
+        toast.error(result.message);
+      }
+    } catch (error) {
+      console.error('Failed to send test email:', error);
+      toast.error('Failed to send test email');
+    } finally {
+      setIsSendingTestEmail(false);
+    }
+  };
+
+  const insertTemplateVariable = (variable: string) => {
+    const textarea = document.getElementById('email-template-body-editor') as HTMLTextAreaElement;
+    if (textarea) {
+      const start = textarea.selectionStart;
+      const end = textarea.selectionEnd;
+      const newValue =
+        editedBody.substring(0, start) +
+        `{{${variable}}}` +
+        editedBody.substring(end);
+      setEditedBody(newValue);
+
+      setTimeout(() => {
+        textarea.focus();
+        textarea.setSelectionRange(
+          start + variable.length + 4,
+          start + variable.length + 4
+        );
+      }, 0);
+    } else {
+      setEditedBody(editedBody + `{{${variable}}}`);
+    }
+  };
+
+  const copyTemplateVariable = (variable: string) => {
+    navigator.clipboard.writeText(`{{${variable}}}`);
+    toast.success(`Copied {{${variable}}} to clipboard`);
+  };
+
+  const toggleTemplateCategory = (category: string) => {
+    setExpandedCategories((prev) => ({
+      ...prev,
+      [category]: !prev[category],
+    }));
+  };
+
+  const groupedEmailTemplates = groupTemplatesByCategory(emailTemplates);
+
+  const hasTemplateChanges =
+    selectedTemplate &&
+    (editedSubject !== selectedTemplate.subject ||
+      editedBody !== selectedTemplate.bodyHtml ||
+      isTemplateActive !== selectedTemplate.isActive);
 
   const handleToggleLanguage = async (id: string, nextIsActive: boolean) => {
     // Guard: cannot deactivate the default language
@@ -1093,49 +1305,355 @@ www.cheapstreamtv.com`
 
       {/* Email Content Management Tab */}
       {activeTab === "email" && (
-        <div className="max-w-5xl">
-          <div className="p-8 rounded-xl bg-[rgba(15,23,42,0.6)] border border-[rgba(255,255,255,0.1)] backdrop-blur-xl mb-6">
+        <div className="w-full">
+          <div className="p-6 rounded-xl bg-[rgba(15,23,42,0.6)] border border-[rgba(255,255,255,0.1)] backdrop-blur-xl mb-6">
             <h2 className="text-white text-2xl font-semibold mb-2">Email Content Management</h2>
-            <p className="text-[#94A3B8] text-sm">Manage IPTV guides and instructions for emails and dashboard</p>
+            <p className="text-[#94A3B8] text-sm">
+              Customize all outgoing email templates with dynamic variables for personalized content
+            </p>
           </div>
 
-          <div className="p-8 rounded-xl bg-[rgba(15,23,42,0.6)] border border-[rgba(255,255,255,0.1)] backdrop-blur-xl">
-            <h3 className="text-white text-lg font-semibold mb-4">IPTV Setup Guide Content</h3>
+          {isEmailTemplatesLoading ? (
+            <div className="flex items-center justify-center py-20">
+              <Loader2 className="w-10 h-10 text-[#3B82F6] animate-spin" />
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+              {/* Left Sidebar - Template List */}
+              <div className="lg:col-span-3">
+                <div className="p-4 rounded-xl bg-[rgba(15,23,42,0.6)] border border-[rgba(255,255,255,0.1)] backdrop-blur-xl sticky top-4">
+                  <h3 className="text-white text-sm font-semibold mb-4">Email Templates</h3>
 
-            <div className="mb-6">
-              <div className="flex items-center gap-2 p-4 rounded-t-lg bg-[rgba(0,0,0,0.4)] border border-[rgba(255,255,255,0.18)] border-b-0">
-                <button className="p-2 hover:bg-[rgba(255,255,255,0.1)] rounded text-white transition-colors">
-                  <strong>B</strong>
-                </button>
-                <button className="p-2 hover:bg-[rgba(255,255,255,0.1)] rounded text-white transition-colors">
-                  <em>I</em>
-                </button>
-                <div className="w-px h-6 bg-[rgba(255,255,255,0.18)]" />
-                <button className="p-2 hover:bg-[rgba(255,255,255,0.1)] rounded text-white text-sm transition-colors">
-                  • List
-                </button>
-                <button className="p-2 hover:bg-[rgba(255,255,255,0.1)] rounded text-white text-sm transition-colors">
-                  1. List
-                </button>
+                  <div className="space-y-2 max-h-[calc(100vh-350px)] overflow-y-auto pr-2">
+                    {Object.entries(groupedEmailTemplates).map(([category, categoryTemplates]) => (
+                      <div key={category} className="mb-3">
+                        <button
+                          onClick={() => toggleTemplateCategory(category)}
+                          className="flex items-center justify-between w-full px-2 py-1.5 text-[#94A3B8] text-xs font-medium uppercase tracking-wide hover:text-white transition-colors"
+                        >
+                          <span>{category}</span>
+                          <ChevronDown
+                            className={`w-4 h-4 transition-transform ${
+                              expandedCategories[category] ? 'rotate-180' : ''
+                            }`}
+                          />
+                        </button>
+
+                        {expandedCategories[category] && (
+                          <div className="mt-1 space-y-1">
+                            {categoryTemplates.map((template) => (
+                              <button
+                                key={template.id}
+                                onClick={() => handleSelectTemplate(template)}
+                                className={`w-full px-3 py-2 rounded-lg text-left text-sm transition-colors ${
+                                  selectedTemplate?.id === template.id
+                                    ? 'bg-[#3B82F6] text-white'
+                                    : 'text-white hover:bg-[rgba(255,255,255,0.08)]'
+                                }`}
+                              >
+                                <div className="flex items-center justify-between">
+                                  <span className="truncate">{template.name}</span>
+                                  {!template.isActive && (
+                                    <span className="ml-2 px-1.5 py-0.5 bg-[#EF4444]/20 text-[#EF4444] text-[10px] rounded">
+                                      OFF
+                                    </span>
+                                  )}
+                                </div>
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
               </div>
-              <textarea
-                value={emailContent}
-                onChange={(e) => setEmailContent(e.target.value)}
-                rows={20}
-                className="w-full bg-[rgba(0,0,0,0.4)] border border-[rgba(255,255,255,0.18)] rounded-b-lg px-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#3B82F6] resize-none font-mono"
-              />
-            </div>
 
-            <div className="flex items-center justify-end">
-              <button
-                onClick={() => handleSave("Email content")}
-                disabled={isLoading}
-                className="px-6 py-3 rounded-lg bg-[#06B6D4] hover:bg-[#0891B2] text-white transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {isLoading ? "Saving..." : "Save Changes"}
-              </button>
+              {/* Main Content - Editor */}
+              <div className="lg:col-span-6">
+                {selectedTemplate ? (
+                  <div className="space-y-6">
+                    {/* Template Info */}
+                    <div className="p-6 rounded-xl bg-[rgba(15,23,42,0.6)] border border-[rgba(255,255,255,0.1)] backdrop-blur-xl">
+                      <div className="flex items-start justify-between mb-4">
+                        <div>
+                          <h2 className="text-white text-lg font-semibold">{selectedTemplate.name}</h2>
+                          <p className="text-[#94A3B8] text-sm mt-1">{selectedTemplate.description}</p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-[#64748B] text-xs">Active</span>
+                          <button
+                            onClick={() => setIsTemplateActive(!isTemplateActive)}
+                            className={`relative w-10 h-5 rounded-full transition-colors ${
+                              isTemplateActive ? 'bg-[#22C55E]' : 'bg-[rgba(255,255,255,0.18)]'
+                            }`}
+                          >
+                            <div
+                              className={`absolute top-0.5 w-4 h-4 bg-white rounded-full transition-transform ${
+                                isTemplateActive ? 'translate-x-5' : 'translate-x-0.5'
+                              }`}
+                            />
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2 text-xs text-[#64748B]">
+                        <Code className="w-3.5 h-3.5" />
+                        <span>Type: {selectedTemplate.type}</span>
+                      </div>
+                    </div>
+
+                    {/* Subject Editor */}
+                    <div className="p-6 rounded-xl bg-[rgba(15,23,42,0.6)] border border-[rgba(255,255,255,0.1)] backdrop-blur-xl">
+                      <label className="text-white text-sm font-medium mb-3 block">
+                        Email Subject
+                      </label>
+                      <input
+                        type="text"
+                        value={editedSubject}
+                        onChange={(e) => setEditedSubject(e.target.value)}
+                        placeholder="Enter email subject..."
+                        className="w-full bg-[rgba(0,0,0,0.4)] border border-[rgba(255,255,255,0.18)] rounded-lg px-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#3B82F6] placeholder:text-[#64748B]"
+                      />
+                      <p className="text-[#64748B] text-xs mt-2">
+                        Use {'{{variableName}}'} syntax for dynamic content
+                      </p>
+                    </div>
+
+                    {/* Body Editor */}
+                    <div className="p-6 rounded-xl bg-[rgba(15,23,42,0.6)] border border-[rgba(255,255,255,0.1)] backdrop-blur-xl">
+                      <label className="text-white text-sm font-medium mb-3 block">
+                        Email Body (HTML)
+                      </label>
+                      <textarea
+                        id="email-template-body-editor"
+                        value={editedBody}
+                        onChange={(e) => setEditedBody(e.target.value)}
+                        rows={18}
+                        className="w-full bg-[rgba(0,0,0,0.4)] border border-[rgba(255,255,255,0.18)] rounded-lg px-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#3B82F6] font-mono resize-none"
+                      />
+                    </div>
+
+                    {/* Action Buttons */}
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <button
+                          onClick={() => setShowResetTemplateConfirm(true)}
+                          className="px-4 py-2.5 rounded-lg bg-[rgba(255,255,255,0.08)] border border-[rgba(255,255,255,0.18)] text-white hover:bg-[rgba(255,255,255,0.12)] transition-colors text-sm font-medium flex items-center gap-2"
+                        >
+                          <RotateCcw className="w-4 h-4" />
+                          Reset to Default
+                        </button>
+                      </div>
+
+                      <div className="flex items-center gap-3">
+                        <button
+                          onClick={handlePreviewTemplate}
+                          disabled={isPreviewLoading}
+                          className="px-4 py-2.5 rounded-lg bg-[rgba(255,255,255,0.08)] border border-[rgba(255,255,255,0.18)] text-white hover:bg-[rgba(255,255,255,0.12)] transition-colors text-sm font-medium flex items-center gap-2 disabled:opacity-50"
+                        >
+                          {isPreviewLoading ? (
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                          ) : showTemplatePreview ? (
+                            <EyeOff className="w-4 h-4" />
+                          ) : (
+                            <Eye className="w-4 h-4" />
+                          )}
+                          {showTemplatePreview ? 'Hide Preview' : 'Preview'}
+                        </button>
+
+                        <button
+                          onClick={() => setShowTestEmailDialog(true)}
+                          className="px-4 py-2.5 rounded-lg bg-[#8B5CF6] hover:bg-[#7C3AED] text-white transition-colors text-sm font-medium flex items-center gap-2"
+                        >
+                          <Send className="w-4 h-4" />
+                          Send Test
+                        </button>
+
+                        <button
+                          onClick={handleSaveTemplate}
+                          disabled={isSavingTemplate || !hasTemplateChanges}
+                          className="px-4 py-2.5 rounded-lg bg-[#3B82F6] hover:bg-[#2563EB] text-white transition-colors text-sm font-medium flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          {isSavingTemplate ? (
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                          ) : (
+                            <Save className="w-4 h-4" />
+                          )}
+                          Save Changes
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Preview Panel */}
+                    {showTemplatePreview && templatePreviewData && (
+                      <div className="p-6 rounded-xl bg-[rgba(15,23,42,0.6)] border border-[rgba(255,255,255,0.1)] backdrop-blur-xl">
+                        <div className="flex items-center justify-between mb-4">
+                          <h3 className="text-white text-sm font-semibold">Email Preview</h3>
+                          <button
+                            onClick={() => setShowTemplatePreview(false)}
+                            className="text-[#64748B] hover:text-white transition-colors"
+                          >
+                            <EyeOff className="w-4 h-4" />
+                          </button>
+                        </div>
+
+                        <div className="mb-4">
+                          <p className="text-[#64748B] text-xs mb-1">Subject:</p>
+                          <p className="text-white text-sm bg-[rgba(0,0,0,0.3)] rounded-lg px-3 py-2">
+                            {templatePreviewData.subject}
+                          </p>
+                        </div>
+
+                        <div>
+                          <p className="text-[#64748B] text-xs mb-1">Body:</p>
+                          <div className="bg-white rounded-lg overflow-hidden">
+                            <iframe
+                              srcDoc={templatePreviewData.bodyHtml}
+                              title="Email Preview"
+                              className="w-full h-[400px] border-0"
+                              sandbox="allow-same-origin"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="p-8 rounded-xl bg-[rgba(15,23,42,0.6)] border border-[rgba(255,255,255,0.1)] backdrop-blur-xl text-center">
+                    <Mail className="w-12 h-12 text-[#64748B] mx-auto mb-4" />
+                    <p className="text-[#94A3B8] text-sm">Select a template to edit</p>
+                  </div>
+                )}
+              </div>
+
+              {/* Right Sidebar - Variables */}
+              <div className="lg:col-span-3">
+                {selectedTemplate && (
+                  <div className="p-4 rounded-xl bg-[rgba(15,23,42,0.6)] border border-[rgba(255,255,255,0.1)] backdrop-blur-xl sticky top-4">
+                    <h3 className="text-white text-sm font-semibold mb-4">Available Variables</h3>
+                    <p className="text-[#64748B] text-xs mb-4">
+                      Click to insert or copy these variables into your template
+                    </p>
+
+                    <div className="space-y-2">
+                      {selectedTemplate.variables.map((variable) => (
+                        <div
+                          key={variable}
+                          className="flex items-center justify-between p-2 rounded-lg bg-[rgba(0,0,0,0.3)] group"
+                        >
+                          <button
+                            onClick={() => insertTemplateVariable(variable)}
+                            className="flex-1 text-left text-[#3B82F6] text-xs font-mono hover:text-[#60A5FA] transition-colors"
+                          >
+                            {'{{'}{variable}{'}}'}
+                          </button>
+                          <button
+                            onClick={() => copyTemplateVariable(variable)}
+                            className="p-1 text-[#64748B] hover:text-white opacity-0 group-hover:opacity-100 transition-all"
+                            title="Copy to clipboard"
+                          >
+                            <Copy className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+
+                    {selectedTemplate.sampleData && (
+                      <div className="mt-6 pt-4 border-t border-[rgba(255,255,255,0.1)]">
+                        <h4 className="text-white text-xs font-semibold mb-3">Sample Values</h4>
+                        <div className="space-y-1.5 text-xs">
+                          {Object.entries(selectedTemplate.sampleData).map(([key, value]) => (
+                            <div key={key} className="flex items-start gap-2">
+                              <span className="text-[#64748B] min-w-0 truncate">{key}:</span>
+                              <span className="text-[#94A3B8] break-all">{String(value)}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
+          )}
+
+          {/* Reset Template Confirmation Dialog */}
+          <AlertDialog open={showResetTemplateConfirm} onOpenChange={setShowResetTemplateConfirm}>
+            <AlertDialogContent className="bg-[#0F172A] border-[rgba(255,255,255,0.1)] text-white">
+              <AlertDialogHeader>
+                <div className="w-12 h-12 rounded-full bg-[#F59E0B]/20 flex items-center justify-center mb-2">
+                  <AlertTriangle className="w-6 h-6 text-[#F59E0B]" />
+                </div>
+                <AlertDialogTitle className="text-white text-xl">
+                  Reset to default?
+                </AlertDialogTitle>
+                <AlertDialogDescription className="text-[#94A3B8] text-sm leading-relaxed">
+                  This will replace your customized template with the original default
+                  version. All your changes will be lost.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel className="bg-transparent border-[rgba(255,255,255,0.18)] text-white hover:bg-[rgba(255,255,255,0.08)] hover:text-white">
+                  Cancel
+                </AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={handleResetTemplate}
+                  className="bg-[#F59E0B] hover:bg-[#D97706] text-white"
+                >
+                  Reset Template
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+
+          {/* Send Test Email Dialog */}
+          <AlertDialog open={showTestEmailDialog} onOpenChange={setShowTestEmailDialog}>
+            <AlertDialogContent className="bg-[#0F172A] border-[rgba(255,255,255,0.1)] text-white">
+              <AlertDialogHeader>
+                <div className="w-12 h-12 rounded-full bg-[#8B5CF6]/20 flex items-center justify-center mb-2">
+                  <Send className="w-6 h-6 text-[#8B5CF6]" />
+                </div>
+                <AlertDialogTitle className="text-white text-xl">
+                  Send Test Email
+                </AlertDialogTitle>
+                <AlertDialogDescription className="text-[#94A3B8] text-sm leading-relaxed">
+                  Enter an email address to send a test version of this template with
+                  sample data.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+
+              <div className="my-4">
+                <input
+                  type="email"
+                  value={testEmailAddress}
+                  onChange={(e) => setTestEmailAddress(e.target.value)}
+                  placeholder="Enter email address..."
+                  className="w-full bg-[rgba(0,0,0,0.4)] border border-[rgba(255,255,255,0.18)] rounded-lg px-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#8B5CF6] placeholder:text-[#64748B]"
+                />
+              </div>
+
+              <AlertDialogFooter>
+                <AlertDialogCancel className="bg-transparent border-[rgba(255,255,255,0.18)] text-white hover:bg-[rgba(255,255,255,0.08)] hover:text-white">
+                  Cancel
+                </AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={handleSendTestTemplateEmail}
+                  disabled={!testEmailAddress || isSendingTestEmail}
+                  className="bg-[#8B5CF6] hover:bg-[#7C3AED] text-white disabled:opacity-50"
+                >
+                  {isSendingTestEmail ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                      Sending...
+                    </>
+                  ) : (
+                    'Send Test'
+                  )}
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </div>
       )}
 
