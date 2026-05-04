@@ -21,12 +21,13 @@ import {
   AlertCircle,
 } from 'lucide-react';
 import Link from 'next/link';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   getWalletBalance,
   formatBalance,
   WalletBalance,
 } from '@/lib/api/walletApi';
+import { useNotifications } from '@/contexts/NotificationContext';
 import {
   getCurrentMembership,
   CurrentMembershipResponse,
@@ -86,15 +87,21 @@ export default function Dashboard() {
       setError(null);
 
       // Fetch all data in parallel
-      const [walletRes, membershipRes, ordersRes, rentalsRes, servicesRes, countriesRes] =
-        await Promise.allSettled([
-          getWalletBalance(),
-          getCurrentMembership(),
-          getOrderHistory({ limit: 5 }),
-          getRentalHistory({ status: 'ACTIVE', limit: 10 }),
-          getServices({ limit: 100 }),
-          getCountries({ limit: 100 }),
-        ]);
+      const [
+        walletRes,
+        membershipRes,
+        ordersRes,
+        rentalsRes,
+        servicesRes,
+        countriesRes,
+      ] = await Promise.allSettled([
+        getWalletBalance(),
+        getCurrentMembership(),
+        getOrderHistory({ limit: 5 }),
+        getRentalHistory({ status: 'ACTIVE', limit: 10 }),
+        getServices({ limit: 100 }),
+        getCountries({ limit: 100 }),
+      ]);
 
       // Process wallet
       const wallet = walletRes.status === 'fulfilled' ? walletRes.value : null;
@@ -167,6 +174,31 @@ export default function Dashboard() {
       fetchDashboardData();
     }
   }, [isInitialized, hasFetched, fetchDashboardData]);
+
+  // Auto-refresh on WS notifications that change wallet/membership/orders
+  const { notifications } = useNotifications();
+  const lastNotifIdRef = useRef<string | null>(null);
+  useEffect(() => {
+    const latest = notifications[0];
+    if (!latest || latest.id === lastNotifIdRef.current) return;
+    lastNotifIdRef.current = latest.id;
+    const refreshing = new Set([
+      'PAYMENT_SUCCESS',
+      'PAYMENT_REFUNDED',
+      'WALLET_CREDITED',
+      'WALLET_DEBITED',
+      'MEMBERSHIP_SUBSCRIBED',
+      'MEMBERSHIP_UPGRADED',
+      'MEMBERSHIP_RENEWED',
+      'MEMBERSHIP_EXPIRED',
+      'SMS_RECEIVED',
+      'ORDER_CANCELLED',
+      'ORDER_REFUNDED',
+    ]);
+    if (refreshing.has(latest.type)) {
+      fetchDashboardData();
+    }
+  }, [notifications, fetchDashboardData]);
 
   // Live countdown ticker - update every second when there are waiting orders
   useEffect(() => {
@@ -294,12 +326,18 @@ export default function Dashboard() {
         {user?.rank && (
           <Badge
             className="flex items-center gap-1.5 px-3 py-1.5 text-sm"
-            style={{ backgroundColor: `${user.rank.color}20`, color: user.rank.color, borderColor: `${user.rank.color}40` }}
+            style={{
+              backgroundColor: `${user.rank.color}20`,
+              color: user.rank.color,
+              borderColor: `${user.rank.color}40`,
+            }}
             variant="outline"
           >
             <span>{user.rank.name}</span>
             {user.rank.discountPercent > 0 && (
-              <span className="opacity-75">({user.rank.discountPercent}% off)</span>
+              <span className="opacity-75">
+                ({user.rank.discountPercent}% off)
+              </span>
             )}
           </Badge>
         )}
@@ -406,7 +444,8 @@ export default function Dashboard() {
               <MessageSquare className="text-primary h-8 w-8" />
             </div>
             <p className="text-muted-foreground text-center text-sm">
-              Choose from 500+ services across 180+ countries with instant delivery
+              Choose from 500+ services across 180+ countries with instant
+              delivery
             </p>
             <Button asChild className="w-full" size="lg">
               <Link href="/dashboard/activation">Order SMS Now</Link>
@@ -447,12 +486,17 @@ export default function Dashboard() {
                   <div className="min-w-0 flex-1">
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0">
-                        <p className="text-sm font-medium">{activity.service}</p>
+                        <p className="text-sm font-medium">
+                          {activity.service}
+                        </p>
                         <p className="text-muted-foreground text-xs">
-                          {getCountryFlag(activity.countryCode)} {activity.country}
+                          {getCountryFlag(activity.countryCode)}{' '}
+                          {activity.country}
                         </p>
                       </div>
-                      {(activity.status === 'pending' || activity.status === 'waiting_sms') && activity.expiresAt ? (
+                      {(activity.status === 'pending' ||
+                        activity.status === 'waiting_sms') &&
+                      activity.expiresAt ? (
                         <div className="flex shrink-0 flex-col items-end">
                           <span className="text-foreground flex items-center text-xs font-semibold">
                             <Clock className="mr-1 h-3 w-3" />
@@ -531,9 +575,17 @@ export default function Dashboard() {
                       </p>
                       <p className="text-muted-foreground text-sm">
                         {(() => {
-                          const name = (rental.provider?.displayName || '').toLowerCase();
-                          if (name.includes('premium') || name.includes('v2')) return 'Premium';
-                          if (name.includes('elite') || name.includes('v3') || name.includes('basic')) return 'Elite';
+                          const name = (
+                            rental.provider?.displayName || ''
+                          ).toLowerCase();
+                          if (name.includes('premium') || name.includes('v2'))
+                            return 'Premium';
+                          if (
+                            name.includes('elite') ||
+                            name.includes('v3') ||
+                            name.includes('basic')
+                          )
+                            return 'Elite';
                           return 'Standard';
                         })()}
                       </p>

@@ -269,7 +269,7 @@ export const getPayments = async (
 const normalizeGateway = (backendGateway: BackendGatewayInfo): GatewayInfo => {
   // Backend uses 'id' field, but might also have 'gateway' field
   const gatewayId = backendGateway.id || backendGateway.gateway || '';
-  
+
   return {
     gateway: gatewayId as PaymentGateway,
     name: backendGateway.name,
@@ -290,26 +290,33 @@ const normalizeGateway = (backendGateway: BackendGatewayInfo): GatewayInfo => {
  * GET /api/v1/payments/gateways
  */
 export const getGateways = async (): Promise<GatewayInfo[]> => {
-  const response = await apiClient.get<BackendGatewayInfo[] | { gateways: BackendGatewayInfo[] } | { data: BackendGatewayInfo[] }>(
-    API_ENDPOINTS.PAYMENTS.GATEWAYS,
-  );
-  
+  const response = await apiClient.get<
+    | BackendGatewayInfo[]
+    | { gateways: BackendGatewayInfo[] }
+    | { data: BackendGatewayInfo[] }
+  >(API_ENDPOINTS.PAYMENTS.GATEWAYS);
+
   let rawGateways: BackendGatewayInfo[] = [];
-  
+
   // Handle different response structures
   if (Array.isArray(response.data)) {
     rawGateways = response.data;
   } else if (response.data && 'gateways' in response.data) {
-    rawGateways = (response.data as { gateways: BackendGatewayInfo[] }).gateways || [];
+    rawGateways =
+      (response.data as { gateways: BackendGatewayInfo[] }).gateways || [];
   } else if (response.data && 'data' in response.data) {
-    const data = (response.data as { data: BackendGatewayInfo[] | { gateways: BackendGatewayInfo[] } }).data;
+    const data = (
+      response.data as {
+        data: BackendGatewayInfo[] | { gateways: BackendGatewayInfo[] };
+      }
+    ).data;
     if (Array.isArray(data)) {
       rawGateways = data;
     } else if (data && 'gateways' in data) {
       rawGateways = data.gateways || [];
     }
   }
-  
+
   // Normalize all gateways to frontend format
   return rawGateways.map(normalizeGateway);
 };
@@ -458,7 +465,9 @@ export interface BinanceVerificationResult {
  * Get Binance payment info (Pay ID, QR code, instructions)
  * GET /api/v1/payments/binance/info?amount=X
  */
-export const getBinanceInfo = async (amount: number): Promise<BinancePaymentInfo> => {
+export const getBinanceInfo = async (
+  amount: number,
+): Promise<BinancePaymentInfo> => {
   const response = await apiClient.get<BinancePaymentInfo>(
     `${API_ENDPOINTS.PAYMENTS.ROOT}/binance/info`,
     { params: { amount } },
@@ -477,6 +486,35 @@ export const verifyBinancePayment = async (
   const response = await apiClient.post<BinanceVerificationResult>(
     `${API_ENDPOINTS.PAYMENTS.ROOT}/binance/verify`,
     { paymentId, orderId },
+  );
+  return response.data;
+};
+
+/**
+ * Current user's pending/verified Binance verifications.
+ * Used to show "Resume verification" cards on wallet page.
+ * GET /api/v1/payments/binance/my-verifications
+ */
+export interface MyBinanceVerification {
+  id: string;
+  paymentId: string;
+  orderId: string | null;
+  amount: number;
+  currency: string;
+  status: 'PENDING' | 'VERIFIED' | 'FAILED' | 'EXPIRED';
+  attempts: number;
+  errorMessage: string | null;
+  createdAt: string;
+  verifiedAt: string | null;
+  paymentStatus: string | null;
+  expiresAt: string | null;
+}
+
+export const getMyBinanceVerifications = async (): Promise<
+  MyBinanceVerification[]
+> => {
+  const response = await apiClient.get<MyBinanceVerification[]>(
+    `${API_ENDPOINTS.PAYMENTS.ROOT}/binance/my-verifications`,
   );
   return response.data;
 };
