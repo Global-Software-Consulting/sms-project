@@ -43,13 +43,20 @@ export interface AdStats {
   totalClicks: number;
 }
 
-export const getAds = async (params?: { position?: string; isActive?: boolean }): Promise<Ad[]> => {
-  const response = await apiClient.get<Ad[]>(API_ENDPOINTS.ADMIN.ADS.ROOT, { params });
+export const getAds = async (params?: {
+  position?: string;
+  isActive?: boolean;
+}): Promise<Ad[]> => {
+  const response = await apiClient.get<Ad[]>(API_ENDPOINTS.ADMIN.ADS.ROOT, {
+    params,
+  });
   return response.data;
 };
 
 // Public endpoint - no auth required; used in footer etc.
-export const getPublicAds = async (params?: { position?: string }): Promise<Ad[]> => {
+export const getPublicAds = async (params?: {
+  position?: string;
+}): Promise<Ad[]> => {
   const response = await apiClient.get<Ad[]>(API_ENDPOINTS.ADS, { params });
   return response.data;
 };
@@ -60,7 +67,9 @@ export const getAdStats = async (): Promise<AdStats> => {
 };
 
 export const getAdPositions = async (): Promise<string[]> => {
-  const response = await apiClient.get<string[]>(API_ENDPOINTS.ADMIN.ADS.POSITIONS);
+  const response = await apiClient.get<string[]>(
+    API_ENDPOINTS.ADMIN.ADS.POSITIONS,
+  );
   return response.data;
 };
 
@@ -74,8 +83,14 @@ export const createAd = async (data: CreateAdRequest): Promise<Ad> => {
   return response.data;
 };
 
-export const updateAd = async (id: string, data: UpdateAdRequest): Promise<Ad> => {
-  const response = await apiClient.patch<Ad>(API_ENDPOINTS.ADMIN.ADS.DETAIL(id), data);
+export const updateAd = async (
+  id: string,
+  data: UpdateAdRequest,
+): Promise<Ad> => {
+  const response = await apiClient.patch<Ad>(
+    API_ENDPOINTS.ADMIN.ADS.DETAIL(id),
+    data,
+  );
   return response.data;
 };
 
@@ -116,7 +131,9 @@ export interface UpdateLegalPageRequest {
   isPublished?: boolean;
 }
 
-export const getLegalPages = async (category?: LegalCategory): Promise<LegalPage[]> => {
+export const getLegalPages = async (
+  category?: LegalCategory,
+): Promise<LegalPage[]> => {
   const response = await apiClient.get<LegalPage[]>(
     API_ENDPOINTS.ADMIN.LEGAL.ROOT,
     category ? { params: { category } } : undefined,
@@ -125,22 +142,37 @@ export const getLegalPages = async (category?: LegalCategory): Promise<LegalPage
 };
 
 export const getLegalPage = async (id: string): Promise<LegalPage> => {
-  const response = await apiClient.get<LegalPage>(API_ENDPOINTS.ADMIN.LEGAL.DETAIL(id));
+  const response = await apiClient.get<LegalPage>(
+    API_ENDPOINTS.ADMIN.LEGAL.DETAIL(id),
+  );
   return response.data;
 };
 
 export const getLegalPageByType = async (type: string): Promise<LegalPage> => {
-  const response = await apiClient.get<LegalPage>(API_ENDPOINTS.ADMIN.LEGAL.BY_TYPE(type));
+  const response = await apiClient.get<LegalPage>(
+    API_ENDPOINTS.ADMIN.LEGAL.BY_TYPE(type),
+  );
   return response.data;
 };
 
-export const createLegalPage = async (data: CreateLegalPageRequest): Promise<LegalPage> => {
-  const response = await apiClient.post<LegalPage>(API_ENDPOINTS.ADMIN.LEGAL.ROOT, data);
+export const createLegalPage = async (
+  data: CreateLegalPageRequest,
+): Promise<LegalPage> => {
+  const response = await apiClient.post<LegalPage>(
+    API_ENDPOINTS.ADMIN.LEGAL.ROOT,
+    data,
+  );
   return response.data;
 };
 
-export const updateLegalPage = async (id: string, data: UpdateLegalPageRequest): Promise<LegalPage> => {
-  const response = await apiClient.patch<LegalPage>(API_ENDPOINTS.ADMIN.LEGAL.DETAIL(id), data);
+export const updateLegalPage = async (
+  id: string,
+  data: UpdateLegalPageRequest,
+): Promise<LegalPage> => {
+  const response = await apiClient.patch<LegalPage>(
+    API_ENDPOINTS.ADMIN.LEGAL.DETAIL(id),
+    data,
+  );
   return response.data;
 };
 
@@ -148,8 +180,14 @@ export const deleteLegalPage = async (id: string): Promise<void> => {
   await apiClient.delete(API_ENDPOINTS.ADMIN.LEGAL.DETAIL(id));
 };
 
-export const seedLegalPages = async (): Promise<{ created: string[]; skipped: string[] }> => {
-  const response = await apiClient.post<{ created: string[]; skipped: string[] }>(`${API_ENDPOINTS.ADMIN.LEGAL.ROOT}/seed`);
+export const seedLegalPages = async (): Promise<{
+  created: string[];
+  skipped: string[];
+}> => {
+  const response = await apiClient.post<{
+    created: string[];
+    skipped: string[];
+  }>(`${API_ENDPOINTS.ADMIN.LEGAL.ROOT}/seed`);
   return response.data;
 };
 
@@ -251,42 +289,76 @@ export interface BlogStats {
 }
 
 // Blog Category API Functions
-export const getBlogCategories = async (includeInactive = false): Promise<BlogCategory[]> => {
-  const response = await apiClient.get<BlogCategory[]>(API_ENDPOINTS.ADMIN.BLOG_CATEGORIES.ROOT, {
-    params: { includeInactive: includeInactive ? 'true' : undefined },
-  });
+export const getBlogCategories = async (
+  includeInactive = false,
+): Promise<BlogCategory[]> => {
+  const response = await apiClient.get<BlogCategory[]>(
+    API_ENDPOINTS.ADMIN.BLOG_CATEGORIES.ROOT,
+    {
+      params: { includeInactive: includeInactive ? 'true' : undefined },
+    },
+  );
   return response.data;
 };
 
-export const getParentBlogCategories = async (includeInactive = false): Promise<BlogCategory[]> => {
-  const response = await apiClient.get<BlogCategory[]>(API_ENDPOINTS.ADMIN.BLOG_CATEGORIES.PARENTS, {
-    params: { includeInactive: includeInactive ? 'true' : undefined },
-  });
+export const getParentBlogCategories = async (
+  includeInactive = false,
+): Promise<BlogCategory[]> => {
+  const response = await apiClient.get<BlogCategory[]>(
+    API_ENDPOINTS.ADMIN.BLOG_CATEGORIES.PARENTS,
+    {
+      params: { includeInactive: includeInactive ? 'true' : undefined },
+    },
+  );
   return response.data;
 };
 
 export const getBlogCategory = async (id: string): Promise<BlogCategory> => {
-  const response = await apiClient.get<BlogCategory>(API_ENDPOINTS.ADMIN.BLOG_CATEGORIES.DETAIL(id));
+  const response = await apiClient.get<BlogCategory>(
+    API_ENDPOINTS.ADMIN.BLOG_CATEGORIES.DETAIL(id),
+  );
   return response.data;
 };
 
-export const createBlogCategory = async (data: CreateBlogCategoryRequest): Promise<BlogCategory> => {
-  const response = await apiClient.post<BlogCategory>(API_ENDPOINTS.ADMIN.BLOG_CATEGORIES.ROOT, data);
+export const createBlogCategory = async (
+  data: CreateBlogCategoryRequest,
+): Promise<BlogCategory> => {
+  const response = await apiClient.post<BlogCategory>(
+    API_ENDPOINTS.ADMIN.BLOG_CATEGORIES.ROOT,
+    data,
+  );
   return response.data;
 };
 
-export const updateBlogCategory = async (id: string, data: UpdateBlogCategoryRequest): Promise<BlogCategory> => {
-  const response = await apiClient.patch<BlogCategory>(API_ENDPOINTS.ADMIN.BLOG_CATEGORIES.DETAIL(id), data);
+export const updateBlogCategory = async (
+  id: string,
+  data: UpdateBlogCategoryRequest,
+): Promise<BlogCategory> => {
+  const response = await apiClient.patch<BlogCategory>(
+    API_ENDPOINTS.ADMIN.BLOG_CATEGORIES.DETAIL(id),
+    data,
+  );
   return response.data;
 };
 
-export const toggleBlogCategory = async (id: string, isActive: boolean): Promise<BlogCategory> => {
-  const response = await apiClient.patch<BlogCategory>(API_ENDPOINTS.ADMIN.BLOG_CATEGORIES.TOGGLE(id), { isActive });
+export const toggleBlogCategory = async (
+  id: string,
+  isActive: boolean,
+): Promise<BlogCategory> => {
+  const response = await apiClient.patch<BlogCategory>(
+    API_ENDPOINTS.ADMIN.BLOG_CATEGORIES.TOGGLE(id),
+    { isActive },
+  );
   return response.data;
 };
 
-export const reorderBlogCategories = async (ids: string[]): Promise<{ message: string }> => {
-  const response = await apiClient.post<{ message: string }>(API_ENDPOINTS.ADMIN.BLOG_CATEGORIES.REORDER, { ids });
+export const reorderBlogCategories = async (
+  ids: string[],
+): Promise<{ message: string }> => {
+  const response = await apiClient.post<{ message: string }>(
+    API_ENDPOINTS.ADMIN.BLOG_CATEGORIES.REORDER,
+    { ids },
+  );
   return response.data;
 };
 
@@ -295,35 +367,61 @@ export const deleteBlogCategory = async (id: string): Promise<void> => {
 };
 
 // Blog Author API Functions
-export const getBlogAuthors = async (includeInactive = false): Promise<BlogAuthor[]> => {
-  const response = await apiClient.get<BlogAuthor[]>(API_ENDPOINTS.ADMIN.BLOG_AUTHORS.ROOT, {
-    params: { includeInactive: includeInactive ? 'true' : undefined },
-  });
+export const getBlogAuthors = async (
+  includeInactive = false,
+): Promise<BlogAuthor[]> => {
+  const response = await apiClient.get<BlogAuthor[]>(
+    API_ENDPOINTS.ADMIN.BLOG_AUTHORS.ROOT,
+    {
+      params: { includeInactive: includeInactive ? 'true' : undefined },
+    },
+  );
   return response.data;
 };
 
 export const getRandomBlogAuthor = async (): Promise<BlogAuthor | null> => {
-  const response = await apiClient.get<BlogAuthor | null>(API_ENDPOINTS.ADMIN.BLOG_AUTHORS.RANDOM);
+  const response = await apiClient.get<BlogAuthor | null>(
+    API_ENDPOINTS.ADMIN.BLOG_AUTHORS.RANDOM,
+  );
   return response.data;
 };
 
 export const getBlogAuthor = async (id: string): Promise<BlogAuthor> => {
-  const response = await apiClient.get<BlogAuthor>(API_ENDPOINTS.ADMIN.BLOG_AUTHORS.DETAIL(id));
+  const response = await apiClient.get<BlogAuthor>(
+    API_ENDPOINTS.ADMIN.BLOG_AUTHORS.DETAIL(id),
+  );
   return response.data;
 };
 
-export const createBlogAuthor = async (data: CreateBlogAuthorRequest): Promise<BlogAuthor> => {
-  const response = await apiClient.post<BlogAuthor>(API_ENDPOINTS.ADMIN.BLOG_AUTHORS.ROOT, data);
+export const createBlogAuthor = async (
+  data: CreateBlogAuthorRequest,
+): Promise<BlogAuthor> => {
+  const response = await apiClient.post<BlogAuthor>(
+    API_ENDPOINTS.ADMIN.BLOG_AUTHORS.ROOT,
+    data,
+  );
   return response.data;
 };
 
-export const updateBlogAuthor = async (id: string, data: UpdateBlogAuthorRequest): Promise<BlogAuthor> => {
-  const response = await apiClient.patch<BlogAuthor>(API_ENDPOINTS.ADMIN.BLOG_AUTHORS.DETAIL(id), data);
+export const updateBlogAuthor = async (
+  id: string,
+  data: UpdateBlogAuthorRequest,
+): Promise<BlogAuthor> => {
+  const response = await apiClient.patch<BlogAuthor>(
+    API_ENDPOINTS.ADMIN.BLOG_AUTHORS.DETAIL(id),
+    data,
+  );
   return response.data;
 };
 
-export const toggleBlogAuthor = async (id: string, isActive: boolean): Promise<BlogAuthor> => {
-  const response = await apiClient.patch<BlogAuthor>(API_ENDPOINTS.ADMIN.BLOG_AUTHORS.TOGGLE(id), { isActive });
+export const toggleBlogAuthor = async (
+  id: string,
+  isActive: boolean,
+): Promise<BlogAuthor> => {
+  const response = await apiClient.patch<BlogAuthor>(
+    API_ENDPOINTS.ADMIN.BLOG_AUTHORS.TOGGLE(id),
+    { isActive },
+  );
   return response.data;
 };
 
@@ -332,56 +430,86 @@ export const deleteBlogAuthor = async (id: string): Promise<void> => {
 };
 
 // Blog Post API Functions
-export const getBlogPosts = async (params?: { 
-  status?: string; 
+export const getBlogPosts = async (params?: {
+  status?: string;
   categoryId?: string;
   authorId?: string;
   search?: string;
   tag?: string;
   page?: number;
   limit?: number;
-}): Promise<{ data: BlogPost[]; meta: { total: number; page: number; limit: number; totalPages: number } }> => {
-  const response = await apiClient.get(API_ENDPOINTS.ADMIN.BLOG.ROOT, { params });
+}): Promise<{
+  data: BlogPost[];
+  meta: { total: number; page: number; limit: number; totalPages: number };
+}> => {
+  const response = await apiClient.get(API_ENDPOINTS.ADMIN.BLOG.ROOT, {
+    params,
+  });
   return response.data;
 };
 
 export const getBlogStats = async (): Promise<BlogStats> => {
-  const response = await apiClient.get<BlogStats>(API_ENDPOINTS.ADMIN.BLOG.STATS);
+  const response = await apiClient.get<BlogStats>(
+    API_ENDPOINTS.ADMIN.BLOG.STATS,
+  );
   return response.data;
 };
 
-export const getBlogTags = async (): Promise<{ tag: string; count: number }[]> => {
-  const response = await apiClient.get<{ tag: string; count: number }[]>(API_ENDPOINTS.ADMIN.BLOG.TAGS);
+export const getBlogTags = async (): Promise<
+  { tag: string; count: number }[]
+> => {
+  const response = await apiClient.get<{ tag: string; count: number }[]>(
+    API_ENDPOINTS.ADMIN.BLOG.TAGS,
+  );
   return response.data;
 };
 
 export const getBlogPost = async (id: string): Promise<BlogPost> => {
-  const response = await apiClient.get<BlogPost>(API_ENDPOINTS.ADMIN.BLOG.DETAIL(id));
+  const response = await apiClient.get<BlogPost>(
+    API_ENDPOINTS.ADMIN.BLOG.DETAIL(id),
+  );
   return response.data;
 };
 
-export const createBlogPost = async (data: CreateBlogPostRequest): Promise<BlogPost> => {
-  const response = await apiClient.post<BlogPost>(API_ENDPOINTS.ADMIN.BLOG.ROOT, data);
+export const createBlogPost = async (
+  data: CreateBlogPostRequest,
+): Promise<BlogPost> => {
+  const response = await apiClient.post<BlogPost>(
+    API_ENDPOINTS.ADMIN.BLOG.ROOT,
+    data,
+  );
   return response.data;
 };
 
-export const updateBlogPost = async (id: string, data: UpdateBlogPostRequest): Promise<BlogPost> => {
-  const response = await apiClient.patch<BlogPost>(API_ENDPOINTS.ADMIN.BLOG.DETAIL(id), data);
+export const updateBlogPost = async (
+  id: string,
+  data: UpdateBlogPostRequest,
+): Promise<BlogPost> => {
+  const response = await apiClient.patch<BlogPost>(
+    API_ENDPOINTS.ADMIN.BLOG.DETAIL(id),
+    data,
+  );
   return response.data;
 };
 
 export const publishBlogPost = async (id: string): Promise<BlogPost> => {
-  const response = await apiClient.post<BlogPost>(API_ENDPOINTS.ADMIN.BLOG.PUBLISH(id));
+  const response = await apiClient.post<BlogPost>(
+    API_ENDPOINTS.ADMIN.BLOG.PUBLISH(id),
+  );
   return response.data;
 };
 
 export const unpublishBlogPost = async (id: string): Promise<BlogPost> => {
-  const response = await apiClient.post<BlogPost>(API_ENDPOINTS.ADMIN.BLOG.UNPUBLISH(id));
+  const response = await apiClient.post<BlogPost>(
+    API_ENDPOINTS.ADMIN.BLOG.UNPUBLISH(id),
+  );
   return response.data;
 };
 
 export const archiveBlogPost = async (id: string): Promise<BlogPost> => {
-  const response = await apiClient.post<BlogPost>(API_ENDPOINTS.ADMIN.BLOG.ARCHIVE(id));
+  const response = await apiClient.post<BlogPost>(
+    API_ENDPOINTS.ADMIN.BLOG.ARCHIVE(id),
+  );
   return response.data;
 };
 
@@ -407,8 +535,13 @@ export interface BulkCreateBlogResponse {
   posts: BlogPost[];
 }
 
-export const bulkCreateBlogPosts = async (data: BulkCreateBlogRequest): Promise<BulkCreateBlogResponse> => {
-  const response = await apiClient.post<BulkCreateBlogResponse>(API_ENDPOINTS.ADMIN.BLOG.BULK, data);
+export const bulkCreateBlogPosts = async (
+  data: BulkCreateBlogRequest,
+): Promise<BulkCreateBlogResponse> => {
+  const response = await apiClient.post<BulkCreateBlogResponse>(
+    API_ENDPOINTS.ADMIN.BLOG.BULK,
+    data,
+  );
   return response.data;
 };
 
@@ -444,27 +577,47 @@ export const getAdminReviews = async (params?: {
   page?: number;
   limit?: number;
 }): Promise<{ data: AdminReview[]; total: number }> => {
-  const response = await apiClient.get(API_ENDPOINTS.ADMIN.REVIEWS.ROOT, { params });
+  const response = await apiClient.get(API_ENDPOINTS.ADMIN.REVIEWS.ROOT, {
+    params,
+  });
   return response.data;
 };
 
 export const getReviewStats = async (): Promise<ReviewStats> => {
-  const response = await apiClient.get<ReviewStats>(API_ENDPOINTS.ADMIN.REVIEWS.STATS);
+  const response = await apiClient.get<ReviewStats>(
+    API_ENDPOINTS.ADMIN.REVIEWS.STATS,
+  );
   return response.data;
 };
 
-export const approveReview = async (id: string, response?: string): Promise<AdminReview> => {
-  const res = await apiClient.post<AdminReview>(API_ENDPOINTS.ADMIN.REVIEWS.APPROVE(id), { response });
+export const approveReview = async (
+  id: string,
+  response?: string,
+): Promise<AdminReview> => {
+  const res = await apiClient.post<AdminReview>(
+    API_ENDPOINTS.ADMIN.REVIEWS.APPROVE(id),
+    { response },
+  );
   return res.data;
 };
 
-export const rejectReview = async (id: string, reason?: string): Promise<AdminReview> => {
-  const res = await apiClient.post<AdminReview>(API_ENDPOINTS.ADMIN.REVIEWS.REJECT(id), { reason });
+export const rejectReview = async (
+  id: string,
+  reason?: string,
+): Promise<AdminReview> => {
+  const res = await apiClient.post<AdminReview>(
+    API_ENDPOINTS.ADMIN.REVIEWS.REJECT(id),
+    { reason },
+  );
   return res.data;
 };
 
-export const toggleReviewFeatured = async (id: string): Promise<AdminReview> => {
-  const response = await apiClient.post<AdminReview>(API_ENDPOINTS.ADMIN.REVIEWS.FEATURE(id));
+export const toggleReviewFeatured = async (
+  id: string,
+): Promise<AdminReview> => {
+  const response = await apiClient.post<AdminReview>(
+    API_ENDPOINTS.ADMIN.REVIEWS.FEATURE(id),
+  );
   return response.data;
 };
 
@@ -476,8 +629,14 @@ export interface UpdateReviewRequest {
   displayOrder?: number;
 }
 
-export const updateReview = async (id: string, data: UpdateReviewRequest): Promise<AdminReview> => {
-  const response = await apiClient.patch<AdminReview>(API_ENDPOINTS.ADMIN.REVIEWS.DETAIL(id), data);
+export const updateReview = async (
+  id: string,
+  data: UpdateReviewRequest,
+): Promise<AdminReview> => {
+  const response = await apiClient.patch<AdminReview>(
+    API_ENDPOINTS.ADMIN.REVIEWS.DETAIL(id),
+    data,
+  );
   return response.data;
 };
 
@@ -531,17 +690,28 @@ export const getAdminNotifications = async (params?: {
   page?: number;
   limit?: number;
 }): Promise<{ data: AdminNotification[]; total: number }> => {
-  const response = await apiClient.get(API_ENDPOINTS.ADMIN.NOTIFICATIONS.ROOT, { params });
+  const response = await apiClient.get(API_ENDPOINTS.ADMIN.NOTIFICATIONS.ROOT, {
+    params,
+  });
   return response.data;
 };
 
-export const sendBulkNotification = async (data: BulkNotificationRequest): Promise<{ sent: number }> => {
-  const response = await apiClient.post<{ sent: number }>(API_ENDPOINTS.ADMIN.NOTIFICATIONS.SEND_BULK, data);
+export const sendBulkNotification = async (
+  data: BulkNotificationRequest,
+): Promise<{ sent: number }> => {
+  const response = await apiClient.post<{ sent: number }>(
+    API_ENDPOINTS.ADMIN.NOTIFICATIONS.SEND_BULK,
+    data,
+  );
   return response.data;
 };
 
-export const getNotificationTemplates = async (): Promise<NotificationTemplate[]> => {
-  const response = await apiClient.get<NotificationTemplate[]>(API_ENDPOINTS.ADMIN.NOTIFICATIONS.TEMPLATES);
+export const getNotificationTemplates = async (): Promise<
+  NotificationTemplate[]
+> => {
+  const response = await apiClient.get<NotificationTemplate[]>(
+    API_ENDPOINTS.ADMIN.NOTIFICATIONS.TEMPLATES,
+  );
   return response.data;
 };
 
@@ -598,13 +768,24 @@ export const getFaqCategories = async (): Promise<FaqCategory[]> => {
   return Array.isArray(data) ? data : (data?.data ?? []);
 };
 
-export const createFaqCategory = async (data: CreateFaqCategoryRequest): Promise<FaqCategory> => {
-  const response = await apiClient.post<FaqCategory>(API_ENDPOINTS.ADMIN.FAQ.CATEGORIES, data);
+export const createFaqCategory = async (
+  data: CreateFaqCategoryRequest,
+): Promise<FaqCategory> => {
+  const response = await apiClient.post<FaqCategory>(
+    API_ENDPOINTS.ADMIN.FAQ.CATEGORIES,
+    data,
+  );
   return response.data;
 };
 
-export const updateFaqCategory = async (id: string, data: Partial<CreateFaqCategoryRequest>): Promise<FaqCategory> => {
-  const response = await apiClient.patch<FaqCategory>(API_ENDPOINTS.ADMIN.FAQ.CATEGORY_DETAIL(id), data);
+export const updateFaqCategory = async (
+  id: string,
+  data: Partial<CreateFaqCategoryRequest>,
+): Promise<FaqCategory> => {
+  const response = await apiClient.patch<FaqCategory>(
+    API_ENDPOINTS.ADMIN.FAQ.CATEGORY_DETAIL(id),
+    data,
+  );
   return response.data;
 };
 
@@ -612,19 +793,34 @@ export const deleteFaqCategory = async (id: string): Promise<void> => {
   await apiClient.delete(API_ENDPOINTS.ADMIN.FAQ.CATEGORY_DETAIL(id));
 };
 
-export const getFaqItems = async (params?: FaqQueryParams): Promise<FaqItem[]> => {
-  const response = await apiClient.get(API_ENDPOINTS.ADMIN.FAQ.ROOT, { params });
+export const getFaqItems = async (
+  params?: FaqQueryParams,
+): Promise<FaqItem[]> => {
+  const response = await apiClient.get(API_ENDPOINTS.ADMIN.FAQ.ROOT, {
+    params,
+  });
   const data = response.data;
   return Array.isArray(data) ? data : (data?.data ?? []);
 };
 
-export const createFaqItem = async (data: CreateFaqItemRequest): Promise<FaqItem> => {
-  const response = await apiClient.post<FaqItem>(API_ENDPOINTS.ADMIN.FAQ.ROOT, data);
+export const createFaqItem = async (
+  data: CreateFaqItemRequest,
+): Promise<FaqItem> => {
+  const response = await apiClient.post<FaqItem>(
+    API_ENDPOINTS.ADMIN.FAQ.ROOT,
+    data,
+  );
   return response.data;
 };
 
-export const updateFaqItem = async (id: string, data: Partial<CreateFaqItemRequest>): Promise<FaqItem> => {
-  const response = await apiClient.patch<FaqItem>(API_ENDPOINTS.ADMIN.FAQ.DETAIL(id), data);
+export const updateFaqItem = async (
+  id: string,
+  data: Partial<CreateFaqItemRequest>,
+): Promise<FaqItem> => {
+  const response = await apiClient.patch<FaqItem>(
+    API_ENDPOINTS.ADMIN.FAQ.DETAIL(id),
+    data,
+  );
   return response.data;
 };
 
@@ -632,7 +828,9 @@ export const deleteFaqItem = async (id: string): Promise<void> => {
   await apiClient.delete(API_ENDPOINTS.ADMIN.FAQ.DETAIL(id));
 };
 
-export const reorderFaqItems = async (items: { id: string; sortOrder: number }[]): Promise<void> => {
+export const reorderFaqItems = async (
+  items: { id: string; sortOrder: number }[],
+): Promise<void> => {
   await apiClient.post(API_ENDPOINTS.ADMIN.FAQ.REORDER, { items });
 };
 
@@ -666,22 +864,36 @@ export const getContactSubmissions = async (params?: {
   page?: number;
   limit?: number;
 }): Promise<{ data: ContactSubmission[]; total: number }> => {
-  const response = await apiClient.get(API_ENDPOINTS.ADMIN.CONTACT.ROOT, { params });
+  const response = await apiClient.get(API_ENDPOINTS.ADMIN.CONTACT.ROOT, {
+    params,
+  });
   return response.data;
 };
 
 export const getContactStats = async (): Promise<ContactStats> => {
-  const response = await apiClient.get<ContactStats>(API_ENDPOINTS.ADMIN.CONTACT.STATS);
+  const response = await apiClient.get<ContactStats>(
+    API_ENDPOINTS.ADMIN.CONTACT.STATS,
+  );
   return response.data;
 };
 
-export const getContactSubmission = async (id: string): Promise<ContactSubmission> => {
-  const response = await apiClient.get<ContactSubmission>(API_ENDPOINTS.ADMIN.CONTACT.DETAIL(id));
+export const getContactSubmission = async (
+  id: string,
+): Promise<ContactSubmission> => {
+  const response = await apiClient.get<ContactSubmission>(
+    API_ENDPOINTS.ADMIN.CONTACT.DETAIL(id),
+  );
   return response.data;
 };
 
-export const replyToContact = async (id: string, reply: string): Promise<ContactSubmission> => {
-  const response = await apiClient.post<ContactSubmission>(API_ENDPOINTS.ADMIN.CONTACT.REPLY(id), { reply });
+export const replyToContact = async (
+  id: string,
+  reply: string,
+): Promise<ContactSubmission> => {
+  const response = await apiClient.post<ContactSubmission>(
+    API_ENDPOINTS.ADMIN.CONTACT.REPLY(id),
+    { reply },
+  );
   return response.data;
 };
 
@@ -735,37 +947,66 @@ export const getAdminTickets = async (params?: {
   page?: number;
   limit?: number;
 }): Promise<{ data: AdminTicket[]; total: number }> => {
-  const response = await apiClient.get(API_ENDPOINTS.ADMIN.TICKETS.ROOT, { params });
+  const response = await apiClient.get(API_ENDPOINTS.ADMIN.TICKETS.ROOT, {
+    params,
+  });
   return response.data;
 };
 
 export const getTicketStats = async (): Promise<TicketStats> => {
-  const response = await apiClient.get<TicketStats>(API_ENDPOINTS.ADMIN.TICKETS.STATS);
+  const response = await apiClient.get<TicketStats>(
+    API_ENDPOINTS.ADMIN.TICKETS.STATS,
+  );
   return response.data;
 };
 
 export const getAdminTicket = async (id: string): Promise<AdminTicket> => {
-  const response = await apiClient.get<AdminTicket>(API_ENDPOINTS.ADMIN.TICKETS.DETAIL(id));
+  const response = await apiClient.get<AdminTicket>(
+    API_ENDPOINTS.ADMIN.TICKETS.DETAIL(id),
+  );
   return response.data;
 };
 
-export const getTicketMessages = async (id: string): Promise<TicketMessage[]> => {
-  const response = await apiClient.get<TicketMessage[]>(API_ENDPOINTS.ADMIN.TICKETS.MESSAGES(id));
+export const getTicketMessages = async (
+  id: string,
+): Promise<TicketMessage[]> => {
+  const response = await apiClient.get<TicketMessage[]>(
+    API_ENDPOINTS.ADMIN.TICKETS.MESSAGES(id),
+  );
   return response.data;
 };
 
-export const assignTicket = async (id: string, assignedToId: string): Promise<AdminTicket> => {
-  const response = await apiClient.post<AdminTicket>(API_ENDPOINTS.ADMIN.TICKETS.ASSIGN(id), { assignedToId });
+export const assignTicket = async (
+  id: string,
+  assignedToId: string,
+): Promise<AdminTicket> => {
+  const response = await apiClient.post<AdminTicket>(
+    API_ENDPOINTS.ADMIN.TICKETS.ASSIGN(id),
+    { assignedToId },
+  );
   return response.data;
 };
 
-export const closeTicket = async (id: string, resolution?: string): Promise<AdminTicket> => {
-  const response = await apiClient.post<AdminTicket>(API_ENDPOINTS.ADMIN.TICKETS.CLOSE(id), { resolution });
+export const closeTicket = async (
+  id: string,
+  resolution?: string,
+): Promise<AdminTicket> => {
+  const response = await apiClient.post<AdminTicket>(
+    API_ENDPOINTS.ADMIN.TICKETS.CLOSE(id),
+    { resolution },
+  );
   return response.data;
 };
 
-export const replyToTicket = async (id: string, message: string, isInternal?: boolean): Promise<TicketMessage> => {
-  const response = await apiClient.post<TicketMessage>(API_ENDPOINTS.ADMIN.TICKETS.MESSAGES(id), { message, isInternal });
+export const replyToTicket = async (
+  id: string,
+  message: string,
+  isInternal?: boolean,
+): Promise<TicketMessage> => {
+  const response = await apiClient.post<TicketMessage>(
+    API_ENDPOINTS.ADMIN.TICKETS.MESSAGES(id),
+    { message, isInternal },
+  );
   return response.data;
 };
 
@@ -809,17 +1050,28 @@ export const getRanks = async (): Promise<Rank[]> => {
 };
 
 export const getRank = async (id: string): Promise<Rank> => {
-  const response = await apiClient.get<Rank>(API_ENDPOINTS.ADMIN.RANKS.DETAIL(id));
+  const response = await apiClient.get<Rank>(
+    API_ENDPOINTS.ADMIN.RANKS.DETAIL(id),
+  );
   return response.data;
 };
 
 export const createRank = async (data: CreateRankRequest): Promise<Rank> => {
-  const response = await apiClient.post<Rank>(API_ENDPOINTS.ADMIN.RANKS.ROOT, data);
+  const response = await apiClient.post<Rank>(
+    API_ENDPOINTS.ADMIN.RANKS.ROOT,
+    data,
+  );
   return response.data;
 };
 
-export const updateRank = async (id: string, data: Partial<CreateRankRequest>): Promise<Rank> => {
-  const response = await apiClient.patch<Rank>(API_ENDPOINTS.ADMIN.RANKS.DETAIL(id), data);
+export const updateRank = async (
+  id: string,
+  data: Partial<CreateRankRequest>,
+): Promise<Rank> => {
+  const response = await apiClient.patch<Rank>(
+    API_ENDPOINTS.ADMIN.RANKS.DETAIL(id),
+    data,
+  );
   return response.data;
 };
 
@@ -827,7 +1079,9 @@ export const deleteRank = async (id: string): Promise<void> => {
   await apiClient.delete(API_ENDPOINTS.ADMIN.RANKS.DETAIL(id));
 };
 
-export const reorderRanks = async (items: { id: string; sortOrder: number }[]): Promise<void> => {
+export const reorderRanks = async (
+  items: { id: string; sortOrder: number }[],
+): Promise<void> => {
   await apiClient.post(API_ENDPOINTS.ADMIN.RANKS.REORDER, { items });
 };
 
@@ -865,17 +1119,26 @@ export interface ReferralPayout {
 }
 
 export const getReferralStats = async (): Promise<ReferralStats> => {
-  const response = await apiClient.get<ReferralStats>(API_ENDPOINTS.ADMIN.REFERRALS.STATS);
+  const response = await apiClient.get<ReferralStats>(
+    API_ENDPOINTS.ADMIN.REFERRALS.STATS,
+  );
   return response.data;
 };
 
 export const getReferralConfig = async (): Promise<ReferralConfig> => {
-  const response = await apiClient.get<ReferralConfig>(API_ENDPOINTS.ADMIN.REFERRALS.CONFIG);
+  const response = await apiClient.get<ReferralConfig>(
+    API_ENDPOINTS.ADMIN.REFERRALS.CONFIG,
+  );
   return response.data;
 };
 
-export const updateReferralConfig = async (data: Partial<ReferralConfig>): Promise<ReferralConfig> => {
-  const response = await apiClient.patch<ReferralConfig>(API_ENDPOINTS.ADMIN.REFERRALS.CONFIG, data);
+export const updateReferralConfig = async (
+  data: Partial<ReferralConfig>,
+): Promise<ReferralConfig> => {
+  const response = await apiClient.patch<ReferralConfig>(
+    API_ENDPOINTS.ADMIN.REFERRALS.CONFIG,
+    data,
+  );
   return response.data;
 };
 
@@ -884,17 +1147,29 @@ export const getReferralPayouts = async (params?: {
   page?: number;
   limit?: number;
 }): Promise<{ data: ReferralPayout[]; total: number }> => {
-  const response = await apiClient.get(API_ENDPOINTS.ADMIN.REFERRALS.PAYOUTS, { params });
+  const response = await apiClient.get(API_ENDPOINTS.ADMIN.REFERRALS.PAYOUTS, {
+    params,
+  });
   return response.data;
 };
 
-export const approveReferralPayout = async (id: string): Promise<ReferralPayout> => {
-  const response = await apiClient.post<ReferralPayout>(API_ENDPOINTS.ADMIN.REFERRALS.APPROVE_PAYOUT(id));
+export const approveReferralPayout = async (
+  id: string,
+): Promise<ReferralPayout> => {
+  const response = await apiClient.post<ReferralPayout>(
+    API_ENDPOINTS.ADMIN.REFERRALS.APPROVE_PAYOUT(id),
+  );
   return response.data;
 };
 
-export const rejectReferralPayout = async (id: string, reason?: string): Promise<ReferralPayout> => {
-  const response = await apiClient.post<ReferralPayout>(API_ENDPOINTS.ADMIN.REFERRALS.REJECT_PAYOUT(id), { reason });
+export const rejectReferralPayout = async (
+  id: string,
+  reason?: string,
+): Promise<ReferralPayout> => {
+  const response = await apiClient.post<ReferralPayout>(
+    API_ENDPOINTS.ADMIN.REFERRALS.REJECT_PAYOUT(id),
+    { reason },
+  );
   return response.data;
 };
 
@@ -948,27 +1223,44 @@ export const getCoupons = async (params?: {
   page?: number;
   limit?: number;
 }): Promise<{ data: Coupon[]; total: number }> => {
-  const response = await apiClient.get(API_ENDPOINTS.ADMIN.COUPONS.ROOT, { params });
+  const response = await apiClient.get(API_ENDPOINTS.ADMIN.COUPONS.ROOT, {
+    params,
+  });
   return response.data;
 };
 
 export const getCouponStats = async (): Promise<CouponStats> => {
-  const response = await apiClient.get<CouponStats>(API_ENDPOINTS.ADMIN.COUPONS.STATS);
+  const response = await apiClient.get<CouponStats>(
+    API_ENDPOINTS.ADMIN.COUPONS.STATS,
+  );
   return response.data;
 };
 
 export const getCoupon = async (id: string): Promise<Coupon> => {
-  const response = await apiClient.get<Coupon>(API_ENDPOINTS.ADMIN.COUPONS.DETAIL(id));
+  const response = await apiClient.get<Coupon>(
+    API_ENDPOINTS.ADMIN.COUPONS.DETAIL(id),
+  );
   return response.data;
 };
 
-export const createCoupon = async (data: CreateCouponRequest): Promise<Coupon> => {
-  const response = await apiClient.post<Coupon>(API_ENDPOINTS.ADMIN.COUPONS.ROOT, data);
+export const createCoupon = async (
+  data: CreateCouponRequest,
+): Promise<Coupon> => {
+  const response = await apiClient.post<Coupon>(
+    API_ENDPOINTS.ADMIN.COUPONS.ROOT,
+    data,
+  );
   return response.data;
 };
 
-export const updateCoupon = async (id: string, data: Partial<CreateCouponRequest>): Promise<Coupon> => {
-  const response = await apiClient.patch<Coupon>(API_ENDPOINTS.ADMIN.COUPONS.DETAIL(id), data);
+export const updateCoupon = async (
+  id: string,
+  data: Partial<CreateCouponRequest>,
+): Promise<Coupon> => {
+  const response = await apiClient.patch<Coupon>(
+    API_ENDPOINTS.ADMIN.COUPONS.DETAIL(id),
+    data,
+  );
   return response.data;
 };
 
@@ -980,7 +1272,14 @@ export const deleteCoupon = async (id: string): Promise<void> => {
 // PAYMENT GATEWAYS Types & Functions
 // ============================================
 
-export type PaymentGatewayType = 'STRIPE' | 'PAYGATE' | 'PLISIO' | 'CRYPTOMUS' | 'NOWPAYMENTS' | 'VOLET' | 'BINANCE';
+export type PaymentGatewayType =
+  | 'STRIPE'
+  | 'PAYGATE'
+  | 'PLISIO'
+  | 'CRYPTOMUS'
+  | 'NOWPAYMENTS'
+  | 'VOLET'
+  | 'BINANCE';
 
 /**
  * Gateway-specific API settings
@@ -992,28 +1291,28 @@ export interface GatewayApiSettings {
   stripePublishableKey?: string;
   stripeWebhookSecret?: string;
   stripeAllowedIps?: string[];
-  
+
   // Plisio settings
   plisioApiKey?: string;
   plisioApiSecret?: string;
-  
+
   // Cryptomus settings
   cryptomusMerchantId?: string;
   cryptomusApiKey?: string;
-  
+
   // NOWPayments settings
   nowpaymentsApiKey?: string;
   nowpaymentsIpnSecret?: string;
-  
+
   // PayGate.to settings
   paygateWalletAddress?: string;
   paygateApiKey?: string;
-  
+
   // Volet settings
   voletApiKey?: string;
   voletSecretKey?: string;
   voletMerchantId?: string;
-  
+
   // Binance settings
   binanceMerchantId?: string;
   binanceApiKey?: string;
@@ -1079,28 +1378,58 @@ export interface GatewayConfigsResponse {
   };
 }
 
-export const getPaymentGateways = async (params?: { isEnabled?: boolean; gateway?: PaymentGatewayType }): Promise<GatewayConfigsResponse> => {
-  const response = await apiClient.get<GatewayConfigsResponse>(API_ENDPOINTS.ADMIN.PAYMENT_GATEWAYS.ROOT, { params });
+export const getPaymentGateways = async (params?: {
+  isEnabled?: boolean;
+  gateway?: PaymentGatewayType;
+}): Promise<GatewayConfigsResponse> => {
+  const response = await apiClient.get<GatewayConfigsResponse>(
+    API_ENDPOINTS.ADMIN.PAYMENT_GATEWAYS.ROOT,
+    { params },
+  );
   return response.data;
 };
 
-export const getPaymentGateway = async (gateway: PaymentGatewayType): Promise<PaymentGatewayConfig> => {
-  const response = await apiClient.get<PaymentGatewayConfig>(API_ENDPOINTS.ADMIN.PAYMENT_GATEWAYS.DETAIL(gateway));
+export const getPaymentGateway = async (
+  gateway: PaymentGatewayType,
+): Promise<PaymentGatewayConfig> => {
+  const response = await apiClient.get<PaymentGatewayConfig>(
+    API_ENDPOINTS.ADMIN.PAYMENT_GATEWAYS.DETAIL(gateway),
+  );
   return response.data;
 };
 
-export const updatePaymentGateway = async (gateway: PaymentGatewayType, data: UpdateGatewayConfigRequest): Promise<{ message: string; data: PaymentGatewayConfig }> => {
-  const response = await apiClient.patch<{ message: string; data: PaymentGatewayConfig }>(API_ENDPOINTS.ADMIN.PAYMENT_GATEWAYS.DETAIL(gateway), data);
+export const updatePaymentGateway = async (
+  gateway: PaymentGatewayType,
+  data: UpdateGatewayConfigRequest,
+): Promise<{ message: string; data: PaymentGatewayConfig }> => {
+  const response = await apiClient.patch<{
+    message: string;
+    data: PaymentGatewayConfig;
+  }>(API_ENDPOINTS.ADMIN.PAYMENT_GATEWAYS.DETAIL(gateway), data);
   return response.data;
 };
 
-export const togglePaymentGateway = async (gateway: PaymentGatewayType, isEnabled: boolean): Promise<{ message: string; data: PaymentGatewayConfig }> => {
-  const response = await apiClient.patch<{ message: string; data: PaymentGatewayConfig }>(API_ENDPOINTS.ADMIN.PAYMENT_GATEWAYS.TOGGLE(gateway), { isEnabled });
+export const togglePaymentGateway = async (
+  gateway: PaymentGatewayType,
+  isEnabled: boolean,
+): Promise<{ message: string; data: PaymentGatewayConfig }> => {
+  const response = await apiClient.patch<{
+    message: string;
+    data: PaymentGatewayConfig;
+  }>(API_ENDPOINTS.ADMIN.PAYMENT_GATEWAYS.TOGGLE(gateway), { isEnabled });
   return response.data;
 };
 
-export const seedPaymentGateways = async (): Promise<{ message: string; created: string[]; skipped: string[] }> => {
-  const response = await apiClient.post<{ message: string; created: string[]; skipped: string[] }>(API_ENDPOINTS.ADMIN.PAYMENT_GATEWAYS.SEED);
+export const seedPaymentGateways = async (): Promise<{
+  message: string;
+  created: string[];
+  skipped: string[];
+}> => {
+  const response = await apiClient.post<{
+    message: string;
+    created: string[];
+    skipped: string[];
+  }>(API_ENDPOINTS.ADMIN.PAYMENT_GATEWAYS.SEED);
   return response.data;
 };
 
@@ -1154,43 +1483,86 @@ export interface PaygateProvidersResponse {
   };
 }
 
-export const getPaygateProviders = async (params?: { isEnabled?: boolean }): Promise<PaygateProvidersResponse> => {
-  const response = await apiClient.get<PaygateProvidersResponse>(API_ENDPOINTS.ADMIN.PAYGATE_PROVIDERS.ROOT, { params });
+export const getPaygateProviders = async (params?: {
+  isEnabled?: boolean;
+}): Promise<PaygateProvidersResponse> => {
+  const response = await apiClient.get<PaygateProvidersResponse>(
+    API_ENDPOINTS.ADMIN.PAYGATE_PROVIDERS.ROOT,
+    { params },
+  );
   return response.data;
 };
 
-export const getPaygateProvider = async (id: string): Promise<PaygateProvider> => {
-  const response = await apiClient.get<PaygateProvider>(API_ENDPOINTS.ADMIN.PAYGATE_PROVIDERS.DETAIL(id));
+export const getPaygateProvider = async (
+  id: string,
+): Promise<PaygateProvider> => {
+  const response = await apiClient.get<PaygateProvider>(
+    API_ENDPOINTS.ADMIN.PAYGATE_PROVIDERS.DETAIL(id),
+  );
   return response.data;
 };
 
-export const createPaygateProvider = async (data: CreatePaygateProviderRequest): Promise<{ message: string; data: PaygateProvider }> => {
-  const response = await apiClient.post<{ message: string; data: PaygateProvider }>(API_ENDPOINTS.ADMIN.PAYGATE_PROVIDERS.ROOT, data);
+export const createPaygateProvider = async (
+  data: CreatePaygateProviderRequest,
+): Promise<{ message: string; data: PaygateProvider }> => {
+  const response = await apiClient.post<{
+    message: string;
+    data: PaygateProvider;
+  }>(API_ENDPOINTS.ADMIN.PAYGATE_PROVIDERS.ROOT, data);
   return response.data;
 };
 
-export const updatePaygateProvider = async (id: string, data: UpdatePaygateProviderRequest): Promise<{ message: string; data: PaygateProvider }> => {
-  const response = await apiClient.patch<{ message: string; data: PaygateProvider }>(API_ENDPOINTS.ADMIN.PAYGATE_PROVIDERS.DETAIL(id), data);
+export const updatePaygateProvider = async (
+  id: string,
+  data: UpdatePaygateProviderRequest,
+): Promise<{ message: string; data: PaygateProvider }> => {
+  const response = await apiClient.patch<{
+    message: string;
+    data: PaygateProvider;
+  }>(API_ENDPOINTS.ADMIN.PAYGATE_PROVIDERS.DETAIL(id), data);
   return response.data;
 };
 
-export const togglePaygateProvider = async (id: string, isEnabled: boolean): Promise<{ message: string; data: PaygateProvider }> => {
-  const response = await apiClient.patch<{ message: string; data: PaygateProvider }>(API_ENDPOINTS.ADMIN.PAYGATE_PROVIDERS.TOGGLE(id), { isEnabled });
+export const togglePaygateProvider = async (
+  id: string,
+  isEnabled: boolean,
+): Promise<{ message: string; data: PaygateProvider }> => {
+  const response = await apiClient.patch<{
+    message: string;
+    data: PaygateProvider;
+  }>(API_ENDPOINTS.ADMIN.PAYGATE_PROVIDERS.TOGGLE(id), { isEnabled });
   return response.data;
 };
 
-export const deletePaygateProvider = async (id: string): Promise<{ message: string }> => {
-  const response = await apiClient.delete<{ message: string }>(API_ENDPOINTS.ADMIN.PAYGATE_PROVIDERS.DETAIL(id));
+export const deletePaygateProvider = async (
+  id: string,
+): Promise<{ message: string }> => {
+  const response = await apiClient.delete<{ message: string }>(
+    API_ENDPOINTS.ADMIN.PAYGATE_PROVIDERS.DETAIL(id),
+  );
   return response.data;
 };
 
-export const reorderPaygateProviders = async (orderMap: { id: string; sortOrder: number }[]): Promise<{ message: string }> => {
-  const response = await apiClient.post<{ message: string }>(API_ENDPOINTS.ADMIN.PAYGATE_PROVIDERS.REORDER, orderMap);
+export const reorderPaygateProviders = async (
+  orderMap: { id: string; sortOrder: number }[],
+): Promise<{ message: string }> => {
+  const response = await apiClient.post<{ message: string }>(
+    API_ENDPOINTS.ADMIN.PAYGATE_PROVIDERS.REORDER,
+    orderMap,
+  );
   return response.data;
 };
 
-export const seedPaygateProviders = async (): Promise<{ message: string; created: string[]; skipped: string[] }> => {
-  const response = await apiClient.post<{ message: string; created: string[]; skipped: string[] }>(API_ENDPOINTS.ADMIN.PAYGATE_PROVIDERS.SEED);
+export const seedPaygateProviders = async (): Promise<{
+  message: string;
+  created: string[];
+  skipped: string[];
+}> => {
+  const response = await apiClient.post<{
+    message: string;
+    created: string[];
+    skipped: string[];
+  }>(API_ENDPOINTS.ADMIN.PAYGATE_PROVIDERS.SEED);
   return response.data;
 };
 
@@ -1242,17 +1614,32 @@ export const getAdminWallets = async (params?: {
   sortBy?: string;
   sortOrder?: 'asc' | 'desc';
 }): Promise<AdminWalletsResponse> => {
-  const response = await apiClient.get<AdminWalletsResponse>(API_ENDPOINTS.ADMIN.WALLETS.ROOT, { params });
+  const response = await apiClient.get<AdminWalletsResponse>(
+    API_ENDPOINTS.ADMIN.WALLETS.ROOT,
+    { params },
+  );
   return response.data;
 };
 
-export const creditUserWallet = async (userId: string, data: CreditDebitRequest): Promise<{ message: string; wallet: AdminWallet }> => {
-  const response = await apiClient.post<{ message: string; wallet: AdminWallet }>(API_ENDPOINTS.ADMIN.WALLETS.CREDIT(userId), data);
+export const creditUserWallet = async (
+  userId: string,
+  data: CreditDebitRequest,
+): Promise<{ message: string; wallet: AdminWallet }> => {
+  const response = await apiClient.post<{
+    message: string;
+    wallet: AdminWallet;
+  }>(API_ENDPOINTS.ADMIN.WALLETS.CREDIT(userId), data);
   return response.data;
 };
 
-export const debitUserWallet = async (userId: string, data: CreditDebitRequest): Promise<{ message: string; wallet: AdminWallet }> => {
-  const response = await apiClient.post<{ message: string; wallet: AdminWallet }>(API_ENDPOINTS.ADMIN.WALLETS.DEBIT(userId), data);
+export const debitUserWallet = async (
+  userId: string,
+  data: CreditDebitRequest,
+): Promise<{ message: string; wallet: AdminWallet }> => {
+  const response = await apiClient.post<{
+    message: string;
+    wallet: AdminWallet;
+  }>(API_ENDPOINTS.ADMIN.WALLETS.DEBIT(userId), data);
   return response.data;
 };
 
@@ -1265,13 +1652,26 @@ export interface BulkSettingUpdate {
   value: string;
 }
 
-export const bulkUpdateSettings = async (settings: BulkSettingUpdate[]): Promise<{ message: string; updated: number }> => {
-  const response = await apiClient.post<{ message: string; updated: number }>(API_ENDPOINTS.ADMIN.SETTINGS.BULK, { settings });
+export const bulkUpdateSettings = async (
+  settings: BulkSettingUpdate[],
+): Promise<{ message: string; updated: number }> => {
+  const response = await apiClient.post<{ message: string; updated: number }>(
+    API_ENDPOINTS.ADMIN.SETTINGS.BULK,
+    { settings },
+  );
   return response.data;
 };
 
-export const getPaymentGuide = async (): Promise<{ title: string; content: string; updatedAt: string }> => {
-  const response = await apiClient.get<{ title: string; content: string; updatedAt: string }>(API_ENDPOINTS.PUBLIC.PAYMENT_GUIDE);
+export const getPaymentGuide = async (): Promise<{
+  title: string;
+  content: string;
+  updatedAt: string;
+}> => {
+  const response = await apiClient.get<{
+    title: string;
+    content: string;
+    updatedAt: string;
+  }>(API_ENDPOINTS.PUBLIC.PAYMENT_GUIDE);
   return response.data;
 };
 
@@ -1354,28 +1754,47 @@ export interface BinanceAuditLog {
   } | null;
 }
 
-export const getBinanceSessionStatus = async (): Promise<BinanceSessionStatus> => {
-  const response = await apiClient.get<BinanceSessionStatus>('/api/v1/admin/binance/session');
-  return response.data;
-};
+export const getBinanceSessionStatus =
+  async (): Promise<BinanceSessionStatus> => {
+    const response = await apiClient.get<BinanceSessionStatus>(
+      '/admin/binance/session',
+    );
+    return response.data;
+  };
 
 export const getBinanceStatistics = async (): Promise<BinanceStatistics> => {
-  const response = await apiClient.get<BinanceStatistics>('/api/v1/admin/binance/statistics');
+  const response = await apiClient.get<BinanceStatistics>(
+    '/admin/binance/statistics',
+  );
   return response.data;
 };
 
-export const getBinancePendingVerifications = async (): Promise<{ data: BinancePendingVerification[]; count: number }> => {
-  const response = await apiClient.get<{ data: BinancePendingVerification[]; count: number }>('/api/v1/admin/binance/pending');
+export const getBinancePendingVerifications = async (): Promise<{
+  data: BinancePendingVerification[];
+  count: number;
+}> => {
+  const response = await apiClient.get<{
+    data: BinancePendingVerification[];
+    count: number;
+  }>('/admin/binance/pending');
   return response.data;
 };
 
-export const getBinanceVerificationHistory = async (): Promise<{ data: BinanceVerificationHistory[] }> => {
-  const response = await apiClient.get<{ data: BinanceVerificationHistory[] }>('/api/v1/admin/binance/history');
+export const getBinanceVerificationHistory = async (): Promise<{
+  data: BinanceVerificationHistory[];
+}> => {
+  const response = await apiClient.get<{ data: BinanceVerificationHistory[] }>(
+    '/admin/binance/history',
+  );
   return response.data;
 };
 
-export const getBinanceAuditLogs = async (): Promise<{ data: BinanceAuditLog[] }> => {
-  const response = await apiClient.get<{ data: BinanceAuditLog[] }>('/api/v1/admin/binance/audit-logs');
+export const getBinanceAuditLogs = async (): Promise<{
+  data: BinanceAuditLog[];
+}> => {
+  const response = await apiClient.get<{ data: BinanceAuditLog[] }>(
+    '/admin/binance/audit-logs',
+  );
   return response.data;
 };
 
@@ -1384,7 +1803,10 @@ export const adminVerifyBinancePayment = async (data: {
   txHash?: string;
   notes?: string;
 }): Promise<{ success: boolean; message: string }> => {
-  const response = await apiClient.post<{ success: boolean; message: string }>('/api/v1/admin/binance/verify', data);
+  const response = await apiClient.post<{ success: boolean; message: string }>(
+    '/admin/binance/verify',
+    data,
+  );
   return response.data;
 };
 
@@ -1392,11 +1814,46 @@ export const adminRejectBinanceVerification = async (data: {
   verificationId: string;
   reason: string;
 }): Promise<{ success: boolean; message: string }> => {
-  const response = await apiClient.post<{ success: boolean; message: string }>('/api/v1/admin/binance/reject', data);
+  const response = await apiClient.post<{ success: boolean; message: string }>(
+    '/admin/binance/reject',
+    data,
+  );
   return response.data;
 };
 
-export const invalidateBinanceSession = async (): Promise<{ success: boolean; message: string }> => {
-  const response = await apiClient.post<{ success: boolean; message: string }>('/api/v1/admin/binance/invalidate-session');
+export const invalidateBinanceSession = async (): Promise<{
+  success: boolean;
+  message: string;
+}> => {
+  const response = await apiClient.post<{ success: boolean; message: string }>(
+    '/admin/binance/invalidate-session',
+  );
+  return response.data;
+};
+
+export interface BinanceFailedVerification extends BinanceVerificationHistory {
+  errorMessage: string | null;
+  updatedAt: string;
+}
+
+export const getBinanceFailedVerifications = async (): Promise<{
+  data: BinanceFailedVerification[];
+  count: number;
+}> => {
+  const response = await apiClient.get<{
+    data: BinanceFailedVerification[];
+    count: number;
+  }>('/admin/binance/failed');
+  return response.data;
+};
+
+export const adminResetBinanceVerification = async (data: {
+  verificationId: string;
+  reason?: string;
+}): Promise<{ success: boolean; message: string }> => {
+  const response = await apiClient.post<{ success: boolean; message: string }>(
+    '/admin/binance/reset',
+    data,
+  );
   return response.data;
 };

@@ -1,6 +1,16 @@
 'use client';
 import { useTheme } from 'next-themes';
-import { Moon, Sun, Bell, User, Check, X, Menu, Loader2, Globe } from 'lucide-react';
+import {
+  Moon,
+  Sun,
+  Bell,
+  User,
+  Check,
+  X,
+  Menu,
+  Loader2,
+  Globe,
+} from 'lucide-react';
 import { LanguagePickerDropdown } from './google-translate';
 import { Button } from './ui/button';
 import {
@@ -18,8 +28,15 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks';
-import { getWalletBalance, formatBalance, WalletBalance } from '@/lib/api/walletApi';
-import { getCurrentMembership, CurrentMembershipResponse } from '@/lib/api/membershipApi';
+import {
+  getWalletBalance,
+  formatBalance,
+  WalletBalance,
+} from '@/lib/api/walletApi';
+import {
+  getCurrentMembership,
+  CurrentMembershipResponse,
+} from '@/lib/api/membershipApi';
 import { useNotifications } from '@/contexts/NotificationContext';
 import { getNotificationIcon } from '@/lib/api/notificationsApi';
 import { formatDistanceToNow } from 'date-fns';
@@ -34,8 +51,11 @@ export function DashboardHeader({ onMenuClick }: DashboardHeaderProps = {}) {
   const { user, logout, isAuthenticated } = useAuth();
   const [mounted, setMounted] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
-  const [walletBalance, setWalletBalance] = useState<WalletBalance | null>(null);
-  const [membership, setMembership] = useState<CurrentMembershipResponse | null>(null);
+  const [walletBalance, setWalletBalance] = useState<WalletBalance | null>(
+    null,
+  );
+  const [membership, setMembership] =
+    useState<CurrentMembershipResponse | null>(null);
   const [langOpen, setLangOpen] = useState(false);
 
   const {
@@ -75,6 +95,27 @@ export function DashboardHeader({ onMenuClick }: DashboardHeaderProps = {}) {
     }
   }, [isAuthenticated, fetchHeaderData]);
 
+  // Auto-refresh balance/membership on WS notifications that change them
+  const lastNotifIdRef = useRef<string | null>(null);
+  useEffect(() => {
+    const latest = notifications[0];
+    if (!latest || latest.id === lastNotifIdRef.current) return;
+    lastNotifIdRef.current = latest.id;
+    const refreshing = new Set([
+      'PAYMENT_SUCCESS',
+      'PAYMENT_REFUNDED',
+      'WALLET_CREDITED',
+      'WALLET_DEBITED',
+      'MEMBERSHIP_SUBSCRIBED',
+      'MEMBERSHIP_UPGRADED',
+      'MEMBERSHIP_RENEWED',
+      'MEMBERSHIP_EXPIRED',
+    ]);
+    if (refreshing.has(latest.type)) {
+      fetchHeaderData();
+    }
+  }, [notifications, fetchHeaderData]);
+
   // Handle sign out
   const handleSignOut = async () => {
     try {
@@ -113,7 +154,9 @@ export function DashboardHeader({ onMenuClick }: DashboardHeaderProps = {}) {
             </button>
           )}
           {/* Logo shown only on mobile when sidebar is hidden */}
-          <span className="truncate text-sm font-bold lg:hidden">BestSMSHQ</span>
+          <span className="truncate text-sm font-bold lg:hidden">
+            BestSMSHQ
+          </span>
         </div>
 
         {/* Right side - Actions */}
@@ -131,7 +174,7 @@ export function DashboardHeader({ onMenuClick }: DashboardHeaderProps = {}) {
           </div>
 
           {/* Language Picker */}
-          <div className="relative notranslate">
+          <div className="notranslate relative">
             <Button
               variant="ghost"
               size="icon"
@@ -144,7 +187,10 @@ export function DashboardHeader({ onMenuClick }: DashboardHeaderProps = {}) {
             >
               <Globe className="h-4 w-4" />
             </Button>
-            <LanguagePickerDropdown isOpen={langOpen} onClose={() => setLangOpen(false)} />
+            <LanguagePickerDropdown
+              isOpen={langOpen}
+              onClose={() => setLangOpen(false)}
+            />
           </div>
 
           {/* Theme Toggle */}
@@ -165,7 +211,12 @@ export function DashboardHeader({ onMenuClick }: DashboardHeaderProps = {}) {
           {/* Notifications */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="relative h-9 w-9" aria-label="Notifications">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="relative h-9 w-9"
+                aria-label="Notifications"
+              >
                 <Bell className="h-4 w-4" />
                 {unreadCount > 0 && (
                   <span className="bg-destructive text-destructive-foreground absolute -top-0.5 -right-0.5 flex h-4 w-4 items-center justify-center rounded-full text-[10px] font-semibold">
@@ -227,7 +278,9 @@ export function DashboardHeader({ onMenuClick }: DashboardHeaderProps = {}) {
                               ? 'bg-primary/5 hover:bg-primary/10'
                               : 'hover:bg-muted/50'
                           }`}
-                          onClick={() => !notification.read && markAsRead(notification.id)}
+                          onClick={() =>
+                            !notification.read && markAsRead(notification.id)
+                          }
                         >
                           <div className="mt-0.5 shrink-0 text-xl sm:text-2xl">
                             {getNotificationIcon(notification.type)}
@@ -279,7 +332,12 @@ export function DashboardHeader({ onMenuClick }: DashboardHeaderProps = {}) {
           {/* Profile */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="relative h-9 w-9" aria-label="User menu">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="relative h-9 w-9"
+                aria-label="User menu"
+              >
                 <div className="bg-primary text-primary-foreground flex h-8 w-8 items-center justify-center rounded-full">
                   <User className="h-4 w-4" />
                 </div>

@@ -76,15 +76,23 @@ import {
   getGatewayIcon,
   PAYGATE_PROVIDERS,
   PaygateProvider,
+  getMyBinanceVerifications,
+  MyBinanceVerification,
 } from '@/lib/api/paymentsApi';
-import { getCurrentMembership, CurrentMembershipResponse } from '@/lib/api/membershipApi';
+import {
+  getCurrentMembership,
+  CurrentMembershipResponse,
+} from '@/lib/api/membershipApi';
 import { validateCoupon, CouponValidationResult } from '@/lib/api/couponsApi';
+import { useNotifications } from '@/contexts/NotificationContext';
 
 export default function WalletPage() {
+  const { notifications } = useNotifications();
   // Wallet state
   const [wallet, setWallet] = useState<Wallet | null>(null);
   const [transactions, setTransactions] = useState<WalletTransaction[]>([]);
-  const [membership, setMembership] = useState<CurrentMembershipResponse | null>(null);
+  const [membership, setMembership] =
+    useState<CurrentMembershipResponse | null>(null);
   const [gateways, setGateways] = useState<GatewayInfo[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
@@ -97,30 +105,50 @@ export default function WalletPage() {
 
   // Filters
   const [typeFilter, setTypeFilter] = useState<TransactionType | 'all'>('all');
-  const [statusFilter, setStatusFilter] = useState<TransactionStatus | 'all'>('all');
+  const [statusFilter, setStatusFilter] = useState<TransactionStatus | 'all'>(
+    'all',
+  );
 
   // Coupon validation state
-  const [couponValidation, setCouponValidation] = useState<CouponValidationResult | null>(null);
+  const [couponValidation, setCouponValidation] =
+    useState<CouponValidationResult | null>(null);
   const [isValidatingCoupon, setIsValidatingCoupon] = useState(false);
 
   // Deposit modal state
   const [showDepositModal, setShowDepositModal] = useState(false);
   const [amount, setAmount] = useState('');
-  const [selectedGateway, setSelectedGateway] = useState<PaymentGateway | null>(null);
-  const [selectedPaygateProvider, setSelectedPaygateProvider] = useState<PaygateProvider | null>(null);
+  const [selectedGateway, setSelectedGateway] = useState<PaymentGateway | null>(
+    null,
+  );
+  const [selectedPaygateProvider, setSelectedPaygateProvider] =
+    useState<PaygateProvider | null>(null);
   const [showPaygateProviders, setShowPaygateProviders] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [couponCode, setCouponCode] = useState('');
-  const [paymentPreview, setPaymentPreview] = useState<PaymentPreviewResponse | null>(null);
+  const [paymentPreview, setPaymentPreview] =
+    useState<PaymentPreviewResponse | null>(null);
   const [isLoadingPreview, setIsLoadingPreview] = useState(false);
-  
+
   // Payment completion state
   const [showPaymentDialog, setShowPaymentDialog] = useState(false);
   const [checkoutUrl, setCheckoutUrl] = useState<string | null>(null);
-  
+
   // Binance payment state
   const [showBinanceDialog, setShowBinanceDialog] = useState(false);
   const [binancePaymentId, setBinancePaymentId] = useState<string | null>(null);
+  const [binanceAmount, setBinanceAmount] = useState<number>(0);
+  const [pendingBinance, setPendingBinance] = useState<MyBinanceVerification[]>(
+    [],
+  );
+
+  const fetchPendingBinance = useCallback(async () => {
+    try {
+      const list = await getMyBinanceVerifications();
+      setPendingBinance(list.filter((v) => v.status === 'PENDING'));
+    } catch (err) {
+      console.error('Failed to fetch pending Binance verifications:', err);
+    }
+  }, []);
 
   // Fetch wallet data
   const fetchWalletData = useCallback(async () => {
@@ -128,12 +156,13 @@ export default function WalletPage() {
       setIsLoading(true);
       setError(null);
 
-      const [walletRes, transactionsRes, membershipRes, gatewaysRes] = await Promise.allSettled([
-        getWallet(),
-        getTransactions({ page: 1, limit: 20 }),
-        getCurrentMembership(),
-        getGateways(),
-      ]);
+      const [walletRes, transactionsRes, membershipRes, gatewaysRes] =
+        await Promise.allSettled([
+          getWallet(),
+          getTransactions({ page: 1, limit: 20 }),
+          getCurrentMembership(),
+          getGateways(),
+        ]);
 
       if (walletRes.status === 'fulfilled') {
         setWallet(walletRes.value);
@@ -153,11 +182,46 @@ export default function WalletPage() {
         setGateways(gatewaysRes.value);
       } else {
         const defaultGateways: GatewayInfo[] = [
-          { gateway: 'STRIPE', name: 'Stripe', enabled: true, minAmount: 1, maxAmount: 10000, currencies: ['USD'] },
-          { gateway: 'PAYGATE', name: 'PayGate Card Getaways', enabled: true, minAmount: 1, maxAmount: 5000, currencies: ['USD'] },
-          { gateway: 'PLISIO', name: 'Crypto Plisio', enabled: true, minAmount: 1, maxAmount: 10000, currencies: ['USD'] },
-          { gateway: 'CRYPTOMUS', name: 'Cryptomus', enabled: true, minAmount: 10, maxAmount: 10000, currencies: ['USD'] },
-          { gateway: 'NOWPAYMENTS', name: 'NOWPayments', enabled: true, minAmount: 10, maxAmount: 10000, currencies: ['USD'] },
+          {
+            gateway: 'STRIPE',
+            name: 'Stripe',
+            enabled: true,
+            minAmount: 1,
+            maxAmount: 10000,
+            currencies: ['USD'],
+          },
+          {
+            gateway: 'PAYGATE',
+            name: 'PayGate Card Getaways',
+            enabled: true,
+            minAmount: 1,
+            maxAmount: 5000,
+            currencies: ['USD'],
+          },
+          {
+            gateway: 'PLISIO',
+            name: 'Crypto Plisio',
+            enabled: true,
+            minAmount: 1,
+            maxAmount: 10000,
+            currencies: ['USD'],
+          },
+          {
+            gateway: 'CRYPTOMUS',
+            name: 'Cryptomus',
+            enabled: true,
+            minAmount: 10,
+            maxAmount: 10000,
+            currencies: ['USD'],
+          },
+          {
+            gateway: 'NOWPAYMENTS',
+            name: 'NOWPayments',
+            enabled: true,
+            minAmount: 10,
+            maxAmount: 10000,
+            currencies: ['USD'],
+          },
         ];
         setGateways(defaultGateways);
       }
@@ -170,48 +234,80 @@ export default function WalletPage() {
   }, []);
 
   // Fetch transactions with filters
-  const fetchTransactions = useCallback(async (pageNum: number, append: boolean = false) => {
-    try {
-      if (append) {
-        setIsLoadingMore(true);
+  const fetchTransactions = useCallback(
+    async (pageNum: number, append: boolean = false) => {
+      try {
+        if (append) {
+          setIsLoadingMore(true);
+        }
+
+        const params: TransactionQueryParams = {
+          page: pageNum,
+          limit: 20,
+        };
+
+        if (typeFilter !== 'all') {
+          params.type = typeFilter;
+        }
+
+        if (statusFilter !== 'all') {
+          params.status = statusFilter;
+        }
+
+        const response = await getTransactions(params);
+
+        if (append) {
+          setTransactions((prev) => [...prev, ...response.data]);
+        } else {
+          setTransactions(response.data);
+        }
+
+        setTotalTransactions(response.meta.total);
+        setHasMore(response.meta.hasNextPage);
+        setPage(pageNum);
+      } catch (err) {
+        console.error('Failed to fetch transactions:', err);
+        toast.error('Failed to load transactions');
+      } finally {
+        setIsLoadingMore(false);
       }
-
-      const params: TransactionQueryParams = {
-        page: pageNum,
-        limit: 20,
-      };
-
-      if (typeFilter !== 'all') {
-        params.type = typeFilter;
-      }
-
-      if (statusFilter !== 'all') {
-        params.status = statusFilter;
-      }
-
-      const response = await getTransactions(params);
-
-      if (append) {
-        setTransactions(prev => [...prev, ...response.data]);
-      } else {
-        setTransactions(response.data);
-      }
-
-      setTotalTransactions(response.meta.total);
-      setHasMore(response.meta.hasNextPage);
-      setPage(pageNum);
-    } catch (err) {
-      console.error('Failed to fetch transactions:', err);
-      toast.error('Failed to load transactions');
-    } finally {
-      setIsLoadingMore(false);
-    }
-  }, [typeFilter, statusFilter]);
+    },
+    [typeFilter, statusFilter],
+  );
 
   // Initial load
   useEffect(() => {
     fetchWalletData();
-  }, [fetchWalletData]);
+    fetchPendingBinance();
+  }, [fetchWalletData, fetchPendingBinance]);
+
+  // Auto-refresh on incoming PAYMENT_SUCCESS notification (admin verified Binance)
+  useEffect(() => {
+    const latest = notifications[0];
+    if (!latest) return;
+    if (latest.type === 'PAYMENT_SUCCESS') {
+      fetchWalletData();
+      fetchPendingBinance();
+      // Auto-close dialog if open and it matches the verified payment
+      const data = latest.data as { paymentId?: string } | null;
+      if (
+        showBinanceDialog &&
+        binancePaymentId &&
+        data?.paymentId === binancePaymentId
+      ) {
+        setShowBinanceDialog(false);
+        setBinancePaymentId(null);
+        setBinanceAmount(0);
+        toast.success('Payment verified! Balance credited.');
+      }
+    }
+  }, [
+    notifications,
+    fetchWalletData,
+    fetchPendingBinance,
+    showBinanceDialog,
+    binancePaymentId,
+  ]);
 
   // Fetch payment preview when amount or gateway changes
   useEffect(() => {
@@ -248,7 +344,12 @@ export default function WalletPage() {
   // Validate coupon when code or amount changes
   useEffect(() => {
     const numAmount = parseFloat(amount);
-    if (!couponCode || couponCode.length < 3 || !numAmount || numAmount < MIN_AMOUNT) {
+    if (
+      !couponCode ||
+      couponCode.length < 3 ||
+      !numAmount ||
+      numAmount < MIN_AMOUNT
+    ) {
       setCouponValidation(null);
       return;
     }
@@ -305,12 +406,12 @@ export default function WalletPage() {
   // Handle gateway selection
   const handleGatewaySelect = (gateway: GatewayInfo) => {
     const numAmount = parseFloat(amount) || 0;
-    
+
     // Check if amount meets minimum
     if (numAmount < gateway.minAmount) {
       return; // Card is disabled, do nothing
     }
-    
+
     if (gateway.gateway === 'PAYGATE') {
       setSelectedGateway('PAYGATE');
       setShowPaygateProviders(true);
@@ -325,12 +426,12 @@ export default function WalletPage() {
   // Handle PayGate provider selection
   const handlePaygateProviderSelect = (provider: PaygateProvider) => {
     const numAmount = parseFloat(amount) || 0;
-    const providerInfo = PAYGATE_PROVIDERS.find(p => p.id === provider);
-    
+    const providerInfo = PAYGATE_PROVIDERS.find((p) => p.id === provider);
+
     if (providerInfo && numAmount < providerInfo.minAmount) {
       return; // Card is disabled
     }
-    
+
     setSelectedPaygateProvider(provider);
   };
 
@@ -344,10 +445,12 @@ export default function WalletPage() {
   // Handle payment confirmation
   const handleConfirmPayment = async () => {
     if (!selectedGateway) return;
-    
+
     const numAmount = parseFloat(amount);
     if (!amount || isNaN(numAmount) || !isValidAmount(numAmount)) {
-      toast.error(`Amount must be between $${MIN_AMOUNT} and $${MAX_AMOUNT.toLocaleString()}`);
+      toast.error(
+        `Amount must be between $${MIN_AMOUNT} and $${MAX_AMOUNT.toLocaleString()}`,
+      );
       return;
     }
 
@@ -363,11 +466,15 @@ export default function WalletPage() {
       const response = await createPayment({
         amount: numAmount,
         gateway: selectedGateway,
-        paygateProvider: selectedGateway === 'PAYGATE' ? selectedPaygateProvider! : undefined,
+        paygateProvider:
+          selectedGateway === 'PAYGATE' ? selectedPaygateProvider! : undefined,
         successUrl: `${window.location.origin}/dashboard/wallet?payment=success`,
         cancelUrl: `${window.location.origin}/dashboard/wallet?payment=cancelled`,
         ...(couponCode ? { couponCode } : {}),
       });
+
+      // Snapshot amount BEFORE closing modal (resetDepositModal clears it)
+      const snapshotAmount = numAmount;
 
       // Close deposit modal
       closeDepositModal();
@@ -375,8 +482,11 @@ export default function WalletPage() {
       // Handle Binance payments differently
       if (selectedGateway === 'BINANCE') {
         setBinancePaymentId(response.paymentId);
+        setBinanceAmount(snapshotAmount);
         setShowBinanceDialog(true);
-        toast.info('Please complete the Binance transfer and enter your Order ID');
+        toast.info(
+          'Please complete the Binance transfer and enter your Order ID',
+        );
         return;
       }
 
@@ -436,10 +546,10 @@ export default function WalletPage() {
   };
 
   // Check if payment summary should show
-  const showPaymentSummary = selectedGateway && (
-    (selectedGateway !== 'PAYGATE') || 
-    (selectedGateway === 'PAYGATE' && selectedPaygateProvider)
-  );
+  const showPaymentSummary =
+    selectedGateway &&
+    (selectedGateway !== 'PAYGATE' ||
+      (selectedGateway === 'PAYGATE' && selectedPaygateProvider));
 
   // Get current amount
   const numAmount = parseFloat(amount) || 0;
@@ -490,23 +600,27 @@ export default function WalletPage() {
       {/* Balance and Quick Actions */}
       <div className="grid gap-6 md:grid-cols-3">
         {/* Balance Card */}
-        <Card className="md:col-span-2 bg-gradient-to-br from-primary/10 via-background to-background border-primary/20">
+        <Card className="from-primary/10 via-background to-background border-primary/20 bg-gradient-to-br md:col-span-2">
           <CardContent className="p-6">
-            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
+            <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
               <div>
-                <p className="text-muted-foreground text-sm font-medium mb-1">Available Balance</p>
-                <p className="text-4xl md:text-5xl font-bold text-primary">
-                  {wallet ? formatBalance(wallet.balance, wallet.currency) : '$0.00'}
+                <p className="text-muted-foreground mb-1 text-sm font-medium">
+                  Available Balance
+                </p>
+                <p className="text-primary text-4xl font-bold md:text-5xl">
+                  {wallet
+                    ? formatBalance(wallet.balance, wallet.currency)
+                    : '$0.00'}
                 </p>
                 {wallet?.isLocked && (
-                  <p className="text-destructive flex items-center gap-1 mt-2 text-sm">
+                  <p className="text-destructive mt-2 flex items-center gap-1 text-sm">
                     <Lock className="h-3 w-3" />
                     Wallet locked: {wallet.lockedReason}
                   </p>
                 )}
               </div>
-              <Button 
-                size="lg" 
+              <Button
+                size="lg"
                 onClick={openDepositModal}
                 disabled={wallet?.isLocked}
                 className="h-14 px-8 text-lg font-semibold"
@@ -520,38 +634,104 @@ export default function WalletPage() {
 
         {/* Stats Card */}
         <Card>
-          <CardContent className="p-6 space-y-4">
-            <div className="flex justify-between items-center">
-              <span className="text-muted-foreground text-sm">Total Deposited</span>
-              <span className="font-semibold text-success">
-                {wallet ? formatBalance(wallet.totalDeposited, wallet.currency) : '$0.00'}
+          <CardContent className="space-y-4 p-6">
+            <div className="flex items-center justify-between">
+              <span className="text-muted-foreground text-sm">
+                Total Deposited
+              </span>
+              <span className="text-success font-semibold">
+                {wallet
+                  ? formatBalance(wallet.totalDeposited, wallet.currency)
+                  : '$0.00'}
               </span>
             </div>
-            <div className="flex justify-between items-center">
+            <div className="flex items-center justify-between">
               <span className="text-muted-foreground text-sm">Total Spent</span>
               <span className="font-semibold">
-                {wallet ? formatBalance(wallet.totalSpent, wallet.currency) : '$0.00'}
+                {wallet
+                  ? formatBalance(wallet.totalSpent, wallet.currency)
+                  : '$0.00'}
               </span>
             </div>
-            <div className="flex justify-between items-center">
-              <span className="text-muted-foreground text-sm">Total Refunded</span>
+            <div className="flex items-center justify-between">
+              <span className="text-muted-foreground text-sm">
+                Total Refunded
+              </span>
               <span className="font-semibold">
-                {wallet ? formatBalance(wallet.totalRefunded, wallet.currency) : '$0.00'}
+                {wallet
+                  ? formatBalance(wallet.totalRefunded, wallet.currency)
+                  : '$0.00'}
               </span>
             </div>
             {membership?.currentPlan && membership.discount > 0 && (
-              <div className="flex justify-between items-center pt-2 border-t">
+              <div className="flex items-center justify-between border-t pt-2">
                 <span className="text-muted-foreground text-sm">
                   {membership.currentPlan.name} Savings
                 </span>
-                <span className="font-semibold text-success">
-                  {wallet ? formatBalance(wallet.totalBonus, wallet.currency) : '$0.00'}
+                <span className="text-success font-semibold">
+                  {wallet
+                    ? formatBalance(wallet.totalBonus, wallet.currency)
+                    : '$0.00'}
                 </span>
               </div>
             )}
           </CardContent>
         </Card>
       </div>
+
+      {/* Pending Binance Verifications */}
+      {pendingBinance.length > 0 && (
+        <Card className="border-amber-500/30 bg-amber-500/5">
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-2 text-base">
+              <span className="text-xl">🔶</span>
+              Pending Binance Payments
+            </CardTitle>
+            <CardDescription>
+              These deposits are awaiting admin verification. You can resume to
+              update Order ID or check status.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {pendingBinance.map((v) => (
+              <div
+                key={v.id}
+                className="bg-background/40 flex flex-col gap-2 rounded-lg border border-amber-500/20 p-3 sm:flex-row sm:items-center sm:justify-between"
+              >
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <span className="font-semibold">
+                      ${v.amount.toFixed(2)}
+                    </span>
+                    <span className="text-muted-foreground text-xs">
+                      {v.currency}
+                    </span>
+                    <span className="rounded bg-amber-500/20 px-2 py-0.5 text-xs text-amber-500">
+                      PENDING
+                    </span>
+                  </div>
+                  <div className="text-muted-foreground text-xs">
+                    {v.orderId
+                      ? `Order ID: ${v.orderId} · Submitted ${new Date(v.createdAt).toLocaleString()}`
+                      : `Created ${new Date(v.createdAt).toLocaleString()} · No Order ID yet`}
+                  </div>
+                </div>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => {
+                    setBinancePaymentId(v.paymentId);
+                    setBinanceAmount(v.amount);
+                    setShowBinanceDialog(true);
+                  }}
+                >
+                  Resume
+                </Button>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      )}
 
       {/* Transaction History */}
       <Card>
@@ -566,7 +746,9 @@ export default function WalletPage() {
             <div className="flex flex-wrap gap-2">
               <Select
                 value={typeFilter}
-                onValueChange={(v) => setTypeFilter(v as TransactionType | 'all')}
+                onValueChange={(v) =>
+                  setTypeFilter(v as TransactionType | 'all')
+                }
               >
                 <SelectTrigger className="w-[130px] sm:w-[140px]">
                   <SelectValue placeholder="Type" />
@@ -583,7 +765,9 @@ export default function WalletPage() {
               </Select>
               <Select
                 value={statusFilter}
-                onValueChange={(v) => setStatusFilter(v as TransactionStatus | 'all')}
+                onValueChange={(v) =>
+                  setStatusFilter(v as TransactionStatus | 'all')
+                }
               >
                 <SelectTrigger className="w-[130px] sm:w-[140px]">
                   <SelectValue placeholder="Status" />
@@ -620,9 +804,13 @@ export default function WalletPage() {
                   <TableHeader>
                     <TableRow>
                       <TableHead>Transaction</TableHead>
-                      <TableHead className="table-hide-mobile">Description</TableHead>
+                      <TableHead className="table-hide-mobile">
+                        Description
+                      </TableHead>
                       <TableHead className="table-hide-tablet">Date</TableHead>
-                      <TableHead className="table-hide-mobile">Status</TableHead>
+                      <TableHead className="table-hide-mobile">
+                        Status
+                      </TableHead>
                       <TableHead className="text-right">Amount</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -677,7 +865,7 @@ export default function WalletPage() {
                               {isPositiveTransaction(txn.type) ? '+' : '-'}
                               {formatBalance(
                                 Math.abs(parseFloat(txn.amount)).toString(),
-                                'USD'
+                                'USD',
                               )}
                             </span>
                             <Badge
@@ -719,19 +907,21 @@ export default function WalletPage() {
 
       {/* Deposit Modal - CheapStreamTV Style (Single Page) */}
       <Dialog open={showDepositModal} onOpenChange={setShowDepositModal}>
-        <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto p-0 gap-0">
+        <DialogContent className="max-h-[90vh] gap-0 overflow-y-auto p-0 sm:max-w-[600px]">
           {/* Modal Header */}
           <DialogHeader className="p-6 pb-0">
             <DialogTitle className="text-xl font-bold">Add Funds</DialogTitle>
-            <p className="text-muted-foreground text-sm mt-1">
+            <p className="text-muted-foreground mt-1 text-sm">
               Enter amount and select your preferred payment method
             </p>
           </DialogHeader>
 
-          <div className="p-6 space-y-6">
+          <div className="space-y-6 p-6">
             {/* Amount Input */}
             <div className="space-y-2">
-              <label className="text-sm font-medium text-muted-foreground">Amount ($)</label>
+              <label className="text-muted-foreground text-sm font-medium">
+                Amount ($)
+              </label>
               <Input
                 type="number"
                 placeholder="Enter amount"
@@ -742,19 +932,19 @@ export default function WalletPage() {
                 max={MAX_AMOUNT}
                 autoFocus
               />
-              
+
               {/* Validation Message */}
               {numAmount > 0 && numAmount >= MIN_AMOUNT ? (
-                <p className="text-sm text-success flex items-center gap-1.5">
+                <p className="text-success flex items-center gap-1.5 text-sm">
                   <CheckCircle2 className="h-4 w-4" />
                   Amount is valid! Select a payment method below.
                 </p>
               ) : numAmount > 0 ? (
-                <p className="text-sm text-muted-foreground">
+                <p className="text-muted-foreground text-sm">
                   Enter amount above to enable payment methods
                 </p>
               ) : (
-                <p className="text-sm text-muted-foreground">
+                <p className="text-muted-foreground text-sm">
                   Enter amount above to enable payment methods
                 </p>
               )}
@@ -762,37 +952,42 @@ export default function WalletPage() {
 
             {/* Coupon Code - Always visible, right after amount like CheapStreamTV */}
             <div className="space-y-2">
-              <label className="text-sm font-medium text-muted-foreground">Coupon Code (optional)</label>
+              <label className="text-muted-foreground text-sm font-medium">
+                Coupon Code (optional)
+              </label>
               <div className="relative">
                 <Input
                   placeholder="Enter coupon code for bonus"
                   value={couponCode}
                   onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
                   className={`h-12 pr-10 ${
-                    couponValidation?.valid 
-                      ? 'border-success focus:border-success' 
-                      : couponValidation && !couponValidation.valid 
+                    couponValidation?.valid
+                      ? 'border-success focus:border-success'
+                      : couponValidation && !couponValidation.valid
                         ? 'border-destructive focus:border-destructive'
                         : ''
                   }`}
                 />
                 {isValidatingCoupon && (
-                  <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground" />
+                  <Loader2 className="text-muted-foreground absolute top-1/2 right-3 h-4 w-4 -translate-y-1/2 animate-spin" />
                 )}
                 {!isValidatingCoupon && couponValidation?.valid && (
-                  <CheckCircle2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-success" />
+                  <CheckCircle2 className="text-success absolute top-1/2 right-3 h-4 w-4 -translate-y-1/2" />
                 )}
-                {!isValidatingCoupon && couponValidation && !couponValidation.valid && (
-                  <AlertCircle className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-destructive" />
-                )}
+                {!isValidatingCoupon &&
+                  couponValidation &&
+                  !couponValidation.valid && (
+                    <AlertCircle className="text-destructive absolute top-1/2 right-3 h-4 w-4 -translate-y-1/2" />
+                  )}
               </div>
               {/* Coupon validation message */}
               {couponValidation && (
-                <p className={`text-sm ${couponValidation.valid ? 'text-success' : 'text-destructive'}`}>
-                  {couponValidation.valid 
+                <p
+                  className={`text-sm ${couponValidation.valid ? 'text-success' : 'text-destructive'}`}
+                >
+                  {couponValidation.valid
                     ? `Coupon valid! You'll get +$${couponValidation.discount.toFixed(2)} bonus (${couponValidation.coupon?.type === 'PERCENTAGE' ? `${couponValidation.coupon.value}%` : `$${couponValidation.coupon?.value}`})`
-                    : couponValidation.message || 'Invalid coupon code'
-                  }
+                    : couponValidation.message || 'Invalid coupon code'}
                 </p>
               )}
             </div>
@@ -800,64 +995,72 @@ export default function WalletPage() {
             {/* Payment Methods Grid - Always Visible */}
             {!showPaygateProviders && (
               <div className="grid grid-cols-3 gap-3">
-                {gateways.filter(g => g.enabled).map((gateway) => {
-                  const isDisabled = numAmount < gateway.minAmount;
-                  const needsMore = gateway.minAmount - numAmount;
-                  
-                  return (
-                    <button
-                      key={gateway.gateway}
-                      onClick={() => handleGatewaySelect(gateway)}
-                      disabled={isDisabled}
-                      className={`relative p-4 rounded-xl border-2 transition-all text-center flex flex-col items-center justify-center min-h-[120px] ${
-                        selectedGateway === gateway.gateway && !showPaygateProviders
-                          ? 'border-primary bg-primary/5'
-                          : isDisabled
-                            ? 'border-border/50 opacity-60 cursor-not-allowed'
-                            : 'border-border hover:border-primary/50 hover:bg-muted/30'
-                      }`}
-                    >
-                      {/* Gateway Icon/Image */}
-                      <div className="mb-2">
-                        {gateway.imageUrl ? (
-                          <img 
-                            src={gateway.imageUrl} 
-                            alt={gateway.name} 
-                            className="h-10 w-auto max-w-[80px] object-contain"
-                          />
-                        ) : gateway.gateway === 'STRIPE' ? (
-                          <div className="h-10 flex items-center justify-center">
-                            <svg viewBox="0 0 60 25" className="h-6 w-auto fill-current">
-                              <path d="M59.64 14.28h-8.06c.19 1.93 1.6 2.55 3.2 2.55 1.64 0 2.96-.37 4.05-.95v3.32a8.33 8.33 0 0 1-4.56 1.1c-4.01 0-6.83-2.5-6.83-7.48 0-4.19 2.39-7.52 6.3-7.52 3.92 0 5.96 3.28 5.96 7.5 0 .4-.02 1.04-.06 1.48zm-6.3-5.63c-1.03 0-2.07.73-2.27 2.59h4.46c-.03-1.67-.82-2.59-2.19-2.59zM40.95 20.3c-1.44 0-2.32-.6-2.9-1.04l-.02 4.63-4.12.87V5.57h3.76l.08 1.02c.58-.68 1.8-1.34 3.45-1.34 3.38 0 5.47 3.03 5.47 7.43 0 5.2-2.54 7.62-5.72 7.62zm-.8-11.23c-1.03 0-1.76.55-2.12 1.05l-.02 5.44c.32.45 1.06 1.01 2.1 1.01 1.59 0 2.59-1.72 2.59-3.79 0-2.04-.95-3.71-2.55-3.71zm-8.24-3.57v14.79h-4.14V5.5h4.14zm0-4.65L27.77.92v3.26l4.14-.87v-.43zM18.69 7.27c-.4-.11-.89-.17-1.45-.17-1.67 0-2.82.77-3.47 1.68v-3.21h-4.14v14.72h4.14v-7.77c.6-.97 1.71-1.66 3.07-1.66.51 0 .96.06 1.41.17l.44-3.76zM5.92 14.99c0 .75.45.97 1.32.97.52 0 1.05-.08 1.42-.21v3.11c-.79.4-1.85.64-3.08.64-3.04 0-3.8-1.58-3.8-3.79V8.87H0V5.57h1.78V2.32l4.14-.87v4.12h2.76v3.3H5.92v6.12z" />
-                            </svg>
-                          </div>
+                {gateways
+                  .filter((g) => g.enabled)
+                  .map((gateway) => {
+                    const isDisabled = numAmount < gateway.minAmount;
+                    const needsMore = gateway.minAmount - numAmount;
+
+                    return (
+                      <button
+                        key={gateway.gateway}
+                        onClick={() => handleGatewaySelect(gateway)}
+                        disabled={isDisabled}
+                        className={`relative flex min-h-[120px] flex-col items-center justify-center rounded-xl border-2 p-4 text-center transition-all ${
+                          selectedGateway === gateway.gateway &&
+                          !showPaygateProviders
+                            ? 'border-primary bg-primary/5'
+                            : isDisabled
+                              ? 'border-border/50 cursor-not-allowed opacity-60'
+                              : 'border-border hover:border-primary/50 hover:bg-muted/30'
+                        }`}
+                      >
+                        {/* Gateway Icon/Image */}
+                        <div className="mb-2">
+                          {gateway.imageUrl ? (
+                            <img
+                              src={gateway.imageUrl}
+                              alt={gateway.name}
+                              className="h-10 w-auto max-w-[80px] object-contain"
+                            />
+                          ) : gateway.gateway === 'STRIPE' ? (
+                            <div className="flex h-10 items-center justify-center">
+                              <svg
+                                viewBox="0 0 60 25"
+                                className="h-6 w-auto fill-current"
+                              >
+                                <path d="M59.64 14.28h-8.06c.19 1.93 1.6 2.55 3.2 2.55 1.64 0 2.96-.37 4.05-.95v3.32a8.33 8.33 0 0 1-4.56 1.1c-4.01 0-6.83-2.5-6.83-7.48 0-4.19 2.39-7.52 6.3-7.52 3.92 0 5.96 3.28 5.96 7.5 0 .4-.02 1.04-.06 1.48zm-6.3-5.63c-1.03 0-2.07.73-2.27 2.59h4.46c-.03-1.67-.82-2.59-2.19-2.59zM40.95 20.3c-1.44 0-2.32-.6-2.9-1.04l-.02 4.63-4.12.87V5.57h3.76l.08 1.02c.58-.68 1.8-1.34 3.45-1.34 3.38 0 5.47 3.03 5.47 7.43 0 5.2-2.54 7.62-5.72 7.62zm-.8-11.23c-1.03 0-1.76.55-2.12 1.05l-.02 5.44c.32.45 1.06 1.01 2.1 1.01 1.59 0 2.59-1.72 2.59-3.79 0-2.04-.95-3.71-2.55-3.71zm-8.24-3.57v14.79h-4.14V5.5h4.14zm0-4.65L27.77.92v3.26l4.14-.87v-.43zM18.69 7.27c-.4-.11-.89-.17-1.45-.17-1.67 0-2.82.77-3.47 1.68v-3.21h-4.14v14.72h4.14v-7.77c.6-.97 1.71-1.66 3.07-1.66.51 0 .96.06 1.41.17l.44-3.76zM5.92 14.99c0 .75.45.97 1.32.97.52 0 1.05-.08 1.42-.21v3.11c-.79.4-1.85.64-3.08.64-3.04 0-3.8-1.58-3.8-3.79V8.87H0V5.57h1.78V2.32l4.14-.87v4.12h2.76v3.3H5.92v6.12z" />
+                              </svg>
+                            </div>
+                          ) : (
+                            <span className="text-3xl">
+                              {getGatewayIcon(gateway.gateway)}
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Gateway Name */}
+                        <p className="text-sm font-medium">
+                          {gateway.name || getGatewayName(gateway.gateway)}
+                        </p>
+
+                        {/* Price or "Need more" message */}
+                        {isDisabled ? (
+                          <p className="text-destructive mt-1 text-xs">
+                            Need ${needsMore.toFixed(2)} more
+                          </p>
+                        ) : numAmount > 0 ? (
+                          <p className="text-primary mt-1 text-sm font-semibold">
+                            ${numAmount.toFixed(2)}
+                          </p>
                         ) : (
-                          <span className="text-3xl">{getGatewayIcon(gateway.gateway)}</span>
+                          <p className="text-muted-foreground mt-1 text-xs">
+                            Min: ${gateway.minAmount}
+                          </p>
                         )}
-                      </div>
-                      
-                      {/* Gateway Name */}
-                      <p className="font-medium text-sm">
-                        {gateway.name || getGatewayName(gateway.gateway)}
-                      </p>
-                      
-                      {/* Price or "Need more" message */}
-                      {isDisabled ? (
-                        <p className="text-xs text-destructive mt-1">
-                          Need ${needsMore.toFixed(2)} more
-                        </p>
-                      ) : numAmount > 0 ? (
-                        <p className="text-sm font-semibold text-primary mt-1">
-                          ${numAmount.toFixed(2)}
-                        </p>
-                      ) : (
-                        <p className="text-xs text-muted-foreground mt-1">
-                          Min: ${gateway.minAmount}
-                        </p>
-                      )}
-                    </button>
-                  );
-                })}
+                      </button>
+                    );
+                  })}
               </div>
             )}
 
@@ -867,74 +1070,81 @@ export default function WalletPage() {
                 {/* Back Button */}
                 <button
                   onClick={handleBackFromProviders}
-                  className="flex items-center gap-1 text-sm text-primary hover:underline"
+                  className="text-primary flex items-center gap-1 text-sm hover:underline"
                 >
                   <ArrowLeft className="h-4 w-4" />
                   Change Payment Method
                 </button>
 
                 <div>
-                  <h3 className="text-lg font-semibold mb-1">Select Payment Provider</h3>
-                  <p className="text-muted-foreground text-sm">Choose how you want to pay with PayGate</p>
+                  <h3 className="mb-1 text-lg font-semibold">
+                    Select Payment Provider
+                  </h3>
+                  <p className="text-muted-foreground text-sm">
+                    Choose how you want to pay with PayGate
+                  </p>
                 </div>
 
                 {/* Card Payments Header */}
-                <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+                <div className="text-muted-foreground flex items-center gap-2 text-sm font-medium">
                   <CreditCard className="h-4 w-4 text-yellow-500" />
                   Card Payments
                 </div>
 
                 {/* Providers Grid */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                   {PAYGATE_PROVIDERS.map((provider) => {
                     const isDisabled = numAmount < provider.minAmount;
                     const needsMore = provider.minAmount - numAmount;
                     const isSelected = selectedPaygateProvider === provider.id;
-                    
+
                     return (
                       <button
                         key={provider.id}
                         onClick={() => handlePaygateProviderSelect(provider.id)}
                         disabled={isDisabled}
-                        className={`p-4 rounded-xl border-2 text-left transition-all ${
+                        className={`rounded-xl border-2 p-4 text-left transition-all ${
                           isSelected
                             ? 'border-primary bg-primary/5'
                             : isDisabled
-                              ? 'border-border/50 opacity-60 cursor-not-allowed'
+                              ? 'border-border/50 cursor-not-allowed opacity-60'
                               : 'border-border hover:border-primary/50 hover:bg-muted/30'
                         }`}
                       >
                         <div className="flex items-start justify-between gap-2">
-                          <div className="flex-1 min-w-0">
-                            <p className="font-semibold flex items-center gap-2 flex-wrap">
+                          <div className="min-w-0 flex-1">
+                            <p className="flex flex-wrap items-center gap-2 font-semibold">
                               {provider.name}
                               {provider.recommended && (
-                                <Badge variant="secondary" className="text-[10px] bg-primary/10 text-primary">
+                                <Badge
+                                  variant="secondary"
+                                  className="bg-primary/10 text-primary text-[10px]"
+                                >
                                   Recommended
                                 </Badge>
                               )}
                             </p>
-                            <p className="text-muted-foreground text-xs mt-1 line-clamp-2">
+                            <p className="text-muted-foreground mt-1 line-clamp-2 text-xs">
                               {provider.description}
                             </p>
-                            
+
                             {/* Min amount / Need more */}
                             {isDisabled ? (
-                              <p className="text-xs text-destructive mt-2">
+                              <p className="text-destructive mt-2 text-xs">
                                 You need ${needsMore.toFixed(2)} more for
                               </p>
                             ) : (
-                              <p className="text-xs text-primary mt-2">
+                              <p className="text-primary mt-2 text-xs">
                                 Min:: ${provider.minAmount}
                               </p>
                             )}
                           </div>
-                          
+
                           {/* Icon */}
                           {provider.id === 'multi' ? (
-                            <Globe className="h-8 w-8 text-primary/60 flex-shrink-0" />
+                            <Globe className="text-primary/60 h-8 w-8 flex-shrink-0" />
                           ) : (
-                            <CreditCard className="h-8 w-8 text-yellow-500/60 flex-shrink-0" />
+                            <CreditCard className="h-8 w-8 flex-shrink-0 text-yellow-500/60" />
                           )}
                         </div>
                       </button>
@@ -946,65 +1156,91 @@ export default function WalletPage() {
 
             {/* Payment Summary - Shows at bottom when method is selected */}
             {showPaymentSummary && (
-              <div className="border-t pt-4 mt-4">
-                <div className="bg-muted/30 rounded-xl p-4 space-y-3">
+              <div className="mt-4 border-t pt-4">
+                <div className="bg-muted/30 space-y-3 rounded-xl p-4">
                   <div className="flex items-center justify-between">
                     <h4 className="font-semibold">Payment Summary</h4>
-                    <button 
+                    <button
                       onClick={closePaymentSummary}
                       className="text-muted-foreground hover:text-foreground"
                     >
                       <X className="h-4 w-4" />
                     </button>
                   </div>
-                  
+
                   <div className="space-y-2 text-sm">
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Method:</span>
                       <span className="font-medium">
-                        {selectedGateway === 'PAYGATE' 
-                          ? 'Paygate Card Getaways' 
+                        {selectedGateway === 'PAYGATE'
+                          ? 'Paygate Card Getaways'
                           : getGatewayName(selectedGateway!)}
                       </span>
                     </div>
-                    
-                    {selectedGateway === 'PAYGATE' && selectedPaygateProvider && (
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Provider:</span>
-                        <span className="font-medium text-primary">
-                          {PAYGATE_PROVIDERS.find(p => p.id === selectedPaygateProvider)?.name}
-                          {PAYGATE_PROVIDERS.find(p => p.id === selectedPaygateProvider)?.recommended && (
-                            <span className="text-muted-foreground ml-1">(Recommended)</span>
-                          )}
-                        </span>
-                      </div>
-                    )}
-                    
+
+                    {selectedGateway === 'PAYGATE' &&
+                      selectedPaygateProvider && (
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">
+                            Provider:
+                          </span>
+                          <span className="text-primary font-medium">
+                            {
+                              PAYGATE_PROVIDERS.find(
+                                (p) => p.id === selectedPaygateProvider,
+                              )?.name
+                            }
+                            {PAYGATE_PROVIDERS.find(
+                              (p) => p.id === selectedPaygateProvider,
+                            )?.recommended && (
+                              <span className="text-muted-foreground ml-1">
+                                (Recommended)
+                              </span>
+                            )}
+                          </span>
+                        </div>
+                      )}
+
                     <div className="flex justify-between">
-                      <span className="text-muted-foreground">Deposit Amount:</span>
-                      <span className="font-medium">${numAmount.toFixed(2)}</span>
+                      <span className="text-muted-foreground">
+                        Deposit Amount:
+                      </span>
+                      <span className="font-medium">
+                        ${numAmount.toFixed(2)}
+                      </span>
                     </div>
 
                     {/* Coupon Bonus - Show if valid coupon applied */}
-                    {couponValidation?.valid && couponValidation.discount > 0 && (
-                      <div className="flex justify-between text-success">
-                        <span>Coupon Bonus ({couponCode}):</span>
-                        <span className="font-medium">+${couponValidation.discount.toFixed(2)}</span>
-                      </div>
-                    )}
+                    {couponValidation?.valid &&
+                      couponValidation.discount > 0 && (
+                        <div className="text-success flex justify-between">
+                          <span>Coupon Bonus ({couponCode}):</span>
+                          <span className="font-medium">
+                            +${couponValidation.discount.toFixed(2)}
+                          </span>
+                        </div>
+                      )}
 
                     {/* Total to receive */}
-                    <div className="flex justify-between pt-2 border-t border-border/50">
-                      <span className="text-muted-foreground">You'll Receive:</span>
-                      <span className="font-semibold text-lg text-primary">
-                        ${(numAmount + (couponValidation?.valid ? couponValidation.discount : 0)).toFixed(2)}
+                    <div className="border-border/50 flex justify-between border-t pt-2">
+                      <span className="text-muted-foreground">
+                        You'll Receive:
+                      </span>
+                      <span className="text-primary text-lg font-semibold">
+                        $
+                        {(
+                          numAmount +
+                          (couponValidation?.valid
+                            ? couponValidation.discount
+                            : 0)
+                        ).toFixed(2)}
                       </span>
                     </div>
                   </div>
 
                   {/* Confirm Button */}
                   <Button
-                    className="w-full h-12 text-base font-semibold mt-2"
+                    className="mt-2 h-12 w-full text-base font-semibold"
                     onClick={handleConfirmPayment}
                     disabled={isProcessing}
                   >
@@ -1017,18 +1253,17 @@ export default function WalletPage() {
                       'Confirm Payment'
                     )}
                   </Button>
-                  
+
                   {/* Change Payment Method Link */}
                   <button
                     onClick={closePaymentSummary}
-                    className="w-full text-center text-sm text-muted-foreground hover:text-foreground py-2"
+                    className="text-muted-foreground hover:text-foreground w-full py-2 text-center text-sm"
                   >
                     ← Change Payment Method
                   </button>
                 </div>
               </div>
             )}
-
           </div>
         </DialogContent>
       </Dialog>
@@ -1041,12 +1276,12 @@ export default function WalletPage() {
           </DialogHeader>
           <div className="space-y-4">
             <p className="text-muted-foreground text-sm">
-              A new window has been opened for you to complete the payment.
-              Once completed, your balance will be updated automatically.
+              A new window has been opened for you to complete the payment. Once
+              completed, your balance will be updated automatically.
             </p>
-            <div className="p-4 rounded-xl bg-muted/50 text-center">
+            <div className="bg-muted/50 rounded-xl p-4 text-center">
               <p className="text-muted-foreground text-sm">Amount</p>
-              <p className="text-3xl font-bold text-primary">${amount}</p>
+              <p className="text-primary text-3xl font-bold">${amount}</p>
             </div>
             {checkoutUrl && (
               <Button
@@ -1075,14 +1310,19 @@ export default function WalletPage() {
       {/* Binance Payment Dialog */}
       <BinancePaymentDialog
         open={showBinanceDialog}
-        onOpenChange={setShowBinanceDialog}
+        onOpenChange={(open) => {
+          setShowBinanceDialog(open);
+          if (!open) fetchPendingBinance();
+        }}
         paymentId={binancePaymentId || ''}
-        amount={parseFloat(amount) || 0}
+        amount={binanceAmount}
         onSuccess={() => {
           setShowBinanceDialog(false);
           setBinancePaymentId(null);
+          setBinanceAmount(0);
           setAmount('');
           fetchWalletData();
+          fetchPendingBinance();
           toast.success('Payment verified! Your balance has been credited.');
         }}
       />
