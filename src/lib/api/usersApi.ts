@@ -32,6 +32,7 @@ export interface UserProfile {
   phoneVerified: boolean;
   abuseScore: number;
   orderLimit: number | null;
+  apiRateLimit: number | null;
   lastLoginAt: string | null;
   loginCount: number;
   createdAt: string;

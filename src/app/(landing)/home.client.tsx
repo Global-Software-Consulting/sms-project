@@ -24,6 +24,7 @@ import {
   Loader2,
 } from 'lucide-react';
 import { getPlans, MembershipPlan } from '@/lib/api/membershipApi';
+import { getProviders, type SmsProvider } from '@/lib/api/smsApi';
 import { apiClient } from '@/config/api-client.config';
 import { API_ENDPOINTS } from '@/config/server.config';
 
@@ -62,6 +63,7 @@ const fallbackReviews = [
 export default function HomeClient() {
   const [plans, setPlans] = useState<MembershipPlan[]>([]);
   const [plansLoading, setPlansLoading] = useState(true);
+  const [providers, setProviders] = useState<SmsProvider[]>([]);
   const [reviews, setReviews] = useState<typeof fallbackReviews>(fallbackReviews);
   const [reviewsLoading, setReviewsLoading] = useState(true);
 
@@ -102,10 +104,35 @@ export default function HomeClient() {
     }
   }, []);
 
+  // Fetch providers so we can render dynamic "From $X.XX" prices on the
+  // V1/V2/V3 cards instead of the old hardcoded values.
+  const fetchProviders = useCallback(async () => {
+    try {
+      const res = await getProviders();
+      setProviders((res?.providers || []).filter(p => p.isActive !== false));
+    } catch (error) {
+      console.error('Failed to fetch providers for landing pricing:', error);
+    }
+  }, []);
+
   useEffect(() => {
     fetchPlans();
     fetchReviews();
-  }, [fetchPlans, fetchReviews]);
+    fetchProviders();
+  }, [fetchPlans, fetchReviews, fetchProviders]);
+
+  // Resolve a "From $X.XX" string for a given provider version (V1, V2, V3).
+  // Falls back to the legacy hardcoded value if no matching provider has a
+  // computed fromPrice yet (e.g., empty product table on a fresh install).
+  const fromPriceFor = useCallback(
+    (versionPrefix: 'V1' | 'V2' | 'V3', fallback: string): string => {
+      const match = providers.find(
+        p => (p.version || '').startsWith(versionPrefix) && p.fromPrice != null && p.fromPrice > 0,
+      );
+      return match ? `From $${match.fromPrice!.toFixed(2)}` : fallback;
+    },
+    [providers],
+  );
 
   const stats = [
     { label: 'Active Numbers', value: '45K+' },
@@ -267,7 +294,7 @@ export default function HomeClient() {
                   </div>
                 </div>
                 <div className="pt-4">
-                  <p className="text-2xl font-bold">From $1.50</p>
+                  <p className="text-2xl font-bold">{fromPriceFor('V1', 'From $1.50')}</p>
                   <p className="text-muted-foreground text-sm">
                     per activation
                   </p>
@@ -318,7 +345,9 @@ export default function HomeClient() {
                   </div>
                 </div>
                 <div className="pt-4">
-                  <p className="text-primary text-2xl font-bold">From $2.50</p>
+                  <p className="text-primary text-2xl font-bold">
+                    {fromPriceFor('V2', 'From $2.50')}
+                  </p>
                   <p className="text-muted-foreground text-sm">
                     per activation
                   </p>
@@ -370,7 +399,9 @@ export default function HomeClient() {
                   </div>
                 </div>
                 <div className="pt-4">
-                  <p className="text-warning text-2xl font-bold">From $3.50</p>
+                  <p className="text-warning text-2xl font-bold">
+                    {fromPriceFor('V3', 'From $3.50')}
+                  </p>
                   <p className="text-muted-foreground text-sm">
                     per activation
                   </p>

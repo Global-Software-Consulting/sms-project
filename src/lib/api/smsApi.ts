@@ -35,6 +35,9 @@ export interface SmsProvider {
   isActive: boolean;
   priority: number;
   supportsRental: boolean;
+  // Dynamic "from" price: cheapest active product × (1 + globalMarkup%).
+  // null when the provider has no active products available.
+  fromPrice?: number | null;
   balance?: string; // Admin only
   markup?: number; // Admin only
   lastSyncAt?: string; // Admin only
@@ -1167,6 +1170,47 @@ export const adminBulkAddVipNumbers = async (
     providerId,
     rating,
   });
+  return response.data;
+};
+
+/**
+ * Bulk add VIP entries for selected services across ALL countries the provider
+ * currently supports. Replaces the manual country picker per client requirement.
+ * POST /admin/sms/vip/bulk-all-countries
+ */
+export const adminBulkAddVipAllCountries = async (
+  serviceIds: string[],
+  providerId: string,
+): Promise<{
+  message: string;
+  added: number;
+  skipped: number;
+  invalid: number;
+  countryCount: number;
+}> => {
+  const response = await apiClient.post<{
+    message: string;
+    added: number;
+    skipped: number;
+    invalid: number;
+    countryCount: number;
+  }>(API_ENDPOINTS.ADMIN.SMS.VIP_BULK_ALL_COUNTRIES, { serviceIds, providerId });
+  return response.data;
+};
+
+/**
+ * Reconcile VIP entries with provider countries — removes VIP rows whose
+ * country has been deactivated.
+ * POST /admin/sms/vip/sync-countries?providerId=xxx (providerId optional)
+ */
+export const adminSyncVipCountries = async (
+  providerId?: string,
+): Promise<{ removed: number; message: string }> => {
+  const response = await apiClient.post<{ removed: number; message: string }>(
+    API_ENDPOINTS.ADMIN.SMS.VIP_SYNC_COUNTRIES,
+    {},
+    { params: providerId ? { providerId } : undefined },
+  );
   return response.data;
 };
 

@@ -146,7 +146,11 @@ export default function MembershipClient() {
         const data = await getPlans();
         const activePlans = data.filter((p) => p.isActive !== false);
         setPlans(activePlans.length > 0 ? activePlans : fallbackPlans);
-      } catch {
+      } catch (err) {
+        // Silent fallback would mask admin price/feature edits never reaching
+        // the public site (e.g., wrong NEXT_PUBLIC_API_URL, CORS, downtime).
+        // Log so production logs show the disconnect.
+        console.error('[membership] failed to fetch live plans, showing fallback:', err);
         setPlans(fallbackPlans);
       } finally {
         setLoading(false);

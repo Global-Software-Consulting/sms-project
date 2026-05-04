@@ -38,6 +38,8 @@ import {
   adminRecalculatePopularity,
   adminBulkLockProducts,
   adminGetServices,
+  adminUpdateService,
+  adminBulkAddVipAllCountries,
   getServices,
   getUnifiedServices,
   getCountriesForUnifiedService,
@@ -142,6 +144,8 @@ export default function AdminSmsServicesPage() {
     features: "",
     discount: 0,
     isActive: true,
+    apiRateLimit: 60,
+    activeNumberLimit: 25,
   });
 
   // API providers
@@ -632,6 +636,24 @@ export default function AdminSmsServicesPage() {
     }
   };
 
+  // Toggle service active status. Optimistically update the row, revert on error.
+  const handleToggleServiceActive = async (service: SmsService) => {
+    const next = !(service.isActive !== false);
+    setProviderServices((prev) =>
+      prev.map((s) => (s.id === service.id ? { ...s, isActive: next } : s)),
+    );
+    try {
+      await adminUpdateService(service.id, { isActive: next });
+      toast.success(`${service.name} ${next ? "activated" : "deactivated"}`);
+    } catch (error: any) {
+      // Revert on failure
+      setProviderServices((prev) =>
+        prev.map((s) => (s.id === service.id ? { ...s, isActive: !next } : s)),
+      );
+      toast.error(error?.response?.data?.message || "Failed to update service status");
+    }
+  };
+
   const handleSaveProvider = async () => {
     if (!selectedProvider) return;
     setIsLoading(true);
@@ -887,34 +909,30 @@ export default function AdminSmsServicesPage() {
     }
   };
 
-  const vipRatingMap: Record<string, number> = { v1: 5, v2: 3, v3: 1 };
-
+  // Per client decision: provider is already in context, and VIP entries are
+  // created for ALL countries the provider supports — no manual picker.
   const handleAddToVIP = async () => {
     if (selectedServices.length === 0) {
       toast.error("Please select at least one service");
       return;
     }
-    if (!selectedVipCountryId) {
-      toast.error("Please select a country");
-      return;
-    }
     if (!selectedProvider) return;
 
-    const rating = vipRatingMap[selectedVIPCategory] ?? 5;
-
     setIsLoading(true);
-    
     try {
-      // Single bulk API call instead of multiple individual calls
-      const result = await adminBulkAddVipNumbers(
+      const result = await adminBulkAddVipAllCountries(
         selectedServices,
-        selectedVipCountryId,
         selectedProvider.id,
-        rating
       );
 
       if (result.added > 0) {
-        toast.success(`${result.added} service(s) added to VIP`);
+        toast.success(
+          `${result.added} VIP entr${result.added === 1 ? "y" : "ies"} added across ${result.countryCount} countries`,
+        );
+      } else if (result.countryCount === 0) {
+        toast.warning("Provider has no active countries");
+      } else {
+        toast.info("All combinations already exist as VIP");
       }
       if (result.skipped > 0) {
         toast.warning(`${result.skipped} duplicate(s) skipped`);
@@ -922,7 +940,7 @@ export default function AdminSmsServicesPage() {
       if (result.invalid > 0) {
         toast.error(`${result.invalid} invalid service(s)`);
       }
-      
+
       fetchVipNumbers();
     } catch (error: any) {
       toast.error(error?.response?.data?.message || "Failed to add VIP services");
@@ -1066,6 +1084,8 @@ export default function AdminSmsServicesPage() {
       features: plan.features.join("\n"),
       discount: plan.discount,
       isActive: plan.isActive,
+      apiRateLimit: plan.apiRateLimit ?? 60,
+      activeNumberLimit: plan.activeNumberLimit ?? 25,
     });
     setShowEditSubscriptionModal(true);
   };
@@ -1088,6 +1108,8 @@ export default function AdminSmsServicesPage() {
           features: subscriptionFormData.features.split("\n").filter((f: string) => f.trim()),
           discount: subscriptionFormData.discount,
           isActive: subscriptionFormData.isActive,
+          apiRateLimit: subscriptionFormData.apiRateLimit,
+          activeNumberLimit: subscriptionFormData.activeNumberLimit,
         },
       );
       toast.success("Plan updated successfully!");
@@ -2101,13 +2123,21 @@ export default function AdminSmsServicesPage() {
                               </td>
                               <td className="px-4 py-3 text-[#94A3B8] text-sm capitalize">{service.category || "—"}</td>
                               <td className="px-4 py-3">
-                                <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                                  service.isActive !== false
-                                    ? "bg-[rgba(34,197,94,0.1)] text-[#22C55E]"
-                                    : "bg-[rgba(239,68,68,0.1)] text-[#EF4444]"
-                                }`}>
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleToggleServiceActive(service);
+                                  }}
+                                  title={`Click to ${service.isActive !== false ? "deactivate" : "activate"}`}
+                                  className={`px-2 py-1 rounded-full text-xs font-medium transition-colors cursor-pointer ${
+                                    service.isActive !== false
+                                      ? "bg-[rgba(34,197,94,0.1)] text-[#22C55E] hover:bg-[rgba(34,197,94,0.2)]"
+                                      : "bg-[rgba(239,68,68,0.1)] text-[#EF4444] hover:bg-[rgba(239,68,68,0.2)]"
+                                  }`}
+                                >
                                   {service.isActive !== false ? "Active" : "Inactive"}
-                                </span>
+                                </button>
                               </td>
                               <td className="px-4 py-3">
                                 <button
@@ -2423,112 +2453,47 @@ export default function AdminSmsServicesPage() {
         </div>
       )}
 
-      {/* Add to VIP Modal */}
+      {/* Add to VIP Modal — provider is in-context, all countries auto-included */}
       {showAddToVIPModal && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-[#0F172A] border border-[rgba(255,255,255,0.1)] rounded-xl p-6 w-full max-w-md">
-            <h2 className="text-white text-xl font-semibold mb-4">Add to VIP Category</h2>
+            <h2 className="text-white text-xl font-semibold mb-2">Add to VIP</h2>
             <p className="text-[#94A3B8] text-sm mb-6">
-              Select a VIP category for {selectedServices.length} selected service(s)
+              {selectedServices.length} selected service(s) will be added as VIP for every
+              country this provider supports.
             </p>
 
-            <div className="space-y-3 mb-6">
-              {vipCategories.map((category) => (
-                <label
-                  key={category.id}
-                  className={`flex items-center justify-between p-4 rounded-lg border-2 cursor-pointer transition-all ${
-                    selectedVIPCategory === category.id
-                      ? "border-[#F59E0B] bg-[rgba(245,158,11,0.1)]"
-                      : "border-[rgba(255,255,255,0.1)] bg-[rgba(0,0,0,0.2)] hover:border-[rgba(255,255,255,0.2)]"
-                  }`}
-                >
-                  <div className="flex items-center gap-3">
-                    <input
-                      type="radio"
-                      name="vipCategory"
-                      value={category.id}
-                      checked={selectedVIPCategory === category.id}
-                      onChange={(e) => setSelectedVIPCategory(e.target.value)}
-                      className="w-4 h-4"
-                    />
-                    <div>
-                      <div className="text-white text-sm font-medium flex items-center gap-2">
-                        <Star className="w-4 h-4 text-[#F59E0B]" />
-                        {category.name}
-                      </div>
-                      <div className="text-[#64748B] text-xs">{category.services.length} services</div>
-                    </div>
-                  </div>
-                </label>
-              ))}
+            {/* Provider context (read-only) */}
+            <div className="mb-4 p-4 rounded-lg border border-[rgba(245,158,11,0.3)] bg-[rgba(245,158,11,0.08)]">
+              <div className="text-[#94A3B8] text-xs uppercase tracking-wide mb-1">Provider</div>
+              <div className="flex items-center gap-2 text-white text-sm font-medium">
+                <Star className="w-4 h-4 text-[#F59E0B]" />
+                {selectedProvider?.name || "—"}
+                {selectedProvider?.version && (
+                  <span className="text-[#64748B] text-xs">({selectedProvider.version})</span>
+                )}
+              </div>
             </div>
 
-            {/* Country Selection */}
-            <div className="mb-6">
-              <label className="text-white text-sm font-medium mb-2 block">
-                Country <span className="text-[#EF4444]">*</span>
-              </label>
-              {isVipCountriesLoading ? (
-                <div className="flex items-center gap-2 py-3">
-                  <Loader2 className="w-4 h-4 text-[#3B82F6] animate-spin" />
-                  <span className="text-[#94A3B8] text-sm">Loading countries...</span>
-                </div>
-              ) : (
-                <>
-                  <div className="relative mb-2">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#64748B]" />
-                    <input
-                      type="text"
-                      placeholder="Search countries..."
-                      value={vipCountrySearch}
-                      onChange={(e) => setVipCountrySearch(e.target.value)}
-                      className="w-full pl-10 pr-4 py-2.5 rounded-lg bg-[rgba(255,255,255,0.05)] border border-[rgba(255,255,255,0.1)] text-white text-sm placeholder:text-[#64748B] focus:outline-none focus:ring-2 focus:ring-[#F59E0B]"
-                    />
-                  </div>
-                  <div className="max-h-[180px] overflow-y-auto rounded-lg border border-[rgba(255,255,255,0.1)] divide-y divide-[rgba(255,255,255,0.05)]">
-                    {vipCountries
-                      .filter((c) =>
-                        c.name.toLowerCase().includes(vipCountrySearch.toLowerCase()) ||
-                        c.code.toLowerCase().includes(vipCountrySearch.toLowerCase())
-                      )
-                      .map((country) => (
-                        <label
-                          key={country.id}
-                          className={`flex items-center gap-3 px-4 py-2.5 cursor-pointer transition-colors ${
-                            selectedVipCountryId === country.id
-                              ? "bg-[rgba(245,158,11,0.1)]"
-                              : "hover:bg-[rgba(255,255,255,0.03)]"
-                          }`}
-                        >
-                          <input
-                            type="radio"
-                            name="vipCountry"
-                            value={country.id}
-                            checked={selectedVipCountryId === country.id}
-                            onChange={() => setSelectedVipCountryId(country.id)}
-                            className="w-4 h-4"
-                          />
-                          <span className="text-white text-sm">{country.name}</span>
-                          <span className="text-[#64748B] text-xs">({country.code})</span>
-                        </label>
-                      ))}
-                  </div>
-                </>
-              )}
+            {/* Countries info (read-only) */}
+            <div className="mb-6 p-4 rounded-lg border border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.02)]">
+              <div className="text-[#94A3B8] text-xs uppercase tracking-wide mb-1">Countries</div>
+              <div className="flex items-center gap-2 text-white text-sm">
+                <Globe className="w-4 h-4 text-[#3B82F6]" />
+                All active countries from this provider will be included automatically.
+              </div>
             </div>
 
             <div className="flex items-center justify-end gap-3">
               <button
-                onClick={() => {
-                  setShowAddToVIPModal(false);
-                }}
+                onClick={() => setShowAddToVIPModal(false)}
                 className="px-5 py-2.5 rounded-lg bg-[rgba(255,255,255,0.08)] hover:bg-[rgba(255,255,255,0.12)] text-white text-sm font-medium transition-colors"
               >
                 Cancel
               </button>
               <button
                 onClick={handleAddToVIP}
-                disabled={isLoading || !selectedVipCountryId}
+                disabled={isLoading || !selectedProvider}
                 className="px-5 py-2.5 rounded-lg bg-[#F59E0B] hover:bg-[#D97706] text-white text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
               >
                 {isLoading ? (
@@ -2536,7 +2501,7 @@ export default function AdminSmsServicesPage() {
                 ) : (
                   <>
                     <MoveRight className="w-4 h-4" />
-                    Add to Category
+                    Add to VIP
                   </>
                 )}
               </button>
@@ -2706,6 +2671,45 @@ export default function AdminSmsServicesPage() {
                     <option value="active">Active</option>
                     <option value="inactive">Inactive</option>
                   </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-white text-sm font-medium mb-2 block">
+                    API Rate Limit (req/min)
+                  </label>
+                  <input
+                    type="number"
+                    min={1}
+                    value={subscriptionFormData.apiRateLimit}
+                    onChange={(e) =>
+                      setSubscriptionFormData({
+                        ...subscriptionFormData,
+                        apiRateLimit: parseInt(e.target.value) || 0,
+                      })
+                    }
+                    className="w-full bg-[rgba(0,0,0,0.4)] border border-[rgba(255,255,255,0.18)] rounded-lg px-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#3B82F6]"
+                    placeholder="60"
+                  />
+                </div>
+                <div>
+                  <label className="text-white text-sm font-medium mb-2 block">
+                    Active Numbers Limit
+                  </label>
+                  <input
+                    type="number"
+                    min={1}
+                    value={subscriptionFormData.activeNumberLimit}
+                    onChange={(e) =>
+                      setSubscriptionFormData({
+                        ...subscriptionFormData,
+                        activeNumberLimit: parseInt(e.target.value) || 0,
+                      })
+                    }
+                    className="w-full bg-[rgba(0,0,0,0.4)] border border-[rgba(255,255,255,0.18)] rounded-lg px-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#3B82F6]"
+                    placeholder="25"
+                  />
                 </div>
               </div>
 

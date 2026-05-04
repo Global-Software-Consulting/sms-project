@@ -120,7 +120,7 @@ export default function AdminUsersPage() {
   const [banForm, setBanForm] = useState({ reason: "" });
   const [roleForm, setRoleForm] = useState({ role: "" });
   const [abuseScoreForm, setAbuseScoreForm] = useState({ abuseScore: "", reason: "" });
-  const [limitsForm, setLimitsForm] = useState({ orderLimit: "" });
+  const [limitsForm, setLimitsForm] = useState({ orderLimit: "", apiRateLimit: "" });
 
   // Search debounce
   const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -332,17 +332,24 @@ export default function AdminUsersPage() {
     }
   };
 
-  // Set limits
+  // Set limits — empty string clears the override, blank-init means "leave unchanged"
   const handleSetLimits = async () => {
     if (!selectedUser) return;
     setIsActionLoading(true);
     try {
+      const parseLimit = (raw: string): number | null | undefined => {
+        if (raw === "") return null; // clear override
+        const n = parseInt(raw);
+        return Number.isFinite(n) ? n : undefined;
+      };
+
       await setUserLimits(selectedUser.id, {
-        orderLimit: limitsForm.orderLimit ? parseInt(limitsForm.orderLimit) : undefined,
+        orderLimit: parseLimit(limitsForm.orderLimit),
+        apiRateLimit: parseLimit(limitsForm.apiRateLimit),
       });
       toast.success("User limits updated successfully!");
       setIsLimitsModalOpen(false);
-      setLimitsForm({ orderLimit: "" });
+      setLimitsForm({ orderLimit: "", apiRateLimit: "" });
       fetchUsers();
     } catch (error: any) {
       toast.error(error?.response?.data?.message || "Failed to update limits");
@@ -805,6 +812,12 @@ export default function AdminUsersPage() {
                       <p className="text-white text-sm font-semibold mt-0.5">{selectedUser.orderLimit}</p>
                     </div>
                   )}
+                  {selectedUser.apiRateLimit && (
+                    <div className="p-3 rounded-lg bg-[rgba(255,255,255,0.05)]">
+                      <p className="text-[#94A3B8] text-xs">API Rate Limit (override)</p>
+                      <p className="text-white text-sm font-semibold mt-0.5">{selectedUser.apiRateLimit}/min</p>
+                    </div>
+                  )}
                 </div>
               </div>
             )}
@@ -843,7 +856,10 @@ export default function AdminUsersPage() {
                   onClick={() => {
                     setIsSlideOverOpen(false);
                     if (selectedUser) {
-                      setLimitsForm({ orderLimit: String(selectedUser.orderLimit || "") });
+                      setLimitsForm({
+                        orderLimit: String(selectedUser.orderLimit || ""),
+                        apiRateLimit: String(selectedUser.apiRateLimit || ""),
+                      });
                       setIsLimitsModalOpen(true);
                     }
                   }}
@@ -1150,15 +1166,24 @@ export default function AdminUsersPage() {
       >
         <div className="space-y-4">
           <p className="text-[#94A3B8]">
-            Set custom limits for <span className="text-white font-medium">{selectedUser?.email}</span>
+            Set custom limits for <span className="text-white font-medium">{selectedUser?.email}</span>.
+            Leave a field blank to clear the override and fall back to the user&apos;s plan default.
           </p>
           <AdminFormInput
             label="Order Limit"
             name="orderLimit"
             type="number"
             value={limitsForm.orderLimit}
-            onChange={(value) => setLimitsForm({ orderLimit: value })}
+            onChange={(value) => setLimitsForm({ ...limitsForm, orderLimit: value })}
             placeholder="50"
+          />
+          <AdminFormInput
+            label="API Rate Limit (requests/min)"
+            name="apiRateLimit"
+            type="number"
+            value={limitsForm.apiRateLimit}
+            onChange={(value) => setLimitsForm({ ...limitsForm, apiRateLimit: value })}
+            placeholder="60"
           />
         </div>
       </AdminModal>

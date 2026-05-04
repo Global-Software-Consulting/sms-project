@@ -190,23 +190,37 @@ export default function MembershipDashboard() {
     setShowConfirmDialog(true);
   };
 
+  // A user has a *paid* subscription only when hasActiveSubscription is true.
+  // Free users have currentPlan=Free but no real subscription record.
+  const hasActivePaidSubscription = membership?.hasActiveSubscription === true;
+
   // Get button text for plan - only upgrade allowed, no downgrade
   const getPlanButtonText = (plan: MembershipPlan): string => {
-    if (!membership?.currentPlan) return 'Subscribe';
-    if (membership.currentPlan.id === plan.id) return 'Current Plan';
-    if (isPlanUpgrade(membership.currentPlan.slug, plan.slug)) return 'Upgrade';
-    return 'Current Plan'; // Lower plans show as unavailable (no downgrade)
+    // No paid subscription: Free is the implicit current plan, others are subscribable
+    if (!hasActivePaidSubscription) {
+      if (plan.slug === 'free') return 'Current Plan';
+      return 'Subscribe';
+    }
+    // Paid subscription: distinguish current / upgrade / lower
+    if (membership?.currentPlan?.id === plan.id) return 'Current Plan';
+    if (membership?.currentPlan && isPlanUpgrade(membership.currentPlan.slug, plan.slug)) {
+      return 'Upgrade';
+    }
+    return 'Lower Plan';
   };
 
   // Check if plan can be selected (only upgrade or new subscription)
   const canSelectPlan = (plan: MembershipPlan): boolean => {
-    if (!membership?.currentPlan) return true; // No current plan, can subscribe
-    if (membership.currentPlan.id === plan.id) return false; // Current plan
-    return isPlanUpgrade(membership.currentPlan.slug, plan.slug); // Only upgrades allowed
+    if (!hasActivePaidSubscription) return plan.slug !== 'free';
+    if (membership?.currentPlan?.id === plan.id) return false;
+    return membership?.currentPlan
+      ? isPlanUpgrade(membership.currentPlan.slug, plan.slug)
+      : false;
   };
 
   // Check if plan is current
   const isCurrentPlan = (plan: MembershipPlan): boolean => {
+    if (!hasActivePaidSubscription) return plan.slug === 'free';
     return membership?.currentPlan?.id === plan.id;
   };
 
@@ -451,7 +465,10 @@ export default function MembershipDashboard() {
             const planColor = getPlanColor(plan.slug);
             const isVIP = plan.slug === 'vip';
             const isPopular = plan.isPopular && !isCurrent && !isVIP;
-            const isUpgrade = membership?.currentPlan && isPlanUpgrade(membership.currentPlan.slug, plan.slug);
+            // Mirror handleSubscribe: only call upgrade API when there's an active paid sub
+            const isUpgrade = hasActivePaidSubscription &&
+              membership?.currentPlan &&
+              isPlanUpgrade(membership.currentPlan.slug, plan.slug);
 
             return (
               <Card

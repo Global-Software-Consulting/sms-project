@@ -24,6 +24,7 @@ export interface AdminUser {
   phoneVerified: boolean;
   abuseScore: number;
   orderLimit: number | null;
+  apiRateLimit: number | null;
   lastLoginAt: string | null;
   loginCount: number;
   rank?: {
@@ -129,7 +130,9 @@ export interface ChangeRoleRequest {
 }
 
 export interface SetLimitsRequest {
-  orderLimit?: number;
+  // Pass a number to set, null to clear the override and fall back to plan default
+  orderLimit?: number | null;
+  apiRateLimit?: number | null;
 }
 
 export interface SetAbuseScoreRequest {

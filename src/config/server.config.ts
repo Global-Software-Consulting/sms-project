@@ -338,6 +338,8 @@ export const API_ENDPOINTS = {
       STATISTICS: '/admin/sms/statistics',
       VIP: '/admin/sms/vip',
       VIP_BULK: '/admin/sms/vip/bulk',
+      VIP_BULK_ALL_COUNTRIES: '/admin/sms/vip/bulk-all-countries',
+      VIP_SYNC_COUNTRIES: '/admin/sms/vip/sync-countries',
       VIP_DETAIL: (id: string) => `/admin/sms/vip/${id}`,
       VIP_AUTO_DETECT: '/admin/sms/vip/auto-detect',
       VIP_CATEGORIES: '/admin/sms/vip/categories',

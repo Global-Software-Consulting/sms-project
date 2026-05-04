@@ -114,19 +114,25 @@ export default function PricingClient() {
     },
   ];
 
-  // Map providers to display format
+  // Map providers to display format. The "From $X.XX" price is fetched live
+  // from the backend (cheapest active product × global markup), per client
+  // requirement that pricing reflects provider data automatically.
   const providerTiers = providers.length > 0
     ? providers.map((provider, index) => {
         const badge = getProviderBadge(provider.slug);
         const isPopular = index === 1;
         const isElite = index === providers.length - 1 && providers.length > 2;
+        const priceRange =
+          provider.fromPrice != null && provider.fromPrice > 0
+            ? `From $${provider.fromPrice.toFixed(2)}`
+            : 'Pricing unavailable';
 
         return {
           id: provider.id,
           name: provider.displayName,
           badge: `${badge.icon} ${badge.label}`,
           tagline: (provider as any).description || 'SMS verification service',
-          priceRange: (provider as any).priceRange || '$0.30 - $5.00',
+          priceRange,
           features: (provider as any).features || [
             'SMS verification',
             'Multiple countries',
