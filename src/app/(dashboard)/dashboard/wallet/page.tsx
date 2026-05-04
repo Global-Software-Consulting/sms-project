@@ -137,6 +137,12 @@ export default function WalletPage() {
   const [showBinanceDialog, setShowBinanceDialog] = useState(false);
   const [binancePaymentId, setBinancePaymentId] = useState<string | null>(null);
   const [binanceAmount, setBinanceAmount] = useState<number>(0);
+  const [binanceDialogMode, setBinanceDialogMode] = useState<
+    'initial' | 'resume'
+  >('initial');
+  const [binanceExistingOrderId, setBinanceExistingOrderId] = useState<
+    string | null
+  >(null);
   const [pendingBinance, setPendingBinance] = useState<MyBinanceVerification[]>(
     [],
   );
@@ -144,7 +150,10 @@ export default function WalletPage() {
   const fetchPendingBinance = useCallback(async () => {
     try {
       const list = await getMyBinanceVerifications();
-      setPendingBinance(list.filter((v) => v.status === 'PENDING'));
+      // Show PENDING (resumable) + FAILED (rate-limited, contact support)
+      setPendingBinance(
+        list.filter((v) => v.status === 'PENDING' || v.status === 'FAILED'),
+      );
     } catch (err) {
       console.error('Failed to fetch pending Binance verifications:', err);
     }
@@ -483,6 +492,8 @@ export default function WalletPage() {
       if (selectedGateway === 'BINANCE') {
         setBinancePaymentId(response.paymentId);
         setBinanceAmount(snapshotAmount);
+        setBinanceDialogMode('initial');
+        setBinanceExistingOrderId(null);
         setShowBinanceDialog(true);
         toast.info(
           'Please complete the Binance transfer and enter your Order ID',
@@ -679,60 +690,6 @@ export default function WalletPage() {
         </Card>
       </div>
 
-      {/* Pending Binance Verifications */}
-      {pendingBinance.length > 0 && (
-        <Card className="border-amber-500/30 bg-amber-500/5">
-          <CardHeader className="pb-3">
-            <CardTitle className="flex items-center gap-2 text-base">
-              <span className="text-xl">🔶</span>
-              Pending Binance Payments
-            </CardTitle>
-            <CardDescription>
-              These deposits are awaiting admin verification. You can resume to
-              update Order ID or check status.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            {pendingBinance.map((v) => (
-              <div
-                key={v.id}
-                className="bg-background/40 flex flex-col gap-2 rounded-lg border border-amber-500/20 p-3 sm:flex-row sm:items-center sm:justify-between"
-              >
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2">
-                    <span className="font-semibold">
-                      ${v.amount.toFixed(2)}
-                    </span>
-                    <span className="text-muted-foreground text-xs">
-                      {v.currency}
-                    </span>
-                    <span className="rounded bg-amber-500/20 px-2 py-0.5 text-xs text-amber-500">
-                      PENDING
-                    </span>
-                  </div>
-                  <div className="text-muted-foreground text-xs">
-                    {v.orderId
-                      ? `Order ID: ${v.orderId} · Submitted ${new Date(v.createdAt).toLocaleString()}`
-                      : `Created ${new Date(v.createdAt).toLocaleString()} · No Order ID yet`}
-                  </div>
-                </div>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => {
-                    setBinancePaymentId(v.paymentId);
-                    setBinanceAmount(v.amount);
-                    setShowBinanceDialog(true);
-                  }}
-                >
-                  Resume
-                </Button>
-              </div>
-            ))}
-          </CardContent>
-        </Card>
-      )}
-
       {/* Transaction History */}
       <Card>
         <CardHeader>
@@ -785,7 +742,19 @@ export default function WalletPage() {
           </div>
         </CardHeader>
         <CardContent className="p-0 sm:p-6">
-          {transactions.length === 0 ? (
+          {(() => {
+            const visibleBinance =
+              typeFilter === 'all' || typeFilter === 'DEPOSIT'
+                ? pendingBinance.filter((v) => {
+                    if (statusFilter === 'all') return true;
+                    if (statusFilter === 'PENDING')
+                      return v.status === 'PENDING';
+                    if (statusFilter === 'FAILED') return v.status === 'FAILED';
+                    return false;
+                  }).length
+                : 0;
+            return transactions.length === 0 && visibleBinance === 0;
+          })() ? (
             <div className="py-12 text-center">
               <WalletIcon className="text-muted-foreground mx-auto mb-4 h-12 w-12" />
               <p className="text-muted-foreground">No transactions found</p>
@@ -815,6 +784,104 @@ export default function WalletPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
+                    {/* Inline Binance rows: PENDING (resumable, amber) + FAILED
+                        (rate-limited, red). Synced with type/status filters. */}
+                    {(typeFilter === 'all' || typeFilter === 'DEPOSIT') &&
+                      pendingBinance
+                        .filter((v) => {
+                          if (statusFilter === 'all') return true;
+                          if (statusFilter === 'PENDING')
+                            return v.status === 'PENDING';
+                          if (statusFilter === 'FAILED')
+                            return v.status === 'FAILED';
+                          return false;
+                        })
+                        .map((v) => {
+                          const isFailed = v.status === 'FAILED';
+                          return (
+                            <TableRow
+                              key={`binance-${v.id}`}
+                              className={
+                                isFailed
+                                  ? 'cursor-pointer bg-red-500/5 hover:bg-red-500/10'
+                                  : 'cursor-pointer bg-amber-500/5 hover:bg-amber-500/10'
+                              }
+                              onClick={() => {
+                                if (isFailed) {
+                                  toast.info(
+                                    v.errorMessage
+                                      ? `${v.errorMessage} — please contact support.`
+                                      : 'Verification failed — please contact support.',
+                                  );
+                                  return;
+                                }
+                                setBinancePaymentId(v.paymentId);
+                                setBinanceAmount(v.amount);
+                                setBinanceDialogMode('resume');
+                                setBinanceExistingOrderId(v.orderId);
+                                setShowBinanceDialog(true);
+                              }}
+                            >
+                              <TableCell>
+                                <div className="flex items-center space-x-2">
+                                  <span className="text-lg">🔶</span>
+                                  <div className="min-w-0">
+                                    <p className="truncate font-medium">
+                                      Binance Deposit
+                                    </p>
+                                    <p className="text-muted-foreground truncate text-xs">
+                                      {v.orderId
+                                        ? `Order: ${v.orderId.slice(0, 12)}…`
+                                        : 'No Order ID yet'}
+                                    </p>
+                                    <p className="text-muted-foreground mt-0.5 text-xs sm:hidden">
+                                      {formatDate(v.createdAt)}
+                                    </p>
+                                  </div>
+                                </div>
+                              </TableCell>
+                              <TableCell className="table-hide-mobile">
+                                <p className="max-w-[200px] truncate text-sm">
+                                  {isFailed
+                                    ? `${v.errorMessage ?? 'Failed'} — contact support`
+                                    : 'Awaiting admin verification — click to view'}
+                                </p>
+                              </TableCell>
+                              <TableCell className="text-muted-foreground table-hide-tablet text-sm">
+                                {formatDate(v.createdAt)}
+                              </TableCell>
+                              <TableCell className="table-hide-mobile">
+                                <Badge
+                                  variant="secondary"
+                                  className={
+                                    isFailed
+                                      ? 'bg-red-500/15 text-red-500 capitalize'
+                                      : 'bg-amber-500/15 text-amber-500 capitalize'
+                                  }
+                                >
+                                  {isFailed ? 'failed' : 'pending'}
+                                </Badge>
+                              </TableCell>
+                              <TableCell className="text-right">
+                                <div className="flex flex-col items-end gap-1">
+                                  <span className="text-foreground font-semibold">
+                                    +{formatBalance(v.amount.toString(), 'USD')}
+                                  </span>
+                                  <Badge
+                                    variant="secondary"
+                                    className={
+                                      isFailed
+                                        ? 'bg-red-500/15 text-xs text-red-500 capitalize sm:hidden'
+                                        : 'bg-amber-500/15 text-xs text-amber-500 capitalize sm:hidden'
+                                    }
+                                  >
+                                    {isFailed ? 'failed' : 'pending'}
+                                  </Badge>
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })}
                     {transactions.map((txn) => (
                       <TableRow key={txn.id}>
                         <TableCell>
@@ -1316,6 +1383,8 @@ export default function WalletPage() {
         }}
         paymentId={binancePaymentId || ''}
         amount={binanceAmount}
+        mode={binanceDialogMode}
+        existingOrderId={binanceExistingOrderId}
         onSuccess={() => {
           setShowBinanceDialog(false);
           setBinancePaymentId(null);

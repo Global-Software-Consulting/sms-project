@@ -503,6 +503,7 @@ export interface MyBinanceVerification {
   currency: string;
   status: 'PENDING' | 'VERIFIED' | 'FAILED' | 'EXPIRED';
   attempts: number;
+  errorMessage: string | null;
   createdAt: string;
   verifiedAt: string | null;
   paymentStatus: string | null;
