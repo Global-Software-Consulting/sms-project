@@ -290,15 +290,18 @@ export default function WalletPage() {
     fetchPendingBinance();
   }, [fetchWalletData, fetchPendingBinance]);
 
-  // Auto-refresh on incoming PAYMENT_SUCCESS notification (admin verified Binance)
+  // Auto-refresh on relevant WS notifications.
+  // PAYMENT_SUCCESS = admin verified Binance → wallet credited.
+  // SYSTEM with data.type=BINANCE_RESET = admin reset failed verification → user can retry.
   useEffect(() => {
     const latest = notifications[0];
     if (!latest) return;
+    const data = latest.data as { paymentId?: string; type?: string } | null;
+
     if (latest.type === 'PAYMENT_SUCCESS') {
       fetchWalletData();
       fetchPendingBinance();
       // Auto-close dialog if open and it matches the verified payment
-      const data = latest.data as { paymentId?: string } | null;
       if (
         showBinanceDialog &&
         binancePaymentId &&
@@ -309,6 +312,9 @@ export default function WalletPage() {
         setBinanceAmount(0);
         toast.success('Payment verified! Balance credited.');
       }
+    } else if (latest.type === 'SYSTEM' && data?.type === 'BINANCE_RESET') {
+      // Admin reset — refresh pending list so red FAILED row turns amber PENDING
+      fetchPendingBinance();
     }
   }, [
     notifications,
