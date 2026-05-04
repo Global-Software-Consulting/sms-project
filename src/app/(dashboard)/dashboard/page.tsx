@@ -80,91 +80,95 @@ export default function Dashboard() {
   const [error, setError] = useState<string | null>(null);
   const [, setTimerTick] = useState(0);
 
-  // Fetch dashboard data
-  const fetchDashboardData = useCallback(async () => {
-    try {
-      setIsLoading(true);
-      setError(null);
+  // Fetch dashboard data. Pass {silent:true} for background WS refreshes.
+  const fetchDashboardData = useCallback(
+    async (options?: { silent?: boolean }) => {
+      try {
+        if (!options?.silent) setIsLoading(true);
+        setError(null);
 
-      // Fetch all data in parallel
-      const [
-        walletRes,
-        membershipRes,
-        ordersRes,
-        rentalsRes,
-        servicesRes,
-        countriesRes,
-      ] = await Promise.allSettled([
-        getWalletBalance(),
-        getCurrentMembership(),
-        getOrderHistory({ limit: 5 }),
-        getRentalHistory({ status: 'ACTIVE', limit: 10 }),
-        getServices({ limit: 100 }),
-        getCountries({ limit: 100 }),
-      ]);
+        // Fetch all data in parallel
+        const [
+          walletRes,
+          membershipRes,
+          ordersRes,
+          rentalsRes,
+          servicesRes,
+          countriesRes,
+        ] = await Promise.allSettled([
+          getWalletBalance(),
+          getCurrentMembership(),
+          getOrderHistory({ limit: 5 }),
+          getRentalHistory({ status: 'ACTIVE', limit: 10 }),
+          getServices({ limit: 100 }),
+          getCountries({ limit: 100 }),
+        ]);
 
-      // Process wallet
-      const wallet = walletRes.status === 'fulfilled' ? walletRes.value : null;
+        // Process wallet
+        const wallet =
+          walletRes.status === 'fulfilled' ? walletRes.value : null;
 
-      // Process membership
-      const membership =
-        membershipRes.status === 'fulfilled' ? membershipRes.value : null;
+        // Process membership
+        const membership =
+          membershipRes.status === 'fulfilled' ? membershipRes.value : null;
 
-      // Process orders
-      const orders =
-        ordersRes.status === 'fulfilled' ? ordersRes.value.data : [];
+        // Process orders
+        const orders =
+          ordersRes.status === 'fulfilled' ? ordersRes.value.data : [];
 
-      // Process rentals
-      const rentals =
-        rentalsRes.status === 'fulfilled' ? rentalsRes.value.data : [];
+        // Process rentals
+        const rentals =
+          rentalsRes.status === 'fulfilled' ? rentalsRes.value.data : [];
 
-      // Process services
-      const services =
-        servicesRes.status === 'fulfilled' ? servicesRes.value.data : [];
+        // Process services
+        const services =
+          servicesRes.status === 'fulfilled' ? servicesRes.value.data : [];
 
-      // Process countries
-      const countries =
-        countriesRes.status === 'fulfilled' ? countriesRes.value.data : [];
+        // Process countries
+        const countries =
+          countriesRes.status === 'fulfilled' ? countriesRes.value.data : [];
 
-      // Calculate stats
-      const activeNumbers =
-        rentals.filter((r) => r.status === 'ACTIVE').length +
-        orders.filter(
-          (o) => o.status === 'WAITING_SMS' || o.status === 'PENDING',
+        // Calculate stats
+        const activeNumbers =
+          rentals.filter((r) => r.status === 'ACTIVE').length +
+          orders.filter(
+            (o) => o.status === 'WAITING_SMS' || o.status === 'PENDING',
+          ).length;
+
+        // Calculate success rate from recent orders
+        const completedOrders = orders.filter(
+          (o) => o.status === 'COMPLETED',
         ).length;
+        const totalProcessedOrders = orders.filter((o) =>
+          ['COMPLETED', 'CANCELLED', 'EXPIRED'].includes(o.status),
+        ).length;
+        const successRate =
+          totalProcessedOrders > 0
+            ? `${((completedOrders / totalProcessedOrders) * 100).toFixed(1)}%`
+            : '--';
 
-      // Calculate success rate from recent orders
-      const completedOrders = orders.filter(
-        (o) => o.status === 'COMPLETED',
-      ).length;
-      const totalProcessedOrders = orders.filter((o) =>
-        ['COMPLETED', 'CANCELLED', 'EXPIRED'].includes(o.status),
-      ).length;
-      const successRate =
-        totalProcessedOrders > 0
-          ? `${((completedOrders / totalProcessedOrders) * 100).toFixed(1)}%`
-          : '--';
-
-      setData({
-        wallet,
-        membership,
-        recentOrders: orders,
-        activeRentals: rentals,
-        services,
-        countries,
-        stats: {
-          activeNumbers,
-          successRate,
-          totalOrders: orders.length,
-        },
-      });
-    } catch (err) {
-      console.error('Failed to fetch dashboard data:', err);
-      setError('Failed to load dashboard data. Please refresh the page.');
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
+        setData({
+          wallet,
+          membership,
+          recentOrders: orders,
+          activeRentals: rentals,
+          services,
+          countries,
+          stats: {
+            activeNumbers,
+            successRate,
+            totalOrders: orders.length,
+          },
+        });
+      } catch (err) {
+        console.error('Failed to fetch dashboard data:', err);
+        setError('Failed to load dashboard data. Please refresh the page.');
+      } finally {
+        if (!options?.silent) setIsLoading(false);
+      }
+    },
+    [],
+  );
 
   // Fetch data on mount (only once when initialized)
   const [hasFetched, setHasFetched] = useState(false);
@@ -196,7 +200,7 @@ export default function Dashboard() {
       'ORDER_REFUNDED',
     ]);
     if (refreshing.has(latest.type)) {
-      fetchDashboardData();
+      fetchDashboardData({ silent: true });
     }
   }, [notifications, fetchDashboardData]);
 
@@ -295,7 +299,7 @@ export default function Dashboard() {
         <div className="text-center">
           <AlertCircle className="text-destructive mx-auto mb-4 h-8 w-8" />
           <p className="text-destructive mb-4">{error}</p>
-          <Button onClick={fetchDashboardData}>Try Again</Button>
+          <Button onClick={() => fetchDashboardData()}>Try Again</Button>
         </div>
       </div>
     );
