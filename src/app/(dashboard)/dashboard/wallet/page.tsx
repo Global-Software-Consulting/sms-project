@@ -159,88 +159,95 @@ export default function WalletPage() {
     }
   }, []);
 
-  // Fetch wallet data
-  const fetchWalletData = useCallback(async () => {
-    try {
-      setIsLoading(true);
-      setError(null);
+  // Fetch wallet data. Pass {silent:true} for background refreshes
+  // (WS events, modal close) so full-page loader doesn't blank the screen.
+  const fetchWalletData = useCallback(
+    async (options?: { silent?: boolean }) => {
+      try {
+        if (!options?.silent) setIsLoading(true);
+        setError(null);
 
-      const [walletRes, transactionsRes, membershipRes, gatewaysRes] =
-        await Promise.allSettled([
-          getWallet(),
-          getTransactions({ page: 1, limit: 20 }),
-          getCurrentMembership(),
-          getGateways(),
-        ]);
+        const [walletRes, transactionsRes, membershipRes, gatewaysRes] =
+          await Promise.allSettled([
+            getWallet(),
+            getTransactions({ page: 1, limit: 20 }),
+            getCurrentMembership(),
+            getGateways(),
+          ]);
 
-      if (walletRes.status === 'fulfilled') {
-        setWallet(walletRes.value);
+        if (walletRes.status === 'fulfilled') {
+          setWallet(walletRes.value);
+        }
+
+        if (transactionsRes.status === 'fulfilled') {
+          setTransactions(transactionsRes.value.data);
+          setTotalTransactions(transactionsRes.value.meta.total);
+          setHasMore(transactionsRes.value.meta.hasNextPage);
+        }
+
+        if (membershipRes.status === 'fulfilled') {
+          setMembership(membershipRes.value);
+        }
+
+        if (
+          gatewaysRes.status === 'fulfilled' &&
+          gatewaysRes.value.length > 0
+        ) {
+          setGateways(gatewaysRes.value);
+        } else {
+          const defaultGateways: GatewayInfo[] = [
+            {
+              gateway: 'STRIPE',
+              name: 'Stripe',
+              enabled: true,
+              minAmount: 1,
+              maxAmount: 10000,
+              currencies: ['USD'],
+            },
+            {
+              gateway: 'PAYGATE',
+              name: 'PayGate Card Getaways',
+              enabled: true,
+              minAmount: 1,
+              maxAmount: 5000,
+              currencies: ['USD'],
+            },
+            {
+              gateway: 'PLISIO',
+              name: 'Crypto Plisio',
+              enabled: true,
+              minAmount: 1,
+              maxAmount: 10000,
+              currencies: ['USD'],
+            },
+            {
+              gateway: 'CRYPTOMUS',
+              name: 'Cryptomus',
+              enabled: true,
+              minAmount: 10,
+              maxAmount: 10000,
+              currencies: ['USD'],
+            },
+            {
+              gateway: 'NOWPAYMENTS',
+              name: 'NOWPayments',
+              enabled: true,
+              minAmount: 10,
+              maxAmount: 10000,
+              currencies: ['USD'],
+            },
+          ];
+          setGateways(defaultGateways);
+        }
+      } catch (err) {
+        console.error('Failed to fetch wallet data:', err);
+        setError('Failed to load wallet data. Please refresh the page.');
+      } finally {
+        if (!options?.silent) setIsLoading(false);
       }
-
-      if (transactionsRes.status === 'fulfilled') {
-        setTransactions(transactionsRes.value.data);
-        setTotalTransactions(transactionsRes.value.meta.total);
-        setHasMore(transactionsRes.value.meta.hasNextPage);
-      }
-
-      if (membershipRes.status === 'fulfilled') {
-        setMembership(membershipRes.value);
-      }
-
-      if (gatewaysRes.status === 'fulfilled' && gatewaysRes.value.length > 0) {
-        setGateways(gatewaysRes.value);
-      } else {
-        const defaultGateways: GatewayInfo[] = [
-          {
-            gateway: 'STRIPE',
-            name: 'Stripe',
-            enabled: true,
-            minAmount: 1,
-            maxAmount: 10000,
-            currencies: ['USD'],
-          },
-          {
-            gateway: 'PAYGATE',
-            name: 'PayGate Card Getaways',
-            enabled: true,
-            minAmount: 1,
-            maxAmount: 5000,
-            currencies: ['USD'],
-          },
-          {
-            gateway: 'PLISIO',
-            name: 'Crypto Plisio',
-            enabled: true,
-            minAmount: 1,
-            maxAmount: 10000,
-            currencies: ['USD'],
-          },
-          {
-            gateway: 'CRYPTOMUS',
-            name: 'Cryptomus',
-            enabled: true,
-            minAmount: 10,
-            maxAmount: 10000,
-            currencies: ['USD'],
-          },
-          {
-            gateway: 'NOWPAYMENTS',
-            name: 'NOWPayments',
-            enabled: true,
-            minAmount: 10,
-            maxAmount: 10000,
-            currencies: ['USD'],
-          },
-        ];
-        setGateways(defaultGateways);
-      }
-    } catch (err) {
-      console.error('Failed to fetch wallet data:', err);
-      setError('Failed to load wallet data. Please refresh the page.');
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
+    },
+    [],
+  );
 
   // Fetch transactions with filters
   const fetchTransactions = useCallback(
@@ -299,7 +306,7 @@ export default function WalletPage() {
     const data = latest.data as { paymentId?: string; type?: string } | null;
 
     if (latest.type === 'PAYMENT_SUCCESS') {
-      fetchWalletData();
+      fetchWalletData({ silent: true });
       fetchPendingBinance();
       // Auto-close dialog if open and it matches the verified payment
       if (
@@ -590,7 +597,7 @@ export default function WalletPage() {
         <div className="text-center">
           <AlertCircle className="text-destructive mx-auto mb-4 h-8 w-8" />
           <p className="text-destructive mb-4">{error}</p>
-          <Button onClick={fetchWalletData}>Try Again</Button>
+          <Button onClick={() => fetchWalletData()}>Try Again</Button>
         </div>
       </div>
     );
@@ -607,7 +614,7 @@ export default function WalletPage() {
           </p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={fetchWalletData}>
+          <Button variant="outline" size="sm" onClick={() => fetchWalletData()}>
             <RefreshCw className="mr-2 h-4 w-4" />
             Refresh
           </Button>
@@ -1371,7 +1378,7 @@ export default function WalletPage() {
               onClick={() => {
                 setShowPaymentDialog(false);
                 setCheckoutUrl(null);
-                fetchWalletData();
+                fetchWalletData({ silent: true });
               }}
             >
               I've Completed Payment
@@ -1396,7 +1403,7 @@ export default function WalletPage() {
           setBinancePaymentId(null);
           setBinanceAmount(0);
           setAmount('');
-          fetchWalletData();
+          fetchWalletData({ silent: true });
           fetchPendingBinance();
           toast.success('Payment verified! Your balance has been credited.');
         }}
