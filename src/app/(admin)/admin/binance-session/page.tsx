@@ -25,8 +25,10 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import {
   BinanceScraperSessionStatus,
+  BinanceSessionTry,
   clearBinanceScraperSession,
   getBinanceScraperSession,
+  getBinanceSessionTries,
   importBinanceScraperSessionFromCurl,
   testBinanceScraperSession,
 } from '@/lib/api/adminModulesApi';
@@ -43,6 +45,14 @@ export default function BinanceScraperSessionPage() {
   const [curl, setCurl] = useState('');
   const [email, setEmail] = useState('');
 
+  const [logs, setLogs] = useState<BinanceSessionTry[]>([]);
+  const [logsLoading, setLogsLoading] = useState(true);
+  const [auditFilter, setAuditFilter] = useState<
+    'all' | 'verified' | 'failed' | 'pending'
+  >('all');
+  const [page, setPage] = useState(1);
+  const PAGE_SIZE = 20;
+
   const fetchStatus = useCallback(async () => {
     try {
       const res = await getBinanceScraperSession();
@@ -54,9 +64,21 @@ export default function BinanceScraperSessionPage() {
     }
   }, []);
 
+  const fetchLogs = useCallback(async () => {
+    try {
+      const res = await getBinanceSessionTries();
+      setLogs(res.data);
+    } catch {
+      // silent — supplementary widget
+    } finally {
+      setLogsLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     void fetchStatus();
-  }, [fetchStatus]);
+    void fetchLogs();
+  }, [fetchStatus, fetchLogs]);
 
   const handleImport = async () => {
     if (!curl.trim()) {
@@ -332,6 +354,260 @@ export default function BinanceScraperSessionPage() {
             violate Binance ToS. Use a dedicated account, monitor for session
             invalidation, and rotate cookies if compromised.
           </p>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="text-base">All Session Tries</CardTitle>
+              <CardDescription>
+                Every Binance Pay verification attempt — auto + manual
+              </CardDescription>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {(
+                [
+                  { id: 'all', label: 'All' },
+                  { id: 'verified', label: 'Success' },
+                  { id: 'failed', label: 'Failed' },
+                  { id: 'pending', label: 'Pending' },
+                ] as const
+              ).map((f) => {
+                const count =
+                  f.id === 'all'
+                    ? logs.length
+                    : logs.filter((l) => l.status === f.id.toUpperCase())
+                        .length;
+                return (
+                  <button
+                    key={f.id}
+                    onClick={() => {
+                      setAuditFilter(f.id);
+                      setPage(1);
+                    }}
+                    className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
+                      auditFilter === f.id
+                        ? 'bg-amber-500 text-black'
+                        : 'bg-muted text-muted-foreground hover:bg-muted/70'
+                    }`}
+                  >
+                    {f.label}
+                    <span className="ml-1.5 opacity-70">{count}</span>
+                  </button>
+                );
+              })}
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => {
+                  setLogsLoading(true);
+                  void fetchLogs();
+                }}
+                disabled={logsLoading}
+              >
+                {logsLoading ? (
+                  <Loader2 className="size-3 animate-spin" />
+                ) : (
+                  <RefreshCw className="size-3" />
+                )}
+              </Button>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="p-0">
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="bg-muted/50 text-muted-foreground border-b text-xs uppercase">
+                  <th className="px-4 py-2 text-left font-medium">Date</th>
+                  <th className="px-4 py-2 text-left font-medium">Action</th>
+                  <th className="px-4 py-2 text-left font-medium">Status</th>
+                  <th className="px-4 py-2 text-left font-medium">Order ID</th>
+                  <th className="px-4 py-2 text-right font-medium">Amount</th>
+                  <th className="px-4 py-2 text-left font-medium">User</th>
+                  <th className="px-4 py-2 text-left font-medium">
+                    Verdict / Note
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y">
+                {logs
+                  .filter((log) =>
+                    auditFilter === 'all'
+                      ? true
+                      : log.status === auditFilter.toUpperCase(),
+                  )
+                  .slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
+                  .map((log) => {
+                    const actionVariant:
+                      | 'default'
+                      | 'secondary'
+                      | 'destructive'
+                      | 'outline' = log.action.includes('VERIFY')
+                      ? 'default'
+                      : log.action.includes('REJECT')
+                        ? 'destructive'
+                        : 'secondary';
+                    const statusVariant:
+                      | 'default'
+                      | 'secondary'
+                      | 'destructive'
+                      | 'outline' =
+                      log.status === 'VERIFIED'
+                        ? 'default'
+                        : log.status === 'FAILED'
+                          ? 'destructive'
+                          : log.status === 'PENDING'
+                            ? 'secondary'
+                            : 'outline';
+                    const verdictColor = log.scraperVerdict
+                      ? log.scraperVerdict === 'FOUND'
+                        ? 'text-green-500'
+                        : log.scraperVerdict === 'NOT_FOUND' ||
+                            log.scraperVerdict === 'WRONG_TYPE'
+                          ? 'text-red-500'
+                          : 'text-amber-500'
+                      : 'text-muted-foreground';
+                    return (
+                      <tr key={log.id} className="hover:bg-muted/30">
+                        <td className="text-muted-foreground px-4 py-2 text-xs whitespace-nowrap">
+                          {new Date(log.createdAt).toLocaleString()}
+                        </td>
+                        <td className="px-4 py-2">
+                          <Badge variant={actionVariant} className="text-xs">
+                            {log.action.replace(/_/g, ' ')}
+                          </Badge>
+                        </td>
+                        <td className="px-4 py-2">
+                          {log.status && (
+                            <Badge variant={statusVariant} className="text-xs">
+                              {log.status}
+                            </Badge>
+                          )}
+                        </td>
+                        <td className="max-w-[180px] truncate px-4 py-2 font-mono text-xs">
+                          {log.orderId || '—'}
+                        </td>
+                        <td className="px-4 py-2 text-right tabular-nums">
+                          {log.amount
+                            ? `${log.currency || ''} ${Number(log.amount).toFixed(2)}`
+                            : '—'}
+                        </td>
+                        <td className="px-4 py-2 text-xs">
+                          {log.user?.email || 'System'}
+                        </td>
+                        <td className="max-w-xs px-4 py-2">
+                          {log.scraperVerdict ? (
+                            <div className="space-y-0.5">
+                              <span
+                                className={`font-mono text-xs font-medium ${verdictColor}`}
+                              >
+                                {log.scraperVerdict}
+                              </span>
+                              {log.errorMessage && (
+                                <p className="text-muted-foreground truncate text-xs">
+                                  {log.errorMessage.replace(
+                                    /^\[.+?\]\s*Scraper:\s*[A-Z_]+\s*[—-]?\s*/,
+                                    '',
+                                  )}
+                                </p>
+                              )}
+                            </div>
+                          ) : log.errorMessage ? (
+                            <p className="text-muted-foreground truncate text-xs">
+                              {log.errorMessage}
+                            </p>
+                          ) : log.txHash ? (
+                            <p className="truncate font-mono text-xs text-green-500">
+                              tx: {log.txHash.slice(0, 24)}…
+                            </p>
+                          ) : (
+                            <span className="text-muted-foreground text-xs">
+                              —
+                            </span>
+                          )}
+                          {log.attempts !== undefined && log.attempts > 1 && (
+                            <p className="text-muted-foreground mt-0.5 text-[10px]">
+                              Attempts: {log.attempts}
+                            </p>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                {!logsLoading &&
+                  logs.filter((log) =>
+                    auditFilter === 'all'
+                      ? true
+                      : log.status === auditFilter.toUpperCase(),
+                  ).length === 0 && (
+                    <tr>
+                      <td
+                        colSpan={7}
+                        className="text-muted-foreground py-12 text-center text-sm"
+                      >
+                        No {auditFilter === 'all' ? '' : auditFilter} session
+                        tries
+                      </td>
+                    </tr>
+                  )}
+                {logsLoading && (
+                  <tr>
+                    <td colSpan={7} className="py-12 text-center">
+                      <Loader2 className="text-muted-foreground mx-auto size-5 animate-spin" />
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+          {(() => {
+            const filtered = logs.filter((log) =>
+              auditFilter === 'all'
+                ? true
+                : log.status === auditFilter.toUpperCase(),
+            );
+            const totalPages = Math.max(
+              1,
+              Math.ceil(filtered.length / PAGE_SIZE),
+            );
+            const safePage = Math.min(page, totalPages);
+            if (filtered.length === 0) return null;
+            const start = (safePage - 1) * PAGE_SIZE + 1;
+            const end = Math.min(safePage * PAGE_SIZE, filtered.length);
+            return (
+              <div className="flex items-center justify-between border-t px-4 py-3">
+                <p className="text-muted-foreground text-xs">
+                  Showing <span className="font-medium">{start}</span>–
+                  <span className="font-medium">{end}</span> of{' '}
+                  <span className="font-medium">{filtered.length}</span>
+                </p>
+                <div className="flex items-center gap-2">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled={safePage <= 1}
+                    onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  >
+                    Previous
+                  </Button>
+                  <span className="text-muted-foreground text-xs tabular-nums">
+                    Page {safePage} / {totalPages}
+                  </span>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled={safePage >= totalPages}
+                    onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                  >
+                    Next
+                  </Button>
+                </div>
+              </div>
+            );
+          })()}
         </CardContent>
       </Card>
     </div>

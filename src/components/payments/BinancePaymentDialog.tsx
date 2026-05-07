@@ -223,8 +223,9 @@ export function BinancePaymentDialog({
                 </div>
               </div>
 
-              {/* Resume mode: compact status banner */}
-              {isResume && (
+              {/* Resume mode: compact status banner — hide when error block below
+                  takes over (e.g. max attempts reached) */}
+              {isResume && verificationStatus !== 'error' && (
                 <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-4">
                   <div className="flex items-start gap-3">
                     <RefreshCw className="mt-0.5 h-5 w-5 shrink-0 animate-spin text-amber-500" />
@@ -233,9 +234,11 @@ export function BinancePaymentDialog({
                         Awaiting Admin Verification
                       </p>
                       <p className="text-muted-foreground text-xs">
-                        Our team typically verifies within 24 hours. You'll get
-                        a notification when your balance is credited. You can
-                        update your Order ID below if needed.
+                        Auto-verified within 24 hours when your Order ID matches
+                        the Binance transaction. Your wallet is credited
+                        automatically on confirmation. Invalid or mismatched IDs
+                        are rejected. You can update your Order ID below if
+                        needed.
                       </p>
                     </div>
                   </div>
@@ -438,6 +441,7 @@ export function BinancePaymentDialog({
                     !orderId.trim() ||
                     isVerifying ||
                     verificationStatus === 'success' ||
+                    verificationStatus === 'error' ||
                     // In resume mode, only enable if Order ID actually changed
                     (isResume &&
                       orderId.trim() === (existingOrderId ?? '').trim())
@@ -464,8 +468,9 @@ export function BinancePaymentDialog({
 
               {/* Help text */}
               <p className="text-muted-foreground text-center text-xs">
-                Payment will be credited automatically after verification. If
-                pending, our team will verify within 24 hours.
+                Auto-verified within 24 hours when your Order ID matches the
+                Binance transaction. Wallet is credited on confirmation; invalid
+                or mismatched IDs are rejected.
               </p>
             </div>
           )}

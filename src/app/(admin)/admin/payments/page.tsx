@@ -1772,7 +1772,7 @@ export default function AdminPaymentsPage() {
             </div>
           )}
 
-          {/* Audit Logs Sub-tab */}
+          {/* Audit Logs Sub-tab — admin manual actions only */}
           {binanceActiveSubTab === 'logs' && (
             <div className="overflow-hidden rounded-xl border border-[rgba(255,255,255,0.1)] bg-[rgba(15,23,42,0.6)]">
               <div className="border-b border-[rgba(255,255,255,0.1)] p-4">

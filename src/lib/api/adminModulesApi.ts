@@ -1755,6 +1755,37 @@ export interface BinanceAuditLog {
   } | null;
 }
 
+export interface BinanceSessionTry {
+  id: string;
+  action: string;
+  resource: string;
+  resourceId: string | null;
+  status: 'PENDING' | 'VERIFIED' | 'FAILED' | 'EXPIRED';
+  orderId: string;
+  amount: string | number;
+  currency: string;
+  attempts: number;
+  txHash: string | null;
+  scraperVerdict: string | null;
+  errorMessage: string | null;
+  verifiedAt: string | null;
+  payment: {
+    id: string;
+    amount: string | number;
+    netAmount: string | number;
+    status: string;
+  } | null;
+  details: Record<string, unknown>;
+  ipAddress: string | null;
+  createdAt: string;
+  updatedAt: string;
+  user: {
+    id: string;
+    email: string;
+    name: string;
+  } | null;
+}
+
 export const getBinanceSessionStatus =
   async (): Promise<BinanceSessionStatus> => {
     const response = await apiClient.get<BinanceSessionStatus>(
@@ -1795,6 +1826,15 @@ export const getBinanceAuditLogs = async (): Promise<{
 }> => {
   const response = await apiClient.get<{ data: BinanceAuditLog[] }>(
     '/admin/binance/audit-logs',
+  );
+  return response.data;
+};
+
+export const getBinanceSessionTries = async (): Promise<{
+  data: BinanceSessionTry[];
+}> => {
+  const response = await apiClient.get<{ data: BinanceSessionTry[] }>(
+    '/admin/binance/sessions',
   );
   return response.data;
 };
