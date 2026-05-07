@@ -34,6 +34,7 @@ import {
   KeyRound,
   ExternalLink,
   SearchCheck,
+  Cookie,
 } from 'lucide-react';
 
 const menuItems = [
@@ -53,6 +54,7 @@ const menuItems = [
   { path: '/admin/blogs', label: 'Blogs Management', icon: Newspaper },
   { path: '/admin/legal', label: 'Legal Management', icon: Scale },
   { path: '/admin/payments', label: 'Payment Management', icon: Wallet },
+  { path: '/admin/binance-session', label: 'Binance Session', icon: Cookie },
   { path: '/admin/ads', label: 'Ad Management', icon: MonitorPlay },
   { path: '/admin/login-api', label: 'Login & API Management', icon: KeyRound },
   { path: '/admin/settings', label: 'System Settings', icon: Settings },
@@ -69,38 +71,42 @@ export function AdminSidebar() {
       {/* Mobile Menu Button */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="fixed top-4 left-4 z-50 lg:hidden p-2 rounded-xl bg-[rgba(255,255,255,0.08)] border border-[rgba(255,255,255,0.18)] text-white"
+        className="fixed top-4 left-4 z-50 rounded-xl border border-[rgba(255,255,255,0.18)] bg-[rgba(255,255,255,0.08)] p-2 text-white lg:hidden"
       >
-        {isOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+        {isOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
       </button>
 
       {/* Overlay */}
       {isOpen && (
         <div
-          className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+          className="fixed inset-0 z-40 bg-black/50 lg:hidden"
           onClick={() => setIsOpen(false)}
         />
       )}
 
       {/* Sidebar */}
       <aside
-        className={`fixed left-0 top-0 h-screen w-60 bg-[#0F172A] border-r border-[rgba(255,255,255,0.18)] overflow-y-auto z-40 transition-transform lg:translate-x-0 ${
+        className={`fixed top-0 left-0 z-40 h-screen w-60 overflow-y-auto border-r border-[rgba(255,255,255,0.18)] bg-[#0F172A] transition-transform lg:translate-x-0 ${
           isOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
         <div className="p-6">
-          <div className="flex items-center gap-3 mb-8">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#3B82F6] to-[#8B5CF6] flex items-center justify-center overflow-hidden flex-shrink-0">
+          <div className="mb-8 flex items-center gap-3">
+            <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center overflow-hidden rounded-xl bg-gradient-to-br from-[#3B82F6] to-[#8B5CF6]">
               {logoUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img src={logoUrl} alt="Logo" className="w-full h-full object-contain" />
+                <img
+                  src={logoUrl}
+                  alt="Logo"
+                  className="h-full w-full object-contain"
+                />
               ) : (
-                <MessageSquare className="w-6 h-6 text-white" />
+                <MessageSquare className="h-6 w-6 text-white" />
               )}
             </div>
             <div>
-              <h1 className="text-white font-semibold text-lg">BestSMSHQ</h1>
-              <p className="text-[#64748B] text-xs">Admin Panel</p>
+              <h1 className="text-lg font-semibold text-white">BestSMSHQ</h1>
+              <p className="text-xs text-[#64748B]">Admin Panel</p>
             </div>
           </div>
 
@@ -114,13 +120,13 @@ export function AdminSidebar() {
                   key={item.path}
                   href={item.path}
                   onClick={() => setIsOpen(false)}
-                  className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${
+                  className={`flex items-center gap-3 rounded-xl px-4 py-3 transition-all ${
                     isActive
-                      ? 'bg-[rgba(255,255,255,0.08)] border border-[rgba(255,255,255,0.18)] text-white'
+                      ? 'border border-[rgba(255,255,255,0.18)] bg-[rgba(255,255,255,0.08)] text-white'
                       : 'text-[#94A3B8] hover:bg-[rgba(255,255,255,0.05)] hover:text-white'
                   }`}
                 >
-                  <Icon className="w-5 h-5" />
+                  <Icon className="h-5 w-5" />
                   <span className="text-sm font-medium">{item.label}</span>
                 </Link>
               );

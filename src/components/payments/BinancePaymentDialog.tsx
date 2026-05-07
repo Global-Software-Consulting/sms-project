@@ -68,7 +68,7 @@ export function BinancePaymentDialog({
       setVerificationStatus(existingOrderId ? 'pending' : 'idle');
       setStatusMessage(
         existingOrderId
-          ? 'Order ID submitted. Awaiting admin verification.'
+          ? 'Order ID submitted. Auto-verified within 24 hours when it matches the Binance transaction.'
           : '',
       );
     }
@@ -140,6 +140,9 @@ export function BinancePaymentDialog({
     try {
       setIsVerifying(true);
       setVerificationStatus('pending');
+      // Drop any prior error/success copy so the loading state isn't paired
+      // with stale text from a previous attempt.
+      setStatusMessage('');
 
       const result = await verifyBinancePayment(paymentId, orderId.trim());
 
@@ -223,8 +226,9 @@ export function BinancePaymentDialog({
                 </div>
               </div>
 
-              {/* Resume mode: compact status banner */}
-              {isResume && (
+              {/* Resume mode: compact status banner — hide when error block below
+                  takes over (e.g. max attempts reached) */}
+              {isResume && verificationStatus !== 'error' && (
                 <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-4">
                   <div className="flex items-start gap-3">
                     <RefreshCw className="mt-0.5 h-5 w-5 shrink-0 animate-spin text-amber-500" />
@@ -233,9 +237,11 @@ export function BinancePaymentDialog({
                         Awaiting Admin Verification
                       </p>
                       <p className="text-muted-foreground text-xs">
-                        Our team typically verifies within 15 minutes. You'll
-                        get a notification when your balance is credited. You
-                        can update your Order ID below if needed.
+                        Auto-verified within 24 hours when your Order ID matches
+                        the Binance transaction. Your wallet is credited
+                        automatically on confirmation. Invalid or mismatched IDs
+                        are rejected. You can update your Order ID below if
+                        needed.
                       </p>
                     </div>
                   </div>
@@ -277,15 +283,29 @@ export function BinancePaymentDialog({
                 </div>
               )}
 
-              {/* QR Code (initial mode only) */}
+              {/* QR Code with centered Binance logo (initial mode only) */}
               {!isResume && binanceInfo.qrCodeUrl && (
                 <div className="flex justify-center">
-                  <div className="rounded-lg border bg-white p-2">
+                  <div className="relative rounded-lg border bg-white p-2">
                     <img
                       src={binanceInfo.qrCodeUrl}
                       alt="Binance Pay QR Code"
                       className="h-32 w-32"
                     />
+                    {/* Inline Binance "B" diamond logo — no external dep */}
+                    <div className="absolute top-1/2 left-1/2 flex h-7 w-7 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded bg-white shadow">
+                      <svg
+                        viewBox="0 0 128 128"
+                        className="h-5 w-5"
+                        xmlns="http://www.w3.org/2000/svg"
+                        aria-label="Binance"
+                      >
+                        <path
+                          fill="#F0B90B"
+                          d="M38.728 64l-12.96 12.96L12.808 64l12.96-12.96L38.728 64zm25.272-25.272l22.184 22.184 12.96-12.96L64 12.808 28.856 47.952l12.96 12.96L64 38.728zm38.232 12.312l-12.96 12.96L102.232 76.96 115.192 64l-12.96-12.96zM64 89.272L41.816 67.088l-12.96 12.96L64 115.192l35.144-35.144-12.96-12.96L64 89.272zm0-12.272L76.96 64 64 51.04 51.04 64 64 76.96z"
+                        />
+                      </svg>
+                    </div>
                   </div>
                 </div>
               )}
@@ -347,7 +367,15 @@ export function BinancePaymentDialog({
                 <Input
                   placeholder="e.g. 1234567890123456"
                   value={orderId}
-                  onChange={(e) => setOrderId(e.target.value)}
+                  onChange={(e) => {
+                    setOrderId(e.target.value);
+                    // Editing the input after a failure should re-enable submission
+                    // and clear the stale error banner.
+                    if (verificationStatus === 'error') {
+                      setVerificationStatus('idle');
+                      setStatusMessage('');
+                    }
+                  }}
                   className="font-mono"
                   disabled={isVerifying || verificationStatus === 'success'}
                 />
@@ -424,6 +452,7 @@ export function BinancePaymentDialog({
                     !orderId.trim() ||
                     isVerifying ||
                     verificationStatus === 'success' ||
+                    verificationStatus === 'error' ||
                     // In resume mode, only enable if Order ID actually changed
                     (isResume &&
                       orderId.trim() === (existingOrderId ?? '').trim())
@@ -450,8 +479,9 @@ export function BinancePaymentDialog({
 
               {/* Help text */}
               <p className="text-muted-foreground text-center text-xs">
-                Payment will be credited automatically after verification. If
-                pending, our team will verify within 15 minutes.
+                Auto-verified within 24 hours when your Order ID matches the
+                Binance transaction. Wallet is credited on confirmation; invalid
+                or mismatched IDs are rejected.
               </p>
             </div>
           )}

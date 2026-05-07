@@ -1712,6 +1712,7 @@ export interface BinancePendingVerification {
   currency: string;
   attempts: number;
   ipAddress: string | null;
+  scraperVerdict: string | null;
   createdAt: string;
   user: {
     id: string;
@@ -1747,6 +1748,37 @@ export interface BinanceAuditLog {
   details: Record<string, unknown>;
   ipAddress: string | null;
   createdAt: string;
+  user: {
+    id: string;
+    email: string;
+    name: string;
+  } | null;
+}
+
+export interface BinanceSessionTry {
+  id: string;
+  action: string;
+  resource: string;
+  resourceId: string | null;
+  status: 'PENDING' | 'VERIFIED' | 'FAILED' | 'EXPIRED';
+  orderId: string;
+  amount: string | number;
+  currency: string;
+  attempts: number;
+  txHash: string | null;
+  scraperVerdict: string | null;
+  errorMessage: string | null;
+  verifiedAt: string | null;
+  payment: {
+    id: string;
+    amount: string | number;
+    netAmount: string | number;
+    status: string;
+  } | null;
+  details: Record<string, unknown>;
+  ipAddress: string | null;
+  createdAt: string;
+  updatedAt: string;
   user: {
     id: string;
     email: string;
@@ -1794,6 +1826,15 @@ export const getBinanceAuditLogs = async (): Promise<{
 }> => {
   const response = await apiClient.get<{ data: BinanceAuditLog[] }>(
     '/admin/binance/audit-logs',
+  );
+  return response.data;
+};
+
+export const getBinanceSessionTries = async (): Promise<{
+  data: BinanceSessionTry[];
+}> => {
+  const response = await apiClient.get<{ data: BinanceSessionTry[] }>(
+    '/admin/binance/sessions',
   );
   return response.data;
 };
@@ -1855,5 +1896,93 @@ export const adminResetBinanceVerification = async (data: {
     '/admin/binance/reset',
     data,
   );
+  return response.data;
+};
+
+// ============================================
+// BINANCE SCRAPER SESSION (cookie import + validate)
+// ============================================
+
+export interface BinanceScraperSessionStatus {
+  configured: boolean;
+  isValid: boolean;
+  email: string | null;
+  payId: string | null;
+  qrCodeUrl: string | null;
+  expiresAt: string | null;
+  lastTestedAt: string | null;
+  testError: string | null;
+  isActive: boolean;
+}
+
+export const getBinanceScraperSession =
+  async (): Promise<BinanceScraperSessionStatus> => {
+    const response = await apiClient.get<BinanceScraperSessionStatus>(
+      '/admin/binance/scraper-session',
+    );
+    return response.data;
+  };
+
+export const importBinanceScraperSessionFromCurl = async (data: {
+  curl: string;
+  email?: string;
+}): Promise<{
+  success: boolean;
+  message: string;
+  cookieCount?: number;
+  expiresAt?: string | null;
+}> => {
+  const response = await apiClient.post<{
+    success: boolean;
+    message: string;
+    cookieCount?: number;
+    expiresAt?: string | null;
+  }>('/admin/binance/scraper-session/import-curl', data);
+  return response.data;
+};
+
+export const importBinanceScraperSession = async (data: {
+  cookiesText: string;
+  email?: string;
+  userAgent?: string;
+  deviceInfo?: string;
+}): Promise<{
+  success: boolean;
+  message: string;
+  cookieCount?: number;
+  expiresAt?: string | null;
+}> => {
+  const response = await apiClient.post<{
+    success: boolean;
+    message: string;
+    cookieCount?: number;
+    expiresAt?: string | null;
+  }>('/admin/binance/scraper-session/import', data);
+  return response.data;
+};
+
+export const testBinanceScraperSession = async (): Promise<{
+  valid: boolean;
+  email: string | null;
+  payId: string | null;
+  error: string | null;
+}> => {
+  const response = await apiClient.post<{
+    valid: boolean;
+    email: string | null;
+    payId: string | null;
+    error: string | null;
+  }>('/admin/binance/scraper-session/test');
+  return response.data;
+};
+
+export const clearBinanceScraperSession = async (): Promise<{
+  success: boolean;
+  message: string;
+}> => {
+  const response = await apiClient.delete<{
+    success: boolean;
+    message: string;
+  }>('/admin/binance/scraper-session');
   return response.data;
 };
