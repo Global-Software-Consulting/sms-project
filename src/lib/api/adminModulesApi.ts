@@ -1712,6 +1712,7 @@ export interface BinancePendingVerification {
   currency: string;
   attempts: number;
   ipAddress: string | null;
+  scraperVerdict: string | null;
   createdAt: string;
   user: {
     id: string;
@@ -1855,5 +1856,93 @@ export const adminResetBinanceVerification = async (data: {
     '/admin/binance/reset',
     data,
   );
+  return response.data;
+};
+
+// ============================================
+// BINANCE SCRAPER SESSION (cookie import + validate)
+// ============================================
+
+export interface BinanceScraperSessionStatus {
+  configured: boolean;
+  isValid: boolean;
+  email: string | null;
+  payId: string | null;
+  qrCodeUrl: string | null;
+  expiresAt: string | null;
+  lastTestedAt: string | null;
+  testError: string | null;
+  isActive: boolean;
+}
+
+export const getBinanceScraperSession =
+  async (): Promise<BinanceScraperSessionStatus> => {
+    const response = await apiClient.get<BinanceScraperSessionStatus>(
+      '/admin/binance/scraper-session',
+    );
+    return response.data;
+  };
+
+export const importBinanceScraperSessionFromCurl = async (data: {
+  curl: string;
+  email?: string;
+}): Promise<{
+  success: boolean;
+  message: string;
+  cookieCount?: number;
+  expiresAt?: string | null;
+}> => {
+  const response = await apiClient.post<{
+    success: boolean;
+    message: string;
+    cookieCount?: number;
+    expiresAt?: string | null;
+  }>('/admin/binance/scraper-session/import-curl', data);
+  return response.data;
+};
+
+export const importBinanceScraperSession = async (data: {
+  cookiesText: string;
+  email?: string;
+  userAgent?: string;
+  deviceInfo?: string;
+}): Promise<{
+  success: boolean;
+  message: string;
+  cookieCount?: number;
+  expiresAt?: string | null;
+}> => {
+  const response = await apiClient.post<{
+    success: boolean;
+    message: string;
+    cookieCount?: number;
+    expiresAt?: string | null;
+  }>('/admin/binance/scraper-session/import', data);
+  return response.data;
+};
+
+export const testBinanceScraperSession = async (): Promise<{
+  valid: boolean;
+  email: string | null;
+  payId: string | null;
+  error: string | null;
+}> => {
+  const response = await apiClient.post<{
+    valid: boolean;
+    email: string | null;
+    payId: string | null;
+    error: string | null;
+  }>('/admin/binance/scraper-session/test');
+  return response.data;
+};
+
+export const clearBinanceScraperSession = async (): Promise<{
+  success: boolean;
+  message: string;
+}> => {
+  const response = await apiClient.delete<{
+    success: boolean;
+    message: string;
+  }>('/admin/binance/scraper-session');
   return response.data;
 };

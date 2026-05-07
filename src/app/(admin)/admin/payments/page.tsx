@@ -1521,7 +1521,40 @@ export default function AdminPaymentsPage() {
                           className="hover:bg-[rgba(255,255,255,0.02)]"
                         >
                           <td className="px-4 py-3 font-mono text-sm text-white">
-                            {v.orderId}
+                            <div>{v.orderId}</div>
+                            {v.scraperVerdict && (
+                              <div
+                                className={`mt-1 text-[10px] font-normal ${
+                                  v.scraperVerdict.includes('NOT_FOUND')
+                                    ? 'text-[#F87171]'
+                                    : v.scraperVerdict.includes('WRONG_AMOUNT')
+                                      ? 'text-[#FBBF24]'
+                                      : v.scraperVerdict.includes(
+                                            'WRONG_CURRENCY',
+                                          )
+                                        ? 'text-[#FBBF24]'
+                                        : v.scraperVerdict.includes(
+                                              'WRONG_TYPE',
+                                            )
+                                          ? 'text-[#F87171]'
+                                          : v.scraperVerdict.includes(
+                                                'NOT_SUCCESS',
+                                              )
+                                            ? 'text-[#FBBF24]'
+                                            : v.scraperVerdict.includes(
+                                                  'NO_SESSION',
+                                                )
+                                              ? 'text-[#94A3B8]'
+                                              : v.scraperVerdict.includes(
+                                                    'ERROR',
+                                                  )
+                                                ? 'text-[#94A3B8]'
+                                                : 'text-[#22C55E]'
+                                }`}
+                              >
+                                {v.scraperVerdict}
+                              </div>
+                            )}
                           </td>
                           <td className="px-4 py-3 font-medium text-white">
                             ${v.amount} {v.currency}

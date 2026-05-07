@@ -233,9 +233,9 @@ export function BinancePaymentDialog({
                         Awaiting Admin Verification
                       </p>
                       <p className="text-muted-foreground text-xs">
-                        Our team typically verifies within 15 minutes. You'll
-                        get a notification when your balance is credited. You
-                        can update your Order ID below if needed.
+                        Our team typically verifies within 24 hours. You'll get
+                        a notification when your balance is credited. You can
+                        update your Order ID below if needed.
                       </p>
                     </div>
                   </div>
@@ -277,15 +277,29 @@ export function BinancePaymentDialog({
                 </div>
               )}
 
-              {/* QR Code (initial mode only) */}
+              {/* QR Code with centered Binance logo (initial mode only) */}
               {!isResume && binanceInfo.qrCodeUrl && (
                 <div className="flex justify-center">
-                  <div className="rounded-lg border bg-white p-2">
+                  <div className="relative rounded-lg border bg-white p-2">
                     <img
                       src={binanceInfo.qrCodeUrl}
                       alt="Binance Pay QR Code"
                       className="h-32 w-32"
                     />
+                    {/* Inline Binance "B" diamond logo — no external dep */}
+                    <div className="absolute top-1/2 left-1/2 flex h-7 w-7 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded bg-white shadow">
+                      <svg
+                        viewBox="0 0 128 128"
+                        className="h-5 w-5"
+                        xmlns="http://www.w3.org/2000/svg"
+                        aria-label="Binance"
+                      >
+                        <path
+                          fill="#F0B90B"
+                          d="M38.728 64l-12.96 12.96L12.808 64l12.96-12.96L38.728 64zm25.272-25.272l22.184 22.184 12.96-12.96L64 12.808 28.856 47.952l12.96 12.96L64 38.728zm38.232 12.312l-12.96 12.96L102.232 76.96 115.192 64l-12.96-12.96zM64 89.272L41.816 67.088l-12.96 12.96L64 115.192l35.144-35.144-12.96-12.96L64 89.272zm0-12.272L76.96 64 64 51.04 51.04 64 64 76.96z"
+                        />
+                      </svg>
+                    </div>
                   </div>
                 </div>
               )}
@@ -451,7 +465,7 @@ export function BinancePaymentDialog({
               {/* Help text */}
               <p className="text-muted-foreground text-center text-xs">
                 Payment will be credited automatically after verification. If
-                pending, our team will verify within 15 minutes.
+                pending, our team will verify within 24 hours.
               </p>
             </div>
           )}
