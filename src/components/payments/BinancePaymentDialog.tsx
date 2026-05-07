@@ -68,7 +68,7 @@ export function BinancePaymentDialog({
       setVerificationStatus(existingOrderId ? 'pending' : 'idle');
       setStatusMessage(
         existingOrderId
-          ? 'Order ID submitted. Awaiting admin verification.'
+          ? 'Order ID submitted. Auto-verified within 24 hours when it matches the Binance transaction.'
           : '',
       );
     }
@@ -140,6 +140,9 @@ export function BinancePaymentDialog({
     try {
       setIsVerifying(true);
       setVerificationStatus('pending');
+      // Drop any prior error/success copy so the loading state isn't paired
+      // with stale text from a previous attempt.
+      setStatusMessage('');
 
       const result = await verifyBinancePayment(paymentId, orderId.trim());
 
@@ -364,7 +367,15 @@ export function BinancePaymentDialog({
                 <Input
                   placeholder="e.g. 1234567890123456"
                   value={orderId}
-                  onChange={(e) => setOrderId(e.target.value)}
+                  onChange={(e) => {
+                    setOrderId(e.target.value);
+                    // Editing the input after a failure should re-enable submission
+                    // and clear the stale error banner.
+                    if (verificationStatus === 'error') {
+                      setVerificationStatus('idle');
+                      setStatusMessage('');
+                    }
+                  }}
                   className="font-mono"
                   disabled={isVerifying || verificationStatus === 'success'}
                 />

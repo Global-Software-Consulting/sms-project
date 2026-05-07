@@ -26,7 +26,9 @@ import {
   Shield,
   Activity,
   RotateCcw,
+  ExternalLink,
 } from 'lucide-react';
+import Link from 'next/link';
 import {
   getPaymentGateways,
   updatePaymentGateway,
@@ -2609,9 +2611,21 @@ export default function AdminPaymentsPage() {
                     Binance Internal Transfer Configuration
                   </h3>
                   <div className="space-y-4">
+                    <div className="rounded-md border border-[rgba(59,130,246,0.3)] bg-[rgba(59,130,246,0.08)] p-3 text-xs text-[#94A3B8]">
+                      Active Pay ID and QR are auto-detected from the live
+                      scraper session. The fallback Pay ID below is only used
+                      when no scraper session is configured.
+                      <Link
+                        href="/admin/binance-session"
+                        className="mt-2 inline-flex items-center gap-1 font-medium text-[#3B82F6] hover:underline"
+                      >
+                        Manage Binance session
+                        <ExternalLink className="h-3 w-3" />
+                      </Link>
+                    </div>
                     <div>
                       <label className="mb-2 block text-sm font-medium text-white">
-                        Pay ID *
+                        Fallback Pay ID
                       </label>
                       <input
                         type="text"
@@ -2626,71 +2640,11 @@ export default function AdminPaymentsPage() {
                           })
                         }
                         className="w-full rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.4)] px-4 py-3 text-sm text-white focus:ring-2 focus:ring-[#3B82F6] focus:outline-none"
-                        placeholder="Enter your Binance Pay ID"
+                        placeholder="Enter fallback Binance Pay ID"
                       />
                       <p className="mt-1 text-xs text-[#64748B]">
-                        Users will transfer to this Pay ID
+                        Used only when no active scraper session exists
                       </p>
-                    </div>
-                    <div>
-                      <label className="mb-2 block text-sm font-medium text-white">
-                        Merchant ID (Optional)
-                      </label>
-                      <input
-                        type="text"
-                        value={methodFormData.settings.binanceMerchantId}
-                        onChange={(e) =>
-                          setMethodFormData({
-                            ...methodFormData,
-                            settings: {
-                              ...methodFormData.settings,
-                              binanceMerchantId: e.target.value,
-                            },
-                          })
-                        }
-                        className="w-full rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.4)] px-4 py-3 text-sm text-white focus:ring-2 focus:ring-[#3B82F6] focus:outline-none"
-                        placeholder="Enter your Binance Merchant ID"
-                      />
-                    </div>
-                    <div>
-                      <label className="mb-2 block text-sm font-medium text-white">
-                        API Key (Optional)
-                      </label>
-                      <input
-                        type="password"
-                        value={methodFormData.settings.binanceApiKey}
-                        onChange={(e) =>
-                          setMethodFormData({
-                            ...methodFormData,
-                            settings: {
-                              ...methodFormData.settings,
-                              binanceApiKey: e.target.value,
-                            },
-                          })
-                        }
-                        className="w-full rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.4)] px-4 py-3 text-sm text-white focus:ring-2 focus:ring-[#3B82F6] focus:outline-none"
-                        placeholder="Enter your Binance API Key"
-                      />
-                    </div>
-                    <div>
-                      <label className="mb-2 block text-sm font-medium text-white">
-                        Secret Key (Optional)
-                      </label>
-                      <input
-                        type="password"
-                        value={methodFormData.settings.binanceSecretKey}
-                        onChange={(e) =>
-                          setMethodFormData({
-                            ...methodFormData,
-                            settings: {
-                              ...methodFormData.settings,
-                              binanceSecretKey: e.target.value,
-                            },
-                          })
-                        }
-                        className="w-full rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.4)] px-4 py-3 text-sm text-white focus:ring-2 focus:ring-[#3B82F6] focus:outline-none"
-                        placeholder="Enter your Binance Secret Key"
-                      />
                     </div>
                   </div>
                 </div>
