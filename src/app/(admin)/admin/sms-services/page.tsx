@@ -250,6 +250,8 @@ export default function AdminSmsServicesPage() {
   const [servicesLimit, setServicesLimit] = useState(50);
   const [servicesTotalCount, setServicesTotalCount] = useState(0);
   const [servicesTotalPages, setServicesTotalPages] = useState(0);
+  // Category filter for the per-provider services modal. Empty string = all.
+  const [serviceCategoryFilter, setServiceCategoryFilter] = useState('');
   const [selectedServiceForCountries, setSelectedServiceForCountries] =
     useState<SmsService | null>(null);
   const [serviceCountries, setServiceCountries] = useState<SmsProduct[]>([]);
@@ -744,7 +746,7 @@ export default function AdminSmsServicesPage() {
     return () => clearTimeout(timer);
   }, [serviceSearchQuery]);
 
-  // Fetch services when pagination/search changes — classic page-based.
+  // Fetch services when pagination/search/category changes.
   useEffect(() => {
     if (selectedProvider && showProviderModal) {
       void fetchProviderServices(
@@ -752,6 +754,7 @@ export default function AdminSmsServicesPage() {
         servicesPage,
         servicesLimit,
         debouncedServiceSearch,
+        serviceCategoryFilter,
       );
     }
   }, [
@@ -760,14 +763,13 @@ export default function AdminSmsServicesPage() {
     servicesPage,
     servicesLimit,
     debouncedServiceSearch,
+    serviceCategoryFilter,
   ]);
 
-  // Reset to page 1 when search changes.
+  // Reset to page 1 when search or category changes.
   useEffect(() => {
-    if (debouncedServiceSearch !== '') {
-      setServicesPage(1);
-    }
-  }, [debouncedServiceSearch]);
+    setServicesPage(1);
+  }, [debouncedServiceSearch, serviceCategoryFilter]);
 
   // Map API providers to local Provider type for backward compat with other tabs
   const providers: Provider[] = apiProviders.map((p) => ({
@@ -839,6 +841,7 @@ export default function AdminSmsServicesPage() {
     page: number,
     limit: number,
     search: string,
+    category?: string,
   ) => {
     setIsServicesLoading(true);
     try {
@@ -847,6 +850,7 @@ export default function AdminSmsServicesPage() {
         page,
         limit,
         search: search || undefined,
+        category: category || undefined,
       });
       setProviderServices(response.data || []);
       setServicesTotalCount(response.meta?.total || 0);
@@ -2490,6 +2494,7 @@ export default function AdminSmsServicesPage() {
                     setServiceCountries([]);
                     setServiceSearchQuery('');
                     setDebouncedServiceSearch('');
+                    setServiceCategoryFilter('');
                     setServicesPage(1);
                     setServicesLimit(50);
                     setServicesTotalCount(0);
@@ -2537,7 +2542,7 @@ export default function AdminSmsServicesPage() {
                   </div>
                 </div>
 
-                {/* Search and Listings per page controls */}
+                {/* Search + Category filter + Per page */}
                 <div className="mb-3 flex items-center gap-4">
                   <div className="relative flex-1">
                     <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-[#64748B]" />
@@ -2551,6 +2556,24 @@ export default function AdminSmsServicesPage() {
                     {isServicesLoading && (
                       <Loader2 className="absolute top-1/2 right-3 h-4 w-4 -translate-y-1/2 animate-spin text-[#3B82F6]" />
                     )}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm whitespace-nowrap text-[#94A3B8]">
+                      Category:
+                    </span>
+                    <select
+                      value={serviceCategoryFilter}
+                      onChange={(e) => setServiceCategoryFilter(e.target.value)}
+                      className="cursor-pointer rounded-lg border border-[rgba(255,255,255,0.1)] bg-[#1E293B] px-3 py-2 text-sm text-white focus:ring-2 focus:ring-[#3B82F6] focus:outline-none [&>option]:bg-[#1E293B] [&>option]:text-white"
+                    >
+                      <option value="">All</option>
+                      <option value="social">Social Media</option>
+                      <option value="messaging">Messaging</option>
+                      <option value="finance">Finance</option>
+                      <option value="gaming">Gaming</option>
+                      <option value="shopping">Shopping</option>
+                      <option value="other">Other</option>
+                    </select>
                   </div>
                   <div className="flex items-center gap-2">
                     <span className="text-sm whitespace-nowrap text-[#94A3B8]">
