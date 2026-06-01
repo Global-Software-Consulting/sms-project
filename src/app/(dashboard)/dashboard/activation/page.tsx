@@ -227,33 +227,24 @@ export default function Activation() {
 
     // Cancellation guard: if the user switches providers mid-flight, the
     // earlier in-flight fetch must not overwrite state with stale data.
-    // Without this, rapid tab switching shows "No services available" even
-    // when services exist (item #17 in client bug list).
+    // (Item #17 in client bug list — was showing "No services available"
+    // intermittently.)
     let cancelled = false;
 
     const fetchServicesForProvider = async () => {
       try {
-        const allServices: SmsService[] = [];
-        let page = 1;
-        const limit = 200;
-
-        while (true) {
-          const response = await getServices({
-            providerId: selectedProvider.id,
-            limit,
-            page,
-          });
-          if (cancelled) return;
-
-          const services = response.data || [];
-          allServices.push(...services);
-
-          if (services.length < limit) break;
-          page++;
-        }
-
+        // Single request with a high limit. Backend fetches all rows from
+        // DB regardless of `limit` (it only slices the response), so
+        // multi-page loops were just hammering the rate limiter and
+        // returning 429s on page 2 — leaving the user with empty state.
+        const response = await getServices({
+          providerId: selectedProvider.id,
+          limit: 5000,
+          page: 1,
+        });
         if (cancelled) return;
-        setServices(allServices);
+
+        setServices(response.data || []);
         setSelectedService(null);
         setProducts([]);
       } catch (err) {
