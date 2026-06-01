@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useAppDispatch } from '@/store/hooks';
 import { initializeAuth } from '@/store/slices/authSlice';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -157,8 +157,17 @@ export default function Activation() {
   }, []);
 
   // Fetch products when service/provider changes - uses REAL-TIME API
+  // Request-ID guard for fetchProducts. Rapid service/provider switches +
+  // 300ms debounce can cause an old fetch to resolve after a newer one,
+  // overwriting state with stale prices. Each call bumps the ID; only the
+  // latest response is allowed to write.
+  const productsRequestId = useRef(0);
+
   const fetchProducts = useCallback(async () => {
     if (!selectedService || !selectedProvider) return;
+
+    const requestId = ++productsRequestId.current;
+    const isStale = () => requestId !== productsRequestId.current;
 
     try {
       setIsLoadingProducts(true);
@@ -167,8 +176,10 @@ export default function Activation() {
         selectedProvider.id,
         selectedService.id,
       );
+      if (isStale()) return;
       setProducts(response.data || []);
     } catch (err) {
+      if (isStale()) return;
       console.error('Failed to fetch products:', err);
       // Fallback to cached products if real-time fails
       try {
@@ -177,12 +188,14 @@ export default function Activation() {
           serviceId: selectedService.id,
           limit: 100,
         });
+        if (isStale()) return;
         setProducts(fallbackResponse.data || []);
       } catch {
+        if (isStale()) return;
         setProducts([]);
       }
     } finally {
-      setIsLoadingProducts(false);
+      if (!isStale()) setIsLoadingProducts(false);
     }
   }, [selectedProvider, selectedService]);
 
@@ -212,40 +225,49 @@ export default function Activation() {
   useEffect(() => {
     if (!selectedProvider) return;
 
+    // Cancellation guard: if the user switches providers mid-flight, the
+    // earlier in-flight fetch must not overwrite state with stale data.
+    // Without this, rapid tab switching shows "No services available" even
+    // when services exist (item #17 in client bug list).
+    let cancelled = false;
+
     const fetchServicesForProvider = async () => {
       try {
-        let allServices: SmsService[] = [];
+        const allServices: SmsService[] = [];
         let page = 1;
         const limit = 200;
-        let hasMore = true;
 
-        while (hasMore) {
+        while (true) {
           const response = await getServices({
             providerId: selectedProvider.id,
             limit,
             page,
           });
-          const services = response.data || [];
-          allServices = [...allServices, ...services];
+          if (cancelled) return;
 
-          if (services.length < limit) {
-            hasMore = false;
-          } else {
-            page++;
-          }
+          const services = response.data || [];
+          allServices.push(...services);
+
+          if (services.length < limit) break;
+          page++;
         }
 
+        if (cancelled) return;
         setServices(allServices);
-        // Clear selected service when provider changes
         setSelectedService(null);
         setProducts([]);
       } catch (err) {
+        if (cancelled) return;
         console.error('Failed to fetch services for provider:', err);
         setServices([]);
       }
     };
 
     fetchServicesForProvider();
+
+    return () => {
+      cancelled = true;
+    };
   }, [selectedProvider]);
 
   // Fetch products when service/provider changes (with debounce)
