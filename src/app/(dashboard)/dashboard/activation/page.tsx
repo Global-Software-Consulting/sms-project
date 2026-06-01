@@ -79,8 +79,13 @@ export default function Activation() {
   const SERVICES_PAGE_SIZE = 200;
   const [servicesPage, setServicesPage] = useState(1);
   const [hasMoreServices, setHasMoreServices] = useState(false);
+  // Full count from backend meta.total — separate from loaded length so
+  // the footer always shows the true total, not just what's paginated in.
+  const [servicesTotal, setServicesTotal] = useState(0);
   const servicesRequestId = useRef(0);
   const loadMoreSentinelRef = useRef<HTMLDivElement | null>(null);
+  // Server-side search — debounced so we don't fire on every keystroke.
+  const [debouncedServiceSearch, setDebouncedServiceSearch] = useState('');
   const [activatingProductId, setActivatingProductId] = useState<string | null>(
     null,
   );
@@ -236,16 +241,13 @@ export default function Activation() {
   useEffect(() => {
     if (!selectedProvider) return;
 
-    // Cancellation: rapid provider switches must not let an old fetch
-    // overwrite state. Request ID changes on every effect run.
-    // (Item #17 in client bug list — was showing "No services available"
-    // intermittently because of races.)
+    // Cancellation: rapid provider switches OR rapid search changes must
+    // not let an old fetch overwrite state.
     const requestId = ++servicesRequestId.current;
     const isStale = () => requestId !== servicesRequestId.current;
 
-    // Flip to loading + clear list synchronously so the next render shows
-    // the skeleton immediately (no "No services available" flash between
-    // provider change and the async fetch starting).
+    // Synchronous loading flip so the skeleton replaces stale content
+    // immediately (no "No services available" flash).
     setIsLoadingServices(true);
     setServices([]);
     setHasMoreServices(false);
@@ -256,26 +258,29 @@ export default function Activation() {
           providerId: selectedProvider.id,
           limit: SERVICES_PAGE_SIZE,
           page: 1,
+          ...(debouncedServiceSearch ? { search: debouncedServiceSearch } : {}),
         });
         if (isStale()) return;
 
         setServices(response.data || []);
         setServicesPage(1);
         setHasMoreServices(response.meta?.hasNextPage ?? false);
-        setSelectedService(null);
-        setProducts([]);
+        setServicesTotal(response.meta?.total ?? response.data?.length ?? 0);
+        // Clear current selection on provider change only — keep it when
+        // user is just searching within the same provider.
       } catch (err) {
         if (isStale()) return;
         console.error('Failed to fetch services for provider:', err);
         setServices([]);
         setHasMoreServices(false);
+        setServicesTotal(0);
       } finally {
         if (!isStale()) setIsLoadingServices(false);
       }
     };
 
     fetchFirstPage();
-  }, [selectedProvider]);
+  }, [selectedProvider, debouncedServiceSearch]);
 
   // Load next page of services (infinite scroll). Skip if already loading,
   // no more pages, or no provider selected. Guarded against stale provider
@@ -294,11 +299,17 @@ export default function Activation() {
         providerId: selectedProvider.id,
         limit: SERVICES_PAGE_SIZE,
         page: nextPage,
+        // Carry the active search term into paginated requests so the
+        // loaded list stays consistent with what the user is filtering on.
+        ...(debouncedServiceSearch ? { search: debouncedServiceSearch } : {}),
       });
       if (isStale()) return;
       setServices((prev) => [...prev, ...(response.data || [])]);
       setServicesPage(nextPage);
       setHasMoreServices(response.meta?.hasNextPage ?? false);
+      if (response.meta?.total != null) {
+        setServicesTotal(response.meta.total);
+      }
     } catch (err) {
       if (isStale()) return;
       console.error('Failed to load more services:', err);
@@ -306,7 +317,13 @@ export default function Activation() {
     } finally {
       if (!isStale()) setIsLoadingMoreServices(false);
     }
-  }, [selectedProvider, hasMoreServices, isLoadingMoreServices, servicesPage]);
+  }, [
+    selectedProvider,
+    hasMoreServices,
+    isLoadingMoreServices,
+    servicesPage,
+    debouncedServiceSearch,
+  ]);
 
   // IntersectionObserver: trigger loadMoreServices when sentinel scrolls
   // into view. Attached to the bottom of the services list.
@@ -396,12 +413,14 @@ export default function Activation() {
     return () => clearInterval(iv);
   }, []);
 
-  // Filter services by search (provider filtering is done in API call)
-  const filteredServices = useMemo(() => {
-    const q = serviceSearch.toLowerCase();
-    if (!q) return services;
-    return services.filter((s) => s.name.toLowerCase().includes(q));
-  }, [services, serviceSearch]);
+  // Debounce search input so we don't spam the backend on every keystroke.
+  // 300ms feels responsive without being chatty.
+  useEffect(() => {
+    const id = setTimeout(() => {
+      setDebouncedServiceSearch(serviceSearch.trim());
+    }, 300);
+    return () => clearTimeout(id);
+  }, [serviceSearch]);
 
   // Get products grouped by country
   const productsByCountry = useMemo(() => {
@@ -885,19 +904,17 @@ export default function Activation() {
               />
             </div>
 
-            {/* Service List - All services for selected provider */}
+            {/* Service List - All services for selected provider.
+                Search is server-side (debounced), so `services` already
+                reflects the active query. Only dedupe locally to guard
+                against any duplicate rows from the API. */}
             <div className="scrollbar-thin min-h-0 flex-1 space-y-1 overflow-y-auto pr-1">
               {(() => {
                 const q = serviceSearch.toLowerCase();
-                const dedupedServices = services.filter(
+                const filtered = services.filter(
                   (svc, idx, self) =>
                     self.findIndex((s) => s.name === svc.name) === idx,
                 );
-                const filtered = q
-                  ? dedupedServices.filter((svc) =>
-                      svc.name.toLowerCase().includes(q),
-                    )
-                  : dedupedServices;
 
                 if (!selectedProvider) {
                   return (
@@ -973,10 +990,10 @@ export default function Activation() {
                 });
               })()}
 
-              {/* Infinite-scroll sentinel + loading indicator. Only renders
-                  when no search filter is active (search is server-side, so
-                  pagination scoped to filtered results would need extra work). */}
-              {!serviceSearch && hasMoreServices && (
+              {/* Infinite-scroll sentinel + loading indicator. Works for
+                  both unfiltered list and search results since search is
+                  server-side and paginated. */}
+              {hasMoreServices && (
                 <div
                   ref={loadMoreSentinelRef}
                   className="text-muted-foreground py-3 text-center text-xs"
@@ -986,16 +1003,11 @@ export default function Activation() {
               )}
             </div>
 
-            {/* Count footer */}
+            {/* Count footer — backend meta.total reflects full filtered
+                count (provider + active search), not just what's loaded. */}
             <div className="border-border border-t pt-2">
               <span className="text-muted-foreground text-sm">
-                {
-                  services.filter(
-                    (svc, idx, self) =>
-                      self.findIndex((s) => s.name === svc.name) === idx,
-                  ).length
-                }{' '}
-                services
+                {servicesTotal} {servicesTotal === 1 ? 'service' : 'services'}
               </span>
             </div>
           </CardContent>
