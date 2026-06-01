@@ -23,6 +23,7 @@ import {
   Lock,
   CheckCircle,
   XCircle,
+  Image as ImageIcon,
 } from 'lucide-react';
 import {
   adminGetProviders,
@@ -638,9 +639,57 @@ export default function AdminSmsServicesPage() {
     fetchServicesForIcons(missingOnly);
   };
 
+  // Ref to the inline Edit Icon panel so we can scroll it into view —
+  // it renders after the services grid and was previously off-screen
+  // when admin clicked "Change Icon" on a row.
+  const editIconPanelRef = useRef<HTMLDivElement | null>(null);
+
   const handleEditIcon = (service: UnifiedService) => {
     setEditingIconService(service);
     setIconUrlInput(service.iconUrl || '');
+    // Defer one tick so the panel mounts before we scroll to it.
+    setTimeout(() => {
+      editIconPanelRef.current?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'start',
+      });
+    }, 0);
+  };
+
+  // Trigger the backend backfill.
+  // - force=false: fills iconUrl=null rows only (preserves everything else)
+  // - force=true: also re-resolves CDN-served icons (replaces broken
+  //   simpleicons URLs etc); admin storage uploads are still preserved.
+  const [isBackfillingIcons, setIsBackfillingIcons] = useState(false);
+  const handleBackfillIcons = async (force = false) => {
+    if (force) {
+      if (
+        !confirm(
+          'Re-resolve ALL public CDN icons? This will replace existing simpleicons/favicons URLs with fresh ones. Admin manual uploads in our storage are NOT touched.',
+        )
+      )
+        return;
+    }
+    setIsBackfillingIcons(true);
+    try {
+      const response = await apiClient.post<{
+        message: string;
+        scanned: number;
+        backfilled: number;
+        fromMetadata: number;
+        fromCdn: number;
+        skipped: number;
+      }>(
+        API_ENDPOINTS.ADMIN.SMS.SERVICES_BACKFILL_ICONS,
+        force ? { force: true } : undefined,
+      );
+      toast.success(response.data.message);
+      fetchServicesForIcons(iconFilterMissing);
+    } catch (error: any) {
+      toast.error(error?.response?.data?.message || 'Failed to backfill icons');
+    } finally {
+      setIsBackfillingIcons(false);
+    }
   };
 
   const handleSaveIcon = async () => {
@@ -2721,16 +2770,58 @@ export default function AdminSmsServicesPage() {
                                 </button>
                               </td>
                               <td className="px-4 py-3">
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleViewServiceCountries(service);
-                                  }}
-                                  className="flex items-center gap-1 rounded-lg bg-[rgba(59,130,246,0.15)] px-3 py-1.5 text-xs font-medium text-[#3B82F6] transition-colors hover:bg-[rgba(59,130,246,0.25)]"
-                                >
-                                  <Globe className="h-3 w-3" />
-                                  View Countries
-                                </button>
+                                <div className="flex items-center gap-2">
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleViewServiceCountries(service);
+                                    }}
+                                    className="flex items-center gap-1 rounded-lg bg-[rgba(59,130,246,0.15)] px-3 py-1.5 text-xs font-medium text-[#3B82F6] transition-colors hover:bg-[rgba(59,130,246,0.25)]"
+                                  >
+                                    <Globe className="h-3 w-3" />
+                                    View Countries
+                                  </button>
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      // Hand-off to the existing Icon
+                                      // Management modal with this single
+                                      // service pre-selected for editing.
+                                      if (!selectedProvider) return;
+                                      const wrapper: UnifiedService = {
+                                        slug: service.slug,
+                                        name: service.name,
+                                        category:
+                                          (service as any).category || 'other',
+                                        iconUrl: service.iconUrl || null,
+                                        description: null,
+                                        isPopular: false,
+                                        providers: [
+                                          {
+                                            id: selectedProvider.id,
+                                            name: selectedProvider.name,
+                                            slug:
+                                              (selectedProvider as any).slug ||
+                                              '',
+                                            version:
+                                              selectedProvider.version || '',
+                                            serviceId: service.id,
+                                          },
+                                        ],
+                                        totalCountries: 0,
+                                      };
+                                      setShowProviderModal(false);
+                                      setShowIconManagementModal(true);
+                                      setEditingIconService(wrapper);
+                                      setIconUrlInput(service.iconUrl || '');
+                                    }}
+                                    title="Edit icon (file upload or URL)"
+                                    className="flex items-center gap-1 rounded-lg bg-[rgba(139,92,246,0.15)] px-3 py-1.5 text-xs font-medium text-[#8B5CF6] transition-colors hover:bg-[rgba(139,92,246,0.25)]"
+                                  >
+                                    <ImageIcon className="h-3 w-3" />
+                                    Icon
+                                  </button>
+                                </div>
                               </td>
                             </tr>
                           ))}
@@ -3838,6 +3929,32 @@ export default function AdminSmsServicesPage() {
                 >
                   Missing Icons Only
                 </button>
+                <button
+                  onClick={() => handleBackfillIcons(false)}
+                  disabled={isBackfillingIcons}
+                  title="Fill in icons for services that don't have one. Doesn't touch existing icons."
+                  className="flex items-center gap-2 rounded-lg bg-[#22C55E] px-4 py-2.5 text-sm font-medium whitespace-nowrap text-white transition-colors hover:bg-[#16A34A] disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {isBackfillingIcons ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <RefreshCw className="h-4 w-4" />
+                  )}
+                  Backfill Icons
+                </button>
+                <button
+                  onClick={() => handleBackfillIcons(true)}
+                  disabled={isBackfillingIcons}
+                  title="Re-resolve ALL public CDN icons (fixes broken simpleicons URLs). Admin storage uploads are preserved."
+                  className="flex items-center gap-2 rounded-lg bg-[#F59E0B] px-4 py-2.5 text-sm font-medium whitespace-nowrap text-white transition-colors hover:bg-[#D97706] disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {isBackfillingIcons ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <RefreshCw className="h-4 w-4" />
+                  )}
+                  Re-resolve All
+                </button>
               </div>
 
               {isIconServicesLoading ? (
@@ -3902,85 +4019,105 @@ export default function AdminSmsServicesPage() {
                     ))}
                 </div>
               )}
+            </div>
+          </div>
+        </div>
+      )}
 
-              {/* Edit Icon Panel */}
-              {editingIconService && (
-                <div className="mt-6 rounded-lg border border-[rgba(139,92,246,0.3)] bg-[rgba(139,92,246,0.1)] p-4">
-                  <h4 className="mb-1 text-sm font-medium text-white">
-                    Edit Icon: {editingIconService.name}
-                  </h4>
-                  <p className="mb-3 text-xs text-[#94A3B8]">
-                    Will update icon for:{' '}
-                    {editingIconService.providers.map((p) => p.name).join(', ')}
-                  </p>
-                  <div className="mb-4 flex items-center gap-3">
-                    {editingIconService.iconUrl || iconUrlInput ? (
-                      <img
-                        src={iconUrlInput || editingIconService.iconUrl || ''}
-                        alt="Preview"
-                        className="h-16 w-16 rounded-lg border border-[rgba(255,255,255,0.1)] object-cover"
-                        onError={(e) => {
-                          (e.target as HTMLImageElement).style.display = 'none';
-                        }}
-                      />
-                    ) : (
-                      <div className="flex h-16 w-16 items-center justify-center rounded-lg border border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.05)]">
-                        <Globe className="h-6 w-6 text-[#64748B]" />
-                      </div>
-                    )}
-                    <div className="flex-1">
-                      <label className="mb-1 block text-xs text-[#94A3B8]">
-                        Icon URL
-                      </label>
-                      <input
-                        type="text"
-                        value={iconUrlInput}
-                        onChange={(e) => setIconUrlInput(e.target.value)}
-                        placeholder="https://example.com/icon.png"
-                        className="w-full rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.4)] px-3 py-2 text-sm text-white focus:ring-2 focus:ring-[#8B5CF6] focus:outline-none"
-                      />
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <label className="flex-1">
-                      <input
-                        type="file"
-                        accept="image/*"
-                        className="hidden"
-                        onChange={(e) => {
-                          const file = e.target.files?.[0];
-                          if (file) handleFileUpload(file);
-                        }}
-                      />
-                      <span className="flex cursor-pointer items-center justify-center gap-2 rounded-lg bg-[rgba(255,255,255,0.08)] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[rgba(255,255,255,0.12)]">
-                        <Plus className="h-4 w-4" />
-                        Upload File
-                      </span>
-                    </label>
-                    <button
-                      onClick={handleSaveIcon}
-                      disabled={isUploadingIcon}
-                      className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-[#8B5CF6] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[#7C3AED] disabled:opacity-50"
-                    >
-                      {isUploadingIcon ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : (
-                        <Save className="h-4 w-4" />
-                      )}
-                      Save Icon
-                    </button>
-                    <button
-                      onClick={() => {
-                        setEditingIconService(null);
-                        setIconUrlInput('');
-                      }}
-                      className="rounded-lg bg-[rgba(255,255,255,0.08)] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[rgba(255,255,255,0.12)]"
-                    >
-                      Cancel
-                    </button>
-                  </div>
+      {/* Edit Icon Modal — stacks on top of the Icon Management modal so
+          admin doesn't have to scroll to find the editor. Closes on backdrop
+          click or Cancel. Higher z-index than the parent modal. */}
+      {editingIconService && (
+        <div
+          className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm"
+          onClick={() => {
+            setEditingIconService(null);
+            setIconUrlInput('');
+          }}
+        >
+          <div
+            ref={editIconPanelRef}
+            onClick={(e) => e.stopPropagation()}
+            className="w-full max-w-md rounded-xl border border-[rgba(139,92,246,0.3)] bg-[#0F172A] p-6 shadow-2xl"
+          >
+            <div className="mb-4 flex items-start justify-between">
+              <div>
+                <h4 className="text-lg font-semibold text-white">
+                  Edit Icon: {editingIconService.name}
+                </h4>
+                <p className="mt-1 text-xs text-[#94A3B8]">
+                  Will update icon for:{' '}
+                  {editingIconService.providers.map((p) => p.name).join(', ')}
+                </p>
+              </div>
+              <button
+                onClick={() => {
+                  setEditingIconService(null);
+                  setIconUrlInput('');
+                }}
+                className="rounded-lg p-1 text-[#94A3B8] transition-colors hover:bg-[rgba(255,255,255,0.05)] hover:text-white"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="mb-4 flex items-center gap-3">
+              {editingIconService.iconUrl || iconUrlInput ? (
+                <img
+                  src={iconUrlInput || editingIconService.iconUrl || ''}
+                  alt="Preview"
+                  className="h-16 w-16 rounded-lg border border-[rgba(255,255,255,0.1)] object-cover"
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).style.display = 'none';
+                  }}
+                />
+              ) : (
+                <div className="flex h-16 w-16 items-center justify-center rounded-lg border border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.05)]">
+                  <Globe className="h-6 w-6 text-[#64748B]" />
                 </div>
               )}
+              <div className="flex-1">
+                <label className="mb-1 block text-xs text-[#94A3B8]">
+                  Icon URL
+                </label>
+                <input
+                  type="text"
+                  value={iconUrlInput}
+                  onChange={(e) => setIconUrlInput(e.target.value)}
+                  placeholder="https://example.com/icon.png"
+                  className="w-full rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.4)] px-3 py-2 text-sm text-white focus:ring-2 focus:ring-[#8B5CF6] focus:outline-none"
+                />
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <label className="flex-1">
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) handleFileUpload(file);
+                  }}
+                />
+                <span className="flex cursor-pointer items-center justify-center gap-2 rounded-lg bg-[rgba(255,255,255,0.08)] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[rgba(255,255,255,0.12)]">
+                  <Plus className="h-4 w-4" />
+                  Upload File
+                </span>
+              </label>
+              <button
+                onClick={handleSaveIcon}
+                disabled={isUploadingIcon}
+                className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-[#8B5CF6] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[#7C3AED] disabled:opacity-50"
+              >
+                {isUploadingIcon ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Save className="h-4 w-4" />
+                )}
+                Save Icon
+              </button>
             </div>
           </div>
         </div>
