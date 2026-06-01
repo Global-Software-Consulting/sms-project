@@ -38,17 +38,22 @@ interface NotificationContextValue {
   setCurrentPage: (page: number) => void;
 }
 
-const NotificationContext = createContext<NotificationContextValue | null>(null);
+const NotificationContext = createContext<NotificationContextValue | null>(
+  null,
+);
 
 export function useNotifications() {
   const ctx = useContext(NotificationContext);
   if (!ctx) {
-    throw new Error('useNotifications must be used within NotificationProvider');
+    throw new Error(
+      'useNotifications must be used within NotificationProvider',
+    );
   }
   return ctx;
 }
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api/v1';
+const API_URL =
+  process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api/v1';
 // Socket URL is the base server URL (without /api/v1 or /api path)
 const SOCKET_URL = API_URL.replace(/\/api(\/v\d+)?\/?$/, '');
 
@@ -73,24 +78,27 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
   }, []);
 
   // Fetch notifications list
-  const fetchNotifications = useCallback(async (params?: NotificationQueryParams) => {
-    try {
-      setIsLoading(true);
-      const res = await getNotifications({
-        page: params?.page ?? currentPage,
-        limit: params?.limit ?? 20,
-        ...params,
-      });
-      if (mountedRef.current) {
-        setNotifications(res.notifications);
-        setTotalPages(res.totalPages);
+  const fetchNotifications = useCallback(
+    async (params?: NotificationQueryParams) => {
+      try {
+        setIsLoading(true);
+        const res = await getNotifications({
+          page: params?.page ?? currentPage,
+          limit: params?.limit ?? 20,
+          ...params,
+        });
+        if (mountedRef.current) {
+          setNotifications(res.notifications);
+          setTotalPages(res.totalPages);
+        }
+      } catch {
+        // silently fail
+      } finally {
+        if (mountedRef.current) setIsLoading(false);
       }
-    } catch {
-      // silently fail
-    } finally {
-      if (mountedRef.current) setIsLoading(false);
-    }
-  }, [currentPage]);
+    },
+    [currentPage],
+  );
 
   // Mark single as read
   const markAsRead = useCallback(async (id: string) => {
@@ -118,18 +126,21 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
   }, []);
 
   // Remove single notification
-  const removeNotification = useCallback(async (id: string) => {
-    try {
-      const notification = notifications.find((n) => n.id === id);
-      await deleteNotificationApi(id);
-      setNotifications((prev) => prev.filter((n) => n.id !== id));
-      if (notification && !notification.read) {
-        setUnreadCount((prev) => Math.max(0, prev - 1));
+  const removeNotification = useCallback(
+    async (id: string) => {
+      try {
+        const notification = notifications.find((n) => n.id === id);
+        await deleteNotificationApi(id);
+        setNotifications((prev) => prev.filter((n) => n.id !== id));
+        if (notification && !notification.read) {
+          setUnreadCount((prev) => Math.max(0, prev - 1));
+        }
+      } catch {
+        toast.error('Failed to delete notification');
       }
-    } catch {
-      toast.error('Failed to delete notification');
-    }
-  }, [notifications]);
+    },
+    [notifications],
+  );
 
   // Clear all notifications
   const clearAll = useCallback(async () => {
@@ -182,6 +193,25 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
       if (mountedRef.current) setUnreadCount(data.count);
     });
 
+    // Pricing changed server-side (global markup, product markup, provider
+    // markup, or sync). Re-dispatch as a window CustomEvent so any page
+    // (e.g. /dashboard/activation) can refetch without coupling to this
+    // context's shape.
+    socket.on(
+      'price.updated',
+      (payload: {
+        providerSlug?: string;
+        serviceId?: string;
+        reason?: string;
+      }) => {
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(
+            new CustomEvent('sms:price-updated', { detail: payload ?? {} }),
+          );
+        }
+      },
+    );
+
     socket.on('disconnect', (reason) => {
       if (mountedRef.current) setIsSocketConnected(false);
     });
@@ -190,10 +220,14 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
       connectionAttempts++;
       // Only log first few attempts to avoid console spam
       if (connectionAttempts <= MAX_LOG_ATTEMPTS) {
-        console.warn(`[Socket] Connection failed (attempt ${connectionAttempts}): ${err.message}`);
+        console.warn(
+          `[Socket] Connection failed (attempt ${connectionAttempts}): ${err.message}`,
+        );
       }
       if (connectionAttempts === MAX_LOG_ATTEMPTS) {
-        console.warn('[Socket] Suppressing further connection error logs. Real-time notifications unavailable.');
+        console.warn(
+          '[Socket] Suppressing further connection error logs. Real-time notifications unavailable.',
+        );
       }
       if (mountedRef.current) setIsSocketConnected(false);
     });

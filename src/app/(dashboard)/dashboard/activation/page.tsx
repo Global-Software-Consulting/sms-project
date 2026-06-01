@@ -70,12 +70,20 @@ export default function Activation() {
   // Loading states
   const [isLoading, setIsLoading] = useState(true);
   const [isLoadingProducts, setIsLoadingProducts] = useState(false);
-  const [activatingProductId, setActivatingProductId] = useState<string | null>(null);
+  const [activatingProductId, setActivatingProductId] = useState<string | null>(
+    null,
+  );
 
   // Selection state
-  const [selectedProvider, setSelectedProvider] = useState<SmsProvider | null>(null);
-  const [selectedService, setSelectedService] = useState<SmsService | null>(null);
-  const [selectedCountry, setSelectedCountry] = useState<SmsCountry | null>(null);
+  const [selectedProvider, setSelectedProvider] = useState<SmsProvider | null>(
+    null,
+  );
+  const [selectedService, setSelectedService] = useState<SmsService | null>(
+    null,
+  );
+  const [selectedCountry, setSelectedCountry] = useState<SmsCountry | null>(
+    null,
+  );
 
   // Search & filter state
   const [serviceSearch, setServiceSearch] = useState('');
@@ -90,7 +98,7 @@ export default function Activation() {
   // Active orders state
   const [activeOrders, setActiveOrders] = useState<SmsOrder[]>([]);
   const [pollingOrders, setPollingOrders] = useState<Set<string>>(new Set());
-  
+
   // Timer tick state for real-time countdown (updates every second)
   const [, setTimerTick] = useState(0);
 
@@ -100,14 +108,14 @@ export default function Activation() {
       setIsLoading(true);
 
       // Load essential data first (providers, balance)
-      const [providersRes, balanceRes] =
-        await Promise.allSettled([
-          getProviders(),
-          getWalletBalance(),
-        ]);
+      const [providersRes, balanceRes] = await Promise.allSettled([
+        getProviders(),
+        getWalletBalance(),
+      ]);
 
       if (providersRes.status === 'fulfilled') {
-        const activeProviders = providersRes.value.providers?.filter(p => p.isActive) || [];
+        const activeProviders =
+          providersRes.value.providers?.filter((p) => p.isActive) || [];
         setProviders(activeProviders);
         if (activeProviders.length > 0) {
           setSelectedProvider(activeProviders[0]);
@@ -135,7 +143,9 @@ export default function Activation() {
       setIsVipLoading(true);
       getVipCategories()
         .then((res) => {
-          setVipCategories((res.categories || []).filter(c => c.serviceCount > 0));
+          setVipCategories(
+            (res.categories || []).filter((c) => c.serviceCount > 0),
+          );
         })
         .catch(() => {})
         .finally(() => setIsVipLoading(false));
@@ -184,45 +194,47 @@ export default function Activation() {
   // Real-time countdown timer - update every second when there are active orders
   useEffect(() => {
     const hasActiveTimers = activeOrders.some(
-      order => order.expiresAt && (order.status === 'PENDING' || order.status === 'WAITING_SMS')
+      (order) =>
+        order.expiresAt &&
+        (order.status === 'PENDING' || order.status === 'WAITING_SMS'),
     );
-    
+
     if (!hasActiveTimers) return;
-    
+
     const interval = setInterval(() => {
-      setTimerTick(tick => tick + 1);
+      setTimerTick((tick) => tick + 1);
     }, 1000);
-    
+
     return () => clearInterval(interval);
   }, [activeOrders]);
 
   // Fetch services when provider changes (with pagination to get all services)
   useEffect(() => {
     if (!selectedProvider) return;
-    
+
     const fetchServicesForProvider = async () => {
       try {
         let allServices: SmsService[] = [];
         let page = 1;
         const limit = 200;
         let hasMore = true;
-        
+
         while (hasMore) {
-          const response = await getServices({ 
+          const response = await getServices({
             providerId: selectedProvider.id,
             limit,
-            page
+            page,
           });
           const services = response.data || [];
           allServices = [...allServices, ...services];
-          
+
           if (services.length < limit) {
             hasMore = false;
           } else {
             page++;
           }
         }
-        
+
         setServices(allServices);
         // Clear selected service when provider changes
         setSelectedService(null);
@@ -232,7 +244,7 @@ export default function Activation() {
         setServices([]);
       }
     };
-    
+
     fetchServicesForProvider();
   }, [selectedProvider]);
 
@@ -240,31 +252,44 @@ export default function Activation() {
   // Real-time API fetches all countries at once, so no need for countryId
   useEffect(() => {
     if (!selectedService || !selectedProvider) return;
-    
+
     // Debounce to prevent rapid API calls during navigation
     const timeoutId = setTimeout(() => {
       fetchProducts();
     }, 300);
-    
+
     return () => clearTimeout(timeoutId);
+  }, [selectedService, selectedProvider, fetchProducts]);
+
+  // Live price updates: backend broadcasts `sms:price-updated` via socket
+  // (forwarded by NotificationContext) whenever admin changes global markup,
+  // per-product markup, provider markup, or a sync finishes. Refetch
+  // immediately so the user sees new prices without manual reload.
+  useEffect(() => {
+    const handler = () => {
+      if (!selectedService || !selectedProvider) return;
+      fetchProducts();
+    };
+    window.addEventListener('sms:price-updated', handler);
+    return () => window.removeEventListener('sms:price-updated', handler);
   }, [selectedService, selectedProvider, fetchProducts]);
 
   // Poll active orders for SMS
   useEffect(() => {
     const pollInterval = setInterval(async () => {
       const ordersToCheck = activeOrders.filter(
-        order => order.status === 'PENDING' || order.status === 'WAITING_SMS'
+        (order) => order.status === 'PENDING' || order.status === 'WAITING_SMS',
       );
 
       for (const order of ordersToCheck) {
         if (pollingOrders.has(order.id)) continue;
 
         try {
-          setPollingOrders(prev => new Set(prev).add(order.id));
+          setPollingOrders((prev) => new Set(prev).add(order.id));
           const response = await checkOrderStatus(order.id);
 
-          setActiveOrders(prev =>
-            prev.map(o => (o.id === order.id ? response.order : o))
+          setActiveOrders((prev) =>
+            prev.map((o) => (o.id === order.id ? response.order : o)),
           );
 
           if (response.order.status === 'COMPLETED' && response.order.smsCode) {
@@ -275,7 +300,7 @@ export default function Activation() {
         } catch (err) {
           console.error('Failed to check order status:', err);
         } finally {
-          setPollingOrders(prev => {
+          setPollingOrders((prev) => {
             const next = new Set(prev);
             next.delete(order.id);
             return next;
@@ -289,7 +314,7 @@ export default function Activation() {
 
   // Countdown ticker for UI
   useEffect(() => {
-    const iv = setInterval(() => setActiveOrders(p => [...p]), 1000);
+    const iv = setInterval(() => setActiveOrders((p) => [...p]), 1000);
     return () => clearInterval(iv);
   }, []);
 
@@ -297,13 +322,13 @@ export default function Activation() {
   const filteredServices = useMemo(() => {
     const q = serviceSearch.toLowerCase();
     if (!q) return services;
-    return services.filter(s => s.name.toLowerCase().includes(q));
+    return services.filter((s) => s.name.toLowerCase().includes(q));
   }, [services, serviceSearch]);
 
   // Get products grouped by country
   const productsByCountry = useMemo(() => {
     const grouped = new Map<string, SmsProduct[]>();
-    products.forEach(product => {
+    products.forEach((product) => {
       const countryId = product.country.id;
       if (!grouped.has(countryId)) {
         grouped.set(countryId, []);
@@ -315,28 +340,30 @@ export default function Activation() {
 
   // Filter and sort countries with products
   const filteredCountries = useMemo(() => {
-    let list = Array.from(productsByCountry.entries()).map(([countryId, prods]) => ({
-      country: prods[0].country,
-      products: prods,
-      minPrice: Math.min(...prods.map(p => parseFloat(p.yourPrice))),
-      totalAvailable: prods.reduce((sum, p) => sum + p.availableCount, 0),
-    }));
+    let list = Array.from(productsByCountry.entries()).map(
+      ([countryId, prods]) => ({
+        country: prods[0].country,
+        products: prods,
+        minPrice: Math.min(...prods.map((p) => parseFloat(p.yourPrice))),
+        totalAvailable: prods.reduce((sum, p) => sum + p.availableCount, 0),
+      }),
+    );
 
     // Search filter
     const q = countrySearch.toLowerCase();
     if (q) {
-      list = list.filter(item => item.country.name.toLowerCase().includes(q));
+      list = list.filter((item) => item.country.name.toLowerCase().includes(q));
     }
 
     // Favorites filter
     if (countryFilter === 'favorites') {
-      const favoriteCountryIds = new Set(favorites.map(f => f.country.id));
-      list = list.filter(item => favoriteCountryIds.has(item.country.id));
+      const favoriteCountryIds = new Set(favorites.map((f) => f.country.id));
+      list = list.filter((item) => favoriteCountryIds.has(item.country.id));
     }
 
     // Available filter
     if (countryFilter === 'available') {
-      list = list.filter(item => item.totalAvailable > 0);
+      list = list.filter((item) => item.totalAvailable > 0);
     }
 
     // Price sorting
@@ -375,8 +402,8 @@ export default function Activation() {
       const response = await activateNumber(product.id);
 
       if (response.order && response.order.id) {
-        setActiveOrders(prev => [response.order, ...prev]);
-        setWalletBalance(prev => (parseFloat(prev) - price).toFixed(2));
+        setActiveOrders((prev) => [response.order, ...prev]);
+        setWalletBalance((prev) => (parseFloat(prev) - price).toFixed(2));
 
         toast.success('Number activated!', {
           description: `${selectedService.name} / ${product.country.name} - Waiting for SMS...`,
@@ -404,16 +431,19 @@ export default function Activation() {
   const handleCancelOrder = async (orderId: string) => {
     try {
       const response = await cancelOrder(orderId);
-      setActiveOrders(prev =>
-        prev.map(o => (o.id === orderId ? response.order : o))
+      setActiveOrders((prev) =>
+        prev.map((o) => (o.id === orderId ? response.order : o)),
       );
       if (parseFloat(response.refundAmount) > 0) {
-        setWalletBalance(prev =>
-          (parseFloat(prev) + parseFloat(response.refundAmount)).toFixed(2)
+        setWalletBalance((prev) =>
+          (parseFloat(prev) + parseFloat(response.refundAmount)).toFixed(2),
         );
       }
       toast.success('Order cancelled', {
-        description: response.refundAmount !== '0' ? `Refunded: ${formatPrice(response.refundAmount)}` : 'Order has been cancelled',
+        description:
+          response.refundAmount !== '0'
+            ? `Refunded: ${formatPrice(response.refundAmount)}`
+            : 'Order has been cancelled',
       });
     } catch (err: any) {
       toast.error('Failed to cancel order', {
@@ -427,26 +457,26 @@ export default function Activation() {
     serviceId: string,
     countryId: string,
     providerId: string,
-    e: React.MouseEvent
+    e: React.MouseEvent,
   ) => {
     e.stopPropagation();
 
     const existing = favorites.find(
-      f =>
+      (f) =>
         f.service?.id === serviceId &&
         f.country?.id === countryId &&
-        f.provider?.id === providerId
+        f.provider?.id === providerId,
     );
 
     try {
       if (existing) {
         await removeFavorite(existing.id);
-        setFavorites(prev => prev.filter(f => f.id !== existing.id));
+        setFavorites((prev) => prev.filter((f) => f.id !== existing.id));
         toast.success('Removed from favorites');
       } else {
         const response = await addFavorite(serviceId, countryId, providerId);
         if (response.favorite) {
-          setFavorites(prev => [...prev, response.favorite]);
+          setFavorites((prev) => [...prev, response.favorite]);
           toast.success('Added to favorites');
         }
       }
@@ -465,17 +495,17 @@ export default function Activation() {
 
   // Remove completed/cancelled order from list
   const removeOrder = (id: string) => {
-    setActiveOrders(prev => prev.filter(o => o.id !== id));
+    setActiveOrders((prev) => prev.filter((o) => o.id !== id));
   };
 
   // Check if country is favorite (with defensive null checks)
   const isFavorite = (countryId: string) => {
     if (!selectedService?.id || !selectedProvider?.id) return false;
     return favorites.some(
-      f =>
+      (f) =>
         f.country?.id === countryId &&
         f.service?.id === selectedService.id &&
-        f.provider?.id === selectedProvider.id
+        f.provider?.id === selectedProvider.id,
     );
   };
 
@@ -501,7 +531,6 @@ export default function Activation() {
             Order phone numbers for instant SMS verification
           </p>
         </div>
-
       </div>
 
       {/* Provider Toggle */}
@@ -511,10 +540,10 @@ export default function Activation() {
             className="bg-card border-border absolute h-[calc(100%-8px)] rounded-lg border shadow-md transition-all duration-300 ease-out"
             style={{
               width: `${100 / providers.length}%`,
-              left: `calc(${(providers.findIndex(p => p.id === selectedProvider?.id) * 100) / providers.length}% + 0.25rem)`,
+              left: `calc(${(providers.findIndex((p) => p.id === selectedProvider?.id) * 100) / providers.length}% + 0.25rem)`,
             }}
           />
-          {providers.map(provider => {
+          {providers.map((provider) => {
             const tabLabel = provider.displayName;
             return (
               <button
@@ -524,7 +553,7 @@ export default function Activation() {
                   'relative z-10 flex flex-1 items-center justify-center gap-1.5 rounded-lg px-2 py-2.5 text-xs font-medium transition-colors sm:px-4 sm:text-sm',
                   selectedProvider?.id === provider.id
                     ? 'text-foreground'
-                    : 'text-muted-foreground hover:text-foreground'
+                    : 'text-muted-foreground hover:text-foreground',
                 )}
               >
                 {tabLabel}
@@ -544,184 +573,209 @@ export default function Activation() {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
-            {activeOrders.filter(order => order && order.id).map(order => {
-              const timeRemaining = order.expiresAt ? getTimeRemaining(order.expiresAt) : null;
-              const statusColor = getOrderStatusColor(order.status);
+            {activeOrders
+              .filter((order) => order && order.id)
+              .map((order) => {
+                const timeRemaining = order.expiresAt
+                  ? getTimeRemaining(order.expiresAt)
+                  : null;
+                const statusColor = getOrderStatusColor(order.status);
 
-              return (
-                <div
-                  key={order.id}
-                  className={cn(
-                    'rounded-xl border p-3 transition-all sm:p-4',
-                    order.status === 'COMPLETED'
-                      ? 'bg-success/8 border-success/40 shadow-[0_0_16px_rgba(16,185,129,0.12)]'
-                      : order.status === 'CANCELLED' || order.status === 'EXPIRED'
-                        ? 'bg-muted/30 border-border opacity-60'
-                        : 'bg-card border-border'
-                  )}
-                >
-                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-                    {/* Service + Country */}
-                    <div className="flex min-w-0 flex-1 items-center gap-2.5">
-                      <div className="bg-primary/10 flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm">
-                        {order.service?.iconUrl ? (
-                          <img
-                            src={order.service.iconUrl}
-                            alt=""
-                            className="h-5 w-5"
-                          />
-                        ) : (
-                          '📱'
-                        )}
-                      </div>
-                      <div className="min-w-0">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <span className="text-sm font-semibold">
-                            {order.service?.name || 'Service'}
-                          </span>
-                          <span className="text-base">
-                            {order.country?.code
-                              ? getCountryFlag(order.country.code)
-                              : '🌍'}
-                          </span>
-                          <span className="text-muted-foreground text-xs">
-                            {order.country?.name || 'Country'}
-                          </span>
-                          {/* Service Type Badge (Premium/Standard/Economy) */}
-                          {order.provider?.slug && (
-                            <span
-                              className="rounded-full px-2 py-0.5 text-[10px] font-medium"
-                              style={{
-                                backgroundColor: `${getServiceTypeLabel(order.provider.slug).color}20`,
-                                color: getServiceTypeLabel(order.provider.slug).color,
-                              }}
-                            >
-                              {getServiceTypeLabel(order.provider.slug).label}
-                            </span>
+                return (
+                  <div
+                    key={order.id}
+                    className={cn(
+                      'rounded-xl border p-3 transition-all sm:p-4',
+                      order.status === 'COMPLETED'
+                        ? 'bg-success/8 border-success/40 shadow-[0_0_16px_rgba(16,185,129,0.12)]'
+                        : order.status === 'CANCELLED' ||
+                            order.status === 'EXPIRED'
+                          ? 'bg-muted/30 border-border opacity-60'
+                          : 'bg-card border-border',
+                    )}
+                  >
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+                      {/* Service + Country */}
+                      <div className="flex min-w-0 flex-1 items-center gap-2.5">
+                        <div className="bg-primary/10 flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm">
+                          {order.service?.iconUrl ? (
+                            <img
+                              src={order.service.iconUrl}
+                              alt=""
+                              className="h-5 w-5"
+                            />
+                          ) : (
+                            '📱'
                           )}
-                          <Badge
-                            variant={
-                              order.status === 'COMPLETED'
-                                ? 'default'
-                                : order.status === 'CANCELLED' ||
-                                    order.status === 'EXPIRED'
-                                  ? 'destructive'
-                                  : 'secondary'
-                            }
-                            className="h-4 px-1.5 text-[10px]"
-                          >
-                            {getOrderStatusLabel(order.status)}
-                          </Badge>
                         </div>
-                        <code className="text-foreground font-mono text-sm font-semibold">
-                          {order.phoneNumber || 'Waiting for number...'}
-                        </code>
-                        {order.smsCode && (
-                          <div className="mt-1 flex items-center gap-2">
-                            <code className="text-success font-mono text-sm font-bold">
-                              {order.smsCode}
-                            </code>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-5 w-5 shrink-0"
-                              onClick={() => copyToClipboard(order.smsCode!)}
+                        <div className="min-w-0">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="text-sm font-semibold">
+                              {order.service?.name || 'Service'}
+                            </span>
+                            <span className="text-base">
+                              {order.country?.code
+                                ? getCountryFlag(order.country.code)
+                                : '🌍'}
+                            </span>
+                            <span className="text-muted-foreground text-xs">
+                              {order.country?.name || 'Country'}
+                            </span>
+                            {/* Service Type Badge (Premium/Standard/Economy) */}
+                            {order.provider?.slug && (
+                              <span
+                                className="rounded-full px-2 py-0.5 text-[10px] font-medium"
+                                style={{
+                                  backgroundColor: `${getServiceTypeLabel(order.provider.slug).color}20`,
+                                  color: getServiceTypeLabel(
+                                    order.provider.slug,
+                                  ).color,
+                                }}
+                              >
+                                {getServiceTypeLabel(order.provider.slug).label}
+                              </span>
+                            )}
+                            <Badge
+                              variant={
+                                order.status === 'COMPLETED'
+                                  ? 'default'
+                                  : order.status === 'CANCELLED' ||
+                                      order.status === 'EXPIRED'
+                                    ? 'destructive'
+                                    : 'secondary'
+                              }
+                              className="h-4 px-1.5 text-[10px]"
                             >
-                              <Copy className="h-3 w-3" />
-                            </Button>
+                              {getOrderStatusLabel(order.status)}
+                            </Badge>
+                          </div>
+                          <code className="text-foreground font-mono text-sm font-semibold">
+                            {order.phoneNumber || 'Waiting for number...'}
+                          </code>
+                          {order.smsCode && (
+                            <div className="mt-1 flex items-center gap-2">
+                              <code className="text-success font-mono text-sm font-bold">
+                                {order.smsCode}
+                              </code>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-5 w-5 shrink-0"
+                                onClick={() => copyToClipboard(order.smsCode!)}
+                              >
+                                <Copy className="h-3 w-3" />
+                              </Button>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Timer + Expiration */}
+                      {(order.status === 'PENDING' ||
+                        order.status === 'WAITING_SMS') &&
+                        timeRemaining && (
+                          <div className="flex shrink-0 flex-col items-end gap-1">
+                            <div
+                              className={cn(
+                                'flex items-center gap-1.5 text-sm font-bold',
+                                timeRemaining.minutes < 2
+                                  ? 'text-destructive'
+                                  : timeRemaining.minutes < 5
+                                    ? 'text-warning'
+                                    : 'text-foreground',
+                              )}
+                            >
+                              <Clock
+                                className={cn(
+                                  'h-4 w-4',
+                                  timeRemaining.minutes < 2 && 'animate-pulse',
+                                )}
+                              />
+                              <span className="font-mono tabular-nums">
+                                {timeRemaining.minutes} min{' '}
+                                {timeRemaining.seconds
+                                  .toString()
+                                  .padStart(2, '0')}{' '}
+                                sec
+                              </span>
+                            </div>
+                            {order.expiresAt && (
+                              <span className="text-muted-foreground text-xs">
+                                Expires at{' '}
+                                {new Date(order.expiresAt).toLocaleTimeString(
+                                  [],
+                                  { hour: '2-digit', minute: '2-digit' },
+                                )}
+                              </span>
+                            )}
                           </div>
                         )}
-                      </div>
-                    </div>
 
-                    {/* Timer + Expiration */}
-                    {(order.status === 'PENDING' ||
-                      order.status === 'WAITING_SMS') && timeRemaining && (
-                      <div className="flex shrink-0 flex-col items-end gap-1">
-                        <div className={cn(
-                          "flex items-center gap-1.5 text-sm font-bold",
-                          timeRemaining.minutes < 2 ? "text-destructive" : 
-                          timeRemaining.minutes < 5 ? "text-warning" : "text-foreground"
-                        )}>
-                          <Clock className={cn(
-                            "h-4 w-4",
-                            timeRemaining.minutes < 2 && "animate-pulse"
-                          )} />
-                          <span className="font-mono tabular-nums">
-                            {timeRemaining.minutes} min {timeRemaining.seconds.toString().padStart(2, '0')} sec
-                          </span>
-                        </div>
-                        {order.expiresAt && (
-                          <span className="text-muted-foreground text-xs">
-                            Expires at {new Date(order.expiresAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                          </span>
-                        )}
-                      </div>
-                    )}
-
-                    {/* Copy number */}
-                    {order.phoneNumber && (
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 shrink-0"
-                        onClick={() => copyToClipboard(order.phoneNumber!)}
-                      >
-                        <Copy className="h-3.5 w-3.5" />
-                      </Button>
-                    )}
-
-                    {/* Actions */}
-                    <div className="flex shrink-0 items-center gap-1">
-                      {canCancelOrder(order.status) && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="text-destructive hover:text-destructive h-8"
-                          onClick={() => handleCancelOrder(order.id)}
-                        >
-                          Cancel
-                        </Button>
-                      )}
-                      {(order.status === 'COMPLETED' ||
-                        order.status === 'CANCELLED' ||
-                        order.status === 'EXPIRED') && (
+                      {/* Copy number */}
+                      {order.phoneNumber && (
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="h-8 w-8"
-                          onClick={() => removeOrder(order.id)}
+                          className="h-8 w-8 shrink-0"
+                          onClick={() => copyToClipboard(order.phoneNumber!)}
                         >
-                          <X className="h-3.5 w-3.5" />
+                          <Copy className="h-3.5 w-3.5" />
                         </Button>
                       )}
-                    </div>
-                  </div>
 
-                  {order.status === 'CANCELLED' && (
-                    <div className="border-destructive/20 text-destructive mt-2 flex items-center gap-2 border-t pt-2 text-xs">
-                      <AlertCircle className="h-3.5 w-3.5" />
-                      Order cancelled - Refunded to wallet
-                    </div>
-                  )}
-
-                  {(order.status === 'PENDING' ||
-                    order.status === 'WAITING_SMS') && order.expiresAt && (
-                    <div className="mt-3">
-                      <Progress
-                        value={Math.max(
-                          0,
-                          ((new Date(order.expiresAt).getTime() - Date.now()) /
-                            (15 * 60 * 1000)) *
-                            100
+                      {/* Actions */}
+                      <div className="flex shrink-0 items-center gap-1">
+                        {canCancelOrder(order.status) && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-destructive hover:text-destructive h-8"
+                            onClick={() => handleCancelOrder(order.id)}
+                          >
+                            Cancel
+                          </Button>
                         )}
-                        className="h-1"
-                      />
+                        {(order.status === 'COMPLETED' ||
+                          order.status === 'CANCELLED' ||
+                          order.status === 'EXPIRED') && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={() => removeOrder(order.id)}
+                          >
+                            <X className="h-3.5 w-3.5" />
+                          </Button>
+                        )}
+                      </div>
                     </div>
-                  )}
-                </div>
-              );
-            })}
+
+                    {order.status === 'CANCELLED' && (
+                      <div className="border-destructive/20 text-destructive mt-2 flex items-center gap-2 border-t pt-2 text-xs">
+                        <AlertCircle className="h-3.5 w-3.5" />
+                        Order cancelled - Refunded to wallet
+                      </div>
+                    )}
+
+                    {(order.status === 'PENDING' ||
+                      order.status === 'WAITING_SMS') &&
+                      order.expiresAt && (
+                        <div className="mt-3">
+                          <Progress
+                            value={Math.max(
+                              0,
+                              ((new Date(order.expiresAt).getTime() -
+                                Date.now()) /
+                                (15 * 60 * 1000)) *
+                                100,
+                            )}
+                            className="h-1"
+                          />
+                        </div>
+                      )}
+                  </div>
+                );
+              })}
           </CardContent>
         </Card>
       )}
@@ -748,7 +802,7 @@ export default function Activation() {
               <Input
                 placeholder="Search by service"
                 value={serviceSearch}
-                onChange={e => setServiceSearch(e.target.value)}
+                onChange={(e) => setServiceSearch(e.target.value)}
                 className="bg-muted/40 pl-9"
               />
             </div>
@@ -758,10 +812,13 @@ export default function Activation() {
               {(() => {
                 const q = serviceSearch.toLowerCase();
                 const dedupedServices = services.filter(
-                  (svc, idx, self) => self.findIndex(s => s.name === svc.name) === idx
+                  (svc, idx, self) =>
+                    self.findIndex((s) => s.name === svc.name) === idx,
                 );
                 const filtered = q
-                  ? dedupedServices.filter(svc => svc.name.toLowerCase().includes(q))
+                  ? dedupedServices.filter((svc) =>
+                      svc.name.toLowerCase().includes(q),
+                    )
                   : dedupedServices;
 
                 if (!selectedProvider) {
@@ -780,7 +837,7 @@ export default function Activation() {
                   );
                 }
 
-                return filtered.map(svc => {
+                return filtered.map((svc) => {
                   const isSelected = selectedService?.id === svc.id;
                   return (
                     <button
@@ -790,7 +847,7 @@ export default function Activation() {
                         'group flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-all',
                         isSelected
                           ? 'bg-primary/10 border-primary/30 border shadow-sm'
-                          : 'hover:bg-muted/60 border border-transparent'
+                          : 'hover:bg-muted/60 border border-transparent',
                       )}
                     >
                       <div className="bg-muted flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-sm">
@@ -802,10 +859,12 @@ export default function Activation() {
                       </div>
 
                       <div className="min-w-0 flex-1">
-                        <span className={cn(
-                          'block truncate text-sm font-medium',
-                          isSelected ? 'text-primary' : 'text-foreground'
-                        )}>
+                        <span
+                          className={cn(
+                            'block truncate text-sm font-medium',
+                            isSelected ? 'text-primary' : 'text-foreground',
+                          )}
+                        >
                           {svc.name}
                         </span>
                       </div>
@@ -822,7 +881,13 @@ export default function Activation() {
             {/* Count footer */}
             <div className="border-border border-t pt-2">
               <span className="text-muted-foreground text-sm">
-                {services.filter((svc, idx, self) => self.findIndex(s => s.name === svc.name) === idx).length} services
+                {
+                  services.filter(
+                    (svc, idx, self) =>
+                      self.findIndex((s) => s.name === svc.name) === idx,
+                  ).length
+                }{' '}
+                services
               </span>
             </div>
           </CardContent>
@@ -837,7 +902,7 @@ export default function Activation() {
                   'flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-sm font-bold',
                   selectedService
                     ? 'bg-primary text-primary-foreground'
-                    : 'bg-muted text-muted-foreground'
+                    : 'bg-muted text-muted-foreground',
                 )}
               >
                 2
@@ -845,7 +910,7 @@ export default function Activation() {
               <CardTitle
                 className={cn(
                   'text-base sm:text-lg',
-                  !selectedService && 'text-muted-foreground'
+                  !selectedService && 'text-muted-foreground',
                 )}
               >
                 Select your country
@@ -879,7 +944,7 @@ export default function Activation() {
                     <Input
                       placeholder="Search by country"
                       value={countrySearch}
-                      onChange={e => setCountrySearch(e.target.value)}
+                      onChange={(e) => setCountrySearch(e.target.value)}
                       className="bg-muted/40 pl-9"
                     />
                   </div>
@@ -919,7 +984,7 @@ export default function Activation() {
                       <Star
                         className={cn(
                           'mr-1.5 h-3 w-3',
-                          countryFilter === 'favorites' && 'fill-current'
+                          countryFilter === 'favorites' && 'fill-current',
                         )}
                       />
                       Favorites
@@ -932,7 +997,9 @@ export default function Activation() {
                       variant={priceSort === 'low-high' ? 'default' : 'outline'}
                       size="sm"
                       onClick={() =>
-                        setPriceSort(priceSort === 'low-high' ? 'none' : 'low-high')
+                        setPriceSort(
+                          priceSort === 'low-high' ? 'none' : 'low-high',
+                        )
                       }
                       className="h-8 text-xs"
                     >
@@ -943,7 +1010,9 @@ export default function Activation() {
                       variant={priceSort === 'high-low' ? 'default' : 'outline'}
                       size="sm"
                       onClick={() =>
-                        setPriceSort(priceSort === 'high-low' ? 'none' : 'high-low')
+                        setPriceSort(
+                          priceSort === 'high-low' ? 'none' : 'high-low',
+                        )
                       }
                       className="h-8 text-xs"
                     >
@@ -964,110 +1033,120 @@ export default function Activation() {
                           : 'No countries available for this service'}
                     </div>
                   )}
-                  {filteredCountries.map(({ country, products: countryProducts, minPrice, totalAvailable }) => {
-                    const isOut = totalAvailable === 0;
-                    const isFav = isFavorite(country.id);
-                    const bestProduct = countryProducts.reduce((best, p) =>
-                      parseFloat(p.yourPrice) < parseFloat(best.yourPrice) ? p : best
-                    );
+                  {filteredCountries.map(
+                    ({
+                      country,
+                      products: countryProducts,
+                      minPrice,
+                      totalAvailable,
+                    }) => {
+                      const isOut = totalAvailable === 0;
+                      const isFav = isFavorite(country.id);
+                      const bestProduct = countryProducts.reduce((best, p) =>
+                        parseFloat(p.yourPrice) < parseFloat(best.yourPrice)
+                          ? p
+                          : best,
+                      );
 
-                    return (
-                      <div
-                        key={country.id}
-                        className={cn(
-                          'overflow-hidden rounded-xl border transition-all',
-                          isOut
-                            ? 'border-border opacity-50'
-                            : 'border-border hover:border-primary/30'
-                        )}
-                      >
-                        <div className="bg-card/50 flex items-center gap-3 px-3 py-2.5">
-                          {/* Favorite Star */}
-                          <button
-                            onClick={e =>
-                              handleToggleFavorite(
-                                selectedService!.id,
-                                country.id,
-                                selectedProvider!.id,
-                                e
-                              )
-                            }
-                            className="shrink-0 p-0.5"
-                            title={
-                              isFav
-                                ? 'Remove from favorites'
-                                : 'Add to favorites'
-                            }
-                          >
-                            <Star
-                              className={cn(
-                                'h-4 w-4 transition-colors',
+                      return (
+                        <div
+                          key={country.id}
+                          className={cn(
+                            'overflow-hidden rounded-xl border transition-all',
+                            isOut
+                              ? 'border-border opacity-50'
+                              : 'border-border hover:border-primary/30',
+                          )}
+                        >
+                          <div className="bg-card/50 flex items-center gap-3 px-3 py-2.5">
+                            {/* Favorite Star */}
+                            <button
+                              onClick={(e) =>
+                                handleToggleFavorite(
+                                  selectedService!.id,
+                                  country.id,
+                                  selectedProvider!.id,
+                                  e,
+                                )
+                              }
+                              className="shrink-0 p-0.5"
+                              title={
                                 isFav
-                                  ? 'fill-yellow-400 text-yellow-400'
-                                  : 'text-muted-foreground/40 hover:text-muted-foreground'
-                              )}
-                            />
-                          </button>
+                                  ? 'Remove from favorites'
+                                  : 'Add to favorites'
+                              }
+                            >
+                              <Star
+                                className={cn(
+                                  'h-4 w-4 transition-colors',
+                                  isFav
+                                    ? 'fill-yellow-400 text-yellow-400'
+                                    : 'text-muted-foreground/40 hover:text-muted-foreground',
+                                )}
+                              />
+                            </button>
 
-                          {/* Flag */}
-                          <span className="w-8 shrink-0 text-center text-xl">
-                            {getCountryFlag(country.code)}
-                          </span>
+                            {/* Flag */}
+                            <span className="w-8 shrink-0 text-center text-xl">
+                              {getCountryFlag(country.code)}
+                            </span>
 
-                          {/* Name + count */}
-                          <div className="min-w-0 flex-1">
-                            <div className="flex items-center gap-2">
-                              <span className="text-sm font-medium">
-                                {country.name}
+                            {/* Name + count */}
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-center gap-2">
+                                <span className="text-sm font-medium">
+                                  {country.name}
+                                </span>
+                              </div>
+                              <span className="text-muted-foreground text-xs tabular-nums">
+                                {totalAvailable.toLocaleString()} available
                               </span>
                             </div>
-                            <span className="text-muted-foreground text-xs tabular-nums">
-                              {totalAvailable.toLocaleString()} available
-                            </span>
-                          </div>
 
-                          {/* Price with discount indicator */}
-                          <div className="shrink-0 text-right">
-                            {bestProduct.discountPercent && bestProduct.discountPercent > 0 ? (
-                              <>
-                                <span className="text-muted-foreground line-through text-xs">
-                                  {formatPrice(bestProduct.price)}
-                                </span>
-                                <span className="ml-1 text-sm font-bold tabular-nums text-green-600 dark:text-green-400">
+                            {/* Price with discount indicator */}
+                            <div className="shrink-0 text-right">
+                              {bestProduct.discountPercent &&
+                              bestProduct.discountPercent > 0 ? (
+                                <>
+                                  <span className="text-muted-foreground text-xs line-through">
+                                    {formatPrice(bestProduct.price)}
+                                  </span>
+                                  <span className="ml-1 text-sm font-bold text-green-600 tabular-nums dark:text-green-400">
+                                    {formatPrice(bestProduct.yourPrice)}
+                                  </span>
+                                  <span className="ml-1 text-xs font-medium text-green-600 dark:text-green-400">
+                                    -{bestProduct.discountPercent}%
+                                  </span>
+                                </>
+                              ) : (
+                                <span className="text-sm font-bold tabular-nums">
                                   {formatPrice(bestProduct.yourPrice)}
                                 </span>
-                                <span className="ml-1 text-xs font-medium text-green-600 dark:text-green-400">
-                                  -{bestProduct.discountPercent}%
-                                </span>
-                              </>
-                            ) : (
-                              <span className="text-sm font-bold tabular-nums">
-                                {formatPrice(bestProduct.yourPrice)}
-                              </span>
-                            )}
+                              )}
+                            </div>
                           </div>
-                        </div>
 
-                        {/* Buy button */}
-                        <Button
-                          className="h-9 w-full rounded-none rounded-b-xl text-sm font-semibold"
-                          disabled={isOut || activatingProductId !== null}
-                          onClick={() => handleBuySMS(bestProduct)}
-                        >
-                          {activatingProductId === bestProduct.id ? (
-                            <>
-                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                              Activating...
-                            </>
-                          ) : isOut ? (
-                            'Unavailable'
-                          ) : (
-                            'Buy SMS'
-                          )}
-                        </Button>
-                      </div>
-                    );
-                  })}
+                          {/* Buy button */}
+                          <Button
+                            className="h-9 w-full rounded-none rounded-b-xl text-sm font-semibold"
+                            disabled={isOut || activatingProductId !== null}
+                            onClick={() => handleBuySMS(bestProduct)}
+                          >
+                            {activatingProductId === bestProduct.id ? (
+                              <>
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                Activating...
+                              </>
+                            ) : isOut ? (
+                              'Unavailable'
+                            ) : (
+                              'Buy SMS'
+                            )}
+                          </Button>
+                        </div>
+                      );
+                    },
+                  )}
                 </div>
 
                 {/* Count footer */}
