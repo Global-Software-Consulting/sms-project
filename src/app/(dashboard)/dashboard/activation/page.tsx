@@ -70,6 +70,17 @@ export default function Activation() {
   // Loading states
   const [isLoading, setIsLoading] = useState(true);
   const [isLoadingProducts, setIsLoadingProducts] = useState(false);
+  const [isLoadingMoreServices, setIsLoadingMoreServices] = useState(false);
+  // Default to true so the very first render shows the skeleton, not the
+  // "No services available" empty state, before the fetch effect kicks in.
+  const [isLoadingServices, setIsLoadingServices] = useState(true);
+
+  // Paginated services state — fetched 200 at a time on scroll.
+  const SERVICES_PAGE_SIZE = 200;
+  const [servicesPage, setServicesPage] = useState(1);
+  const [hasMoreServices, setHasMoreServices] = useState(false);
+  const servicesRequestId = useRef(0);
+  const loadMoreSentinelRef = useRef<HTMLDivElement | null>(null);
   const [activatingProductId, setActivatingProductId] = useState<string | null>(
     null,
   );
@@ -225,41 +236,95 @@ export default function Activation() {
   useEffect(() => {
     if (!selectedProvider) return;
 
-    // Cancellation guard: if the user switches providers mid-flight, the
-    // earlier in-flight fetch must not overwrite state with stale data.
+    // Cancellation: rapid provider switches must not let an old fetch
+    // overwrite state. Request ID changes on every effect run.
     // (Item #17 in client bug list — was showing "No services available"
-    // intermittently.)
-    let cancelled = false;
+    // intermittently because of races.)
+    const requestId = ++servicesRequestId.current;
+    const isStale = () => requestId !== servicesRequestId.current;
 
-    const fetchServicesForProvider = async () => {
+    // Flip to loading + clear list synchronously so the next render shows
+    // the skeleton immediately (no "No services available" flash between
+    // provider change and the async fetch starting).
+    setIsLoadingServices(true);
+    setServices([]);
+    setHasMoreServices(false);
+
+    const fetchFirstPage = async () => {
       try {
-        // Single request with a high limit. Backend fetches all rows from
-        // DB regardless of `limit` (it only slices the response), so
-        // multi-page loops were just hammering the rate limiter and
-        // returning 429s on page 2 — leaving the user with empty state.
         const response = await getServices({
           providerId: selectedProvider.id,
-          limit: 5000,
+          limit: SERVICES_PAGE_SIZE,
           page: 1,
         });
-        if (cancelled) return;
+        if (isStale()) return;
 
         setServices(response.data || []);
+        setServicesPage(1);
+        setHasMoreServices(response.meta?.hasNextPage ?? false);
         setSelectedService(null);
         setProducts([]);
       } catch (err) {
-        if (cancelled) return;
+        if (isStale()) return;
         console.error('Failed to fetch services for provider:', err);
         setServices([]);
+        setHasMoreServices(false);
+      } finally {
+        if (!isStale()) setIsLoadingServices(false);
       }
     };
 
-    fetchServicesForProvider();
-
-    return () => {
-      cancelled = true;
-    };
+    fetchFirstPage();
   }, [selectedProvider]);
+
+  // Load next page of services (infinite scroll). Skip if already loading,
+  // no more pages, or no provider selected. Guarded against stale provider
+  // switches via the same request-ID ref.
+  const loadMoreServices = useCallback(async () => {
+    if (!selectedProvider || !hasMoreServices || isLoadingMoreServices) {
+      return;
+    }
+    const requestId = servicesRequestId.current;
+    const isStale = () => requestId !== servicesRequestId.current;
+
+    setIsLoadingMoreServices(true);
+    try {
+      const nextPage = servicesPage + 1;
+      const response = await getServices({
+        providerId: selectedProvider.id,
+        limit: SERVICES_PAGE_SIZE,
+        page: nextPage,
+      });
+      if (isStale()) return;
+      setServices((prev) => [...prev, ...(response.data || [])]);
+      setServicesPage(nextPage);
+      setHasMoreServices(response.meta?.hasNextPage ?? false);
+    } catch (err) {
+      if (isStale()) return;
+      console.error('Failed to load more services:', err);
+      setHasMoreServices(false);
+    } finally {
+      if (!isStale()) setIsLoadingMoreServices(false);
+    }
+  }, [selectedProvider, hasMoreServices, isLoadingMoreServices, servicesPage]);
+
+  // IntersectionObserver: trigger loadMoreServices when sentinel scrolls
+  // into view. Attached to the bottom of the services list.
+  useEffect(() => {
+    const node = loadMoreSentinelRef.current;
+    if (!node || !hasMoreServices) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting) {
+          void loadMoreServices();
+        }
+      },
+      { root: null, rootMargin: '100px', threshold: 0 },
+    );
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [hasMoreServices, loadMoreServices]);
 
   // Fetch products when service/provider changes (with debounce)
   // Real-time API fetches all countries at once, so no need for countryId
@@ -842,6 +907,24 @@ export default function Activation() {
                   );
                 }
 
+                // Show skeleton placeholders while the first page is loading
+                // so the user doesn't see "No services available" flash.
+                if (isLoadingServices && services.length === 0) {
+                  return (
+                    <div className="space-y-1">
+                      {Array.from({ length: 8 }).map((_, i) => (
+                        <div
+                          key={i}
+                          className="flex items-center gap-3 rounded-xl px-3 py-2.5"
+                        >
+                          <div className="bg-muted/60 h-8 w-8 shrink-0 animate-pulse rounded-lg" />
+                          <div className="bg-muted/60 h-3 flex-1 animate-pulse rounded" />
+                        </div>
+                      ))}
+                    </div>
+                  );
+                }
+
                 if (filtered.length === 0) {
                   return (
                     <div className="text-muted-foreground py-10 text-center text-sm">
@@ -889,6 +972,18 @@ export default function Activation() {
                   );
                 });
               })()}
+
+              {/* Infinite-scroll sentinel + loading indicator. Only renders
+                  when no search filter is active (search is server-side, so
+                  pagination scoped to filtered results would need extra work). */}
+              {!serviceSearch && hasMoreServices && (
+                <div
+                  ref={loadMoreSentinelRef}
+                  className="text-muted-foreground py-3 text-center text-xs"
+                >
+                  {isLoadingMoreServices ? 'Loading more…' : ' '}
+                </div>
+              )}
             </div>
 
             {/* Count footer */}
