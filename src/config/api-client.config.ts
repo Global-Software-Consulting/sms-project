@@ -138,8 +138,17 @@ const ensureFreshAccessToken = async (): Promise<string> => {
     .catch((refreshError) => {
       processQueue(refreshError as Error, null);
       clearTokens();
+      // Same rule as the response interceptor below: only force-route
+      // to /auth/login when the user is on a protected page. On public
+      // pages, just clear tokens and let the page render its logged-
+      // out state.
       if (typeof window !== 'undefined') {
-        window.location.href = '/auth/login';
+        const path = window.location.pathname || '';
+        const isProtected =
+          path.startsWith('/dashboard') || path.startsWith('/admin');
+        if (isProtected) {
+          window.location.href = '/auth/login';
+        }
       }
       throw refreshError;
     })
@@ -201,8 +210,18 @@ axiosInstance.interceptors.response.use(
       const tokens = getTokens();
       if (!tokens?.refreshToken) {
         clearTokens();
+        // Only force-navigate to login when the user is currently on a
+        // protected page (dashboard / admin). Public pages (home,
+        // /membership, /faq, etc.) should remain reachable for logged-
+        // out users — otherwise a single unauthenticated API call from
+        // the landing page kicks them straight to /auth/login.
         if (typeof window !== 'undefined') {
-          window.location.href = '/auth/login';
+          const path = window.location.pathname || '';
+          const isProtected =
+            path.startsWith('/dashboard') || path.startsWith('/admin');
+          if (isProtected) {
+            window.location.href = '/auth/login';
+          }
         }
         return Promise.reject(error);
       }

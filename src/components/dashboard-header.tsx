@@ -122,7 +122,7 @@ export function DashboardHeader({ onMenuClick }: DashboardHeaderProps = {}) {
       setIsLoggingOut(true);
       await logout();
       toast.success('Signed out successfully');
-      router.push('/auth/login');
+      router.push('/');
     } catch (error) {
       console.error('Logout failed:', error);
       toast.error('Failed to sign out. Please try again.');
