@@ -204,11 +204,13 @@ export default function Dashboard() {
     }
   }, [notifications, fetchDashboardData]);
 
-  // Live countdown ticker - update every second when there are waiting orders
+  // Live countdown ticker - update every second when there are waiting orders.
+  // expiresAt may be null on legacy rows; we derive a fallback in the
+  // activity mapper below, so the ticker only needs to know there's a
+  // waiting order, not whether it has a server-provided expiry.
   useEffect(() => {
     const hasWaiting = data.recentOrders.some(
-      (o) =>
-        (o.status === 'PENDING' || o.status === 'WAITING_SMS') && o.expiresAt,
+      (o) => o.status === 'PENDING' || o.status === 'WAITING_SMS',
     );
     if (!hasWaiting) return;
     const interval = setInterval(() => setTimerTick((t) => t + 1), 1000);
@@ -305,17 +307,32 @@ export default function Dashboard() {
     );
   }
 
-  // Map recent orders to activity format
-  const recentActivity = data.recentOrders.slice(0, 3).map((order) => ({
-    service: order.service?.name || 'Unknown',
-    country: order.country?.name || 'Unknown',
-    countryCode: order.country?.code || 'US',
-    phoneNumber: order.phoneNumber,
-    code: order.smsCode,
-    expiresAt: order.expiresAt,
-    time: formatTimeAgo(order.createdAt),
-    status: order.status.toLowerCase(),
-  }));
+  // Map recent orders to activity format. Client bug #15: waiting
+  // orders must always show a live countdown + absolute expiry. Some
+  // legacy rows have null expiresAt — derive a fallback from createdAt
+  // using the standard 20-minute activation window so the UI never
+  // falls back to a "X min ago" label for an in-flight order.
+  const DEFAULT_TIMEOUT_MIN = 20;
+  const recentActivity = data.recentOrders.slice(0, 3).map((order) => {
+    const isWaiting =
+      order.status === 'PENDING' || order.status === 'WAITING_SMS';
+    let expiresAt = order.expiresAt ?? null;
+    if (!expiresAt && isWaiting && order.createdAt) {
+      expiresAt = new Date(
+        new Date(order.createdAt).getTime() + DEFAULT_TIMEOUT_MIN * 60 * 1000,
+      ).toISOString();
+    }
+    return {
+      service: order.service?.name || 'Unknown',
+      country: order.country?.name || 'Unknown',
+      countryCode: order.country?.code || 'US',
+      phoneNumber: order.phoneNumber,
+      code: order.smsCode,
+      expiresAt,
+      time: formatTimeAgo(order.createdAt),
+      status: order.status.toLowerCase(),
+    };
+  });
 
   return (
     <div className="space-y-6">

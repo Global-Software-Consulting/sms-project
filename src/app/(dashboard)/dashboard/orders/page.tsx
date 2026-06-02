@@ -42,10 +42,28 @@ import {
   formatPrice,
 } from '@/lib/api/smsApi';
 
-const getServiceType = (provider?: { displayName?: string; slug?: string }) => {
-  const name = (provider?.displayName || provider?.slug || '').toLowerCase();
+// Map provider tier to a customer-friendly label. Prefer the explicit
+// `version` enum from the backend (V1_STANDARD / V2 / V3); fall back to
+// name keyword matching for older orders that don't yet carry version.
+const getServiceType = (provider?: {
+  displayName?: string;
+  slug?: string;
+  name?: string;
+  version?: string;
+}) => {
+  const v = (provider?.version || '').toUpperCase();
+  if (v === 'V3') return 'Elite';
+  if (v === 'V2') return 'Premium';
+  if (v === 'V1_STANDARD' || v === 'V1') return 'Standard';
+  const name = (
+    provider?.displayName ||
+    provider?.name ||
+    provider?.slug ||
+    ''
+  ).toLowerCase();
   if (name.includes('premium') || name.includes('v2')) return 'Premium';
-  if (name.includes('elite') || name.includes('v3') || name.includes('basic')) return 'Elite';
+  if (name.includes('elite') || name.includes('v3') || name.includes('basic'))
+    return 'Elite';
   return 'Standard';
 };
 
@@ -61,7 +79,9 @@ export default function Orders() {
   const [totalOrders, setTotalOrders] = useState(0);
 
   // Filters
-  const [statusFilter, setStatusFilter] = useState<SmsOrderStatus | 'all'>('all');
+  const [statusFilter, setStatusFilter] = useState<SmsOrderStatus | 'all'>(
+    'all',
+  );
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
 
@@ -78,41 +98,44 @@ export default function Orders() {
   }, [searchQuery]);
 
   // Fetch orders
-  const fetchOrders = useCallback(async (pageNum: number) => {
-    try {
-      if (pageNum === 1) {
-        setIsLoading(true);
-      } else {
-        setIsLoadingMore(true);
+  const fetchOrders = useCallback(
+    async (pageNum: number) => {
+      try {
+        if (pageNum === 1) {
+          setIsLoading(true);
+        } else {
+          setIsLoadingMore(true);
+        }
+
+        const params: any = {
+          page: pageNum,
+          limit: 20,
+        };
+
+        if (statusFilter !== 'all') {
+          params.status = statusFilter;
+        }
+
+        if (debouncedSearch) {
+          params.search = debouncedSearch;
+        }
+
+        const response = await getOrderHistory(params);
+
+        setOrders(response.data);
+        setTotalPages(response.meta.totalPages);
+        setTotalOrders(response.meta.total);
+        setPage(pageNum);
+      } catch (err) {
+        console.error('Failed to fetch orders:', err);
+        toast.error('Failed to load orders');
+      } finally {
+        setIsLoading(false);
+        setIsLoadingMore(false);
       }
-
-      const params: any = {
-        page: pageNum,
-        limit: 20,
-      };
-
-      if (statusFilter !== 'all') {
-        params.status = statusFilter;
-      }
-
-      if (debouncedSearch) {
-        params.search = debouncedSearch;
-      }
-
-      const response = await getOrderHistory(params);
-
-      setOrders(response.data);
-      setTotalPages(response.meta.totalPages);
-      setTotalOrders(response.meta.total);
-      setPage(pageNum);
-    } catch (err) {
-      console.error('Failed to fetch orders:', err);
-      toast.error('Failed to load orders');
-    } finally {
-      setIsLoading(false);
-      setIsLoadingMore(false);
-    }
-  }, [statusFilter, debouncedSearch]);
+    },
+    [statusFilter, debouncedSearch],
+  );
 
   // Initial load and filter changes
   useEffect(() => {
@@ -186,7 +209,9 @@ export default function Orders() {
           onClick={() => fetchOrders(page)}
           disabled={isLoadingMore}
         >
-          <RefreshCw className={`mr-2 h-4 w-4 ${isLoadingMore ? 'animate-spin' : ''}`} />
+          <RefreshCw
+            className={`mr-2 h-4 w-4 ${isLoadingMore ? 'animate-spin' : ''}`}
+          />
           Refresh
         </Button>
       </div>
@@ -209,7 +234,9 @@ export default function Orders() {
             </div>
             <Select
               value={statusFilter}
-              onValueChange={(v) => setStatusFilter(v as SmsOrderStatus | 'all')}
+              onValueChange={(v) =>
+                setStatusFilter(v as SmsOrderStatus | 'all')
+              }
             >
               <SelectTrigger className="w-full md:w-48">
                 <SelectValue />
@@ -275,7 +302,9 @@ export default function Orders() {
                           </Badge>
                         </div>
                         <div className="text-muted-foreground space-y-1 text-sm">
-                          <p className="text-xs">Order ID: {order.id.slice(0, 8)}...</p>
+                          <p className="text-xs">
+                            Order ID: {order.id.slice(0, 8)}...
+                          </p>
                           <p className="flex flex-wrap items-center gap-1">
                             <span>
                               {order.country?.code
@@ -292,7 +321,9 @@ export default function Orders() {
                                 variant="ghost"
                                 size="icon"
                                 className="h-5 w-5"
-                                onClick={() => copyToClipboard(order.phoneNumber!)}
+                                onClick={() =>
+                                  copyToClipboard(order.phoneNumber!)
+                                }
                               >
                                 <Copy className="h-3 w-3" />
                               </Button>
@@ -314,7 +345,9 @@ export default function Orders() {
                               </Button>
                             </p>
                           )}
-                          <p className="text-xs">{formatDate(order.createdAt)}</p>
+                          <p className="text-xs">
+                            {formatDate(order.createdAt)}
+                          </p>
                         </div>
                       </div>
                     </div>
@@ -370,9 +403,7 @@ export default function Orders() {
         <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle>Order Details</DialogTitle>
-            <DialogDescription>
-              Order ID: {selectedOrder?.id}
-            </DialogDescription>
+            <DialogDescription>Order ID: {selectedOrder?.id}</DialogDescription>
           </DialogHeader>
           {selectedOrder && (
             <div className="space-y-4">
@@ -419,7 +450,9 @@ export default function Orders() {
               {/* Phone Number */}
               {selectedOrder.phoneNumber && (
                 <div className="flex items-center justify-between">
-                  <span className="text-muted-foreground text-sm">Phone Number</span>
+                  <span className="text-muted-foreground text-sm">
+                    Phone Number
+                  </span>
                   <div className="flex items-center gap-2">
                     <code className="font-mono text-sm">
                       {selectedOrder.phoneNumber}
@@ -428,7 +461,9 @@ export default function Orders() {
                       variant="ghost"
                       size="icon"
                       className="h-6 w-6"
-                      onClick={() => copyToClipboard(selectedOrder.phoneNumber!)}
+                      onClick={() =>
+                        copyToClipboard(selectedOrder.phoneNumber!)
+                      }
                     >
                       <Copy className="h-3 w-3" />
                     </Button>
@@ -439,7 +474,9 @@ export default function Orders() {
               {/* SMS Code */}
               {selectedOrder.smsCode && (
                 <div className="flex items-center justify-between">
-                  <span className="text-muted-foreground text-sm">SMS Code</span>
+                  <span className="text-muted-foreground text-sm">
+                    SMS Code
+                  </span>
                   <div className="flex items-center gap-2">
                     <code className="bg-success/10 text-success rounded px-2 py-1 font-mono font-bold">
                       {selectedOrder.smsCode}
@@ -459,7 +496,9 @@ export default function Orders() {
               {/* Full SMS Text */}
               {selectedOrder.fullSms && (
                 <div className="space-y-1">
-                  <span className="text-muted-foreground text-sm">Full SMS</span>
+                  <span className="text-muted-foreground text-sm">
+                    Full SMS
+                  </span>
                   <div className="bg-muted/50 rounded-lg p-3">
                     <p className="text-sm">{selectedOrder.fullSms}</p>
                     <Button
@@ -478,12 +517,18 @@ export default function Orders() {
               {/* Pricing */}
               <div className="border-border space-y-2 border-t pt-4">
                 <div className="flex items-center justify-between">
-                  <span className="text-muted-foreground text-sm">Base Price</span>
-                  <span>{formatPrice(selectedOrder.basePrice || selectedOrder.cost)}</span>
+                  <span className="text-muted-foreground text-sm">
+                    Base Price
+                  </span>
+                  <span>
+                    {formatPrice(selectedOrder.basePrice || selectedOrder.cost)}
+                  </span>
                 </div>
                 {parseFloat(selectedOrder.discount) > 0 && (
                   <div className="flex items-center justify-between">
-                    <span className="text-muted-foreground text-sm">Discount</span>
+                    <span className="text-muted-foreground text-sm">
+                      Discount
+                    </span>
                     <span className="text-success">
                       -{formatPrice(selectedOrder.discount)}
                     </span>
