@@ -380,6 +380,17 @@ export default function Activation() {
     return () => window.removeEventListener('sms:price-updated', handler);
   }, [selectedService, selectedProvider, fetchProducts]);
 
+  // Poll for fresh availability while the user is viewing countries.
+  // Client bug #11: the "available" count shown in Step 2 should reflect
+  // real provider stock, not a 5-minute-old cached value. We refetch
+  // every 30s only when a service+provider is selected, so the count
+  // ticks down as other users consume numbers.
+  useEffect(() => {
+    if (!selectedService || !selectedProvider) return;
+    const id = setInterval(() => fetchProducts(), 30_000);
+    return () => clearInterval(id);
+  }, [selectedService, selectedProvider, fetchProducts]);
+
   // Poll active orders for SMS
   useEffect(() => {
     const pollInterval = setInterval(async () => {
@@ -448,11 +459,23 @@ export default function Activation() {
 
   // Filter and sort countries with products
   const filteredCountries = useMemo(() => {
+    // NaN-safe min: parseFloat returning NaN would poison Math.min and
+    // make the price sort comparator return NaN, leaving the list in
+    // its original order (which is why "High → Low" appeared broken).
+    const safeMin = (prods: SmsProduct[]) => {
+      let min = Number.POSITIVE_INFINITY;
+      for (const p of prods) {
+        const v = parseFloat(p.yourPrice);
+        if (Number.isFinite(v) && v < min) min = v;
+      }
+      return Number.isFinite(min) ? min : 0;
+    };
+
     let list = Array.from(productsByCountry.entries()).map(
-      ([countryId, prods]) => ({
+      ([_countryId, prods]) => ({
         country: prods[0].country,
         products: prods,
-        minPrice: Math.min(...prods.map((p) => parseFloat(p.yourPrice))),
+        minPrice: safeMin(prods),
         totalAvailable: prods.reduce((sum, p) => sum + p.availableCount, 0),
       }),
     );
