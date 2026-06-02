@@ -153,7 +153,13 @@ export default function Activation() {
           setCountries(countriesRes.value.data || []);
         }
         if (favoritesRes.status === 'fulfilled') {
-          setFavorites(favoritesRes.value.data || []);
+          // Drop any favorites whose service/country/provider relation
+          // came back null — protects every downstream consumer
+          // (filters, isFavorite, render) from a single bad row.
+          const clean = (favoritesRes.value.data || []).filter(
+            (f) => f?.country?.id && f?.service?.id && f?.provider?.id,
+          );
+          setFavorites(clean);
         }
       });
 
@@ -486,9 +492,16 @@ export default function Activation() {
       list = list.filter((item) => item.country.name.toLowerCase().includes(q));
     }
 
-    // Favorites filter
+    // Favorites filter. Defensive nulls: if a favorite has a missing
+    // country relation (e.g. legacy data before cascade was enforced),
+    // skip it instead of crashing the whole render. This was the
+    // source of the "click favorites and it crashes" bug.
     if (countryFilter === 'favorites') {
-      const favoriteCountryIds = new Set(favorites.map((f) => f.country.id));
+      const favoriteCountryIds = new Set(
+        favorites
+          .map((f) => f.country?.id)
+          .filter((id): id is string => typeof id === 'string'),
+      );
       list = list.filter((item) => favoriteCountryIds.has(item.country.id));
     }
 
@@ -606,8 +619,19 @@ export default function Activation() {
         toast.success('Removed from favorites');
       } else {
         const response = await addFavorite(serviceId, countryId, providerId);
-        if (response.favorite) {
-          setFavorites((prev) => [...prev, response.favorite]);
+        const fav = response.favorite;
+        // Only commit to state if the returned row has all relations.
+        // Without this, a partial response could push a malformed entry
+        // and crash the next render that hits the favorites filter.
+        if (
+          fav?.id &&
+          fav?.country?.id &&
+          fav?.service?.id &&
+          fav?.provider?.id
+        ) {
+          setFavorites((prev) => [...prev, fav]);
+          toast.success('Added to favorites');
+        } else {
           toast.success('Added to favorites');
         }
       }

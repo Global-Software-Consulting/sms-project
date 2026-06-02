@@ -207,24 +207,27 @@ export interface SmsRental {
  */
 export interface SmsFavorite {
   id: string;
-  userId: string;
+  userId?: string;
+  // Backend cascades on delete, but legacy rows (pre-cascade) may have
+  // dangling references. Treat relations as possibly missing so the UI
+  // can defend against malformed rows rather than crash on access.
   service: {
     id: string;
     name: string;
     slug: string;
     iconUrl: string | null;
-  };
+  } | null;
   country: {
     id: string;
     name: string;
     code: string;
     iconUrl: string | null;
-  };
+  } | null;
   provider: {
     id: string;
     displayName: string;
     slug: string;
-  };
+  } | null;
   createdAt: string;
 }
 
