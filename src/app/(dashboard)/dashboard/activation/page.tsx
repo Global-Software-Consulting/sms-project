@@ -36,7 +36,6 @@ import {
   addFavorite,
   removeFavorite,
   getUnifiedVipCategories,
-  getVipServiceCountries,
   UnifiedVipService,
   SmsProvider,
   SmsService,
@@ -108,26 +107,11 @@ export default function Activation() {
   const [countryFilter, setCountryFilter] = useState<CountryFilterType>('all');
   const [priceSort, setPriceSort] = useState<PriceSortType>('none');
 
-  // VIP state — switched to the unified shape so we display each service
-  // exactly once (bugs #6/#7/#8). enabled mirrors admin's global toggle;
-  // false hides the entire VIP section.
+  // VIP state — user-facing VIP section is deferred per client. We still
+  // load the unified list (one shot) so we can decorate Step 1 service
+  // rows with a "VIP" badge for services flagged by admin.
   const [vipServices, setVipServices] = useState<UnifiedVipService[]>([]);
   const [vipEnabled, setVipEnabled] = useState(true);
-  const [isVipLoading, setIsVipLoading] = useState(false);
-  // Search across services and countries — debounced + sent to the API
-  // so the full catalog is searchable, not just the 9 countries we
-  // initially loaded per service.
-  const [vipSearch, setVipSearch] = useState('');
-  const [debouncedVipSearch, setDebouncedVipSearch] = useState('');
-  // Cache full country lists per service slug. Fetched on first
-  // "Show all" click and kept across collapses so re-expanding is
-  // instant. 'loading' marks an in-flight fetch.
-  const [vipFullCache, setVipFullCache] = useState<
-    Record<string, UnifiedVipService['countries'] | 'loading'>
-  >({});
-  // Only one service can be expanded at a time — opening a second
-  // collapses the first so the VIP card stays compact.
-  const [vipExpandedSlug, setVipExpandedSlug] = useState<string | null>(null);
 
   // Active orders state
   const [activeOrders, setActiveOrders] = useState<SmsOrder[]>([]);
@@ -173,17 +157,16 @@ export default function Activation() {
         }
       });
 
-      // Load unified VIP — deduped service names with countries nested.
-      // If admin has disabled VIP, response.enabled=false and we hide
-      // the section entirely.
-      setIsVipLoading(true);
-      getUnifiedVipCategories({ topCountriesPerService: 9 })
+      // Load unified VIP — only used to decorate Step 1 services with a
+      // "VIP" badge. The full VIP card is deferred per client direction.
+      // Request topCountriesPerService=1 to keep the payload tiny since we
+      // only need the service slugs.
+      getUnifiedVipCategories({ topCountriesPerService: 1 })
         .then((res) => {
           setVipEnabled(res.enabled !== false);
           setVipServices(res.enabled === false ? [] : res.services || []);
         })
-        .catch(() => {})
-        .finally(() => setIsVipLoading(false));
+        .catch(() => {});
     } catch (err) {
       console.error('Failed to fetch initial data:', err);
     } finally {
@@ -375,59 +358,13 @@ export default function Activation() {
     return () => clearTimeout(timeoutId);
   }, [selectedService, selectedProvider, fetchProducts]);
 
-  // Debounce VIP search input. 300ms matches the Step-1 service search
-  // so the two feel consistent.
-  useEffect(() => {
-    const t = setTimeout(() => setDebouncedVipSearch(vipSearch.trim()), 300);
-    return () => clearTimeout(t);
-  }, [vipSearch]);
-
-  // Refetch VIP services when the debounced query changes. Empty query
-  // returns the trimmed initial view (top 9 per service); non-empty hits
-  // the backend search which returns full matching countries.
-  useEffect(() => {
-    if (!vipEnabled) return;
-    let cancelled = false;
-    setIsVipLoading(true);
-    getUnifiedVipCategories(
-      debouncedVipSearch
-        ? { q: debouncedVipSearch }
-        : { topCountriesPerService: 9 },
-    )
-      .then((res) => {
-        if (cancelled) return;
-        setVipServices(res.enabled === false ? [] : res.services || []);
-      })
-      .catch(() => {})
-      .finally(() => {
-        if (!cancelled) setIsVipLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [debouncedVipSearch, vipEnabled]);
-
-  // Lazy-load the full country list for one VIP service and mark it as
-  // the (only) expanded service. Cached results are reused on re-open.
-  const loadFullVipCountries = useCallback(
-    (slug: string) => {
-      setVipExpandedSlug(slug);
-      const existing = vipFullCache[slug];
-      if (Array.isArray(existing) || existing === 'loading') return;
-      setVipFullCache((prev) => ({ ...prev, [slug]: 'loading' }));
-      getVipServiceCountries(slug)
-        .then((res) => {
-          setVipFullCache((prev) => ({ ...prev, [slug]: res.countries }));
-        })
-        .catch(() => {
-          setVipFullCache((prev) => {
-            const { [slug]: _drop, ...rest } = prev;
-            return rest;
-          });
-          setVipExpandedSlug((s) => (s === slug ? null : s));
-        });
-    },
-    [vipFullCache],
+  // Set of VIP service slugs (lowercase). Used to badge Step 1 service
+  // rows so users can still see which services are in VIP without a
+  // dedicated VIP section.
+  const vipServiceSlugs = useMemo(
+    () =>
+      new Set(vipEnabled ? vipServices.map((s) => s.slug.toLowerCase()) : []),
+    [vipServices, vipEnabled],
   );
 
   // Live price updates: backend broadcasts `sms:price-updated` via socket
@@ -951,179 +888,6 @@ export default function Activation() {
         </Card>
       )}
 
-      {/* VIP Section (client bugs #6/#7/#8).
-          - Hidden if admin disabled VIP globally (vipEnabled=false)
-          - Each service shown ONCE (deduped across providers) with the
-            country list nested underneath. Click a country to start an
-            order using the best (cheapest) provider for that combo. */}
-      {vipEnabled && vipServices.length > 0 && (
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="flex items-center gap-2 text-base">
-              <Star className="h-4 w-4 text-amber-500" />
-              VIP — Top Services
-            </CardTitle>
-            <p className="text-muted-foreground text-xs">
-              Most-used services, curated and deduplicated across providers
-            </p>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {/* Single search filters both services and countries. When the
-                query matches a country (not the service name), the card
-                stays visible with only matching countries shown — and the
-                collapse is bypassed so results are visible without an
-                extra click. */}
-            <div className="relative">
-              <Search className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
-              <Input
-                placeholder="Search services or countries..."
-                value={vipSearch}
-                onChange={(e) => setVipSearch(e.target.value)}
-                className="pl-9"
-              />
-            </div>
-            {isVipLoading && (
-              <div className="text-muted-foreground py-2 text-center text-xs">
-                Searching...
-              </div>
-            )}
-            {!isVipLoading &&
-              vipServices.length === 0 &&
-              debouncedVipSearch && (
-                <div className="text-muted-foreground py-6 text-center text-sm">
-                  No services or countries match &ldquo;{debouncedVipSearch}
-                  &rdquo;
-                </div>
-              )}
-            {vipServices.map((svc) => {
-              // Backend already trimmed to top 9 per service (or returned
-              // full matching list when q is set). "Show all" lazily fetches
-              // the remaining countries and caches them client-side. Only
-              // one service can be expanded at a time.
-              const isExpanded = vipExpandedSlug === svc.slug;
-              const cached = vipFullCache[svc.slug];
-              const isLoadingMore = isExpanded && cached === 'loading';
-              const visibleCountries =
-                isExpanded && Array.isArray(cached) ? cached : svc.countries;
-              const hasMore = !!svc.hasMore && !isExpanded;
-              return (
-                <div
-                  key={svc.slug}
-                  className="border-border bg-card/50 rounded-xl border p-4"
-                >
-                  <div className="mb-3 flex items-center gap-3">
-                    {svc.iconUrl ? (
-                      <img
-                        src={svc.iconUrl}
-                        alt={svc.name}
-                        className="h-10 w-10 rounded-lg object-cover"
-                        onError={(e) => {
-                          (e.target as HTMLImageElement).style.display = 'none';
-                        }}
-                      />
-                    ) : (
-                      <div className="bg-muted flex h-10 w-10 items-center justify-center rounded-lg text-base">
-                        📱
-                      </div>
-                    )}
-                    <div className="min-w-0 flex-1">
-                      <h3 className="text-sm font-semibold">{svc.name}</h3>
-                      <p className="text-muted-foreground text-xs">
-                        {svc.category} • {svc.countryCount}{' '}
-                        {svc.countryCount === 1 ? 'country' : 'countries'}
-                      </p>
-                    </div>
-                    {hasMore && (
-                      <button
-                        onClick={() => loadFullVipCountries(svc.slug)}
-                        disabled={isLoadingMore}
-                        className="text-primary hover:text-primary/80 shrink-0 text-xs font-medium disabled:opacity-50"
-                      >
-                        {isLoadingMore
-                          ? 'Loading...'
-                          : `Show all ${svc.countryCount}`}
-                      </button>
-                    )}
-                    {isExpanded && (
-                      <button
-                        onClick={() => setVipExpandedSlug(null)}
-                        className="text-primary hover:text-primary/80 shrink-0 text-xs font-medium"
-                      >
-                        Show less
-                      </button>
-                    )}
-                  </div>
-
-                  {/* Country list — each row shows the cheapest provider
-                    available for that (service, country) and lets user
-                    jump straight to ordering. Collapsed to top 9 by
-                    default so the VIP card doesn't dominate the viewport
-                    on services with 100+ countries. */}
-                  <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
-                    {visibleCountries.map((c) => {
-                      const best = c.providers[0];
-                      if (!best) return null;
-                      return (
-                        <button
-                          key={c.id}
-                          onClick={() => {
-                            // Pick the corresponding provider in the
-                            // standard activation flow + jump down to
-                            // the country list. User picks final price
-                            // at the regular Step 2.
-                            const matched = providers.find(
-                              (p) => p.id === best.providerId,
-                            );
-                            if (matched) setSelectedProvider(matched);
-                            if (best.serviceId) {
-                              setSelectedService({
-                                id: best.serviceId,
-                                name: svc.name,
-                                slug: svc.slug,
-                                iconUrl: svc.iconUrl,
-                                category: svc.category,
-                              } as SmsService);
-                            }
-                            setSelectedCountry({
-                              id: c.id,
-                              name: c.name,
-                              code: c.code,
-                              iconUrl: c.iconUrl,
-                            } as SmsCountry);
-                          }}
-                          className="hover:border-primary/40 group flex items-center justify-between rounded-lg border border-transparent bg-[rgba(255,255,255,0.03)] px-3 py-2 text-left transition-colors hover:bg-[rgba(255,255,255,0.06)]"
-                        >
-                          <div className="flex min-w-0 items-center gap-2">
-                            {c.iconUrl && (
-                              <img
-                                src={c.iconUrl}
-                                alt=""
-                                className="h-4 w-4 rounded-sm"
-                                onError={(e) => {
-                                  (e.target as HTMLImageElement).style.display =
-                                    'none';
-                                }}
-                              />
-                            )}
-                            <span className="truncate text-xs font-medium">
-                              {c.name}
-                            </span>
-                          </div>
-                          <span className="text-muted-foreground text-[10px]">
-                            {c.providerCount}{' '}
-                            {c.providerCount === 1 ? 'provider' : 'providers'}
-                          </span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              );
-            })}
-          </CardContent>
-        </Card>
-      )}
-
       {/* Two-column layout: Step 1 + Step 2 */}
       <div className="grid gap-5 md:grid-cols-2">
         {/* STEP 1: Select a Service */}
@@ -1199,6 +963,7 @@ export default function Activation() {
 
                 return filtered.map((svc) => {
                   const isSelected = selectedService?.id === svc.id;
+                  const isVip = vipServiceSlugs.has(svc.slug.toLowerCase());
                   return (
                     <button
                       key={svc.id}
@@ -1228,6 +993,13 @@ export default function Activation() {
                           {svc.name}
                         </span>
                       </div>
+
+                      {isVip && (
+                        <span className="inline-flex shrink-0 items-center gap-1 rounded-full border border-amber-500/40 bg-amber-500/10 px-2 py-0.5 text-[10px] font-semibold tracking-wide text-amber-500 uppercase">
+                          <Star className="h-2.5 w-2.5 fill-current" />
+                          VIP
+                        </span>
+                      )}
 
                       {isSelected && (
                         <ChevronRight className="text-primary h-4 w-4 shrink-0" />
