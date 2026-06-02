@@ -1128,10 +1128,12 @@ export default function AdminSmsServicesPage() {
     if (!selectedProvider) return;
     setIsLoading(true);
     try {
+      // Priority is now auto-managed from per-product usage counts
+      // (client bug #5). Don't send a value — preserve whatever the
+      // backend has computed.
       await adminUpdateProvider(selectedProvider.id, {
         displayName: providerFormData.name,
         version: providerFormData.version,
-        priority: providerFormData.priority,
         markup: providerFormData.markup,
         isActive: providerFormData.isActive,
       });
@@ -3272,22 +3274,11 @@ export default function AdminSmsServicesPage() {
                   <label className="mb-2 block text-sm font-medium text-white">
                     Priority
                   </label>
-                  <input
-                    type="number"
-                    value={providerFormData.priority}
-                    onChange={(e) =>
-                      setProviderFormData({
-                        ...providerFormData,
-                        priority: parseInt(e.target.value) || 0,
-                      })
-                    }
-                    className="w-full rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.4)] px-4 py-3 text-sm text-white focus:ring-2 focus:ring-[#3B82F6] focus:outline-none"
-                    placeholder="100"
-                    min="0"
-                    max="1000"
-                  />
+                  <div className="flex items-center rounded-lg border border-dashed border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.2)] px-4 py-3 text-sm text-[#94A3B8]">
+                    Auto — calculated from real usage
+                  </div>
                   <p className="mt-1 text-xs text-[#64748B]">
-                    Higher = shown first
+                    Services rank by customer usage daily. No manual setting.
                   </p>
                 </div>
               </div>
