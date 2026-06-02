@@ -177,11 +177,19 @@ export default function Activation() {
 
       // Repopulate active orders on mount/reload. Without this, the
       // "Active Numbers" card disappears on reload because state resets
-      // to []. Fetch the latest 20 and keep only in-flight statuses.
+      // to []. Fetch the latest 20 and keep only in-flight statuses
+      // whose expiry is still in the future — orders whose expiresAt
+      // has already passed are stale (backend never transitioned them
+      // to EXPIRED) and would render as "0 min 00 sec" which confuses
+      // users.
       getOrderHistory({ limit: 20 })
         .then((res) => {
+          const now = Date.now();
           const inFlight = (res.data || []).filter(
-            (o) => o.status === 'PENDING' || o.status === 'WAITING_SMS',
+            (o) =>
+              (o.status === 'PENDING' || o.status === 'WAITING_SMS') &&
+              o.expiresAt &&
+              new Date(o.expiresAt).getTime() > now,
           );
           setActiveOrders(inFlight);
         })
