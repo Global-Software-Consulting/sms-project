@@ -117,7 +117,8 @@ export const API_ENDPOINTS = {
     PROVIDERS: '/sms/providers',
     SERVICES: '/sms/services',
     SERVICES_UNIFIED: '/sms/services/unified',
-    SERVICES_UNIFIED_COUNTRIES: (serviceName: string) => `/sms/services/unified/${encodeURIComponent(serviceName)}/countries`,
+    SERVICES_UNIFIED_COUNTRIES: (serviceName: string) =>
+      `/sms/services/unified/${encodeURIComponent(serviceName)}/countries`,
     COUNTRIES: '/sms/countries',
     PRODUCTS: '/sms/products',
     PRODUCTS_REALTIME: '/sms/products/realtime',
@@ -320,12 +321,15 @@ export const API_ENDPOINTS = {
       PROVIDERS: '/admin/sms/providers',
       PROVIDER_DETAIL: (id: string) => `/admin/sms/providers/${id}`,
       PROVIDER_SYNC: (id: string) => `/admin/sms/providers/${id}/sync`,
-      PROVIDER_SYNC_STATUS: (id: string) => `/admin/sms/providers/${id}/sync-status`,
+      PROVIDER_SYNC_STATUS: (id: string) =>
+        `/admin/sms/providers/${id}/sync-status`,
       SERVICES: '/admin/sms/services',
       SERVICE_DETAIL: (id: string) => `/admin/sms/services/${id}`,
       SERVICES_BULK_DISABLE: '/admin/sms/services/bulk-disable',
       SERVICES_BULK_UPDATE_ICONS: '/admin/sms/services/bulk-update-icons',
-      SERVICES_RECALCULATE_POPULARITY: '/admin/sms/services/recalculate-popularity',
+      SERVICES_BACKFILL_ICONS: '/admin/sms/services/backfill-icons',
+      SERVICES_RECALCULATE_POPULARITY:
+        '/admin/sms/services/recalculate-popularity',
       SERVICES_USAGE_STATS: '/admin/sms/services/usage-stats',
       COUNTRIES: '/admin/sms/countries',
       COUNTRY_DETAIL: (id: string) => `/admin/sms/countries/${id}`,
@@ -349,7 +353,8 @@ export const API_ENDPOINTS = {
       VIP_TOP_ORDERED: '/admin/sms/vip/top-ordered',
       PRICING_GLOBAL_MARKUP: '/admin/sms/pricing/global-markup',
       PRICING_PRODUCTS: '/admin/sms/pricing/products',
-      PRICING_PRODUCT_DETAIL: (id: string) => `/admin/sms/pricing/products/${id}`,
+      PRICING_PRODUCT_DETAIL: (id: string) =>
+        `/admin/sms/pricing/products/${id}`,
       PRICING_BULK_LOCK: '/admin/sms/pricing/products/bulk-lock',
       PRICING_LOCKED_STATS: '/admin/sms/pricing/locked-stats',
     },
