@@ -35,6 +35,7 @@ import {
   ExternalLink,
   SearchCheck,
   Cookie,
+  Crown,
 } from 'lucide-react';
 
 const menuItems = [
@@ -42,6 +43,7 @@ const menuItems = [
   { path: '/admin/users', label: 'User Management', icon: Users },
   { path: '/admin/activations', label: 'Order Management', icon: ShoppingCart },
   { path: '/admin/sms-services', label: 'SMS Services', icon: MessageSquare },
+  { path: '/admin/subscriptions', label: 'User Subscriptions', icon: Crown },
   { path: '/admin/coupons', label: 'Coupon Management', icon: Ticket },
   { path: '/admin/referrals', label: 'Affiliate Management', icon: Gift },
   { path: '/admin/rank-system', label: 'Rank System', icon: Award },
