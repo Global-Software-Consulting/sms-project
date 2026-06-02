@@ -264,6 +264,8 @@ export const API_ENDPOINTS = {
     // Admin Membership
     MEMBERSHIP: {
       SUBSCRIPTIONS: '/admin/membership/subscriptions',
+      SUBSCRIPTION_CANCEL: (id: string) =>
+        `/admin/membership/subscriptions/${id}/cancel`,
       STATISTICS: '/admin/membership/statistics',
       GRANT: '/admin/membership/grant',
       PLANS: '/admin/membership/plans',

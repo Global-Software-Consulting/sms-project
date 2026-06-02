@@ -207,16 +207,96 @@ export const upgradePlan = async (
 export const toggleAutoRenew = async (
   autoRenew: boolean,
 ): Promise<{ message: string; autoRenew: boolean }> => {
-  const response = await apiClient.patch<{ message: string; autoRenew: boolean }>(
-    API_ENDPOINTS.MEMBERSHIP.AUTO_RENEW,
-    { autoRenew },
-  );
+  const response = await apiClient.patch<{
+    message: string;
+    autoRenew: boolean;
+  }>(API_ENDPOINTS.MEMBERSHIP.AUTO_RENEW, { autoRenew });
   return response.data;
 };
 
 // NOTE: cancelSubscription removed per client requirement (March 2026)
 // Users cannot cancel subscriptions directly - they must open a support ticket
 // Admin can cancel via admin panel
+
+// ============================================
+// Admin API Functions
+// ============================================
+
+export interface AdminSubscriptionUser {
+  id: string;
+  email: string | null;
+  username: string | null;
+  firstName?: string | null;
+  lastName?: string | null;
+}
+
+export interface AdminSubscription {
+  id: string;
+  userId: string;
+  user: AdminSubscriptionUser;
+  status: SubscriptionStatus;
+  pricePaid: string;
+  startDate: string;
+  endDate: string;
+  autoRenew: boolean;
+  cancelledAt: string | null;
+  cancelReason: string | null;
+  plan: MembershipPlan;
+  createdAt: string;
+}
+
+export interface AdminSubscriptionsResponse {
+  data: AdminSubscription[];
+  meta: {
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  };
+}
+
+export interface AdminSubscriptionQuery {
+  userId?: string;
+  planSlug?: string;
+  status?: SubscriptionStatus;
+  search?: string;
+  page?: number;
+  limit?: number;
+}
+
+/**
+ * List all user subscriptions (admin)
+ * GET /api/v1/admin/membership/subscriptions
+ */
+export const adminGetSubscriptions = async (
+  params?: AdminSubscriptionQuery,
+): Promise<AdminSubscriptionsResponse> => {
+  const response = await apiClient.get<AdminSubscriptionsResponse>(
+    API_ENDPOINTS.ADMIN.MEMBERSHIP.SUBSCRIPTIONS,
+    { params },
+  );
+  return response.data;
+};
+
+/**
+ * Cancel a user subscription (admin)
+ * POST /api/v1/admin/membership/subscriptions/:id/cancel
+ */
+export const adminCancelSubscription = async (
+  subscriptionId: string,
+  body: {
+    reason: string;
+    refundType?: 'wallet' | 'crypto' | 'none';
+    refundAmount?: number;
+    skipTicketCheck?: boolean;
+  },
+): Promise<{ message: string }> => {
+  const response = await apiClient.post<{ message: string }>(
+    API_ENDPOINTS.ADMIN.MEMBERSHIP.SUBSCRIPTION_CANCEL(subscriptionId),
+    body,
+  );
+  return response.data;
+};
 
 // ============================================
 // Helper Functions
