@@ -537,7 +537,9 @@ export const checkOrderStatus = async (
 /**
  * Type guard to check if an order response is valid
  */
-export const isValidOrderResponse = (response: any): response is { order: SmsOrder } => {
+export const isValidOrderResponse = (
+  response: any,
+): response is { order: SmsOrder } => {
   return response && response.order && typeof response.order.id === 'string';
 };
 
@@ -705,7 +707,9 @@ export interface VipCategory {
  * Get VIP categories with services grouped by provider
  * GET /api/v1/sms/vip/categories
  */
-export const getVipCategories = async (): Promise<{ categories: VipCategory[] }> => {
+export const getVipCategories = async (): Promise<{
+  categories: VipCategory[];
+}> => {
   const response = await apiClient.get<{ categories: VipCategory[] }>(
     API_ENDPOINTS.SMS.VIP_CATEGORIES,
   );
@@ -778,10 +782,9 @@ export const getCountriesForUnifiedService = async (
   serviceName: string,
   params?: CountryQueryParams,
 ): Promise<PaginatedResponse<UnifiedServiceCountry>> => {
-  const response = await apiClient.get<PaginatedResponse<UnifiedServiceCountry>>(
-    API_ENDPOINTS.SMS.SERVICES_UNIFIED_COUNTRIES(serviceName),
-    { params },
-  );
+  const response = await apiClient.get<
+    PaginatedResponse<UnifiedServiceCountry>
+  >(API_ENDPOINTS.SMS.SERVICES_UNIFIED_COUNTRIES(serviceName), { params });
   return response.data;
 };
 
@@ -796,6 +799,7 @@ export interface UnifiedVipService {
   iconUrl: string | null;
   category: string;
   countryCount: number;
+  hasMore?: boolean;
   countries: Array<{
     id: string;
     name: string;
@@ -821,7 +825,10 @@ export interface UnifiedVipService {
  * Get unified VIP categories (no duplicates)
  * GET /api/v1/sms/vip/unified
  */
-export const getUnifiedVipCategories = async (): Promise<{
+export const getUnifiedVipCategories = async (params?: {
+  q?: string;
+  topCountriesPerService?: number;
+}): Promise<{
   enabled: boolean;
   serviceCount?: number;
   services: UnifiedVipService[];
@@ -832,7 +839,33 @@ export const getUnifiedVipCategories = async (): Promise<{
     serviceCount?: number;
     services: UnifiedVipService[];
     message?: string;
-  }>(API_ENDPOINTS.SMS.VIP_UNIFIED);
+  }>(API_ENDPOINTS.SMS.VIP_UNIFIED, { params });
+  return response.data;
+};
+
+/**
+ * Fetch the full country list for a single VIP service.
+ * Used by the "Show all" expander so the initial unified payload stays small.
+ * GET /api/v1/sms/vip/services/:slug/countries
+ */
+export const getVipServiceCountries = async (
+  slug: string,
+): Promise<{
+  slug: string;
+  name: string | null;
+  iconUrl?: string | null;
+  category?: string;
+  countryCount: number;
+  countries: UnifiedVipService['countries'];
+}> => {
+  const response = await apiClient.get<{
+    slug: string;
+    name: string | null;
+    iconUrl?: string | null;
+    category?: string;
+    countryCount: number;
+    countries: UnifiedVipService['countries'];
+  }>(`/sms/vip/services/${encodeURIComponent(slug)}/countries`);
   return response.data;
 };
 
@@ -891,7 +924,9 @@ export const adminSyncProvider = async (id: string): Promise<SyncResponse> => {
  * Get sync status for a provider
  * GET /api/v1/admin/sms/providers/:id/sync-status
  */
-export const adminGetSyncStatus = async (id: string): Promise<SyncStatusResponse> => {
+export const adminGetSyncStatus = async (
+  id: string,
+): Promise<SyncStatusResponse> => {
   const response = await apiClient.get<SyncStatusResponse>(
     API_ENDPOINTS.ADMIN.SMS.PROVIDER_SYNC_STATUS(id),
   );
@@ -918,19 +953,17 @@ export const adminGetServices = async (
  * Create new service (admin)
  * POST /api/v1/admin/sms/services
  */
-export const adminCreateService = async (
-  data: {
-    name: string;
-    serviceCode: string;
-    providerId: string;
-    defaultPrice: number;
-    successRate?: number;
-    iconUrl?: string;
-    category?: string;
-    countryIds?: string[];
-    isActive?: boolean;
-  },
-): Promise<{ service: SmsService; message: string }> => {
+export const adminCreateService = async (data: {
+  name: string;
+  serviceCode: string;
+  providerId: string;
+  defaultPrice: number;
+  successRate?: number;
+  iconUrl?: string;
+  category?: string;
+  countryIds?: string[];
+  isActive?: boolean;
+}): Promise<{ service: SmsService; message: string }> => {
   const response = await apiClient.post<{
     service: SmsService;
     message: string;
@@ -1158,7 +1191,12 @@ export const adminBulkAddVipNumbers = async (
   countryId: string,
   providerId: string,
   rating?: number,
-): Promise<{ message: string; added: number; skipped: number; invalid: number }> => {
+): Promise<{
+  message: string;
+  added: number;
+  skipped: number;
+  invalid: number;
+}> => {
   const response = await apiClient.post<{
     message: string;
     added: number;
@@ -1194,7 +1232,10 @@ export const adminBulkAddVipAllCountries = async (
     skipped: number;
     invalid: number;
     countryCount: number;
-  }>(API_ENDPOINTS.ADMIN.SMS.VIP_BULK_ALL_COUNTRIES, { serviceIds, providerId });
+  }>(API_ENDPOINTS.ADMIN.SMS.VIP_BULK_ALL_COUNTRIES, {
+    serviceIds,
+    providerId,
+  });
   return response.data;
 };
 
@@ -1259,9 +1300,7 @@ export const adminGetUnifiedVipCategories = async (): Promise<{
   services: UnifiedVipService[];
   message?: string;
 }> => {
-  const response = await apiClient.get(
-    API_ENDPOINTS.ADMIN.SMS.VIP_UNIFIED,
-  );
+  const response = await apiClient.get(API_ENDPOINTS.ADMIN.SMS.VIP_UNIFIED);
   return response.data;
 };
 
@@ -1286,7 +1325,11 @@ export const adminToggleVip = async (
 export const adminAutoPopulateVip = async (params?: {
   minOrders?: number;
   limit?: number;
-}): Promise<{ message: string; added: number; criteria: { minOrders: number; limit: number } }> => {
+}): Promise<{
+  message: string;
+  added: number;
+  criteria: { minOrders: number; limit: number };
+}> => {
   const response = await apiClient.post(
     API_ENDPOINTS.ADMIN.SMS.VIP_AUTO_POPULATE,
     {},
@@ -1460,7 +1503,11 @@ export const adminBulkLockProducts = async (
  */
 export const adminGetLockedProductsStats = async (): Promise<{
   totalLocked: number;
-  byProvider: Array<{ providerId: string; providerName: string; count: number }>;
+  byProvider: Array<{
+    providerId: string;
+    providerName: string;
+    count: number;
+  }>;
 }> => {
   const response = await apiClient.get(
     API_ENDPOINTS.ADMIN.SMS.PRICING_LOCKED_STATS,
@@ -1581,9 +1628,9 @@ export const getServiceTypeLabel = (
   slugOrVersion?: string,
 ): { label: string; color: string } => {
   if (!slugOrVersion) return { label: 'Standard', color: '#94A3B8' };
-  
+
   const slug = slugOrVersion.toLowerCase();
-  
+
   // Map provider slugs to service types
   if (slug.includes('fivesim') || slug === '5sim' || slug.includes('v1')) {
     return { label: 'Premium', color: '#C6A75E' };
@@ -1591,10 +1638,14 @@ export const getServiceTypeLabel = (
   if (slug.includes('smsman') || slug.includes('v2')) {
     return { label: 'Standard', color: '#3B82F6' };
   }
-  if (slug.includes('herosms') || slug.includes('hero') || slug.includes('v3')) {
+  if (
+    slug.includes('herosms') ||
+    slug.includes('hero') ||
+    slug.includes('v3')
+  ) {
     return { label: 'Economy', color: '#10B981' };
   }
-  
+
   return { label: 'Standard', color: '#94A3B8' };
 };
 
