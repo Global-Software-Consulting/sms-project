@@ -1,5 +1,10 @@
 import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios';
-import { getTokens, setTokens, clearTokens } from '@/lib/api/tokenStorage';
+import {
+  getTokens,
+  setTokens,
+  clearTokens,
+  isAccessTokenExpiringSoon,
+} from '@/lib/api/tokenStorage';
 import { API_ENDPOINTS } from '@/config/server.config';
 
 // API Base URL
@@ -24,7 +29,10 @@ const axiosInstance = axios.create({
 const inflightRequests = new Map<string, Promise<unknown>>();
 
 export const apiClient = {
-  get: <T = unknown>(url: string, config?: Parameters<typeof axiosInstance.get>[1]) => {
+  get: <T = unknown>(
+    url: string,
+    config?: Parameters<typeof axiosInstance.get>[1],
+  ) => {
     const key = `GET:${url}:${JSON.stringify(config?.params || {})}`;
     const existing = inflightRequests.get(key);
     if (existing) {
@@ -36,14 +44,25 @@ export const apiClient = {
     inflightRequests.set(key, request);
     return request;
   },
-  post: <T = unknown>(url: string, data?: unknown, config?: Parameters<typeof axiosInstance.post>[2]) => 
-    axiosInstance.post<T>(url, data, config),
-  put: <T = unknown>(url: string, data?: unknown, config?: Parameters<typeof axiosInstance.put>[2]) => 
-    axiosInstance.put<T>(url, data, config),
-  patch: <T = unknown>(url: string, data?: unknown, config?: Parameters<typeof axiosInstance.patch>[2]) => 
-    axiosInstance.patch<T>(url, data, config),
-  delete: <T = unknown>(url: string, config?: Parameters<typeof axiosInstance.delete>[1]) => 
-    axiosInstance.delete<T>(url, config),
+  post: <T = unknown>(
+    url: string,
+    data?: unknown,
+    config?: Parameters<typeof axiosInstance.post>[2],
+  ) => axiosInstance.post<T>(url, data, config),
+  put: <T = unknown>(
+    url: string,
+    data?: unknown,
+    config?: Parameters<typeof axiosInstance.put>[2],
+  ) => axiosInstance.put<T>(url, data, config),
+  patch: <T = unknown>(
+    url: string,
+    data?: unknown,
+    config?: Parameters<typeof axiosInstance.patch>[2],
+  ) => axiosInstance.patch<T>(url, data, config),
+  delete: <T = unknown>(
+    url: string,
+    config?: Parameters<typeof axiosInstance.delete>[1],
+  ) => axiosInstance.delete<T>(url, config),
   interceptors: axiosInstance.interceptors,
   defaults: axiosInstance.defaults,
 } as typeof axiosInstance;
@@ -66,18 +85,6 @@ const processQueue = (error: Error | null, token: string | null = null) => {
   });
   failedQueue = [];
 };
-
-// Request interceptor - Add auth token
-axiosInstance.interceptors.request.use(
-  (config: InternalAxiosRequestConfig) => {
-    const tokens = getTokens();
-    if (tokens?.accessToken) {
-      config.headers.Authorization = `Bearer ${tokens.accessToken}`;
-    }
-    return config;
-  },
-  (error) => Promise.reject(error),
-);
 
 // Auth endpoints that should NOT trigger token refresh on 401
 // These endpoints are expected to return 401 for invalid credentials
@@ -107,13 +114,71 @@ const refreshAccessToken = async (): Promise<string> => {
   const response = await axios.post(
     `${API_BASE_URL}${API_ENDPOINTS.AUTH.REFRESH}`,
     { refreshToken: tokens.refreshToken },
-    { timeout: 10000 } // 10 second timeout for refresh
+    { timeout: 10000 }, // 10 second timeout for refresh
   );
 
   const { accessToken, refreshToken } = response.data;
   setTokens(accessToken, refreshToken);
   return accessToken;
 };
+
+// Shared "start refresh" helper. Used by both the proactive
+// (request-time) and reactive (response 401) paths so all callers
+// queue behind the same in-flight refresh promise.
+const ensureFreshAccessToken = async (): Promise<string> => {
+  if (isRefreshing && refreshPromise) {
+    return refreshPromise;
+  }
+  isRefreshing = true;
+  refreshPromise = refreshAccessToken()
+    .then((newToken) => {
+      processQueue(null, newToken);
+      return newToken;
+    })
+    .catch((refreshError) => {
+      processQueue(refreshError as Error, null);
+      clearTokens();
+      if (typeof window !== 'undefined') {
+        window.location.href = '/auth/login';
+      }
+      throw refreshError;
+    })
+    .finally(() => {
+      isRefreshing = false;
+      refreshPromise = null;
+    });
+  return refreshPromise;
+};
+
+// Request interceptor - Add auth token AND proactively refresh if the
+// access token is within 30s of expiring. Without this, the first
+// request after the token expires returns 401, the response interceptor
+// refreshes, and the request is retried — visible as a red 401 in the
+// network panel even though the user-facing call succeeds.
+axiosInstance.interceptors.request.use(
+  async (config: InternalAxiosRequestConfig) => {
+    // Skip refresh for auth endpoints (login, refresh itself, etc.)
+    if (!isAuthEndpoint(config.url) && isAccessTokenExpiringSoon()) {
+      const tokens = getTokens();
+      if (tokens?.refreshToken) {
+        try {
+          const newToken = await ensureFreshAccessToken();
+          config.headers.Authorization = `Bearer ${newToken}`;
+          return config;
+        } catch {
+          // Fall through — if refresh failed, send the (likely expired)
+          // token and let the response interceptor handle the 401 path.
+        }
+      }
+    }
+    const tokens = getTokens();
+    if (tokens?.accessToken) {
+      config.headers.Authorization = `Bearer ${tokens.accessToken}`;
+    }
+    return config;
+  },
+  (error) => Promise.reject(error),
+);
 
 // Response interceptor - Handle token refresh
 axiosInstance.interceptors.response.use(
@@ -142,39 +207,8 @@ axiosInstance.interceptors.response.use(
         return Promise.reject(error);
       }
 
-      // If already refreshing, wait for the existing refresh to complete
-      if (isRefreshing && refreshPromise) {
-        try {
-          const newToken = await refreshPromise;
-          originalRequest.headers.Authorization = `Bearer ${newToken}`;
-          return axiosInstance(originalRequest);
-        } catch (refreshError) {
-          return Promise.reject(refreshError);
-        }
-      }
-
-      // Start a new refresh
-      isRefreshing = true;
-      refreshPromise = refreshAccessToken()
-        .then((newToken) => {
-          processQueue(null, newToken);
-          return newToken;
-        })
-        .catch((refreshError) => {
-          processQueue(refreshError as Error, null);
-          clearTokens();
-          if (typeof window !== 'undefined') {
-            window.location.href = '/auth/login';
-          }
-          throw refreshError;
-        })
-        .finally(() => {
-          isRefreshing = false;
-          refreshPromise = null;
-        });
-
       try {
-        const newToken = await refreshPromise;
+        const newToken = await ensureFreshAccessToken();
         originalRequest.headers.Authorization = `Bearer ${newToken}`;
         return axiosInstance(originalRequest);
       } catch (refreshError) {
