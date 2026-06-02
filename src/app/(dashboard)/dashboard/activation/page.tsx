@@ -36,6 +36,7 @@ import {
   addFavorite,
   removeFavorite,
   getUnifiedVipCategories,
+  getOrderHistory,
   UnifiedVipService,
   SmsProvider,
   SmsService,
@@ -171,6 +172,18 @@ export default function Activation() {
         .then((res) => {
           setVipEnabled(res.enabled !== false);
           setVipServices(res.enabled === false ? [] : res.services || []);
+        })
+        .catch(() => {});
+
+      // Repopulate active orders on mount/reload. Without this, the
+      // "Active Numbers" card disappears on reload because state resets
+      // to []. Fetch the latest 20 and keep only in-flight statuses.
+      getOrderHistory({ limit: 20 })
+        .then((res) => {
+          const inFlight = (res.data || []).filter(
+            (o) => o.status === 'PENDING' || o.status === 'WAITING_SMS',
+          );
+          setActiveOrders(inFlight);
         })
         .catch(() => {});
     } catch (err) {
