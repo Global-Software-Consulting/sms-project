@@ -128,6 +128,7 @@ export interface SmsOrder {
     name?: string;
     displayName?: string;
     slug: string;
+    version?: string;
   };
   service?: {
     id?: string;
