@@ -165,6 +165,54 @@ const UnifiedServiceRow = memo(function UnifiedServiceRow({
   );
 });
 
+// Memoized row for the Icon Management grid. Re-renders only when the
+// row's specific props change — keeps typing/scrolling fast even with
+// hundreds of items loaded.
+const IconServiceRow = memo(function IconServiceRow({
+  service,
+  onEdit,
+}: {
+  service: UnifiedService;
+  onEdit: (s: UnifiedService) => void;
+}) {
+  return (
+    <div className="rounded-lg border border-[rgba(255,255,255,0.05)] bg-[rgba(255,255,255,0.02)] p-4 transition-all hover:border-[rgba(139,92,246,0.3)]">
+      <div className="flex items-start gap-3">
+        <div className="relative">
+          {service.iconUrl ? (
+            <img
+              src={service.iconUrl}
+              alt={service.name}
+              className="h-12 w-12 rounded-lg object-cover"
+            />
+          ) : (
+            <div className="flex h-12 w-12 items-center justify-center rounded-lg border border-[rgba(239,68,68,0.3)] bg-[rgba(239,68,68,0.1)]">
+              <X className="h-5 w-5 text-[#EF4444]" />
+            </div>
+          )}
+        </div>
+        <div className="min-w-0 flex-1">
+          <h4 className="truncate text-sm font-medium text-white">
+            {service.name}
+          </h4>
+          <p className="mt-0.5 text-xs text-[#64748B]">
+            {service.category || 'Uncategorized'}
+          </p>
+          <p className="mt-0.5 text-xs text-[#3B82F6]">
+            {service.providers.length} provider(s)
+          </p>
+          <button
+            onClick={() => onEdit(service)}
+            className="mt-2 rounded-lg bg-[#8B5CF6]/20 px-3 py-1.5 text-xs font-medium text-[#8B5CF6] transition-colors hover:bg-[#8B5CF6]/30"
+          >
+            {service.iconUrl ? 'Change Icon' : 'Add Icon'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+});
+
 export default function AdminSmsServicesPage() {
   const [activeTab, setActiveTab] = useState<
     'providers' | 'vip' | 'pricing' | 'subscriptions'
@@ -292,9 +340,31 @@ export default function AdminSmsServicesPage() {
   const [servicesForIcons, setServicesForIcons] = useState<UnifiedService[]>(
     [],
   );
-  const [isIconServicesLoading, setIsIconServicesLoading] = useState(false);
+  // Default to true so the first render shows skeleton, not empty state.
+  const [isIconServicesLoading, setIsIconServicesLoading] = useState(true);
+  const [isLoadingMoreIcons, setIsLoadingMoreIcons] = useState(false);
   const [iconFilterMissing, setIconFilterMissing] = useState(false);
   const [iconSearchQuery, setIconSearchQuery] = useState('');
+  const [debouncedIconSearch, setDebouncedIconSearch] = useState('');
+  const [iconsPage, setIconsPage] = useState(1);
+  const [hasMoreIcons, setHasMoreIcons] = useState(false);
+  const [iconsTotal, setIconsTotal] = useState(0);
+  const iconsRequestId = useRef(0);
+  const iconLoadMoreSentinelRef = useRef<HTMLDivElement | null>(null);
+  // Sync flag (ref, not state) — set true while a first-page fetch is in
+  // flight. loadMoreIcons checks this synchronously to avoid the race
+  // where the sentinel fires page-2-of-new-query and the response gets
+  // appended to the stale page-1 still on screen.
+  const isFetchingFirstPageRef = useRef(false);
+  // Track the filter the displayed list was fetched with. If the next
+  // first-page fetch uses a different filter, we clear the list
+  // synchronously — the dataset is fundamentally different so blinking
+  // through a skeleton is the right UX (the alternative is showing stale
+  // missing-icon items at the top while new ones append below).
+  const lastFetchedFilterRef = useRef<{ search: string; missingOnly: boolean }>(
+    { search: '', missingOnly: false },
+  );
+  const ICONS_PAGE_SIZE = 50;
   const [editingIconService, setEditingIconService] =
     useState<UnifiedService | null>(null);
   const [iconUrlInput, setIconUrlInput] = useState('');
@@ -586,75 +656,177 @@ export default function AdminSmsServicesPage() {
     // + debouncedUnifiedServiceSearch — no manual call needed.
   };
 
-  // Icon Management functions - uses unified services (no duplicates across providers) with pagination
-  const fetchServicesForIcons = useCallback(
-    async (missingOnly: boolean = false) => {
+  // Icon Management — server-paginated first page. Backend handles
+  // search + missing-only filter so the UI doesn't burn cycles loading
+  // 5000+ rows and filtering client-side.
+  const fetchIconsFirstPage = useCallback(
+    async (search: string, missingOnly: boolean) => {
+      const requestId = ++iconsRequestId.current;
+      const isStale = () => requestId !== iconsRequestId.current;
+
+      // Sync gate — set true BEFORE the async fetch so any sentinel
+      // intersection event that fires during this fetch is dropped.
+      isFetchingFirstPageRef.current = true;
+      // Stop the sentinel from being "intersecting" → also prevents
+      // load-more from queuing fresh data into the stale list.
+      setHasMoreIcons(false);
+
+      // If the FILTER changed (missingOnly toggle), clear the list NOW so
+      // there's no chance of stale rows lingering on screen during the
+      // fetch. Search refetches keep the list visible (similar dataset).
+      const filterChanged =
+        lastFetchedFilterRef.current.missingOnly !== missingOnly;
+      lastFetchedFilterRef.current = { search, missingOnly };
+      if (filterChanged) {
+        setServicesForIcons([]);
+        setIconsTotal(0);
+      }
+
+      // Loading flag stays true while we refetch — list visible underneath
+      // (no blink). Skeleton only shown when no items at all.
       setIsIconServicesLoading(true);
+
       try {
-        let allServices: UnifiedService[] = [];
-        let page = 1;
-        const limit = 200;
-        let hasMore = true;
-
-        while (hasMore) {
-          const response = await getUnifiedServices({ limit, page });
-          const services = response.data || [];
-          allServices = [...allServices, ...services];
-
-          if (services.length < limit) {
-            hasMore = false;
-          } else {
-            page++;
-          }
-        }
-
-        // Filter to missing icons only if requested
-        if (missingOnly) {
-          allServices = allServices.filter((s) => !s.iconUrl);
-        }
-
-        setServicesForIcons(allServices);
+        const response = await getUnifiedServices({
+          limit: ICONS_PAGE_SIZE,
+          page: 1,
+          ...(search ? { search } : {}),
+          ...(missingOnly ? { missingIconOnly: true } : {}),
+        } as any);
+        if (isStale()) return;
+        setServicesForIcons(response.data || []);
+        setIconsPage(1);
+        setHasMoreIcons(response.meta?.hasNextPage ?? false);
+        setIconsTotal(response.meta?.total ?? response.data?.length ?? 0);
       } catch (error: any) {
+        if (isStale()) return;
         toast.error(
           error?.response?.data?.message || 'Failed to fetch services',
         );
+        setServicesForIcons([]);
+        setHasMoreIcons(false);
+        setIconsTotal(0);
       } finally {
-        setIsIconServicesLoading(false);
+        if (!isStale()) setIsIconServicesLoading(false);
+        isFetchingFirstPageRef.current = false;
       }
     },
     [],
+  );
+
+  const loadMoreIcons = useCallback(async () => {
+    if (
+      !showIconManagementModal ||
+      !hasMoreIcons ||
+      isLoadingMoreIcons ||
+      // Sync guard — drop sentinel events that fire while a first-page
+      // fetch is in flight. Without this, page-2 of the new query gets
+      // appended to the stale page-1 still on screen.
+      isFetchingFirstPageRef.current
+    )
+      return;
+    const requestId = iconsRequestId.current;
+    const isStale = () => requestId !== iconsRequestId.current;
+
+    setIsLoadingMoreIcons(true);
+    try {
+      const nextPage = iconsPage + 1;
+      const response = await getUnifiedServices({
+        limit: ICONS_PAGE_SIZE,
+        page: nextPage,
+        ...(debouncedIconSearch ? { search: debouncedIconSearch } : {}),
+        ...(iconFilterMissing ? { missingIconOnly: true } : {}),
+      } as any);
+      if (isStale()) return;
+      setServicesForIcons((prev) => [...prev, ...(response.data || [])]);
+      setIconsPage(nextPage);
+      setHasMoreIcons(response.meta?.hasNextPage ?? false);
+      if (response.meta?.total != null) setIconsTotal(response.meta.total);
+    } catch (error: any) {
+      if (isStale()) return;
+      toast.error(
+        error?.response?.data?.message || 'Failed to load more services',
+      );
+      setHasMoreIcons(false);
+    } finally {
+      if (!isStale()) setIsLoadingMoreIcons(false);
+    }
+  }, [
+    showIconManagementModal,
+    hasMoreIcons,
+    isLoadingMoreIcons,
+    iconsPage,
+    debouncedIconSearch,
+    iconFilterMissing,
+  ]);
+
+  // Debounce search 300ms.
+  useEffect(() => {
+    const id = setTimeout(() => {
+      setDebouncedIconSearch(iconSearchQuery.trim());
+    }, 300);
+    return () => clearTimeout(id);
+  }, [iconSearchQuery]);
+
+  // Fire first-page fetch when modal open OR search / filter changes.
+  useEffect(() => {
+    if (!showIconManagementModal) return;
+    void fetchIconsFirstPage(debouncedIconSearch, iconFilterMissing);
+  }, [
+    showIconManagementModal,
+    debouncedIconSearch,
+    iconFilterMissing,
+    fetchIconsFirstPage,
+  ]);
+
+  // IntersectionObserver — trigger loadMore when sentinel scrolls into view.
+  useEffect(() => {
+    if (!showIconManagementModal) return;
+    const node = iconLoadMoreSentinelRef.current;
+    if (!node || !hasMoreIcons) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting) void loadMoreIcons();
+      },
+      { root: null, rootMargin: '100px', threshold: 0 },
+    );
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [showIconManagementModal, hasMoreIcons, loadMoreIcons]);
+
+  // Back-compat helper used by other call sites (e.g. after upload).
+  // Re-runs the first-page fetch with current search + filter.
+  const fetchServicesForIcons = useCallback(
+    (missingOnly: boolean = iconFilterMissing) => {
+      void fetchIconsFirstPage(debouncedIconSearch, missingOnly);
+    },
+    [fetchIconsFirstPage, debouncedIconSearch, iconFilterMissing],
   );
 
   const handleOpenIconManagement = () => {
     setShowIconManagementModal(true);
     setIconFilterMissing(false);
     setIconSearchQuery('');
+    setDebouncedIconSearch('');
     setEditingIconService(null);
     setIconUrlInput('');
-    fetchServicesForIcons(false);
+    // Initial fetch handled by useEffect watching showIconManagementModal.
   };
 
   const handleIconFilterChange = (missingOnly: boolean) => {
     setIconFilterMissing(missingOnly);
-    fetchServicesForIcons(missingOnly);
+    // Refetch handled by useEffect watching iconFilterMissing.
   };
 
-  // Ref to the inline Edit Icon panel so we can scroll it into view —
-  // it renders after the services grid and was previously off-screen
-  // when admin clicked "Change Icon" on a row.
+  // Edit Icon panel ref retained for the now-modal version (kept harmless).
   const editIconPanelRef = useRef<HTMLDivElement | null>(null);
 
-  const handleEditIcon = (service: UnifiedService) => {
+  // useCallback so memoized IconServiceRow can skip re-renders on
+  // parent re-renders (search typing, scroll, etc).
+  const handleEditIcon = useCallback((service: UnifiedService) => {
     setEditingIconService(service);
     setIconUrlInput(service.iconUrl || '');
-    // Defer one tick so the panel mounts before we scroll to it.
-    setTimeout(() => {
-      editIconPanelRef.current?.scrollIntoView({
-        behavior: 'smooth',
-        block: 'start',
-      });
-    }, 0);
-  };
+  }, []);
 
   // Trigger the backend backfill.
   // - force=false: fills iconUrl=null rows only (preserves everything else)
@@ -3906,9 +4078,11 @@ export default function AdminSmsServicesPage() {
               </div>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-6">
-              {/* Filters */}
-              <div className="mb-4 flex items-center gap-3">
+            <div className="flex-1 overflow-y-auto">
+              {/* Filters — sticky to the top of the scroll container so
+                  search/filter buttons stay reachable while admin scrolls
+                  through the grid below. */}
+              <div className="sticky top-0 z-20 flex items-center gap-3 border-b border-[rgba(255,255,255,0.05)] bg-[#0F172A] px-6 py-4">
                 <div className="relative flex-1">
                   <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-[#64748B]" />
                   <input
@@ -3957,68 +4131,70 @@ export default function AdminSmsServicesPage() {
                 </button>
               </div>
 
-              {isIconServicesLoading ? (
-                <div className="flex items-center justify-center py-16">
-                  <Loader2 className="h-6 w-6 animate-spin text-[#8B5CF6]" />
-                  <span className="ml-3 text-sm text-[#94A3B8]">
-                    Loading services...
+              {/* Fixed-height wrapper prevents the modal from blinking
+                  between loading / empty / loaded states. */}
+              <div className="min-h-[500px] px-6 py-4">
+                {/* Total count row */}
+                <div className="mb-3 flex items-center justify-between text-xs text-[#94A3B8]">
+                  <span>
+                    {iconsTotal}{' '}
+                    {iconFilterMissing ? 'missing icons' : 'services'}
                   </span>
+                  {isIconServicesLoading && servicesForIcons.length > 0 && (
+                    <Loader2 className="h-3 w-3 animate-spin text-[#8B5CF6]" />
+                  )}
                 </div>
-              ) : servicesForIcons.length === 0 ? (
-                <div className="py-16 text-center text-[#64748B]">
-                  {iconFilterMissing
-                    ? 'All services have icons!'
-                    : 'No services found'}
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-                  {servicesForIcons
-                    .filter((s) =>
-                      s.name
-                        .toLowerCase()
-                        .includes(iconSearchQuery.toLowerCase()),
-                    )
-                    .map((service) => (
+
+                {isIconServicesLoading && servicesForIcons.length === 0 ? (
+                  // Skeleton placeholders for the first-page load.
+                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+                    {Array.from({ length: 9 }).map((_, i) => (
                       <div
-                        key={service.slug}
-                        className="rounded-lg border border-[rgba(255,255,255,0.05)] bg-[rgba(255,255,255,0.02)] p-4 transition-all hover:border-[rgba(139,92,246,0.3)]"
+                        key={i}
+                        className="flex items-start gap-3 rounded-lg border border-[rgba(255,255,255,0.05)] bg-[rgba(255,255,255,0.02)] p-4"
                       >
-                        <div className="flex items-start gap-3">
-                          <div className="relative">
-                            {service.iconUrl ? (
-                              <img
-                                src={service.iconUrl}
-                                alt={service.name}
-                                className="h-12 w-12 rounded-lg object-cover"
-                              />
-                            ) : (
-                              <div className="flex h-12 w-12 items-center justify-center rounded-lg border border-[rgba(239,68,68,0.3)] bg-[rgba(239,68,68,0.1)]">
-                                <X className="h-5 w-5 text-[#EF4444]" />
-                              </div>
-                            )}
-                          </div>
-                          <div className="min-w-0 flex-1">
-                            <h4 className="truncate text-sm font-medium text-white">
-                              {service.name}
-                            </h4>
-                            <p className="mt-0.5 text-xs text-[#64748B]">
-                              {service.category || 'Uncategorized'}
-                            </p>
-                            <p className="mt-0.5 text-xs text-[#3B82F6]">
-                              {service.providers.length} provider(s)
-                            </p>
-                            <button
-                              onClick={() => handleEditIcon(service)}
-                              className="mt-2 rounded-lg bg-[#8B5CF6]/20 px-3 py-1.5 text-xs font-medium text-[#8B5CF6] transition-colors hover:bg-[#8B5CF6]/30"
-                            >
-                              {service.iconUrl ? 'Change Icon' : 'Add Icon'}
-                            </button>
-                          </div>
+                        <div className="h-12 w-12 shrink-0 animate-pulse rounded-lg bg-[rgba(255,255,255,0.05)]" />
+                        <div className="flex-1 space-y-2">
+                          <div className="h-3 w-1/2 animate-pulse rounded bg-[rgba(255,255,255,0.05)]" />
+                          <div className="h-2 w-1/3 animate-pulse rounded bg-[rgba(255,255,255,0.05)]" />
+                          <div className="h-2 w-1/4 animate-pulse rounded bg-[rgba(255,255,255,0.05)]" />
+                          <div className="mt-2 h-6 w-20 animate-pulse rounded-lg bg-[rgba(255,255,255,0.05)]" />
                         </div>
                       </div>
                     ))}
-                </div>
-              )}
+                  </div>
+                ) : servicesForIcons.length === 0 ? (
+                  <div className="flex h-[500px] items-center justify-center text-center text-[#64748B]">
+                    {iconFilterMissing
+                      ? 'All services have icons!'
+                      : debouncedIconSearch
+                        ? 'No services match your search.'
+                        : 'No services found'}
+                  </div>
+                ) : (
+                  <>
+                    <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+                      {servicesForIcons.map((service) => (
+                        <IconServiceRow
+                          key={service.slug}
+                          service={service}
+                          onEdit={handleEditIcon}
+                        />
+                      ))}
+                    </div>
+
+                    {/* Infinite-scroll sentinel */}
+                    {hasMoreIcons && (
+                      <div
+                        ref={iconLoadMoreSentinelRef}
+                        className="py-4 text-center text-xs text-[#64748B]"
+                      >
+                        {isLoadingMoreIcons ? 'Loading more…' : ' '}
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
             </div>
           </div>
         </div>
