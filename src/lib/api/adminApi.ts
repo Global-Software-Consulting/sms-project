@@ -184,6 +184,24 @@ export const getAdminUserCountries = async (): Promise<UserCountryCount[]> => {
 };
 
 /**
+ * Bulk-notification audience counts — how many users fall into each
+ * Target Users tab on the Bulk Notification page.
+ */
+export interface BulkAudienceCounts {
+  all: number;
+  loggedIn: number;
+  purchased: number;
+  loggedInNoPurchase: number;
+}
+
+export const getBulkAudienceCounts = async (): Promise<BulkAudienceCounts> => {
+  const response = await apiClient.get<BulkAudienceCounts>(
+    API_ENDPOINTS.ADMIN.NOTIFICATIONS.AUDIENCE_COUNTS,
+  );
+  return response.data;
+};
+
+/**
  * Get user statistics
  * GET /api/v1/admin/users/statistics
  */
@@ -832,7 +850,9 @@ export interface TrendResponse {
 /**
  * Get monthly revenue trends
  */
-export const getRevenueTrends = async (months: number = 12): Promise<TrendResponse> => {
+export const getRevenueTrends = async (
+  months: number = 12,
+): Promise<TrendResponse> => {
   const response = await apiClient.get<TrendResponse>(
     API_ENDPOINTS.ADMIN.ANALYTICS.REVENUE_TRENDS,
     { params: { months } },
@@ -843,7 +863,9 @@ export const getRevenueTrends = async (months: number = 12): Promise<TrendRespon
 /**
  * Get monthly activation trends
  */
-export const getActivationTrends = async (months: number = 12): Promise<TrendResponse> => {
+export const getActivationTrends = async (
+  months: number = 12,
+): Promise<TrendResponse> => {
   const response = await apiClient.get<TrendResponse>(
     API_ENDPOINTS.ADMIN.ANALYTICS.ACTIVATION_TRENDS,
     { params: { months } },
@@ -863,7 +885,9 @@ export interface RecentActivity {
 /**
  * Get recent SMS activation activity
  */
-export const getRecentActivity = async (limit: number = 10): Promise<RecentActivity[]> => {
+export const getRecentActivity = async (
+  limit: number = 10,
+): Promise<RecentActivity[]> => {
   const response = await apiClient.get<RecentActivity[]>(
     API_ENDPOINTS.ADMIN.ANALYTICS.RECENT_ACTIVITY,
     { params: { limit } },
@@ -940,7 +964,7 @@ export const getLogLevelColor = (
 // Admin Membership Types
 // ============================================
 
-export type SubscriptionStatus = 'ACTIVE' | 'EXPIRED' | 'CANCELLED' | 'PENDING'; 
+export type SubscriptionStatus = 'ACTIVE' | 'EXPIRED' | 'CANCELLED' | 'PENDING';
 
 export interface AdminSubscription {
   id: string;

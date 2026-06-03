@@ -32,29 +32,73 @@ export function GoogleTranslate() {
     <>
       <div
         id="google_translate_element"
-        style={{ position: 'absolute', top: '-9999px', left: '-9999px', opacity: 0 }}
+        style={{
+          position: 'absolute',
+          top: '-9999px',
+          left: '-9999px',
+          opacity: 0,
+        }}
       />
       <Script
         src="https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"
         strategy="afterInteractive"
-        onLoad={() => {
-          window.googleTranslateElementInit = () => {
-            if (window.google?.translate) {
-              new window.google.translate.TranslateElement(
-                { pageLanguage: 'en', autoDisplay: false },
-                'google_translate_element',
-              );
+        onReady={() => {
+          // Google's script (?cb=googleTranslateElementInit) calls
+          // window.googleTranslateElementInit as soon as it loads.
+          // Defining the callback inside onLoad raced with Google's
+          // own call, leaving TranslateElement undefined and throwing
+          // "TranslateElement is not a constructor" in the console.
+          //
+          // Define the callback if missing, then poll briefly until
+          // TranslateElement is actually attached before constructing.
+          if (!window.googleTranslateElementInit) {
+            window.googleTranslateElementInit = () => {
+              if (
+                typeof window.google?.translate?.TranslateElement === 'function'
+              ) {
+                new window.google.translate.TranslateElement(
+                  { pageLanguage: 'en', autoDisplay: false },
+                  'google_translate_element',
+                );
+              }
+            };
+          }
+          let tries = 0;
+          const intv = setInterval(() => {
+            if (
+              typeof window.google?.translate?.TranslateElement === 'function'
+            ) {
+              clearInterval(intv);
+              try {
+                window.googleTranslateElementInit?.();
+              } catch {
+                /* ignore — best effort */
+              }
+            } else if (++tries > 40) {
+              clearInterval(intv); // give up after ~4s
             }
-          };
-          window.googleTranslateElementInit();
+          }, 100);
         }}
       />
       <style jsx global>{`
-        .goog-te-banner-frame { display: none !important; }
-        .skiptranslate { display: none !important; }
-        body { top: 0 !important; position: static !important; }
-        #goog-gt-tt, .goog-te-balloon-frame { display: none !important; }
-        .goog-text-highlight { background: none !important; box-shadow: none !important; }
+        .goog-te-banner-frame {
+          display: none !important;
+        }
+        .skiptranslate {
+          display: none !important;
+        }
+        body {
+          top: 0 !important;
+          position: static !important;
+        }
+        #goog-gt-tt,
+        .goog-te-balloon-frame {
+          display: none !important;
+        }
+        .goog-text-highlight {
+          background: none !important;
+          box-shadow: none !important;
+        }
       `}</style>
     </>
   );
@@ -76,7 +120,9 @@ function setGoogleTranslateLanguage(langCode: string) {
   document.cookie = `googtrans=/en/${langCode}; path=/`;
 
   // Use the hidden select element to trigger translation without reload
-  const select = document.querySelector<HTMLSelectElement>('#google_translate_element select');
+  const select = document.querySelector<HTMLSelectElement>(
+    '#google_translate_element select',
+  );
   if (select) {
     select.value = langCode;
     select.dispatchEvent(new Event('change'));
@@ -94,7 +140,8 @@ export function LanguagePickerDropdown({
 }) {
   const [search, setSearch] = useState('');
   const [currentLang, setCurrentLang] = useState('');
-  const [languages, setLanguages] = useState<LanguageOption[]>(FALLBACK_LANGUAGES);
+  const [languages, setLanguages] =
+    useState<LanguageOption[]>(FALLBACK_LANGUAGES);
   const ref = useRef<HTMLDivElement>(null);
 
   // Fetch active languages from public API the first time the dropdown opens
@@ -147,17 +194,17 @@ export function LanguagePickerDropdown({
   return (
     <div
       ref={ref}
-      className="notranslate absolute right-0 top-full mt-2 z-[99999] w-64 rounded-xl bg-[#0F172A] border border-[rgba(255,255,255,0.15)] shadow-2xl overflow-hidden"
+      className="notranslate absolute top-full right-0 z-[99999] mt-2 w-64 overflow-hidden rounded-xl border border-[rgba(255,255,255,0.15)] bg-[#0F172A] shadow-2xl"
     >
       {/* Search */}
-      <div className="p-3 border-b border-[rgba(255,255,255,0.1)]">
+      <div className="border-b border-[rgba(255,255,255,0.1)] p-3">
         <input
           type="text"
           placeholder="Search language..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           autoFocus
-          className="w-full px-3 py-2 rounded-lg bg-[rgba(255,255,255,0.08)] border border-[rgba(255,255,255,0.1)] text-white text-sm placeholder:text-[#64748B] focus:outline-none focus:ring-2 focus:ring-[#3B82F6]"
+          className="w-full rounded-lg border border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.08)] px-3 py-2 text-sm text-white placeholder:text-[#64748B] focus:ring-2 focus:ring-[#3B82F6] focus:outline-none"
         />
       </div>
 
@@ -171,7 +218,7 @@ export function LanguagePickerDropdown({
               setCurrentLang(lang.code);
               onClose();
             }}
-            className={`w-full text-left px-4 py-2.5 text-sm transition-colors flex items-center justify-between ${
+            className={`flex w-full items-center justify-between px-4 py-2.5 text-left text-sm transition-colors ${
               currentLang === lang.code
                 ? 'bg-[rgba(59,130,246,0.15)] text-[#3B82F6]'
                 : 'text-[#E2E8F0] hover:bg-[rgba(255,255,255,0.06)]'
@@ -179,12 +226,14 @@ export function LanguagePickerDropdown({
           >
             <span>{lang.label}</span>
             {currentLang === lang.code && (
-              <span className="text-[#3B82F6] text-xs font-medium">Active</span>
+              <span className="text-xs font-medium text-[#3B82F6]">Active</span>
             )}
           </button>
         ))}
         {filtered.length === 0 && (
-          <div className="px-4 py-3 text-[#64748B] text-sm text-center">No languages found</div>
+          <div className="px-4 py-3 text-center text-sm text-[#64748B]">
+            No languages found
+          </div>
         )}
       </div>
     </div>
