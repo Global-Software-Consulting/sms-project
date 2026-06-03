@@ -110,21 +110,58 @@ export default function RootLayout({
           dangerouslySetInnerHTML={{
             __html: `
               (function () {
-                if (typeof Node === 'undefined') return;
-                var origRemove = Node.prototype.removeChild;
-                Node.prototype.removeChild = function (child) {
-                  if (child && child.parentNode !== this) {
-                    return child;
-                  }
-                  return origRemove.apply(this, arguments);
-                };
-                var origInsert = Node.prototype.insertBefore;
-                Node.prototype.insertBefore = function (newNode, refNode) {
-                  if (refNode && refNode.parentNode !== this) {
-                    return newNode;
-                  }
-                  return origInsert.apply(this, arguments);
-                };
+                if (typeof Node !== 'undefined') {
+                  var origRemove = Node.prototype.removeChild;
+                  Node.prototype.removeChild = function (child) {
+                    if (child && child.parentNode !== this) {
+                      return child;
+                    }
+                    return origRemove.apply(this, arguments);
+                  };
+                  var origInsert = Node.prototype.insertBefore;
+                  Node.prototype.insertBefore = function (newNode, refNode) {
+                    if (refNode && refNode.parentNode !== this) {
+                      return newNode;
+                    }
+                    return origInsert.apply(this, arguments);
+                  };
+                }
+                // The prototype patch above covers \`parent.removeChild(orphan)\`,
+                // but React's commit-phase also does \`stateNode.parentNode.removeChild(stateNode)\`
+                // where \`stateNode.parentNode\` is null after Google Translate has
+                // detached the node — that throws on the property access itself,
+                // before we ever reach the prototype method. React's own
+                // try/catch absorbs the fiber-level error and keeps rendering,
+                // but the throw still surfaces as an Uncaught TypeError in the
+                // console. Swallow exactly that pattern so logs stay clean.
+                if (typeof window !== 'undefined') {
+                  var swallow = function (msg) {
+                    return (
+                      typeof msg === 'string' &&
+                      msg.indexOf('Cannot read properties of null') !== -1 &&
+                      (msg.indexOf('removeChild') !== -1 ||
+                        msg.indexOf('insertBefore') !== -1)
+                    );
+                  };
+                  window.addEventListener(
+                    'error',
+                    function (ev) {
+                      var m = ev && ev.error && ev.error.message;
+                      if (swallow(m)) {
+                        ev.preventDefault();
+                        ev.stopImmediatePropagation();
+                      }
+                    },
+                    true,
+                  );
+                  window.addEventListener('unhandledrejection', function (ev) {
+                    var reason = ev && ev.reason;
+                    var m = reason && reason.message;
+                    if (swallow(m)) {
+                      ev.preventDefault();
+                    }
+                  });
+                }
               })();
             `,
           }}
