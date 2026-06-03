@@ -212,6 +212,20 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
       },
     );
 
+    // Live ticket chat: a new reply on either side gets pushed here.
+    // Forward as a window event so the support page (user + admin) can
+    // append the message without polling the API.
+    socket.on(
+      'ticket:message',
+      (payload: { ticketId: string; message: any }) => {
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(
+            new CustomEvent('ticket:message', { detail: payload }),
+          );
+        }
+      },
+    );
+
     socket.on('disconnect', (reason) => {
       if (mountedRef.current) setIsSocketConnected(false);
     });
