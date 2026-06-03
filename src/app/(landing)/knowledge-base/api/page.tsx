@@ -3,6 +3,7 @@ import { Badge } from '@/components/ui/badge';
 import { ArrowLeft, ChevronDown } from 'lucide-react';
 import Link from 'next/link';
 import { buildMetadata } from '@/lib/seo/metadata';
+import { RateLimitsTable } from '@/components/rate-limits-table';
 
 export const metadata = buildMetadata({
   title: 'API Knowledge Base',
@@ -124,7 +125,13 @@ export default function APIArticle() {
           <ol className="text-muted-foreground list-decimal space-y-2 pl-6">
             <li>Sign up and verify your email.</li>
             <li>
-              Open <Link href="/dashboard/api" className="text-primary hover:underline">Dashboard → API</Link>{' '}
+              Open{' '}
+              <Link
+                href="/dashboard/api"
+                className="text-primary hover:underline"
+              >
+                Dashboard → API
+              </Link>{' '}
               and click <strong>Create API Key</strong>.
             </li>
             <li>Copy the key — it is shown only once.</li>
@@ -142,7 +149,10 @@ export default function APIArticle() {
             Every request must include an <code>Authorization</code> header with
             your secret API key. Keys are scoped to your account; revoke and
             rotate them anytime from{' '}
-            <Link href="/dashboard/api" className="text-primary hover:underline">
+            <Link
+              href="/dashboard/api"
+              className="text-primary hover:underline"
+            >
               Dashboard → API
             </Link>
             .
@@ -169,10 +179,11 @@ export default function APIArticle() {
             `curl -X POST "${BASE}/sms/activate" \\\n  -H "Authorization: Bearer YOUR_API_KEY" \\\n  -H "Content-Type: application/json" \\\n  -d '{\n    "service": "whatsapp",\n    "country": "us",\n    "version": "V2"\n  }'`,
           )}
           <p className="text-muted-foreground text-sm">
-            Poll <code>GET {BASE}/sms/orders/:id</code> until <code>status</code>{' '}
-            is <code>RECEIVED</code>, then read <code>smsCode</code> from the
-            response. Cancel any unused activation with{' '}
-            <code>POST {BASE}/sms/orders/:id/cancel</code> to refund your wallet.
+            Poll <code>GET {BASE}/sms/orders/:id</code> until{' '}
+            <code>status</code> is <code>RECEIVED</code>, then read{' '}
+            <code>smsCode</code> from the response. Cancel any unused activation
+            with <code>POST {BASE}/sms/orders/:id/cancel</code> to refund your
+            wallet.
           </p>
         </section>
 
@@ -191,7 +202,8 @@ export default function APIArticle() {
             `curl -X POST "${BASE}/sms/rent" \\\n  -H "Authorization: Bearer YOUR_API_KEY" \\\n  -H "Content-Type: application/json" \\\n  -d '{ "service": "whatsapp", "country": "us", "duration": "1d" }'`,
           )}
           <p className="text-muted-foreground text-sm">
-            Fetch received SMS at <code>GET {BASE}/sms/rentals/:id/messages</code>.
+            Fetch received SMS at{' '}
+            <code>GET {BASE}/sms/rentals/:id/messages</code>.
           </p>
         </section>
 
@@ -216,19 +228,18 @@ export default function APIArticle() {
         <section id="rate-limits" className="scroll-mt-24 space-y-4">
           <h2 className="text-2xl font-bold">Rate Limits & Quotas</h2>
           <p className="text-muted-foreground">
-            Default limit is 30 requests per minute per API key. The active
-            limit is set in <strong>Admin → System Settings → Limits</strong>{' '}
-            (<code>api_rate_limit_per_minute</code>).
+            Limits are applied per API key and configured per plan tier. Current
+            values:
           </p>
-          <p className="text-muted-foreground">
-            Every response includes:
-          </p>
+          <RateLimitsTable />
+          <p className="text-muted-foreground">Every response includes:</p>
           {codeBlock(
-            `X-RateLimit-Limit: 30\nX-RateLimit-Remaining: 27\nX-RateLimit-Reset: 1717406400`,
+            `X-RateLimit-Limit: <your tier limit>\nX-RateLimit-Remaining: 27\nX-RateLimit-Reset: 1717406400`,
           )}
           <p className="text-muted-foreground text-sm">
-            When you exceed the limit you get HTTP <code>429 Too Many Requests</code>{' '}
-            with a <code>Retry-After</code> header.
+            When you exceed the limit you get HTTP{' '}
+            <code>429 Too Many Requests</code> with a <code>Retry-After</code>{' '}
+            header.
           </p>
         </section>
 
@@ -249,31 +260,47 @@ export default function APIArticle() {
               </thead>
               <tbody className="text-muted-foreground">
                 <tr className="border-b">
-                  <td className="py-2"><code>400</code></td>
-                  <td className="py-2">Invalid request body or missing field</td>
+                  <td className="py-2">
+                    <code>400</code>
+                  </td>
+                  <td className="py-2">
+                    Invalid request body or missing field
+                  </td>
                 </tr>
                 <tr className="border-b">
-                  <td className="py-2"><code>401</code></td>
+                  <td className="py-2">
+                    <code>401</code>
+                  </td>
                   <td className="py-2">Missing / invalid API key</td>
                 </tr>
                 <tr className="border-b">
-                  <td className="py-2"><code>402</code></td>
+                  <td className="py-2">
+                    <code>402</code>
+                  </td>
                   <td className="py-2">Wallet balance too low</td>
                 </tr>
                 <tr className="border-b">
-                  <td className="py-2"><code>404</code></td>
+                  <td className="py-2">
+                    <code>404</code>
+                  </td>
                   <td className="py-2">Order / service / country not found</td>
                 </tr>
                 <tr className="border-b">
-                  <td className="py-2"><code>409</code></td>
+                  <td className="py-2">
+                    <code>409</code>
+                  </td>
                   <td className="py-2">No numbers available right now</td>
                 </tr>
                 <tr className="border-b">
-                  <td className="py-2"><code>429</code></td>
+                  <td className="py-2">
+                    <code>429</code>
+                  </td>
                   <td className="py-2">Rate-limited — back off</td>
                 </tr>
                 <tr>
-                  <td className="py-2"><code>5xx</code></td>
+                  <td className="py-2">
+                    <code>5xx</code>
+                  </td>
                   <td className="py-2">Server error — retry with jitter</td>
                 </tr>
               </tbody>
@@ -294,7 +321,9 @@ export default function APIArticle() {
             `curl -X POST "${BASE}/sms/activate" \\\n  -H "Authorization: Bearer YOUR_API_KEY" \\\n  -H "Content-Type: application/json" \\\n  -d '{ "service": "whatsapp", "country": "us", "version": "V2" }'`,
           )}
 
-          <h3 className="text-lg font-semibold">JavaScript (Node 18+ / fetch)</h3>
+          <h3 className="text-lg font-semibold">
+            JavaScript (Node 18+ / fetch)
+          </h3>
           {codeBlock(
             `const res = await fetch('${BASE}/sms/activate', {\n  method: 'POST',\n  headers: {\n    'Authorization': 'Bearer YOUR_API_KEY',\n    'Content-Type': 'application/json',\n  },\n  body: JSON.stringify({\n    service: 'whatsapp',\n    country: 'us',\n    version: 'V2',\n  }),\n});\nconst data = await res.json();\nconsole.log(data);`,
           )}

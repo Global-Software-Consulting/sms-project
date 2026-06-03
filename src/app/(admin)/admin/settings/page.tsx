@@ -77,6 +77,7 @@ type TabType =
   | 'page'
   | 'email'
   | 'addons'
+  | 'rate-limits'
   | 'logo'
   | 'status'
   | 'language';
@@ -87,6 +88,7 @@ const validTabs: TabType[] = [
   'page',
   'email',
   'addons',
+  'rate-limits',
   'logo',
   'status',
   'language',
@@ -219,6 +221,13 @@ www.cheapstreamtv.com`,
     cloudflare: { enabled: false, token: '' },
     getbutton: { enabled: false, code: '' },
     tawkto: { enabled: false, propertyId: '', widgetId: 'default' },
+  });
+
+  // API Rate Limits per tier (req/min)
+  const [rateLimits, setRateLimits] = useState({
+    basic: '10',
+    pro: '100',
+    vip: '1000',
   });
 
   // Languages State (now API-driven)
@@ -404,6 +413,18 @@ www.cheapstreamtv.com`,
           },
         });
       }
+
+      // Parse API rate limits (api category, falls back to defaults)
+      const apiSettings = grouped['api'] || [];
+      const apiMap: Record<string, string> = {};
+      apiSettings.forEach((s) => {
+        apiMap[s.key] = s.value;
+      });
+      setRateLimits({
+        basic: apiMap['api_rate_limit_basic'] || '10',
+        pro: apiMap['api_rate_limit_pro'] || '100',
+        vip: apiMap['api_rate_limit_vip'] || '1000',
+      });
 
       // Parse content settings (page content, email content)
       const contentSettings = grouped['content'] || [];
@@ -682,6 +703,26 @@ www.cheapstreamtv.com`,
               key: 'addon_tawkto_widget_id',
               value: str(addons.tawkto.widgetId),
             },
+          ];
+          break;
+        }
+        case 'Rate limits': {
+          const num = (v: string): string => {
+            const n = parseInt((v ?? '').trim(), 10);
+            return Number.isFinite(n) && n > 0 ? String(n) : '';
+          };
+          const b = num(rateLimits.basic);
+          const p = num(rateLimits.pro);
+          const v = num(rateLimits.vip);
+          if (!b || !p || !v) {
+            toast.error('Each rate limit must be a positive number (req/min).');
+            setIsLoading(false);
+            return;
+          }
+          settings = [
+            { key: 'api_rate_limit_basic', value: b },
+            { key: 'api_rate_limit_pro', value: p },
+            { key: 'api_rate_limit_vip', value: v },
           ];
           break;
         }
@@ -1224,6 +1265,7 @@ www.cheapstreamtv.com`,
     { id: 'page', label: 'Page Edit' },
     { id: 'email', label: 'Email Content Management' },
     { id: 'addons', label: 'Addons Management' },
+    { id: 'rate-limits', label: 'API Rate Limits' },
     { id: 'logo', label: 'Logo Management' },
     { id: 'status', label: 'Site Status' },
     { id: 'language', label: 'Language Management' },
@@ -1970,6 +2012,71 @@ www.cheapstreamtv.com`,
               </AlertDialogFooter>
             </AlertDialogContent>
           </AlertDialog>
+        </div>
+      )}
+
+      {/* API Rate Limits Tab */}
+      {activeTab === 'rate-limits' && (
+        <div className="max-w-5xl">
+          <div className="mb-6 rounded-xl border border-[rgba(255,255,255,0.1)] bg-[rgba(15,23,42,0.6)] p-8 backdrop-blur-xl">
+            <h2 className="mb-2 text-2xl font-semibold text-white">
+              API Rate Limits
+            </h2>
+            <p className="text-sm text-[#94A3B8]">
+              Set the per-minute request limit shown for each plan tier on the
+              public /api page, the knowledge-base API guide, and the user
+              dashboard. Values must be positive integers.
+            </p>
+          </div>
+
+          <div className="rounded-xl border border-[rgba(255,255,255,0.1)] bg-[rgba(15,23,42,0.6)] p-6 backdrop-blur-xl">
+            <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
+              {(
+                [
+                  { id: 'basic', label: 'Basic tier' },
+                  { id: 'pro', label: 'Pro tier' },
+                  { id: 'vip', label: 'VIP tier' },
+                ] as const
+              ).map((tier) => (
+                <div key={tier.id}>
+                  <label className="mb-2 block text-sm font-medium text-white">
+                    {tier.label}
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="number"
+                      min={1}
+                      value={rateLimits[tier.id]}
+                      onChange={(e) =>
+                        setRateLimits({
+                          ...rateLimits,
+                          [tier.id]: e.target.value,
+                        })
+                      }
+                      className="w-full rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.4)] px-4 py-3 text-sm text-white focus:ring-2 focus:ring-[#3B82F6] focus:outline-none"
+                    />
+                    <span className="text-xs text-[#64748B]">req/min</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-6 flex items-center justify-start gap-4">
+              <button
+                onClick={handleRefresh}
+                className="rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(255,255,255,0.08)] px-6 py-3 text-sm font-medium text-white transition-colors hover:bg-[rgba(255,255,255,0.12)]"
+              >
+                Refresh
+              </button>
+              <button
+                onClick={() => handleSave('Rate limits')}
+                disabled={isLoading}
+                className="rounded-lg bg-[#3B82F6] px-6 py-3 text-sm font-medium text-white transition-colors hover:bg-[#2563EB] disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {isLoading ? 'Saving...' : 'Save'}
+              </button>
+            </div>
+          </div>
         </div>
       )}
 

@@ -24,11 +24,17 @@ import {
 import { useCallback, useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { getProviders, type SmsProvider } from '@/lib/api/smsApi';
+import { getRateLimits, type RateLimits } from '@/lib/api/rateLimitsApi';
 
 export default function ApiClient() {
   const [activeEndpoint, setActiveEndpoint] = useState('create');
   const [providers, setProviders] = useState<SmsProvider[]>([]);
   const [providersLoaded, setProvidersLoaded] = useState(false);
+  const [rateLimits, setRateLimits] = useState<RateLimits>({
+    basic: '10',
+    pro: '100',
+    vip: '1000',
+  });
 
   useEffect(() => {
     getProviders()
@@ -39,6 +45,10 @@ export default function ApiClient() {
       )
       .catch(() => setProviders([]))
       .finally(() => setProvidersLoaded(true));
+
+    getRateLimits()
+      .then(setRateLimits)
+      .catch(() => {});
   }, []);
 
   const hasTier = useCallback(
@@ -609,19 +619,19 @@ print(response.json())`}</code>
                   <span className="text-muted-foreground text-sm">
                     Basic tier
                   </span>
-                  <Badge variant="secondary">10 req/min</Badge>
+                  <Badge variant="secondary">{rateLimits.basic} req/min</Badge>
                 </div>
                 <div className="border-border flex items-center justify-between border-b py-2">
                   <span className="text-muted-foreground text-sm">
                     Pro tier
                   </span>
-                  <Badge variant="secondary">100 req/min</Badge>
+                  <Badge variant="secondary">{rateLimits.pro} req/min</Badge>
                 </div>
                 <div className="flex items-center justify-between py-2">
                   <span className="text-muted-foreground text-sm">
                     VIP tier
                   </span>
-                  <Badge className="bg-primary">1000 req/min</Badge>
+                  <Badge className="bg-primary">{rateLimits.vip} req/min</Badge>
                 </div>
               </CardContent>
             </Card>
