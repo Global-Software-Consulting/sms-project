@@ -242,7 +242,7 @@ export default function APIAccess() {
       icon: '💰',
       description: 'Cost-effective API access with standard performance',
       features: ['Standard rate limits', 'Basic support', '99%+ uptime SLA'],
-      endpoint: 'https://api.smspro.com/v1',
+      endpoint: 'https://api.bestsmshq.com/api/v1',
     },
     v2: {
       name: 'Premium V2',
@@ -254,7 +254,7 @@ export default function APIAccess() {
         '99.9%+ uptime SLA',
         'Faster response times',
       ],
-      endpoint: 'https://api.smspro.com/v2',
+      endpoint: 'https://api.bestsmshq.com/api/v1',
     },
     v3: {
       name: 'Basic V3',
@@ -266,7 +266,7 @@ export default function APIAccess() {
         '99.99%+ uptime SLA',
         'Guaranteed instant delivery',
       ],
-      endpoint: 'https://api.smspro.com/v3',
+      endpoint: 'https://api.bestsmshq.com/api/v1',
     },
   };
 
@@ -647,7 +647,7 @@ export default function APIAccess() {
             </div>
             <Button asChild size="lg" className="shrink-0">
               <a
-                href="https://docs.smspro.com"
+                href="/knowledge-base/api"
                 target="_blank"
                 rel="noopener noreferrer"
               >

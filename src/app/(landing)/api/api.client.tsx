@@ -55,31 +55,31 @@ export default function ApiClient() {
   const endpoints = [
     {
       method: 'POST',
-      path: '/v1/activations',
+      path: '/api/v1/sms/activate',
       title: 'Create Activation',
       description: 'Purchase a new SMS activation number',
     },
     {
       method: 'GET',
-      path: '/v1/activations/:id',
+      path: '/api/v1/sms/orders/:id',
       title: 'Get Activation Status',
       description: 'Check status and retrieve SMS code',
     },
     {
       method: 'POST',
-      path: '/v1/activations/:id/cancel',
+      path: '/api/v1/sms/orders/:id/cancel',
       title: 'Cancel Activation',
       description: 'Cancel an activation and get refund',
     },
     {
       method: 'GET',
-      path: '/v1/services',
+      path: '/api/v1/sms/services',
       title: 'List Services',
       description: 'Get available services and pricing',
     },
     {
       method: 'GET',
-      path: '/v1/balance',
+      path: '/api/v1/wallet/balance',
       title: 'Get Balance',
       description: 'Check your account balance',
     },
@@ -243,7 +243,7 @@ export default function ApiClient() {
                         variant="ghost"
                         className="absolute top-2 right-2 opacity-0 transition-opacity group-hover:opacity-100"
                         onClick={() =>
-                          copyCode(`curl -X POST "https://api.smspro.com/v1/activations" \\
+                          copyCode(`curl -X POST "https://api.bestsmshq.com/api/v1/sms/activate" \\
   -H "Authorization: Bearer YOUR_API_KEY" \\
   -H "Content-Type: application/json" \\
   -d '{
@@ -256,7 +256,7 @@ export default function ApiClient() {
                         <Copy className="h-4 w-4" />
                       </Button>
                       <pre className="text-xs">
-                        <code>{`curl -X POST "https://api.smspro.com/v1/activations" \\
+                        <code>{`curl -X POST "https://api.bestsmshq.com/api/v1/sms/activate" \\
   -H "Authorization: Bearer YOUR_API_KEY" \\
   -H "Content-Type: application/json" \\
   -d '{
@@ -275,7 +275,7 @@ export default function ApiClient() {
                         variant="ghost"
                         className="absolute top-2 right-2 opacity-0 transition-opacity group-hover:opacity-100"
                         onClick={() =>
-                          copyCode(`const response = await fetch('https://api.smspro.com/v1/activations', {
+                          copyCode(`const response = await fetch('https://api.bestsmshq.com/api/v1/sms/activate', {
   method: 'POST',
   headers: {
     'Authorization': 'Bearer YOUR_API_KEY',
@@ -295,7 +295,7 @@ console.log(data);`)
                         <Copy className="h-4 w-4" />
                       </Button>
                       <pre className="text-xs">
-                        <code>{`const response = await fetch('https://api.smspro.com/v1/activations', {
+                        <code>{`const response = await fetch('https://api.bestsmshq.com/api/v1/sms/activate', {
   method: 'POST',
   headers: {
     'Authorization': 'Bearer YOUR_API_KEY',
@@ -323,7 +323,7 @@ console.log(data);`}</code>
                         onClick={() =>
                           copyCode(`import requests
 
-url = "https://api.smspro.com/v1/activations"
+url = "https://api.bestsmshq.com/api/v1/sms/activate"
 headers = {
     "Authorization": "Bearer YOUR_API_KEY",
     "Content-Type": "application/json"
@@ -343,7 +343,7 @@ print(response.json())`)
                       <pre className="text-xs">
                         <code>{`import requests
 
-url = "https://api.smspro.com/v1/activations"
+url = "https://api.bestsmshq.com/api/v1/sms/activate"
 headers = {
     "Authorization": "Bearer YOUR_API_KEY",
     "Content-Type": "application/json"
