@@ -63,10 +63,18 @@ const STATUS_VARIANT: Record<
   string,
   'success' | 'warning' | 'error' | 'default'
 > = {
-  approved: 'success',
-  pending: 'warning',
-  rejected: 'error',
+  APPROVED: 'success',
+  PENDING: 'warning',
+  REJECTED: 'error',
 };
+
+// Helper — comparisons against backend status (uppercase enum)
+function isApproved(s: string): boolean {
+  return s?.toUpperCase() === 'APPROVED';
+}
+function isRejected(s: string): boolean {
+  return s?.toUpperCase() === 'REJECTED';
+}
 
 function formatDate(s?: string | null): string {
   if (!s) return '-';
@@ -80,7 +88,10 @@ function formatDate(s?: string | null): string {
 }
 
 function renderStars(n: number): string {
-  return '★'.repeat(Math.max(0, Math.min(5, n))) + '☆'.repeat(5 - Math.max(0, Math.min(5, n)));
+  return (
+    '★'.repeat(Math.max(0, Math.min(5, n))) +
+    '☆'.repeat(5 - Math.max(0, Math.min(5, n)))
+  );
 }
 
 export default function AdminReviewsPage() {
@@ -135,7 +146,8 @@ export default function AdminReviewsPage() {
             ? reviewerName
             : (userObj?.username as string | undefined) ||
               (userObj?.firstName as string | undefined) ||
-              ((userObj?.email as string | undefined)?.split('@')[0] ?? 'Unknown');
+              ((userObj?.email as string | undefined)?.split('@')[0] ??
+                'Unknown');
           return {
             ...r,
             displayName,
@@ -291,9 +303,7 @@ export default function AdminReviewsPage() {
               {item.displayName}
             </span>
             {item.user?.email && !item.isBulkGenerated && (
-              <span className="text-xs text-[#64748B]">
-                {item.user.email}
-              </span>
+              <span className="text-xs text-[#64748B]">{item.user.email}</span>
             )}
           </div>
         );
@@ -353,7 +363,7 @@ export default function AdminReviewsPage() {
       case 'actions':
         return (
           <div className="flex items-center gap-1.5">
-            {item.status !== 'approved' && (
+            {!isApproved(item.status) && (
               <button
                 onClick={() => {
                   setSelectedReview(item);
@@ -365,7 +375,7 @@ export default function AdminReviewsPage() {
                 <Check className="h-3.5 w-3.5" />
               </button>
             )}
-            {item.status !== 'rejected' && (
+            {!isRejected(item.status) && (
               <button
                 onClick={() => {
                   setSelectedReview(item);
@@ -476,8 +486,7 @@ export default function AdminReviewsPage() {
       const res = await listUniqueNames({
         limit: 100,
         search: nameSearch || undefined,
-        used:
-          nameUsedFilter === '' ? undefined : nameUsedFilter === 'true',
+        used: nameUsedFilter === '' ? undefined : nameUsedFilter === 'true',
       });
       setNames(res.data);
     } catch (e: any) {
@@ -646,7 +655,9 @@ export default function AdminReviewsPage() {
           <div className="mb-2 flex items-center gap-2 px-4 text-xs text-[#94A3B8]">
             <input
               type="checkbox"
-              checked={reviews.length > 0 && selectedIds.size === reviews.length}
+              checked={
+                reviews.length > 0 && selectedIds.size === reviews.length
+              }
               onChange={toggleSelectAll}
               className="h-4 w-4 cursor-pointer accent-[#3B82F6]"
             />
@@ -837,8 +848,8 @@ export default function AdminReviewsPage() {
           <p className="mb-4 text-sm text-[#94A3B8]">
             One review text per line. Each entry gets a unique name from the
             pool, a random rating inside your range, and is scheduled at a
-            random delay inside your timer range. Reviews auto-flip to
-            APPROVED as their scheduled time arrives.
+            random delay inside your timer range. Reviews auto-flip to APPROVED
+            as their scheduled time arrives.
           </p>
 
           <textarea
@@ -940,8 +951,8 @@ export default function AdminReviewsPage() {
           </button>
 
           <p className="mt-3 text-xs text-[#64748B]">
-            Reviewer names are pulled from the Unique Name pool — add more
-            in the third tab if you run out.
+            Reviewer names are pulled from the Unique Name pool — add more in
+            the third tab if you run out.
           </p>
         </div>
       )}
