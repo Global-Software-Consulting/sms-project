@@ -37,7 +37,10 @@ type SocialKey =
   | 'telegram'
   | 'github';
 
-const SOCIAL_ICONS: Record<SocialKey, React.ComponentType<{ className?: string }>> = {
+const SOCIAL_ICONS: Record<
+  SocialKey,
+  React.ComponentType<{ className?: string }>
+> = {
   twitter: Twitter,
   facebook: Facebook,
   instagram: Instagram,
@@ -64,11 +67,15 @@ export function Footer() {
   const { siteLogo } = useBranding();
   const [ads, setAds] = useState<Ad[]>([]);
   const [selectedAd, setSelectedAd] = useState<Ad | null>(null);
-  const [socialLinks, setSocialLinks] = useState<{ key: SocialKey; url: string }[]>([]);
+  const [socialLinks, setSocialLinks] = useState<
+    { key: SocialKey; url: string }[]
+  >([]);
 
   useEffect(() => {
     getPublicAds()
-      .then((data) => setAds(Array.isArray(data) ? data.filter((a) => a.isActive) : []))
+      .then((data) =>
+        setAds(Array.isArray(data) ? data.filter((a) => a.isActive) : []),
+      )
       .catch(() => setAds([]));
   }, []);
 
@@ -119,12 +126,18 @@ export function Footer() {
           {/* Brand — full width on smallest, half on sm */}
           <div className="col-span-2 space-y-4 sm:col-span-2 md:col-span-1">
             <div className="flex items-center space-x-2">
-              <div className="from-primary to-accent flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br sm:h-10 sm:w-10 overflow-hidden">
+              <div className="from-primary to-accent flex h-9 w-9 items-center justify-center overflow-hidden rounded-xl bg-gradient-to-br sm:h-10 sm:w-10">
                 {siteLogo ? (
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img src={siteLogo} alt="Logo" className="w-full h-full object-contain" />
+                  <img
+                    src={siteLogo}
+                    alt="Logo"
+                    className="h-full w-full object-contain"
+                  />
                 ) : (
-                  <span className="text-primary-foreground text-base font-bold sm:text-xl">S</span>
+                  <span className="text-primary-foreground text-base font-bold sm:text-xl">
+                    S
+                  </span>
                 )}
               </div>
               <span className="text-lg font-bold sm:text-xl">BestSMSHQ</span>
@@ -301,11 +314,11 @@ export function Footer() {
             </ul>
           </div>
 
-          {/* Our Products (Ads) */}
+          {/* Our Websites (Ads) */}
           {ads.length > 0 && (
             <div className="col-span-2 sm:col-span-2 md:col-span-4 lg:col-span-1">
               <h4 className="mb-3 text-sm font-semibold sm:mb-4 sm:text-base">
-                Our Products
+                Our Websites
               </h4>
               <div className="space-y-3">
                 {ads.map((ad) => (
@@ -325,7 +338,7 @@ export function Footer() {
                       <p className="truncate text-sm font-medium">{ad.title}</p>
                       {/* Description hidden on hover, replaced by "View Details" */}
                       {ad.description && (
-                        <p className="text-muted-foreground truncate text-xs group-hover:opacity-0 transition-opacity">
+                        <p className="text-muted-foreground truncate text-xs transition-opacity group-hover:opacity-0">
                           {ad.description}
                         </p>
                       )}
@@ -381,7 +394,10 @@ export function Footer() {
       </div>
 
       {/* Ad details dialog */}
-      <Dialog open={!!selectedAd} onOpenChange={(open) => !open && setSelectedAd(null)}>
+      <Dialog
+        open={!!selectedAd}
+        onOpenChange={(open) => !open && setSelectedAd(null)}
+      >
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>{selectedAd?.title}</DialogTitle>
