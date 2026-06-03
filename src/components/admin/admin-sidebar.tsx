@@ -54,7 +54,8 @@ const menuItems = [
   { path: '/admin/notifications', label: 'Bulk & Notification', icon: Bell },
   { path: '/admin/reviews', label: 'Review Management', icon: Star },
   { path: '/admin/blogs', label: 'Blogs Management', icon: Newspaper },
-  { path: '/admin/legal', label: 'Legal Management', icon: Scale },
+  // Legal Management removed — legal pages are now edited inline from
+  // /admin/settings → Page Edit (Privacy / Terms / Refund / Disclaimer).
   { path: '/admin/payments', label: 'Payment Management', icon: Wallet },
   { path: '/admin/binance-session', label: 'Binance Session', icon: Cookie },
   { path: '/admin/ads', label: 'Ad Management', icon: MonitorPlay },
