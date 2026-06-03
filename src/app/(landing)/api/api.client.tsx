@@ -21,11 +21,29 @@ import {
   ArrowRight,
   Copy,
 } from 'lucide-react';
-import { useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { toast } from 'sonner';
+import { getProviders, type SmsProvider } from '@/lib/api/smsApi';
 
 export default function ApiClient() {
   const [activeEndpoint, setActiveEndpoint] = useState('create');
+  const [providers, setProviders] = useState<SmsProvider[]>([]);
+
+  useEffect(() => {
+    getProviders()
+      .then((res) =>
+        setProviders(
+          (res?.providers || []).filter((p) => p.isActive !== false),
+        ),
+      )
+      .catch(() => setProviders([]));
+  }, []);
+
+  const hasTier = useCallback(
+    (versionPrefix: 'V1' | 'V2' | 'V3'): boolean =>
+      providers.some((p) => (p.version || '').startsWith(versionPrefix)),
+    [providers],
+  );
 
   const copyCode = (code: string) => {
     navigator.clipboard.writeText(code);
@@ -432,82 +450,86 @@ print(response.json())`}</code>
               </CardContent>
             </Card>
 
-            <Card className="border-primary border-2">
-              <CardHeader>
-                <Badge className="bg-primary mb-2 w-fit">💎 V2 Premium</Badge>
-                <CardTitle className="text-lg">Premium Tier</CardTitle>
-                <CardDescription>
-                  Faster delivery and higher success rate. Ideal for customers
-                  looking for more reliable results and quicker processing.
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="bg-muted overflow-x-auto rounded-lg p-3 font-mono text-xs">
-                  <code className="text-primary">"provider": "v2"</code>
-                </div>
-                <ul className="mt-4 space-y-2">
-                  <li className="flex items-start space-x-2 text-sm">
-                    <CheckCircle2 className="text-primary mt-0.5 h-4 w-4" />
-                    <span>Lightning-fast delivery</span>
-                  </li>
-                  <li className="flex items-start space-x-2 text-sm">
-                    <CheckCircle2 className="text-primary mt-0.5 h-4 w-4" />
-                    <span>Higher success rate</span>
-                  </li>
-                  <li className="flex items-start space-x-2 text-sm">
-                    <CheckCircle2 className="text-primary mt-0.5 h-4 w-4" />
-                    <span>Premium providers only</span>
-                  </li>
-                  <li className="flex items-start space-x-2 text-sm">
-                    <CheckCircle2 className="text-primary mt-0.5 h-4 w-4" />
-                    <span>VIP priority routing</span>
-                  </li>
-                </ul>
-                <p className="mt-4 text-sm font-semibold">
-                  From $2.50 per activation
-                </p>
-              </CardContent>
-            </Card>
+            {hasTier('V2') && (
+              <Card className="border-primary border-2">
+                <CardHeader>
+                  <Badge className="bg-primary mb-2 w-fit">💎 V2 Premium</Badge>
+                  <CardTitle className="text-lg">Premium Tier</CardTitle>
+                  <CardDescription>
+                    Faster delivery and higher success rate. Ideal for customers
+                    looking for more reliable results and quicker processing.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="bg-muted overflow-x-auto rounded-lg p-3 font-mono text-xs">
+                    <code className="text-primary">"provider": "v2"</code>
+                  </div>
+                  <ul className="mt-4 space-y-2">
+                    <li className="flex items-start space-x-2 text-sm">
+                      <CheckCircle2 className="text-primary mt-0.5 h-4 w-4" />
+                      <span>Lightning-fast delivery</span>
+                    </li>
+                    <li className="flex items-start space-x-2 text-sm">
+                      <CheckCircle2 className="text-primary mt-0.5 h-4 w-4" />
+                      <span>Higher success rate</span>
+                    </li>
+                    <li className="flex items-start space-x-2 text-sm">
+                      <CheckCircle2 className="text-primary mt-0.5 h-4 w-4" />
+                      <span>Premium providers only</span>
+                    </li>
+                    <li className="flex items-start space-x-2 text-sm">
+                      <CheckCircle2 className="text-primary mt-0.5 h-4 w-4" />
+                      <span>VIP priority routing</span>
+                    </li>
+                  </ul>
+                  <p className="mt-4 text-sm font-semibold">
+                    From $2.50 per activation
+                  </p>
+                </CardContent>
+              </Card>
+            )}
 
-            <Card className="border-warning border-2">
-              <CardHeader>
-                <Badge className="bg-warning text-warning-foreground mb-2 w-fit">
-                  👑 V3 Elite
-                </Badge>
-                <CardTitle className="text-lg">Elite Tier</CardTitle>
-                <CardDescription>
-                  The highest quality service with priority routing and 99.9%
-                  success rate. Best for customers who demand the absolute best
-                  with premium providers and priority support.
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="bg-muted overflow-x-auto rounded-lg p-3 font-mono text-xs">
-                  <code className="text-warning">"provider": "v3"</code>
-                </div>
-                <ul className="mt-4 space-y-2">
-                  <li className="flex items-start space-x-2 text-sm">
-                    <CheckCircle2 className="text-warning mt-0.5 h-4 w-4" />
-                    <span>Instant guaranteed delivery</span>
-                  </li>
-                  <li className="flex items-start space-x-2 text-sm">
-                    <CheckCircle2 className="text-warning mt-0.5 h-4 w-4" />
-                    <span>99.9% success rate</span>
-                  </li>
-                  <li className="flex items-start space-x-2 text-sm">
-                    <CheckCircle2 className="text-warning mt-0.5 h-4 w-4" />
-                    <span>Basic providers only</span>
-                  </li>
-                  <li className="flex items-start space-x-2 text-sm">
-                    <CheckCircle2 className="text-warning mt-0.5 h-4 w-4" />
-                    <span>Maximum priority + support</span>
-                  </li>
-                </ul>
-                <p className="mt-4 text-sm font-semibold">
-                  From $3.50 per activation
-                </p>
-              </CardContent>
-            </Card>
+            {hasTier('V3') && (
+              <Card className="border-warning border-2">
+                <CardHeader>
+                  <Badge className="bg-warning text-warning-foreground mb-2 w-fit">
+                    👑 V3 Elite
+                  </Badge>
+                  <CardTitle className="text-lg">Elite Tier</CardTitle>
+                  <CardDescription>
+                    The highest quality service with priority routing and 99.9%
+                    success rate. Best for customers who demand the absolute
+                    best with premium providers and priority support.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="bg-muted overflow-x-auto rounded-lg p-3 font-mono text-xs">
+                    <code className="text-warning">"provider": "v3"</code>
+                  </div>
+                  <ul className="mt-4 space-y-2">
+                    <li className="flex items-start space-x-2 text-sm">
+                      <CheckCircle2 className="text-warning mt-0.5 h-4 w-4" />
+                      <span>Instant guaranteed delivery</span>
+                    </li>
+                    <li className="flex items-start space-x-2 text-sm">
+                      <CheckCircle2 className="text-warning mt-0.5 h-4 w-4" />
+                      <span>99.9% success rate</span>
+                    </li>
+                    <li className="flex items-start space-x-2 text-sm">
+                      <CheckCircle2 className="text-warning mt-0.5 h-4 w-4" />
+                      <span>Basic providers only</span>
+                    </li>
+                    <li className="flex items-start space-x-2 text-sm">
+                      <CheckCircle2 className="text-warning mt-0.5 h-4 w-4" />
+                      <span>Maximum priority + support</span>
+                    </li>
+                  </ul>
+                  <p className="mt-4 text-sm font-semibold">
+                    From $3.50 per activation
+                  </p>
+                </CardContent>
+              </Card>
+            )}
           </div>
         </div>
       </section>
