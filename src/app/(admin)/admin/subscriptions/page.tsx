@@ -45,7 +45,12 @@ const statusVariantMap: Record<
   EXPIRED: 'error',
 };
 
-const statusOptions: SubStatus[] = ['ACTIVE', 'CANCELLED', 'EXPIRED', 'PENDING'];
+const statusOptions: SubStatus[] = [
+  'ACTIVE',
+  'CANCELLED',
+  'EXPIRED',
+  'PENDING',
+];
 const planOptions = ['free', 'basic', 'standard', 'pro', 'vip'];
 
 const formatDate = (s: string | null | undefined) => {
@@ -227,7 +232,7 @@ export default function AdminSubscriptionsPage() {
   };
 
   return (
-    <div>
+    <div className="p-4 lg:p-8">
       <AdminPageHeader
         title="User Subscriptions"
         description="All membership subscriptions across users — filter, audit, and cancel as needed."
