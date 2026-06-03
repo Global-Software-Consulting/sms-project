@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useEffect, useCallback } from "react";
-import { useSearchParams, useRouter } from "next/navigation";
-import { toast } from "sonner";
+import { useState, useEffect, useCallback } from 'react';
+import { useSearchParams, useRouter } from 'next/navigation';
+import { toast } from 'sonner';
 import {
   Twitter,
   Facebook,
@@ -22,17 +22,18 @@ import {
   Plus,
   Loader2,
   Mail,
-} from "lucide-react";
+} from 'lucide-react';
 import {
   getGroupedSettings,
   bulkUpdateSettings,
   getMaintenanceSettings,
   updateSetting,
   type GroupedSettings,
-} from "@/lib/api/settingsApi";
-import { apiClient } from "@/config/api-client.config";
-import { API_ENDPOINTS } from "@/config/server.config";
-import { useBranding } from "@/contexts/BrandingContext";
+} from '@/lib/api/settingsApi';
+import { apiClient } from '@/config/api-client.config';
+import { API_ENDPOINTS } from '@/config/server.config';
+import { useBranding } from '@/contexts/BrandingContext';
+import { PageEditor } from '@/components/admin/page-editor';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -42,14 +43,23 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import { AlertTriangle, Info, Save, RotateCcw, EyeOff, ChevronDown, Copy, Code } from "lucide-react";
+} from '@/components/ui/alert-dialog';
+import {
+  AlertTriangle,
+  Info,
+  Save,
+  RotateCcw,
+  EyeOff,
+  ChevronDown,
+  Copy,
+  Code,
+} from 'lucide-react';
 import {
   getAllLanguages,
   toggleLanguage,
   updateLanguage,
   type Language,
-} from "@/lib/api/languagesApi";
+} from '@/lib/api/languagesApi';
 import {
   getAllEmailTemplates,
   updateEmailTemplate,
@@ -59,25 +69,45 @@ import {
   groupTemplatesByCategory,
   type EmailTemplate,
   type PreviewEmailTemplateResponse,
-} from "@/lib/api/emailTemplatesApi";
+} from '@/lib/api/emailTemplatesApi';
 
-type TabType = "social" | "contact" | "page" | "email" | "addons" | "trial" | "logo" | "status" | "language";
+type TabType =
+  | 'social'
+  | 'contact'
+  | 'page'
+  | 'email'
+  | 'addons'
+  | 'trial'
+  | 'logo'
+  | 'status'
+  | 'language';
 
-const validTabs: TabType[] = ["social", "contact", "page", "email", "addons", "trial", "logo", "status", "language"];
+const validTabs: TabType[] = [
+  'social',
+  'contact',
+  'page',
+  'email',
+  'addons',
+  'trial',
+  'logo',
+  'status',
+  'language',
+];
 
 export default function AdminSettingsPage() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const { refresh: refreshBranding } = useBranding();
-  
+
   // Get initial tab from URL or default to "social"
   const tabFromUrl = searchParams.get('tab') as TabType | null;
-  const initialTab: TabType = tabFromUrl && validTabs.includes(tabFromUrl) ? tabFromUrl : "social";
-  
+  const initialTab: TabType =
+    tabFromUrl && validTabs.includes(tabFromUrl) ? tabFromUrl : 'social';
+
   const [activeTab, setActiveTab] = useState<TabType>(initialTab);
   const [isLoading, setIsLoading] = useState(false);
   const [isPageLoading, setIsPageLoading] = useState(true);
-  const [activePage, setActivePage] = useState("home");
+  const [activePage, setActivePage] = useState('home');
 
   // Update URL when tab changes (without full page reload)
   const handleTabChange = (tab: TabType) => {
@@ -88,13 +118,19 @@ export default function AdminSettingsPage() {
 
   // Social Media State
   const [socialMedia, setSocialMedia] = useState({
-    twitter: { url: "https://x.com/VipStoreHQ", visible: true },
-    facebook: { url: "", visible: false },
-    instagram: { url: "https://www.instagram.com/vipstorehq", visible: true },
-    linkedin: { url: "https://www.linkedin.com/in/alen-omer-18663519", visible: true },
-    youtube: { url: "", visible: false },
-    tiktok: { url: "https://www.cheapstreamtv.com/dashboard/orders", visible: false },
-    telegram: { url: "", visible: false },
+    twitter: { url: 'https://x.com/VipStoreHQ', visible: true },
+    facebook: { url: '', visible: false },
+    instagram: { url: 'https://www.instagram.com/vipstorehq', visible: true },
+    linkedin: {
+      url: 'https://www.linkedin.com/in/alen-omer-18663519',
+      visible: true,
+    },
+    youtube: { url: '', visible: false },
+    tiktok: {
+      url: 'https://www.cheapstreamtv.com/dashboard/orders',
+      visible: false,
+    },
+    telegram: { url: '', visible: false },
   });
 
   // Email Content State
@@ -131,71 +167,73 @@ Feel free to contact us via your dashboard ticket or Telegram.
 
 Enjoy your streaming!
 CheapStreamTV Team
-www.cheapstreamtv.com`
+www.cheapstreamtv.com`,
   );
 
   // Contact Information State
   const [contactInfo, setContactInfo] = useState({
-    phone: "+447727751217",
-    email: "help@cheapstreamtv.com",
+    phone: '+447727751217',
+    email: 'help@cheapstreamtv.com',
     businessHours: "We're available 24/7 full-time, every day of the week.",
     helpMessage:
-      "If you have any questions about your order, please describe it and include your Order ID in the message (example: zxxxx-xxxx-xxx).",
-    buttonText: "Submit Request",
+      'If you have any questions about your order, please describe it and include your Order ID in the message (example: zxxxx-xxxx-xxx).',
+    buttonText: 'Submit Request',
     successMessage:
-      "Thank you for choosing Cheap Streamwhere great entertainment meets unbeatable value. We look forward to assisting you!",
+      'Thank you for choosing Cheap Streamwhere great entertainment meets unbeatable value. We look forward to assisting you!',
   });
 
   // Free Trial State
   const [freeTrial, setFreeTrial] = useState({
-    mainTitle: "Start Your Free Trial",
+    mainTitle: 'Start Your Free Trial',
     description:
-      "Experience 4 hours of premium entertainment. Try top-tier live channels and on-demand content with no commitment.",
-    sectionTitle: "What Do You Get with Your Free Trial?",
+      'Experience 4 hours of premium entertainment. Try top-tier live channels and on-demand content with no commitment.',
+    sectionTitle: 'What Do You Get with Your Free Trial?',
     items: [
-      "Instant activation - No credit card required",
-      "Full HD & 4K streams",
-      "Works on all devices (Mobile, PC, Smart TV, Firestick, m3u, MAG, Enigma)",
-      "27,000+ Live Channels",
-      "131,000+ VOD",
-      "52,000+ TV Series",
-      "Friendly support via ticket or WhatsApp",
-      "Get a real feel before you subscribe",
+      'Instant activation - No credit card required',
+      'Full HD & 4K streams',
+      'Works on all devices (Mobile, PC, Smart TV, Firestick, m3u, MAG, Enigma)',
+      '27,000+ Live Channels',
+      '131,000+ VOD',
+      '52,000+ TV Series',
+      'Friendly support via ticket or WhatsApp',
+      'Get a real feel before you subscribe',
     ],
   });
 
   // Site Status State
   const [siteStatus, setSiteStatus] = useState({
     isActive: true,
-    maintenanceMessage: "We're currently performing maintenance. Please check back later.",
+    maintenanceMessage:
+      "We're currently performing maintenance. Please check back later.",
   });
 
   // Page Edit State
   const [pageContent, setPageContent] = useState({
-    headingPart1: "Best IPTV Subscription Service 2026",
-    headingPart2: "CheapStreamTV",
+    headingPart1: 'Best IPTV Subscription Service 2026',
+    headingPart2: 'CheapStreamTV',
     description:
-      "Enjoy seamless access to 22,000+ live channels and 180,000+ movies & series with CheapStreamTV. Secure IPTV subscription service with 24/7 fast, caring I.A support, and flexible refund policy compatibility. No buffering. No contracts.",
-    inputPlaceholder: "Email Address",
-    buttonText: "Get Started",
-    pageTitle: "Cheap Stream TV Premium Access to Global Digital Store",
-    metaDescription: "Experience smooth, high-speed digital access for global",
-    keywords: "best IPTV service, streaming, movies, TV shows, live channels",
-    ogTitle: "Cheap Stream - Premium IPTV Service Provider test",
-    ogDescription: "best Stream thousands of movies, TV shows, and live channels",
+      'Enjoy seamless access to 22,000+ live channels and 180,000+ movies & series with CheapStreamTV. Secure IPTV subscription service with 24/7 fast, caring I.A support, and flexible refund policy compatibility. No buffering. No contracts.',
+    inputPlaceholder: 'Email Address',
+    buttonText: 'Get Started',
+    pageTitle: 'Cheap Stream TV Premium Access to Global Digital Store',
+    metaDescription: 'Experience smooth, high-speed digital access for global',
+    keywords: 'best IPTV service, streaming, movies, TV shows, live channels',
+    ogTitle: 'Cheap Stream - Premium IPTV Service Provider test',
+    ogDescription:
+      'best Stream thousands of movies, TV shows, and live channels',
   });
 
   // Addons State
   const [addons, setAddons] = useState({
     recaptcha: {
       enabled: true,
-      siteKey: "6Lc4c7BJAAAAJCRKEkgnKJhyjtPvER__TxsMSp0H",
-      secretKey: "6Lc4c7BJAAAAkkLJ7BQTh_NqverPynuSznTivEnO3",
+      siteKey: '6Lc4c7BJAAAAJCRKEkgnKJhyjtPvER__TxsMSp0H',
+      secretKey: '6Lc4c7BJAAAAkkLJ7BQTh_NqverPynuSznTivEnO3',
     },
     trustpilot: { enabled: false },
     googleAnalytics: {
       enabled: true,
-      measurementId: "G-Y7TVVML9P",
+      measurementId: 'G-Y7TVVML9P',
     },
     microsoftClarity: { enabled: false },
     cloudflare: { enabled: false },
@@ -218,7 +256,8 @@ www.cheapstreamtv.com`
 
   // Email Templates State
   const [emailTemplates, setEmailTemplates] = useState<EmailTemplate[]>([]);
-  const [selectedTemplate, setSelectedTemplate] = useState<EmailTemplate | null>(null);
+  const [selectedTemplate, setSelectedTemplate] =
+    useState<EmailTemplate | null>(null);
   const [isEmailTemplatesLoading, setIsEmailTemplatesLoading] = useState(false);
   const [isSavingTemplate, setIsSavingTemplate] = useState(false);
   const [isPreviewLoading, setIsPreviewLoading] = useState(false);
@@ -227,11 +266,15 @@ www.cheapstreamtv.com`
   const [editedBody, setEditedBody] = useState('');
   const [isTemplateActive, setIsTemplateActive] = useState(true);
   const [showTemplatePreview, setShowTemplatePreview] = useState(false);
-  const [templatePreviewData, setTemplatePreviewData] = useState<PreviewEmailTemplateResponse | null>(null);
+  const [templatePreviewData, setTemplatePreviewData] =
+    useState<PreviewEmailTemplateResponse | null>(null);
   const [showTestEmailDialog, setShowTestEmailDialog] = useState(false);
   const [testEmailAddress, setTestEmailAddress] = useState('');
-  const [showResetTemplateConfirm, setShowResetTemplateConfirm] = useState(false);
-  const [expandedCategories, setExpandedCategories] = useState<Record<string, boolean>>({
+  const [showResetTemplateConfirm, setShowResetTemplateConfirm] =
+    useState(false);
+  const [expandedCategories, setExpandedCategories] = useState<
+    Record<string, boolean>
+  >({
     Authentication: true,
     User: true,
     Payments: true,
@@ -246,43 +289,43 @@ www.cheapstreamtv.com`
     try {
       setIsPageLoading(true);
       const grouped = await getGroupedSettings();
-      
+
       // Parse social media settings
       const socialSettings = grouped['social'] || [];
       const socialMap: Record<string, string> = {};
       socialSettings.forEach((s) => {
         socialMap[s.key] = s.value;
       });
-      
+
       if (Object.keys(socialMap).length > 0) {
         setSocialMedia({
-          twitter: { 
-            url: socialMap['social_twitter_url'] || '', 
-            visible: socialMap['social_twitter_visible'] !== 'false' 
+          twitter: {
+            url: socialMap['social_twitter_url'] || '',
+            visible: socialMap['social_twitter_visible'] !== 'false',
           },
-          facebook: { 
-            url: socialMap['social_facebook_url'] || '', 
-            visible: socialMap['social_facebook_visible'] === 'true' 
+          facebook: {
+            url: socialMap['social_facebook_url'] || '',
+            visible: socialMap['social_facebook_visible'] === 'true',
           },
-          instagram: { 
-            url: socialMap['social_instagram_url'] || '', 
-            visible: socialMap['social_instagram_visible'] !== 'false' 
+          instagram: {
+            url: socialMap['social_instagram_url'] || '',
+            visible: socialMap['social_instagram_visible'] !== 'false',
           },
-          linkedin: { 
-            url: socialMap['social_linkedin_url'] || '', 
-            visible: socialMap['social_linkedin_visible'] !== 'false' 
+          linkedin: {
+            url: socialMap['social_linkedin_url'] || '',
+            visible: socialMap['social_linkedin_visible'] !== 'false',
           },
-          youtube: { 
-            url: socialMap['social_youtube_url'] || '', 
-            visible: socialMap['social_youtube_visible'] === 'true' 
+          youtube: {
+            url: socialMap['social_youtube_url'] || '',
+            visible: socialMap['social_youtube_visible'] === 'true',
           },
-          tiktok: { 
-            url: socialMap['social_tiktok_url'] || '', 
-            visible: socialMap['social_tiktok_visible'] === 'true' 
+          tiktok: {
+            url: socialMap['social_tiktok_url'] || '',
+            visible: socialMap['social_tiktok_visible'] === 'true',
           },
-          telegram: { 
-            url: socialMap['social_telegram_url'] || '', 
-            visible: socialMap['social_telegram_visible'] === 'true' 
+          telegram: {
+            url: socialMap['social_telegram_url'] || '',
+            visible: socialMap['social_telegram_visible'] === 'true',
           },
         });
       }
@@ -293,15 +336,19 @@ www.cheapstreamtv.com`
       contactSettings.forEach((s) => {
         contactMap[s.key] = s.value;
       });
-      
+
       if (Object.keys(contactMap).length > 0) {
         setContactInfo({
           phone: contactMap['contact_phone'] || contactInfo.phone,
           email: contactMap['contact_email'] || contactInfo.email,
-          businessHours: contactMap['contact_business_hours'] || contactInfo.businessHours,
-          helpMessage: contactMap['contact_help_message'] || contactInfo.helpMessage,
-          buttonText: contactMap['contact_button_text'] || contactInfo.buttonText,
-          successMessage: contactMap['contact_success_message'] || contactInfo.successMessage,
+          businessHours:
+            contactMap['contact_business_hours'] || contactInfo.businessHours,
+          helpMessage:
+            contactMap['contact_help_message'] || contactInfo.helpMessage,
+          buttonText:
+            contactMap['contact_button_text'] || contactInfo.buttonText,
+          successMessage:
+            contactMap['contact_success_message'] || contactInfo.successMessage,
         });
       }
 
@@ -311,11 +358,13 @@ www.cheapstreamtv.com`
       maintenanceSettings.forEach((s) => {
         maintenanceMap[s.key] = s.value;
       });
-      
+
       if (Object.keys(maintenanceMap).length > 0) {
         setSiteStatus({
           isActive: maintenanceMap['maintenance_enabled'] !== 'true',
-          maintenanceMessage: maintenanceMap['maintenance_message'] || siteStatus.maintenanceMessage,
+          maintenanceMessage:
+            maintenanceMap['maintenance_message'] ||
+            siteStatus.maintenanceMessage,
         });
       }
 
@@ -325,22 +374,35 @@ www.cheapstreamtv.com`
       addonsSettings.forEach((s) => {
         addonsMap[s.key] = s.value;
       });
-      
+
       if (Object.keys(addonsMap).length > 0) {
         setAddons({
           recaptcha: {
             enabled: addonsMap['addon_recaptcha_enabled'] === 'true',
-            siteKey: addonsMap['addon_recaptcha_site_key'] || addons.recaptcha.siteKey,
-            secretKey: addonsMap['addon_recaptcha_secret_key'] || addons.recaptcha.secretKey,
+            siteKey:
+              addonsMap['addon_recaptcha_site_key'] || addons.recaptcha.siteKey,
+            secretKey:
+              addonsMap['addon_recaptcha_secret_key'] ||
+              addons.recaptcha.secretKey,
           },
-          trustpilot: { enabled: addonsMap['addon_trustpilot_enabled'] === 'true' },
+          trustpilot: {
+            enabled: addonsMap['addon_trustpilot_enabled'] === 'true',
+          },
           googleAnalytics: {
             enabled: addonsMap['addon_ga_enabled'] === 'true',
-            measurementId: addonsMap['addon_ga_measurement_id'] || addons.googleAnalytics.measurementId,
+            measurementId:
+              addonsMap['addon_ga_measurement_id'] ||
+              addons.googleAnalytics.measurementId,
           },
-          microsoftClarity: { enabled: addonsMap['addon_clarity_enabled'] === 'true' },
-          cloudflare: { enabled: addonsMap['addon_cloudflare_enabled'] === 'true' },
-          getbutton: { enabled: addonsMap['addon_getbutton_enabled'] === 'true' },
+          microsoftClarity: {
+            enabled: addonsMap['addon_clarity_enabled'] === 'true',
+          },
+          cloudflare: {
+            enabled: addonsMap['addon_cloudflare_enabled'] === 'true',
+          },
+          getbutton: {
+            enabled: addonsMap['addon_getbutton_enabled'] === 'true',
+          },
           tawkto: { enabled: addonsMap['addon_tawkto_enabled'] === 'true' },
         });
       }
@@ -349,13 +411,18 @@ www.cheapstreamtv.com`
       const contentSettings = grouped['content'] || [];
       const generalSettings = grouped['general'] || [];
       const contentMap: Record<string, string> = {};
-      
+
       // Combine content and general categories for backward compatibility
       contentSettings.forEach((s) => {
         contentMap[s.key] = s.value;
       });
       generalSettings.forEach((s) => {
-        if ((s.key.startsWith('page_') || s.key.startsWith('email_') || s.key.startsWith('trial_')) && !contentMap[s.key]) {
+        if (
+          (s.key.startsWith('page_') ||
+            s.key.startsWith('email_') ||
+            s.key.startsWith('trial_')) &&
+          !contentMap[s.key]
+        ) {
           contentMap[s.key] = s.value;
         }
       });
@@ -370,29 +437,44 @@ www.cheapstreamtv.com`
         setFreeTrial({
           mainTitle: contentMap['trial_main_title'] || freeTrial.mainTitle,
           description: contentMap['trial_description'] || freeTrial.description,
-          sectionTitle: contentMap['trial_section_title'] || freeTrial.sectionTitle,
-          items: contentMap['trial_items'] ? JSON.parse(contentMap['trial_items']) : freeTrial.items,
+          sectionTitle:
+            contentMap['trial_section_title'] || freeTrial.sectionTitle,
+          items: contentMap['trial_items']
+            ? JSON.parse(contentMap['trial_items'])
+            : freeTrial.items,
         });
       }
 
       // Page content for home page (default)
-      if (contentMap['page_home_heading1'] || contentMap['page_home_description']) {
+      if (
+        contentMap['page_home_heading1'] ||
+        contentMap['page_home_description']
+      ) {
         setPageContent({
-          headingPart1: contentMap['page_home_heading1'] || pageContent.headingPart1,
-          headingPart2: contentMap['page_home_heading2'] || pageContent.headingPart2,
-          description: contentMap['page_home_description'] || pageContent.description,
-          inputPlaceholder: contentMap['page_home_input_placeholder'] || pageContent.inputPlaceholder,
-          buttonText: contentMap['page_home_button_text'] || pageContent.buttonText,
-          pageTitle: contentMap['page_home_meta_title'] || pageContent.pageTitle,
-          metaDescription: contentMap['page_home_meta_description'] || pageContent.metaDescription,
+          headingPart1:
+            contentMap['page_home_heading1'] || pageContent.headingPart1,
+          headingPart2:
+            contentMap['page_home_heading2'] || pageContent.headingPart2,
+          description:
+            contentMap['page_home_description'] || pageContent.description,
+          inputPlaceholder:
+            contentMap['page_home_input_placeholder'] ||
+            pageContent.inputPlaceholder,
+          buttonText:
+            contentMap['page_home_button_text'] || pageContent.buttonText,
+          pageTitle:
+            contentMap['page_home_meta_title'] || pageContent.pageTitle,
+          metaDescription:
+            contentMap['page_home_meta_description'] ||
+            pageContent.metaDescription,
           keywords: contentMap['page_home_keywords'] || pageContent.keywords,
           ogTitle: contentMap['page_home_og_title'] || pageContent.ogTitle,
-          ogDescription: contentMap['page_home_og_description'] || pageContent.ogDescription,
+          ogDescription:
+            contentMap['page_home_og_description'] || pageContent.ogDescription,
         });
       }
 
       // Languages are now loaded from a dedicated endpoint via fetchLanguages()
-
     } catch (error) {
       console.error('Failed to fetch settings:', error);
       toast.error('Failed to load settings');
@@ -412,7 +494,7 @@ www.cheapstreamtv.com`
       const contentSettings = grouped['content'] || [];
       const generalSettings = grouped['general'] || [];
       const contentMap: Record<string, string> = {};
-      
+
       contentSettings.forEach((s) => {
         contentMap[s.key] = s.value;
       });
@@ -427,7 +509,8 @@ www.cheapstreamtv.com`
         headingPart1: contentMap[`page_${pageName}_heading1`] || '',
         headingPart2: contentMap[`page_${pageName}_heading2`] || '',
         description: contentMap[`page_${pageName}_description`] || '',
-        inputPlaceholder: contentMap[`page_${pageName}_input_placeholder`] || 'Email Address',
+        inputPlaceholder:
+          contentMap[`page_${pageName}_input_placeholder`] || 'Email Address',
         buttonText: contentMap[`page_${pageName}_button_text`] || 'Get Started',
         pageTitle: contentMap[`page_${pageName}_meta_title`] || '',
         metaDescription: contentMap[`page_${pageName}_meta_description`] || '',
@@ -453,54 +536,106 @@ www.cheapstreamtv.com`
       let settings: { key: string; value: string }[] = [];
 
       switch (type) {
-        case "Social media links":
+        case 'Social media links':
           settings = [
             { key: 'social_twitter_url', value: socialMedia.twitter.url },
-            { key: 'social_twitter_visible', value: String(socialMedia.twitter.visible) },
+            {
+              key: 'social_twitter_visible',
+              value: String(socialMedia.twitter.visible),
+            },
             { key: 'social_facebook_url', value: socialMedia.facebook.url },
-            { key: 'social_facebook_visible', value: String(socialMedia.facebook.visible) },
+            {
+              key: 'social_facebook_visible',
+              value: String(socialMedia.facebook.visible),
+            },
             { key: 'social_instagram_url', value: socialMedia.instagram.url },
-            { key: 'social_instagram_visible', value: String(socialMedia.instagram.visible) },
+            {
+              key: 'social_instagram_visible',
+              value: String(socialMedia.instagram.visible),
+            },
             { key: 'social_linkedin_url', value: socialMedia.linkedin.url },
-            { key: 'social_linkedin_visible', value: String(socialMedia.linkedin.visible) },
+            {
+              key: 'social_linkedin_visible',
+              value: String(socialMedia.linkedin.visible),
+            },
             { key: 'social_youtube_url', value: socialMedia.youtube.url },
-            { key: 'social_youtube_visible', value: String(socialMedia.youtube.visible) },
+            {
+              key: 'social_youtube_visible',
+              value: String(socialMedia.youtube.visible),
+            },
             { key: 'social_tiktok_url', value: socialMedia.tiktok.url },
-            { key: 'social_tiktok_visible', value: String(socialMedia.tiktok.visible) },
+            {
+              key: 'social_tiktok_visible',
+              value: String(socialMedia.tiktok.visible),
+            },
             { key: 'social_telegram_url', value: socialMedia.telegram.url },
-            { key: 'social_telegram_visible', value: String(socialMedia.telegram.visible) },
+            {
+              key: 'social_telegram_visible',
+              value: String(socialMedia.telegram.visible),
+            },
           ];
           break;
-        case "Contact information":
+        case 'Contact information':
           settings = [
             { key: 'contact_phone', value: contactInfo.phone },
             { key: 'contact_email', value: contactInfo.email },
             { key: 'contact_business_hours', value: contactInfo.businessHours },
             { key: 'contact_help_message', value: contactInfo.helpMessage },
             { key: 'contact_button_text', value: contactInfo.buttonText },
-            { key: 'contact_success_message', value: contactInfo.successMessage },
+            {
+              key: 'contact_success_message',
+              value: contactInfo.successMessage,
+            },
           ];
           break;
-        case "Addons":
+        case 'Addons':
           settings = [
-            { key: 'addon_recaptcha_enabled', value: String(addons.recaptcha.enabled) },
-            { key: 'addon_recaptcha_site_key', value: addons.recaptcha.siteKey },
-            { key: 'addon_recaptcha_secret_key', value: addons.recaptcha.secretKey },
-            { key: 'addon_trustpilot_enabled', value: String(addons.trustpilot.enabled) },
-            { key: 'addon_ga_enabled', value: String(addons.googleAnalytics.enabled) },
-            { key: 'addon_ga_measurement_id', value: addons.googleAnalytics.measurementId },
-            { key: 'addon_clarity_enabled', value: String(addons.microsoftClarity.enabled) },
-            { key: 'addon_cloudflare_enabled', value: String(addons.cloudflare.enabled) },
-            { key: 'addon_getbutton_enabled', value: String(addons.getbutton.enabled) },
-            { key: 'addon_tawkto_enabled', value: String(addons.tawkto.enabled) },
+            {
+              key: 'addon_recaptcha_enabled',
+              value: String(addons.recaptcha.enabled),
+            },
+            {
+              key: 'addon_recaptcha_site_key',
+              value: addons.recaptcha.siteKey,
+            },
+            {
+              key: 'addon_recaptcha_secret_key',
+              value: addons.recaptcha.secretKey,
+            },
+            {
+              key: 'addon_trustpilot_enabled',
+              value: String(addons.trustpilot.enabled),
+            },
+            {
+              key: 'addon_ga_enabled',
+              value: String(addons.googleAnalytics.enabled),
+            },
+            {
+              key: 'addon_ga_measurement_id',
+              value: addons.googleAnalytics.measurementId,
+            },
+            {
+              key: 'addon_clarity_enabled',
+              value: String(addons.microsoftClarity.enabled),
+            },
+            {
+              key: 'addon_cloudflare_enabled',
+              value: String(addons.cloudflare.enabled),
+            },
+            {
+              key: 'addon_getbutton_enabled',
+              value: String(addons.getbutton.enabled),
+            },
+            {
+              key: 'addon_tawkto_enabled',
+              value: String(addons.tawkto.enabled),
+            },
           ];
           break;
-        case "Email content":
-          settings = [
-            { key: 'email_setup_guide', value: emailContent },
-          ];
+        case 'Email content':
+          settings = [{ key: 'email_setup_guide', value: emailContent }];
           break;
-        case "Free trial content":
+        case 'Free trial content':
           settings = [
             { key: 'trial_main_title', value: freeTrial.mainTitle },
             { key: 'trial_description', value: freeTrial.description },
@@ -508,18 +643,42 @@ www.cheapstreamtv.com`
             { key: 'trial_items', value: JSON.stringify(freeTrial.items) },
           ];
           break;
-        case "Page content":
+        case 'Page content':
           settings = [
-            { key: `page_${activePage}_heading1`, value: pageContent.headingPart1 },
-            { key: `page_${activePage}_heading2`, value: pageContent.headingPart2 },
-            { key: `page_${activePage}_description`, value: pageContent.description },
-            { key: `page_${activePage}_input_placeholder`, value: pageContent.inputPlaceholder },
-            { key: `page_${activePage}_button_text`, value: pageContent.buttonText },
-            { key: `page_${activePage}_meta_title`, value: pageContent.pageTitle },
-            { key: `page_${activePage}_meta_description`, value: pageContent.metaDescription },
+            {
+              key: `page_${activePage}_heading1`,
+              value: pageContent.headingPart1,
+            },
+            {
+              key: `page_${activePage}_heading2`,
+              value: pageContent.headingPart2,
+            },
+            {
+              key: `page_${activePage}_description`,
+              value: pageContent.description,
+            },
+            {
+              key: `page_${activePage}_input_placeholder`,
+              value: pageContent.inputPlaceholder,
+            },
+            {
+              key: `page_${activePage}_button_text`,
+              value: pageContent.buttonText,
+            },
+            {
+              key: `page_${activePage}_meta_title`,
+              value: pageContent.pageTitle,
+            },
+            {
+              key: `page_${activePage}_meta_description`,
+              value: pageContent.metaDescription,
+            },
             { key: `page_${activePage}_keywords`, value: pageContent.keywords },
             { key: `page_${activePage}_og_title`, value: pageContent.ogTitle },
-            { key: `page_${activePage}_og_description`, value: pageContent.ogDescription },
+            {
+              key: `page_${activePage}_og_description`,
+              value: pageContent.ogDescription,
+            },
           ];
           break;
         default:
@@ -531,7 +690,7 @@ www.cheapstreamtv.com`
         // Re-fetch settings to confirm save and update UI
         await fetchSettings();
       }
-      
+
       toast.success(`${type} updated successfully!`);
     } catch (error) {
       console.error('Failed to save settings:', error);
@@ -542,9 +701,9 @@ www.cheapstreamtv.com`
   };
 
   const handleRefresh = async () => {
-    toast.info("Refreshing settings...");
+    toast.info('Refreshing settings...');
     await fetchSettings();
-    toast.success("Settings refreshed!");
+    toast.success('Settings refreshed!');
   };
 
   const fetchLanguages = useCallback(async () => {
@@ -572,10 +731,10 @@ www.cheapstreamtv.com`
       setIsEmailTemplatesLoading(true);
       const response = await getAllEmailTemplates();
       console.log('Email templates response:', response);
-      
+
       if (response.templates && response.templates.length > 0) {
         setEmailTemplates(response.templates);
-        
+
         // Select first template automatically
         const firstTemplate = response.templates[0];
         setSelectedTemplate(firstTemplate);
@@ -621,7 +780,7 @@ www.cheapstreamtv.com`
       });
 
       setEmailTemplates((prev) =>
-        prev.map((t) => (t.id === updated.id ? updated : t))
+        prev.map((t) => (t.id === updated.id ? updated : t)),
       );
       setSelectedTemplate(updated);
 
@@ -662,7 +821,7 @@ www.cheapstreamtv.com`
       const reset = await resetEmailTemplate(selectedTemplate.id);
 
       setEmailTemplates((prev) =>
-        prev.map((t) => (t.id === reset.id ? reset : t))
+        prev.map((t) => (t.id === reset.id ? reset : t)),
       );
       setSelectedTemplate(reset);
       setEditedSubject(reset.subject);
@@ -687,7 +846,9 @@ www.cheapstreamtv.com`
         bodyHtml: editedBody,
       });
 
-      const result = await sendTestEmail(selectedTemplate.id, { testEmail: testEmailAddress });
+      const result = await sendTestEmail(selectedTemplate.id, {
+        testEmail: testEmailAddress,
+      });
 
       if (result.success) {
         toast.success(`Test email sent to ${testEmailAddress}`);
@@ -705,7 +866,9 @@ www.cheapstreamtv.com`
   };
 
   const insertTemplateVariable = (variable: string) => {
-    const textarea = document.getElementById('email-template-body-editor') as HTMLTextAreaElement;
+    const textarea = document.getElementById(
+      'email-template-body-editor',
+    ) as HTMLTextAreaElement;
     if (textarea) {
       const start = textarea.selectionStart;
       const end = textarea.selectionEnd;
@@ -719,7 +882,7 @@ www.cheapstreamtv.com`
         textarea.focus();
         textarea.setSelectionRange(
           start + variable.length + 4,
-          start + variable.length + 4
+          start + variable.length + 4,
         );
       }, 0);
     } else {
@@ -751,7 +914,9 @@ www.cheapstreamtv.com`
     // Guard: cannot deactivate the default language
     const target = languages.find((l) => l.id === id);
     if (target?.isDefault && !nextIsActive) {
-      toast.error('The default language must stay active. Change the default first.');
+      toast.error(
+        'The default language must stay active. Change the default first.',
+      );
       return;
     }
     // Guard: cannot deactivate the last active language
@@ -786,9 +951,7 @@ www.cheapstreamtv.com`
     }
     // Optimistic update: mark chosen as default, unset others
     const prev = languages;
-    setLanguages((list) =>
-      list.map((l) => ({ ...l, isDefault: l.id === id })),
-    );
+    setLanguages((list) => list.map((l) => ({ ...l, isDefault: l.id === id })));
     try {
       await updateLanguage(id, { isDefault: true });
       toast.success('Default language updated');
@@ -801,7 +964,10 @@ www.cheapstreamtv.com`
   const toggleAddon = (addon: string) => {
     setAddons({
       ...addons,
-      [addon]: { ...addons[addon as keyof typeof addons], enabled: !addons[addon as keyof typeof addons].enabled },
+      [addon]: {
+        ...addons[addon as keyof typeof addons],
+        enabled: !addons[addon as keyof typeof addons].enabled,
+      },
     });
   };
 
@@ -815,7 +981,7 @@ www.cheapstreamtv.com`
   const addTrialItem = () => {
     setFreeTrial({
       ...freeTrial,
-      items: [...freeTrial.items, ""],
+      items: [...freeTrial.items, ''],
     });
   };
 
@@ -857,7 +1023,9 @@ www.cheapstreamtv.com`
     setSiteStatus((prev) => ({ ...prev, isActive: !newMaintenanceMode }));
     setIsLoading(true);
     try {
-      await updateSetting('maintenance_mode', { value: newMaintenanceMode ? 'true' : 'false' });
+      await updateSetting('maintenance_mode', {
+        value: newMaintenanceMode ? 'true' : 'false',
+      });
       toast.success(
         newMaintenanceMode
           ? 'Site is now under maintenance'
@@ -880,7 +1048,9 @@ www.cheapstreamtv.com`
   const handleUpdateMaintenanceMessage = async () => {
     setIsLoading(true);
     try {
-      await updateSetting('maintenance_message', { value: siteStatus.maintenanceMessage });
+      await updateSetting('maintenance_message', {
+        value: siteStatus.maintenanceMessage,
+      });
       toast.success('Maintenance message updated');
     } catch {
       toast.error('Failed to update maintenance message');
@@ -891,9 +1061,10 @@ www.cheapstreamtv.com`
 
   const fetchBranding = useCallback(async () => {
     try {
-      const response = await apiClient.get<{ siteLogo: string; siteFavicon: string }>(
-        API_ENDPOINTS.ADMIN.SETTINGS.BRANDING
-      );
+      const response = await apiClient.get<{
+        siteLogo: string;
+        siteFavicon: string;
+      }>(API_ENDPOINTS.ADMIN.SETTINGS.BRANDING);
       setLogoUrl(response.data.siteLogo || null);
       setFaviconUrl(response.data.siteFavicon || null);
     } catch {
@@ -907,7 +1078,13 @@ www.cheapstreamtv.com`
     }
   }, [activeTab, fetchBranding]);
 
-  const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/x-icon', 'image/vnd.microsoft.icon'];
+  const ALLOWED_TYPES = [
+    'image/jpeg',
+    'image/png',
+    'image/webp',
+    'image/x-icon',
+    'image/vnd.microsoft.icon',
+  ];
   const MAX_SIZE_BYTES = 5 * 1024 * 1024; // 5MB
 
   const validateImageFile = (file: File): string | null => {
@@ -941,7 +1118,7 @@ www.cheapstreamtv.com`
       const response = await apiClient.post<Record<string, unknown>>(
         API_ENDPOINTS.ADMIN.SETTINGS.BRANDING_LOGO,
         form,
-        { headers: { 'Content-Type': 'multipart/form-data' } }
+        { headers: { 'Content-Type': 'multipart/form-data' } },
       );
       // Replace local blob with the real server URL if present
       const data = response.data as Record<string, unknown>;
@@ -968,7 +1145,9 @@ www.cheapstreamtv.com`
     }
   };
 
-  const handleFaviconUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFaviconUpload = async (
+    e: React.ChangeEvent<HTMLInputElement>,
+  ) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -988,7 +1167,7 @@ www.cheapstreamtv.com`
       const response = await apiClient.post<Record<string, unknown>>(
         API_ENDPOINTS.ADMIN.SETTINGS.BRANDING_FAVICON,
         form,
-        { headers: { 'Content-Type': 'multipart/form-data' } }
+        { headers: { 'Content-Type': 'multipart/form-data' } },
       );
       const data = response.data as Record<string, unknown>;
       const serverUrl =
@@ -1015,40 +1194,40 @@ www.cheapstreamtv.com`
   };
 
   const tabs = [
-    { id: "social", label: "Social Media" },
-    { id: "contact", label: "Contact & Support Ticket" },
-    { id: "page", label: "Page Edit" },
-    { id: "email", label: "Email Content Management" },
-    { id: "addons", label: "Addons Management" },
-    { id: "trial", label: "Free Trial Management" },
-    { id: "logo", label: "Logo Management" },
-    { id: "status", label: "Site Status" },
-    { id: "language", label: "Language Management" },
+    { id: 'social', label: 'Social Media' },
+    { id: 'contact', label: 'Contact & Support Ticket' },
+    { id: 'page', label: 'Page Edit' },
+    { id: 'email', label: 'Email Content Management' },
+    { id: 'addons', label: 'Addons Management' },
+    { id: 'trial', label: 'Free Trial Management' },
+    { id: 'logo', label: 'Logo Management' },
+    { id: 'status', label: 'Site Status' },
+    { id: 'language', label: 'Language Management' },
   ];
 
   const pageButtons = [
-    { id: "home", label: "Home" },
-    { id: "about", label: "About Us" },
-    { id: "affiliate", label: "Affiliate" },
-    { id: "blogs", label: "Blogs" },
-    { id: "fullmenu", label: "Fullmenu" },
-    { id: "knowledge", label: "Knowledge Base" },
-    { id: "packages", label: "Packages" },
-    { id: "privacy", label: "Privacy Policy" },
-    { id: "terms", label: "Terms of Use" },
-    { id: "legal", label: "Legal Disclaimer" },
-    { id: "contact", label: "Contact" },
-    { id: "faq", label: "FAQ" },
-    { id: "pricing", label: "Pricing" },
+    { id: 'home', label: 'Home' },
+    { id: 'about', label: 'About Us' },
+    { id: 'affiliate', label: 'Affiliate' },
+    { id: 'blogs', label: 'Blogs' },
+    { id: 'fullmenu', label: 'Fullmenu' },
+    { id: 'knowledge', label: 'Knowledge Base' },
+    { id: 'packages', label: 'Packages' },
+    { id: 'privacy', label: 'Privacy Policy' },
+    { id: 'terms', label: 'Terms of Use' },
+    { id: 'legal', label: 'Legal Disclaimer' },
+    { id: 'contact', label: 'Contact' },
+    { id: 'faq', label: 'FAQ' },
+    { id: 'pricing', label: 'Pricing' },
   ];
 
   if (isPageLoading) {
     return (
       <div className="p-4 lg:p-8">
-        <div className="flex items-center justify-center min-h-[400px]">
+        <div className="flex min-h-[400px] items-center justify-center">
           <div className="flex flex-col items-center gap-4">
-            <Loader2 className="w-10 h-10 text-[#3B82F6] animate-spin" />
-            <p className="text-[#94A3B8] text-sm">Loading settings...</p>
+            <Loader2 className="h-10 w-10 animate-spin text-[#3B82F6]" />
+            <p className="text-sm text-[#94A3B8]">Loading settings...</p>
           </div>
         </div>
       </div>
@@ -1058,81 +1237,93 @@ www.cheapstreamtv.com`
   return (
     <div className="p-4 lg:p-8">
       <div className="mb-8">
-        <h1 className="text-white text-3xl font-semibold mb-2">
+        <h1 className="mb-2 text-3xl font-semibold text-white">
           System Settings
         </h1>
-        <p className="text-[#94A3B8] text-sm">
-          Manage your system configuration, social media, content, and integrations
+        <p className="text-sm text-[#94A3B8]">
+          Manage your system configuration, social media, content, and
+          integrations
         </p>
       </div>
 
       {/* Navigation Tabs */}
-      <div className="flex items-center gap-6 mb-8 border-b border-[rgba(255,255,255,0.18)] overflow-x-auto">
+      <div className="mb-8 flex items-center gap-6 overflow-x-auto border-b border-[rgba(255,255,255,0.18)]">
         {tabs.map((tab) => (
           <button
             key={tab.id}
             onClick={() => handleTabChange(tab.id as TabType)}
-            className={`pb-4 px-2 text-sm font-medium transition-colors whitespace-nowrap relative ${
-              activeTab === tab.id ? "text-[#3B82F6]" : "text-[#64748B] hover:text-white"
+            className={`relative px-2 pb-4 text-sm font-medium whitespace-nowrap transition-colors ${
+              activeTab === tab.id
+                ? 'text-[#3B82F6]'
+                : 'text-[#64748B] hover:text-white'
             }`}
           >
             {tab.label}
-            {activeTab === tab.id && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#3B82F6]" />}
+            {activeTab === tab.id && (
+              <div className="absolute right-0 bottom-0 left-0 h-0.5 bg-[#3B82F6]" />
+            )}
           </button>
         ))}
       </div>
 
       {/* Social Media Tab */}
-      {activeTab === "social" && (
+      {activeTab === 'social' && (
         <div className="max-w-5xl">
-          <div className="p-8 rounded-xl bg-[rgba(15,23,42,0.6)] border border-[rgba(255,255,255,0.1)] backdrop-blur-xl mb-6">
-            <h2 className="text-white text-2xl font-semibold mb-2">Social Media Management</h2>
-            <p className="text-[#94A3B8] text-sm">
-              Manage your social media links that will be displayed in the footer.
+          <div className="mb-6 rounded-xl border border-[rgba(255,255,255,0.1)] bg-[rgba(15,23,42,0.6)] p-8 backdrop-blur-xl">
+            <h2 className="mb-2 text-2xl font-semibold text-white">
+              Social Media Management
+            </h2>
+            <p className="text-sm text-[#94A3B8]">
+              Manage your social media links that will be displayed in the
+              footer.
             </p>
           </div>
 
-          <div className="p-8 rounded-xl bg-[rgba(15,23,42,0.6)] border border-[rgba(255,255,255,0.1)] backdrop-blur-xl">
-            <h3 className="text-white text-lg font-semibold mb-6">Social Media Links</h3>
+          <div className="rounded-xl border border-[rgba(255,255,255,0.1)] bg-[rgba(15,23,42,0.6)] p-8 backdrop-blur-xl">
+            <h3 className="mb-6 text-lg font-semibold text-white">
+              Social Media Links
+            </h3>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+            <div className="mb-8 grid grid-cols-1 gap-6 lg:grid-cols-2">
               {Object.entries(socialMedia).map(([key, value]) => {
                 const icons = {
-                  twitter: <Twitter className="w-5 h-5 text-[#1DA1F2]" />,
-                  facebook: <Facebook className="w-5 h-5 text-[#1877F2]" />,
-                  instagram: <Instagram className="w-5 h-5 text-[#E4405F]" />,
-                  linkedin: <Linkedin className="w-5 h-5 text-[#0A66C2]" />,
-                  youtube: <Youtube className="w-5 h-5 text-[#FF0000]" />,
-                  tiktok: <Music className="w-5 h-5 text-[#00F2EA]" />,
-                  telegram: <Send className="w-5 h-5 text-[#26A5E4]" />,
+                  twitter: <Twitter className="h-5 w-5 text-[#1DA1F2]" />,
+                  facebook: <Facebook className="h-5 w-5 text-[#1877F2]" />,
+                  instagram: <Instagram className="h-5 w-5 text-[#E4405F]" />,
+                  linkedin: <Linkedin className="h-5 w-5 text-[#0A66C2]" />,
+                  youtube: <Youtube className="h-5 w-5 text-[#FF0000]" />,
+                  tiktok: <Music className="h-5 w-5 text-[#00F2EA]" />,
+                  telegram: <Send className="h-5 w-5 text-[#26A5E4]" />,
                 };
 
                 const names = {
-                  twitter: "Twitter",
-                  facebook: "Facebook",
-                  instagram: "Instagram",
-                  linkedin: "LinkedIn",
-                  youtube: "YouTube",
-                  tiktok: "TikTok",
-                  telegram: "Telegram",
+                  twitter: 'Twitter',
+                  facebook: 'Facebook',
+                  instagram: 'Instagram',
+                  linkedin: 'LinkedIn',
+                  youtube: 'YouTube',
+                  tiktok: 'TikTok',
+                  telegram: 'Telegram',
                 };
 
                 return (
                   <div key={key}>
-                    <div className="flex items-center justify-between mb-3">
+                    <div className="mb-3 flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         {icons[key as keyof typeof icons]}
-                        <span className="text-white text-sm font-medium">
+                        <span className="text-sm font-medium text-white">
                           {names[key as keyof typeof names]}
                         </span>
                       </div>
                       <div className="flex items-center gap-2">
                         <span
-                          className={`px-2 py-1 rounded text-xs font-medium ${
-                            value.visible ? "bg-[#22C55E]/20 text-[#22C55E]" : "bg-[#64748B]/20 text-[#64748B]"
+                          className={`rounded px-2 py-1 text-xs font-medium ${
+                            value.visible
+                              ? 'bg-[#22C55E]/20 text-[#22C55E]'
+                              : 'bg-[#64748B]/20 text-[#64748B]'
                           }`}
                         >
-                          {value.visible ? "Visible" : "Hidden"}
+                          {value.visible ? 'Visible' : 'Hidden'}
                         </span>
                         <button
                           onClick={() =>
@@ -1141,19 +1332,25 @@ www.cheapstreamtv.com`
                               [key]: { ...value, visible: !value.visible },
                             })
                           }
-                          className={`relative w-12 h-6 rounded-full transition-colors ${
-                            value.visible ? "bg-[#22C55E]" : "bg-[rgba(255,255,255,0.18)]"
+                          className={`relative h-6 w-12 rounded-full transition-colors ${
+                            value.visible
+                              ? 'bg-[#22C55E]'
+                              : 'bg-[rgba(255,255,255,0.18)]'
                           }`}
                         >
                           <div
-                            className={`absolute top-0.5 w-5 h-5 bg-white rounded-full transition-transform ${
-                              value.visible ? "translate-x-6" : "translate-x-0.5"
+                            className={`absolute top-0.5 h-5 w-5 rounded-full bg-white transition-transform ${
+                              value.visible
+                                ? 'translate-x-6'
+                                : 'translate-x-0.5'
                             }`}
                           />
                         </button>
                       </div>
                     </div>
-                    <p className="text-[#64748B] text-xs mb-2">Show in footer</p>
+                    <p className="mb-2 text-xs text-[#64748B]">
+                      Show in footer
+                    </p>
                     <input
                       type="text"
                       value={value.url}
@@ -1164,7 +1361,7 @@ www.cheapstreamtv.com`
                         })
                       }
                       placeholder={`Enter ${names[key as keyof typeof names]} URL`}
-                      className="w-full bg-[rgba(0,0,0,0.4)] border border-[rgba(255,255,255,0.18)] rounded-lg px-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#3B82F6] placeholder:text-[#64748B]"
+                      className="w-full rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.4)] px-4 py-3 text-sm text-white placeholder:text-[#64748B] focus:ring-2 focus:ring-[#3B82F6] focus:outline-none"
                     />
                   </div>
                 );
@@ -1174,16 +1371,16 @@ www.cheapstreamtv.com`
             <div className="flex items-center justify-start gap-4">
               <button
                 onClick={handleRefresh}
-                className="px-6 py-3 rounded-lg bg-[rgba(255,255,255,0.08)] border border-[rgba(255,255,255,0.18)] text-white hover:bg-[rgba(255,255,255,0.12)] transition-colors text-sm font-medium"
+                className="rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(255,255,255,0.08)] px-6 py-3 text-sm font-medium text-white transition-colors hover:bg-[rgba(255,255,255,0.12)]"
               >
                 Refresh
               </button>
               <button
-                onClick={() => handleSave("Social media links")}
+                onClick={() => handleSave('Social media links')}
                 disabled={isLoading}
-                className="px-6 py-3 rounded-lg bg-[#3B82F6] hover:bg-[#2563EB] text-white transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                className="rounded-lg bg-[#3B82F6] px-6 py-3 text-sm font-medium text-white transition-colors hover:bg-[#2563EB] disabled:cursor-not-allowed disabled:opacity-50"
               >
-                {isLoading ? "Saving..." : "Save"}
+                {isLoading ? 'Saving...' : 'Save'}
               </button>
             </div>
           </div>
@@ -1191,99 +1388,146 @@ www.cheapstreamtv.com`
       )}
 
       {/* Contact & Support Ticket Tab */}
-      {activeTab === "contact" && (
+      {activeTab === 'contact' && (
         <div className="max-w-5xl">
-          <div className="p-8 rounded-xl bg-[rgba(15,23,42,0.6)] border border-[rgba(255,255,255,0.1)] backdrop-blur-xl mb-6">
-            <h2 className="text-white text-2xl font-semibold mb-2">Contact Information Management</h2>
-            <p className="text-[#94A3B8] text-sm">
-              Manage your contact information that will be displayed in the footer and contact form.
+          <div className="mb-6 rounded-xl border border-[rgba(255,255,255,0.1)] bg-[rgba(15,23,42,0.6)] p-8 backdrop-blur-xl">
+            <h2 className="mb-2 text-2xl font-semibold text-white">
+              Contact Information Management
+            </h2>
+            <p className="text-sm text-[#94A3B8]">
+              Manage your contact information that will be displayed in the
+              footer and contact form.
             </p>
           </div>
 
           <div className="space-y-6">
             {/* Contact Details */}
-            <div className="p-6 rounded-xl bg-[rgba(15,23,42,0.6)] border border-[rgba(255,255,255,0.1)] backdrop-blur-xl">
-              <h3 className="text-white text-base font-semibold mb-4">Contact Details</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="rounded-xl border border-[rgba(255,255,255,0.1)] bg-[rgba(15,23,42,0.6)] p-6 backdrop-blur-xl">
+              <h3 className="mb-4 text-base font-semibold text-white">
+                Contact Details
+              </h3>
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 <div>
-                  <label className="text-white text-sm font-medium mb-2 block">
+                  <label className="mb-2 block text-sm font-medium text-white">
                     Phone Number
                   </label>
                   <input
                     type="text"
                     value={contactInfo.phone}
-                    onChange={(e) => setContactInfo({ ...contactInfo, phone: e.target.value })}
-                    className="w-full bg-[rgba(0,0,0,0.4)] border border-[rgba(255,255,255,0.18)] rounded-lg px-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#3B82F6]"
+                    onChange={(e) =>
+                      setContactInfo({ ...contactInfo, phone: e.target.value })
+                    }
+                    className="w-full rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.4)] px-4 py-3 text-sm text-white focus:ring-2 focus:ring-[#3B82F6] focus:outline-none"
                   />
                 </div>
                 <div>
-                  <label className="text-white text-sm font-medium mb-2 block">
+                  <label className="mb-2 block text-sm font-medium text-white">
                     Email Address
                   </label>
                   <input
                     type="email"
                     value={contactInfo.email}
-                    onChange={(e) => setContactInfo({ ...contactInfo, email: e.target.value })}
-                    className="w-full bg-[rgba(0,0,0,0.4)] border border-[rgba(255,255,255,0.18)] rounded-lg px-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#3B82F6]"
+                    onChange={(e) =>
+                      setContactInfo({ ...contactInfo, email: e.target.value })
+                    }
+                    className="w-full rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.4)] px-4 py-3 text-sm text-white focus:ring-2 focus:ring-[#3B82F6] focus:outline-none"
                   />
                 </div>
               </div>
             </div>
 
             {/* Business Hours */}
-            <div className="p-6 rounded-xl bg-[rgba(15,23,42,0.6)] border border-[rgba(255,255,255,0.1)] backdrop-blur-xl">
-              <h3 className="text-white text-base font-semibold mb-4">Business Hours</h3>
-              <label className="text-white text-sm font-medium mb-2 block">
+            <div className="rounded-xl border border-[rgba(255,255,255,0.1)] bg-[rgba(15,23,42,0.6)] p-6 backdrop-blur-xl">
+              <h3 className="mb-4 text-base font-semibold text-white">
+                Business Hours
+              </h3>
+              <label className="mb-2 block text-sm font-medium text-white">
                 Business Hours
               </label>
               <input
                 type="text"
                 value={contactInfo.businessHours}
-                onChange={(e) => setContactInfo({ ...contactInfo, businessHours: e.target.value })}
-                className="w-full bg-[rgba(0,0,0,0.4)] border border-[rgba(255,255,255,0.18)] rounded-lg px-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#3B82F6]"
+                onChange={(e) =>
+                  setContactInfo({
+                    ...contactInfo,
+                    businessHours: e.target.value,
+                  })
+                }
+                className="w-full rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.4)] px-4 py-3 text-sm text-white focus:ring-2 focus:ring-[#3B82F6] focus:outline-none"
               />
-              <p className="text-[#64748B] text-xs mt-2">This will be displayed in the footer</p>
+              <p className="mt-2 text-xs text-[#64748B]">
+                This will be displayed in the footer
+              </p>
             </div>
 
             {/* Support Message */}
-            <div className="p-6 rounded-xl bg-[rgba(15,23,42,0.6)] border border-[rgba(255,255,255,0.1)] backdrop-blur-xl">
-              <h3 className="text-white text-base font-semibold mb-4">Support Message</h3>
-              <label className="text-white text-sm font-medium mb-2 block">
+            <div className="rounded-xl border border-[rgba(255,255,255,0.1)] bg-[rgba(15,23,42,0.6)] p-6 backdrop-blur-xl">
+              <h3 className="mb-4 text-base font-semibold text-white">
+                Support Message
+              </h3>
+              <label className="mb-2 block text-sm font-medium text-white">
                 Help Message
               </label>
               <textarea
                 value={contactInfo.helpMessage}
-                onChange={(e) => setContactInfo({ ...contactInfo, helpMessage: e.target.value })}
+                onChange={(e) =>
+                  setContactInfo({
+                    ...contactInfo,
+                    helpMessage: e.target.value,
+                  })
+                }
                 rows={3}
-                className="w-full bg-[rgba(0,0,0,0.4)] border border-[rgba(255,255,255,0.18)] rounded-lg px-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#3B82F6] resize-none"
+                className="w-full resize-none rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.4)] px-4 py-3 text-sm text-white focus:ring-2 focus:ring-[#3B82F6] focus:outline-none"
               />
-              <p className="text-[#64748B] text-xs mt-2">This message will be shown above the contact form</p>
+              <p className="mt-2 text-xs text-[#64748B]">
+                This message will be shown above the contact form
+              </p>
             </div>
 
             {/* Support Ticket Settings */}
-            <div className="p-6 rounded-xl bg-[rgba(15,23,42,0.6)] border border-[rgba(255,255,255,0.1)] backdrop-blur-xl">
-              <h3 className="text-white text-base font-semibold mb-4">Support Ticket Settings</h3>
+            <div className="rounded-xl border border-[rgba(255,255,255,0.1)] bg-[rgba(15,23,42,0.6)] p-6 backdrop-blur-xl">
+              <h3 className="mb-4 text-base font-semibold text-white">
+                Support Ticket Settings
+              </h3>
               <div className="space-y-4">
                 <div>
-                  <label className="text-white text-sm font-medium mb-2 block">Button Text</label>
+                  <label className="mb-2 block text-sm font-medium text-white">
+                    Button Text
+                  </label>
                   <input
                     type="text"
                     value={contactInfo.buttonText}
-                    onChange={(e) => setContactInfo({ ...contactInfo, buttonText: e.target.value })}
-                    className="w-full bg-[rgba(0,0,0,0.4)] border border-[rgba(255,255,255,0.18)] rounded-lg px-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#3B82F6]"
+                    onChange={(e) =>
+                      setContactInfo({
+                        ...contactInfo,
+                        buttonText: e.target.value,
+                      })
+                    }
+                    className="w-full rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.4)] px-4 py-3 text-sm text-white focus:ring-2 focus:ring-[#3B82F6] focus:outline-none"
                   />
-                  <p className="text-[#64748B] text-xs mt-2">Text for the submit button on contact form</p>
+                  <p className="mt-2 text-xs text-[#64748B]">
+                    Text for the submit button on contact form
+                  </p>
                 </div>
 
                 <div>
-                  <label className="text-white text-sm font-medium mb-2 block">Success Message</label>
+                  <label className="mb-2 block text-sm font-medium text-white">
+                    Success Message
+                  </label>
                   <textarea
                     value={contactInfo.successMessage}
-                    onChange={(e) => setContactInfo({ ...contactInfo, successMessage: e.target.value })}
+                    onChange={(e) =>
+                      setContactInfo({
+                        ...contactInfo,
+                        successMessage: e.target.value,
+                      })
+                    }
                     rows={2}
-                    className="w-full bg-[rgba(0,0,0,0.4)] border border-[rgba(255,255,255,0.18)] rounded-lg px-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#3B82F6] resize-none"
+                    className="w-full resize-none rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.4)] px-4 py-3 text-sm text-white focus:ring-2 focus:ring-[#3B82F6] focus:outline-none"
                   />
-                  <p className="text-[#64748B] text-xs mt-2">Message shown after successful form submission</p>
+                  <p className="mt-2 text-xs text-[#64748B]">
+                    Message shown after successful form submission
+                  </p>
                 </div>
               </div>
             </div>
@@ -1292,16 +1536,16 @@ www.cheapstreamtv.com`
             <div className="flex items-center justify-start gap-4">
               <button
                 onClick={handleRefresh}
-                className="px-6 py-3 rounded-lg bg-[rgba(255,255,255,0.08)] border border-[rgba(255,255,255,0.18)] text-white hover:bg-[rgba(255,255,255,0.12)] transition-colors text-sm font-medium"
+                className="rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(255,255,255,0.08)] px-6 py-3 text-sm font-medium text-white transition-colors hover:bg-[rgba(255,255,255,0.12)]"
               >
                 Refresh
               </button>
               <button
-                onClick={() => handleSave("Contact information")}
+                onClick={() => handleSave('Contact information')}
                 disabled={isLoading}
-                className="px-6 py-3 rounded-lg bg-[#3B82F6] hover:bg-[#2563EB] text-white transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                className="rounded-lg bg-[#3B82F6] px-6 py-3 text-sm font-medium text-white transition-colors hover:bg-[#2563EB] disabled:cursor-not-allowed disabled:opacity-50"
               >
-                {isLoading ? "Saving..." : "Save Changes"}
+                {isLoading ? 'Saving...' : 'Save Changes'}
               </button>
             </div>
           </div>
@@ -1309,67 +1553,76 @@ www.cheapstreamtv.com`
       )}
 
       {/* Email Content Management Tab */}
-      {activeTab === "email" && (
+      {activeTab === 'email' && (
         <div className="w-full">
-          <div className="p-6 rounded-xl bg-[rgba(15,23,42,0.6)] border border-[rgba(255,255,255,0.1)] backdrop-blur-xl mb-6">
-            <h2 className="text-white text-2xl font-semibold mb-2">Email Content Management</h2>
-            <p className="text-[#94A3B8] text-sm">
-              Customize all outgoing email templates with dynamic variables for personalized content
+          <div className="mb-6 rounded-xl border border-[rgba(255,255,255,0.1)] bg-[rgba(15,23,42,0.6)] p-6 backdrop-blur-xl">
+            <h2 className="mb-2 text-2xl font-semibold text-white">
+              Email Content Management
+            </h2>
+            <p className="text-sm text-[#94A3B8]">
+              Customize all outgoing email templates with dynamic variables for
+              personalized content
             </p>
           </div>
 
           {isEmailTemplatesLoading ? (
             <div className="flex items-center justify-center py-20">
-              <Loader2 className="w-10 h-10 text-[#3B82F6] animate-spin" />
+              <Loader2 className="h-10 w-10 animate-spin text-[#3B82F6]" />
             </div>
           ) : (
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
               {/* Left Sidebar - Template List */}
               <div className="lg:col-span-3">
-                <div className="p-4 rounded-xl bg-[rgba(15,23,42,0.6)] border border-[rgba(255,255,255,0.1)] backdrop-blur-xl sticky top-4">
-                  <h3 className="text-white text-sm font-semibold mb-4">Email Templates</h3>
+                <div className="sticky top-4 rounded-xl border border-[rgba(255,255,255,0.1)] bg-[rgba(15,23,42,0.6)] p-4 backdrop-blur-xl">
+                  <h3 className="mb-4 text-sm font-semibold text-white">
+                    Email Templates
+                  </h3>
 
-                  <div className="space-y-2 max-h-[calc(100vh-350px)] overflow-y-auto pr-2">
-                    {Object.entries(groupedEmailTemplates).map(([category, categoryTemplates]) => (
-                      <div key={category} className="mb-3">
-                        <button
-                          onClick={() => toggleTemplateCategory(category)}
-                          className="flex items-center justify-between w-full px-2 py-1.5 text-[#94A3B8] text-xs font-medium uppercase tracking-wide hover:text-white transition-colors"
-                        >
-                          <span>{category}</span>
-                          <ChevronDown
-                            className={`w-4 h-4 transition-transform ${
-                              expandedCategories[category] ? 'rotate-180' : ''
-                            }`}
-                          />
-                        </button>
+                  <div className="max-h-[calc(100vh-350px)] space-y-2 overflow-y-auto pr-2">
+                    {Object.entries(groupedEmailTemplates).map(
+                      ([category, categoryTemplates]) => (
+                        <div key={category} className="mb-3">
+                          <button
+                            onClick={() => toggleTemplateCategory(category)}
+                            className="flex w-full items-center justify-between px-2 py-1.5 text-xs font-medium tracking-wide text-[#94A3B8] uppercase transition-colors hover:text-white"
+                          >
+                            <span>{category}</span>
+                            <ChevronDown
+                              className={`h-4 w-4 transition-transform ${
+                                expandedCategories[category] ? 'rotate-180' : ''
+                              }`}
+                            />
+                          </button>
 
-                        {expandedCategories[category] && (
-                          <div className="mt-1 space-y-1">
-                            {categoryTemplates.map((template) => (
-                              <button
-                                key={template.id}
-                                onClick={() => handleSelectTemplate(template)}
-                                className={`w-full px-3 py-2 rounded-lg text-left text-sm transition-colors ${
-                                  selectedTemplate?.id === template.id
-                                    ? 'bg-[#3B82F6] text-white'
-                                    : 'text-white hover:bg-[rgba(255,255,255,0.08)]'
-                                }`}
-                              >
-                                <div className="flex items-center justify-between">
-                                  <span className="truncate">{template.name}</span>
-                                  {!template.isActive && (
-                                    <span className="ml-2 px-1.5 py-0.5 bg-[#EF4444]/20 text-[#EF4444] text-[10px] rounded">
-                                      OFF
+                          {expandedCategories[category] && (
+                            <div className="mt-1 space-y-1">
+                              {categoryTemplates.map((template) => (
+                                <button
+                                  key={template.id}
+                                  onClick={() => handleSelectTemplate(template)}
+                                  className={`w-full rounded-lg px-3 py-2 text-left text-sm transition-colors ${
+                                    selectedTemplate?.id === template.id
+                                      ? 'bg-[#3B82F6] text-white'
+                                      : 'text-white hover:bg-[rgba(255,255,255,0.08)]'
+                                  }`}
+                                >
+                                  <div className="flex items-center justify-between">
+                                    <span className="truncate">
+                                      {template.name}
                                     </span>
-                                  )}
-                                </div>
-                              </button>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    ))}
+                                    {!template.isActive && (
+                                      <span className="ml-2 rounded bg-[#EF4444]/20 px-1.5 py-0.5 text-[10px] text-[#EF4444]">
+                                        OFF
+                                      </span>
+                                    )}
+                                  </div>
+                                </button>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      ),
+                    )}
                   </div>
                 </div>
               </div>
@@ -1379,23 +1632,33 @@ www.cheapstreamtv.com`
                 {selectedTemplate ? (
                   <div className="space-y-6">
                     {/* Template Info */}
-                    <div className="p-6 rounded-xl bg-[rgba(15,23,42,0.6)] border border-[rgba(255,255,255,0.1)] backdrop-blur-xl">
-                      <div className="flex items-start justify-between mb-4">
+                    <div className="rounded-xl border border-[rgba(255,255,255,0.1)] bg-[rgba(15,23,42,0.6)] p-6 backdrop-blur-xl">
+                      <div className="mb-4 flex items-start justify-between">
                         <div>
-                          <h2 className="text-white text-lg font-semibold">{selectedTemplate.name}</h2>
-                          <p className="text-[#94A3B8] text-sm mt-1">{selectedTemplate.description}</p>
+                          <h2 className="text-lg font-semibold text-white">
+                            {selectedTemplate.name}
+                          </h2>
+                          <p className="mt-1 text-sm text-[#94A3B8]">
+                            {selectedTemplate.description}
+                          </p>
                         </div>
                         <div className="flex items-center gap-2">
-                          <span className="text-[#64748B] text-xs">Active</span>
+                          <span className="text-xs text-[#64748B]">Active</span>
                           <button
-                            onClick={() => setIsTemplateActive(!isTemplateActive)}
-                            className={`relative w-10 h-5 rounded-full transition-colors ${
-                              isTemplateActive ? 'bg-[#22C55E]' : 'bg-[rgba(255,255,255,0.18)]'
+                            onClick={() =>
+                              setIsTemplateActive(!isTemplateActive)
+                            }
+                            className={`relative h-5 w-10 rounded-full transition-colors ${
+                              isTemplateActive
+                                ? 'bg-[#22C55E]'
+                                : 'bg-[rgba(255,255,255,0.18)]'
                             }`}
                           >
                             <div
-                              className={`absolute top-0.5 w-4 h-4 bg-white rounded-full transition-transform ${
-                                isTemplateActive ? 'translate-x-5' : 'translate-x-0.5'
+                              className={`absolute top-0.5 h-4 w-4 rounded-full bg-white transition-transform ${
+                                isTemplateActive
+                                  ? 'translate-x-5'
+                                  : 'translate-x-0.5'
                               }`}
                             />
                           </button>
@@ -1403,14 +1666,14 @@ www.cheapstreamtv.com`
                       </div>
 
                       <div className="flex items-center gap-2 text-xs text-[#64748B]">
-                        <Code className="w-3.5 h-3.5" />
+                        <Code className="h-3.5 w-3.5" />
                         <span>Type: {selectedTemplate.type}</span>
                       </div>
                     </div>
 
                     {/* Subject Editor */}
-                    <div className="p-6 rounded-xl bg-[rgba(15,23,42,0.6)] border border-[rgba(255,255,255,0.1)] backdrop-blur-xl">
-                      <label className="text-white text-sm font-medium mb-3 block">
+                    <div className="rounded-xl border border-[rgba(255,255,255,0.1)] bg-[rgba(15,23,42,0.6)] p-6 backdrop-blur-xl">
+                      <label className="mb-3 block text-sm font-medium text-white">
                         Email Subject
                       </label>
                       <input
@@ -1418,16 +1681,16 @@ www.cheapstreamtv.com`
                         value={editedSubject}
                         onChange={(e) => setEditedSubject(e.target.value)}
                         placeholder="Enter email subject..."
-                        className="w-full bg-[rgba(0,0,0,0.4)] border border-[rgba(255,255,255,0.18)] rounded-lg px-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#3B82F6] placeholder:text-[#64748B]"
+                        className="w-full rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.4)] px-4 py-3 text-sm text-white placeholder:text-[#64748B] focus:ring-2 focus:ring-[#3B82F6] focus:outline-none"
                       />
-                      <p className="text-[#64748B] text-xs mt-2">
+                      <p className="mt-2 text-xs text-[#64748B]">
                         Use {'{{variableName}}'} syntax for dynamic content
                       </p>
                     </div>
 
                     {/* Body Editor */}
-                    <div className="p-6 rounded-xl bg-[rgba(15,23,42,0.6)] border border-[rgba(255,255,255,0.1)] backdrop-blur-xl">
-                      <label className="text-white text-sm font-medium mb-3 block">
+                    <div className="rounded-xl border border-[rgba(255,255,255,0.1)] bg-[rgba(15,23,42,0.6)] p-6 backdrop-blur-xl">
+                      <label className="mb-3 block text-sm font-medium text-white">
                         Email Body (HTML)
                       </label>
                       <textarea
@@ -1435,7 +1698,7 @@ www.cheapstreamtv.com`
                         value={editedBody}
                         onChange={(e) => setEditedBody(e.target.value)}
                         rows={18}
-                        className="w-full bg-[rgba(0,0,0,0.4)] border border-[rgba(255,255,255,0.18)] rounded-lg px-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#3B82F6] font-mono resize-none"
+                        className="w-full resize-none rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.4)] px-4 py-3 font-mono text-sm text-white focus:ring-2 focus:ring-[#3B82F6] focus:outline-none"
                       />
                     </div>
 
@@ -1444,9 +1707,9 @@ www.cheapstreamtv.com`
                       <div className="flex items-center gap-3">
                         <button
                           onClick={() => setShowResetTemplateConfirm(true)}
-                          className="px-4 py-2.5 rounded-lg bg-[rgba(255,255,255,0.08)] border border-[rgba(255,255,255,0.18)] text-white hover:bg-[rgba(255,255,255,0.12)] transition-colors text-sm font-medium flex items-center gap-2"
+                          className="flex items-center gap-2 rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(255,255,255,0.08)] px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-[rgba(255,255,255,0.12)]"
                         >
-                          <RotateCcw className="w-4 h-4" />
+                          <RotateCcw className="h-4 w-4" />
                           Reset to Default
                         </button>
                       </div>
@@ -1455,35 +1718,35 @@ www.cheapstreamtv.com`
                         <button
                           onClick={handlePreviewTemplate}
                           disabled={isPreviewLoading}
-                          className="px-4 py-2.5 rounded-lg bg-[rgba(255,255,255,0.08)] border border-[rgba(255,255,255,0.18)] text-white hover:bg-[rgba(255,255,255,0.12)] transition-colors text-sm font-medium flex items-center gap-2 disabled:opacity-50"
+                          className="flex items-center gap-2 rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(255,255,255,0.08)] px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-[rgba(255,255,255,0.12)] disabled:opacity-50"
                         >
                           {isPreviewLoading ? (
-                            <Loader2 className="w-4 h-4 animate-spin" />
+                            <Loader2 className="h-4 w-4 animate-spin" />
                           ) : showTemplatePreview ? (
-                            <EyeOff className="w-4 h-4" />
+                            <EyeOff className="h-4 w-4" />
                           ) : (
-                            <Eye className="w-4 h-4" />
+                            <Eye className="h-4 w-4" />
                           )}
                           {showTemplatePreview ? 'Hide Preview' : 'Preview'}
                         </button>
 
                         <button
                           onClick={() => setShowTestEmailDialog(true)}
-                          className="px-4 py-2.5 rounded-lg bg-[#8B5CF6] hover:bg-[#7C3AED] text-white transition-colors text-sm font-medium flex items-center gap-2"
+                          className="flex items-center gap-2 rounded-lg bg-[#8B5CF6] px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-[#7C3AED]"
                         >
-                          <Send className="w-4 h-4" />
+                          <Send className="h-4 w-4" />
                           Send Test
                         </button>
 
                         <button
                           onClick={handleSaveTemplate}
                           disabled={isSavingTemplate || !hasTemplateChanges}
-                          className="px-4 py-2.5 rounded-lg bg-[#3B82F6] hover:bg-[#2563EB] text-white transition-colors text-sm font-medium flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                          className="flex items-center gap-2 rounded-lg bg-[#3B82F6] px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-[#2563EB] disabled:cursor-not-allowed disabled:opacity-50"
                         >
                           {isSavingTemplate ? (
-                            <Loader2 className="w-4 h-4 animate-spin" />
+                            <Loader2 className="h-4 w-4 animate-spin" />
                           ) : (
-                            <Save className="w-4 h-4" />
+                            <Save className="h-4 w-4" />
                           )}
                           Save Changes
                         </button>
@@ -1492,31 +1755,35 @@ www.cheapstreamtv.com`
 
                     {/* Preview Panel */}
                     {showTemplatePreview && templatePreviewData && (
-                      <div className="p-6 rounded-xl bg-[rgba(15,23,42,0.6)] border border-[rgba(255,255,255,0.1)] backdrop-blur-xl">
-                        <div className="flex items-center justify-between mb-4">
-                          <h3 className="text-white text-sm font-semibold">Email Preview</h3>
+                      <div className="rounded-xl border border-[rgba(255,255,255,0.1)] bg-[rgba(15,23,42,0.6)] p-6 backdrop-blur-xl">
+                        <div className="mb-4 flex items-center justify-between">
+                          <h3 className="text-sm font-semibold text-white">
+                            Email Preview
+                          </h3>
                           <button
                             onClick={() => setShowTemplatePreview(false)}
-                            className="text-[#64748B] hover:text-white transition-colors"
+                            className="text-[#64748B] transition-colors hover:text-white"
                           >
-                            <EyeOff className="w-4 h-4" />
+                            <EyeOff className="h-4 w-4" />
                           </button>
                         </div>
 
                         <div className="mb-4">
-                          <p className="text-[#64748B] text-xs mb-1">Subject:</p>
-                          <p className="text-white text-sm bg-[rgba(0,0,0,0.3)] rounded-lg px-3 py-2">
+                          <p className="mb-1 text-xs text-[#64748B]">
+                            Subject:
+                          </p>
+                          <p className="rounded-lg bg-[rgba(0,0,0,0.3)] px-3 py-2 text-sm text-white">
                             {templatePreviewData.subject}
                           </p>
                         </div>
 
                         <div>
-                          <p className="text-[#64748B] text-xs mb-1">Body:</p>
-                          <div className="bg-white rounded-lg overflow-hidden">
+                          <p className="mb-1 text-xs text-[#64748B]">Body:</p>
+                          <div className="overflow-hidden rounded-lg bg-white">
                             <iframe
                               srcDoc={templatePreviewData.bodyHtml}
                               title="Email Preview"
-                              className="w-full h-[400px] border-0"
+                              className="h-[400px] w-full border-0"
                               sandbox="allow-same-origin"
                             />
                           </div>
@@ -1525,9 +1792,11 @@ www.cheapstreamtv.com`
                     )}
                   </div>
                 ) : (
-                  <div className="p-8 rounded-xl bg-[rgba(15,23,42,0.6)] border border-[rgba(255,255,255,0.1)] backdrop-blur-xl text-center">
-                    <Mail className="w-12 h-12 text-[#64748B] mx-auto mb-4" />
-                    <p className="text-[#94A3B8] text-sm">Select a template to edit</p>
+                  <div className="rounded-xl border border-[rgba(255,255,255,0.1)] bg-[rgba(15,23,42,0.6)] p-8 text-center backdrop-blur-xl">
+                    <Mail className="mx-auto mb-4 h-12 w-12 text-[#64748B]" />
+                    <p className="text-sm text-[#94A3B8]">
+                      Select a template to edit
+                    </p>
                   </div>
                 )}
               </div>
@@ -1535,9 +1804,11 @@ www.cheapstreamtv.com`
               {/* Right Sidebar - Variables */}
               <div className="lg:col-span-3">
                 {selectedTemplate && (
-                  <div className="p-4 rounded-xl bg-[rgba(15,23,42,0.6)] border border-[rgba(255,255,255,0.1)] backdrop-blur-xl sticky top-4">
-                    <h3 className="text-white text-sm font-semibold mb-4">Available Variables</h3>
-                    <p className="text-[#64748B] text-xs mb-4">
+                  <div className="sticky top-4 rounded-xl border border-[rgba(255,255,255,0.1)] bg-[rgba(15,23,42,0.6)] p-4 backdrop-blur-xl">
+                    <h3 className="mb-4 text-sm font-semibold text-white">
+                      Available Variables
+                    </h3>
+                    <p className="mb-4 text-xs text-[#64748B]">
                       Click to insert or copy these variables into your template
                     </p>
 
@@ -1545,35 +1816,45 @@ www.cheapstreamtv.com`
                       {selectedTemplate.variables.map((variable) => (
                         <div
                           key={variable}
-                          className="flex items-center justify-between p-2 rounded-lg bg-[rgba(0,0,0,0.3)] group"
+                          className="group flex items-center justify-between rounded-lg bg-[rgba(0,0,0,0.3)] p-2"
                         >
                           <button
                             onClick={() => insertTemplateVariable(variable)}
-                            className="flex-1 text-left text-[#3B82F6] text-xs font-mono hover:text-[#60A5FA] transition-colors"
+                            className="flex-1 text-left font-mono text-xs text-[#3B82F6] transition-colors hover:text-[#60A5FA]"
                           >
-                            {'{{'}{variable}{'}}'}
+                            {'{{'}
+                            {variable}
+                            {'}}'}
                           </button>
                           <button
                             onClick={() => copyTemplateVariable(variable)}
-                            className="p-1 text-[#64748B] hover:text-white opacity-0 group-hover:opacity-100 transition-all"
+                            className="p-1 text-[#64748B] opacity-0 transition-all group-hover:opacity-100 hover:text-white"
                             title="Copy to clipboard"
                           >
-                            <Copy className="w-3.5 h-3.5" />
+                            <Copy className="h-3.5 w-3.5" />
                           </button>
                         </div>
                       ))}
                     </div>
 
                     {selectedTemplate.sampleData && (
-                      <div className="mt-6 pt-4 border-t border-[rgba(255,255,255,0.1)]">
-                        <h4 className="text-white text-xs font-semibold mb-3">Sample Values</h4>
+                      <div className="mt-6 border-t border-[rgba(255,255,255,0.1)] pt-4">
+                        <h4 className="mb-3 text-xs font-semibold text-white">
+                          Sample Values
+                        </h4>
                         <div className="space-y-1.5 text-xs">
-                          {Object.entries(selectedTemplate.sampleData).map(([key, value]) => (
-                            <div key={key} className="flex items-start gap-2">
-                              <span className="text-[#64748B] min-w-0 truncate">{key}:</span>
-                              <span className="text-[#94A3B8] break-all">{String(value)}</span>
-                            </div>
-                          ))}
+                          {Object.entries(selectedTemplate.sampleData).map(
+                            ([key, value]) => (
+                              <div key={key} className="flex items-start gap-2">
+                                <span className="min-w-0 truncate text-[#64748B]">
+                                  {key}:
+                                </span>
+                                <span className="break-all text-[#94A3B8]">
+                                  {String(value)}
+                                </span>
+                              </div>
+                            ),
+                          )}
                         </div>
                       </div>
                     )}
@@ -1584,27 +1865,30 @@ www.cheapstreamtv.com`
           )}
 
           {/* Reset Template Confirmation Dialog */}
-          <AlertDialog open={showResetTemplateConfirm} onOpenChange={setShowResetTemplateConfirm}>
-            <AlertDialogContent className="bg-[#0F172A] border-[rgba(255,255,255,0.1)] text-white">
+          <AlertDialog
+            open={showResetTemplateConfirm}
+            onOpenChange={setShowResetTemplateConfirm}
+          >
+            <AlertDialogContent className="border-[rgba(255,255,255,0.1)] bg-[#0F172A] text-white">
               <AlertDialogHeader>
-                <div className="w-12 h-12 rounded-full bg-[#F59E0B]/20 flex items-center justify-center mb-2">
-                  <AlertTriangle className="w-6 h-6 text-[#F59E0B]" />
+                <div className="mb-2 flex h-12 w-12 items-center justify-center rounded-full bg-[#F59E0B]/20">
+                  <AlertTriangle className="h-6 w-6 text-[#F59E0B]" />
                 </div>
-                <AlertDialogTitle className="text-white text-xl">
+                <AlertDialogTitle className="text-xl text-white">
                   Reset to default?
                 </AlertDialogTitle>
-                <AlertDialogDescription className="text-[#94A3B8] text-sm leading-relaxed">
-                  This will replace your customized template with the original default
-                  version. All your changes will be lost.
+                <AlertDialogDescription className="text-sm leading-relaxed text-[#94A3B8]">
+                  This will replace your customized template with the original
+                  default version. All your changes will be lost.
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
-                <AlertDialogCancel className="bg-transparent border-[rgba(255,255,255,0.18)] text-white hover:bg-[rgba(255,255,255,0.08)] hover:text-white">
+                <AlertDialogCancel className="border-[rgba(255,255,255,0.18)] bg-transparent text-white hover:bg-[rgba(255,255,255,0.08)] hover:text-white">
                   Cancel
                 </AlertDialogCancel>
                 <AlertDialogAction
                   onClick={handleResetTemplate}
-                  className="bg-[#F59E0B] hover:bg-[#D97706] text-white"
+                  className="bg-[#F59E0B] text-white hover:bg-[#D97706]"
                 >
                   Reset Template
                 </AlertDialogAction>
@@ -1613,18 +1897,21 @@ www.cheapstreamtv.com`
           </AlertDialog>
 
           {/* Send Test Email Dialog */}
-          <AlertDialog open={showTestEmailDialog} onOpenChange={setShowTestEmailDialog}>
-            <AlertDialogContent className="bg-[#0F172A] border-[rgba(255,255,255,0.1)] text-white">
+          <AlertDialog
+            open={showTestEmailDialog}
+            onOpenChange={setShowTestEmailDialog}
+          >
+            <AlertDialogContent className="border-[rgba(255,255,255,0.1)] bg-[#0F172A] text-white">
               <AlertDialogHeader>
-                <div className="w-12 h-12 rounded-full bg-[#8B5CF6]/20 flex items-center justify-center mb-2">
-                  <Send className="w-6 h-6 text-[#8B5CF6]" />
+                <div className="mb-2 flex h-12 w-12 items-center justify-center rounded-full bg-[#8B5CF6]/20">
+                  <Send className="h-6 w-6 text-[#8B5CF6]" />
                 </div>
-                <AlertDialogTitle className="text-white text-xl">
+                <AlertDialogTitle className="text-xl text-white">
                   Send Test Email
                 </AlertDialogTitle>
-                <AlertDialogDescription className="text-[#94A3B8] text-sm leading-relaxed">
-                  Enter an email address to send a test version of this template with
-                  sample data.
+                <AlertDialogDescription className="text-sm leading-relaxed text-[#94A3B8]">
+                  Enter an email address to send a test version of this template
+                  with sample data.
                 </AlertDialogDescription>
               </AlertDialogHeader>
 
@@ -1634,22 +1921,22 @@ www.cheapstreamtv.com`
                   value={testEmailAddress}
                   onChange={(e) => setTestEmailAddress(e.target.value)}
                   placeholder="Enter email address..."
-                  className="w-full bg-[rgba(0,0,0,0.4)] border border-[rgba(255,255,255,0.18)] rounded-lg px-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#8B5CF6] placeholder:text-[#64748B]"
+                  className="w-full rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.4)] px-4 py-3 text-sm text-white placeholder:text-[#64748B] focus:ring-2 focus:ring-[#8B5CF6] focus:outline-none"
                 />
               </div>
 
               <AlertDialogFooter>
-                <AlertDialogCancel className="bg-transparent border-[rgba(255,255,255,0.18)] text-white hover:bg-[rgba(255,255,255,0.08)] hover:text-white">
+                <AlertDialogCancel className="border-[rgba(255,255,255,0.18)] bg-transparent text-white hover:bg-[rgba(255,255,255,0.08)] hover:text-white">
                   Cancel
                 </AlertDialogCancel>
                 <AlertDialogAction
                   onClick={handleSendTestTemplateEmail}
                   disabled={!testEmailAddress || isSendingTestEmail}
-                  className="bg-[#8B5CF6] hover:bg-[#7C3AED] text-white disabled:opacity-50"
+                  className="bg-[#8B5CF6] text-white hover:bg-[#7C3AED] disabled:opacity-50"
                 >
                   {isSendingTestEmail ? (
                     <>
-                      <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                       Sending...
                     </>
                   ) : (
@@ -1663,60 +1950,80 @@ www.cheapstreamtv.com`
       )}
 
       {/* Free Trial Management Tab */}
-      {activeTab === "trial" && (
+      {activeTab === 'trial' && (
         <div className="max-w-5xl">
-          <div className="p-8 rounded-xl bg-[rgba(15,23,42,0.6)] border border-[rgba(255,255,255,0.1)] backdrop-blur-xl mb-6">
-            <h2 className="text-white text-2xl font-semibold mb-2">Free Trial Management</h2>
-            <p className="text-[#94A3B8] text-sm">Manage your free trial content from admin panel</p>
+          <div className="mb-6 rounded-xl border border-[rgba(255,255,255,0.1)] bg-[rgba(15,23,42,0.6)] p-8 backdrop-blur-xl">
+            <h2 className="mb-2 text-2xl font-semibold text-white">
+              Free Trial Management
+            </h2>
+            <p className="text-sm text-[#94A3B8]">
+              Manage your free trial content from admin panel
+            </p>
           </div>
 
           <div className="space-y-6">
             {/* Main Title & Description */}
-            <div className="p-6 rounded-xl bg-[rgba(15,23,42,0.6)] border border-[rgba(255,255,255,0.1)] backdrop-blur-xl">
-              <h3 className="text-white text-base font-semibold mb-4">Main Title</h3>
+            <div className="rounded-xl border border-[rgba(255,255,255,0.1)] bg-[rgba(15,23,42,0.6)] p-6 backdrop-blur-xl">
+              <h3 className="mb-4 text-base font-semibold text-white">
+                Main Title
+              </h3>
               <input
                 type="text"
                 value={freeTrial.mainTitle}
-                onChange={(e) => setFreeTrial({ ...freeTrial, mainTitle: e.target.value })}
-                className="w-full bg-[rgba(0,0,0,0.4)] border border-[rgba(255,255,255,0.18)] rounded-lg px-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#3B82F6] mb-4"
+                onChange={(e) =>
+                  setFreeTrial({ ...freeTrial, mainTitle: e.target.value })
+                }
+                className="mb-4 w-full rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.4)] px-4 py-3 text-sm text-white focus:ring-2 focus:ring-[#3B82F6] focus:outline-none"
               />
 
-              <h3 className="text-white text-base font-semibold mb-4">Description</h3>
+              <h3 className="mb-4 text-base font-semibold text-white">
+                Description
+              </h3>
               <textarea
                 value={freeTrial.description}
-                onChange={(e) => setFreeTrial({ ...freeTrial, description: e.target.value })}
+                onChange={(e) =>
+                  setFreeTrial({ ...freeTrial, description: e.target.value })
+                }
                 rows={3}
-                className="w-full bg-[rgba(0,0,0,0.4)] border border-[rgba(255,255,255,0.18)] rounded-lg px-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#3B82F6] resize-none"
+                className="w-full resize-none rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.4)] px-4 py-3 text-sm text-white focus:ring-2 focus:ring-[#3B82F6] focus:outline-none"
               />
             </div>
 
             {/* Features Section */}
-            <div className="p-6 rounded-xl bg-[rgba(15,23,42,0.6)] border border-[rgba(255,255,255,0.1)] backdrop-blur-xl">
-              <h3 className="text-white text-base font-semibold mb-4">Features</h3>
+            <div className="rounded-xl border border-[rgba(255,255,255,0.1)] bg-[rgba(15,23,42,0.6)] p-6 backdrop-blur-xl">
+              <h3 className="mb-4 text-base font-semibold text-white">
+                Features
+              </h3>
 
               <div className="mb-4">
-                <label className="text-white text-sm font-medium mb-2 block">Section Title</label>
+                <label className="mb-2 block text-sm font-medium text-white">
+                  Section Title
+                </label>
                 <input
                   type="text"
                   value={freeTrial.sectionTitle}
-                  onChange={(e) => setFreeTrial({ ...freeTrial, sectionTitle: e.target.value })}
-                  className="w-full bg-[rgba(0,0,0,0.4)] border border-[rgba(255,255,255,0.18)] rounded-lg px-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#3B82F6]"
+                  onChange={(e) =>
+                    setFreeTrial({ ...freeTrial, sectionTitle: e.target.value })
+                  }
+                  className="w-full rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.4)] px-4 py-3 text-sm text-white focus:ring-2 focus:ring-[#3B82F6] focus:outline-none"
                 />
               </div>
 
-              <h4 className="text-white text-sm font-medium mb-3">Feature Items</h4>
-              <div className="space-y-2 mb-4">
+              <h4 className="mb-3 text-sm font-medium text-white">
+                Feature Items
+              </h4>
+              <div className="mb-4 space-y-2">
                 {freeTrial.items.map((item, index) => (
                   <div key={index} className="flex items-center gap-2">
                     <input
                       type="text"
                       value={item}
                       onChange={(e) => updateTrialItem(index, e.target.value)}
-                      className="flex-1 bg-[rgba(0,0,0,0.4)] border border-[rgba(255,255,255,0.18)] rounded-lg px-4 py-2.5 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#3B82F6]"
+                      className="flex-1 rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.4)] px-4 py-2.5 text-sm text-white focus:ring-2 focus:ring-[#3B82F6] focus:outline-none"
                     />
                     <button
                       onClick={() => removeTrialItem(index)}
-                      className="px-3 py-2.5 rounded-lg bg-[#EF4444] hover:bg-[#DC2626] text-white text-sm font-medium transition-colors"
+                      className="rounded-lg bg-[#EF4444] px-3 py-2.5 text-sm font-medium text-white transition-colors hover:bg-[#DC2626]"
                     >
                       Remove
                     </button>
@@ -1726,9 +2033,9 @@ www.cheapstreamtv.com`
 
               <button
                 onClick={addTrialItem}
-                className="px-4 py-2 rounded-lg bg-[#22C55E] hover:bg-[#16A34A] text-white text-sm font-medium transition-colors flex items-center gap-2"
+                className="flex items-center gap-2 rounded-lg bg-[#22C55E] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[#16A34A]"
               >
-                <Plus className="w-4 h-4" />
+                <Plus className="h-4 w-4" />
                 Add Item
               </button>
             </div>
@@ -1737,16 +2044,16 @@ www.cheapstreamtv.com`
             <div className="flex items-center justify-start gap-4">
               <button
                 onClick={handleRefresh}
-                className="px-6 py-3 rounded-lg bg-[rgba(255,255,255,0.08)] border border-[rgba(255,255,255,0.18)] text-white hover:bg-[rgba(255,255,255,0.12)] transition-colors text-sm font-medium"
+                className="rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(255,255,255,0.08)] px-6 py-3 text-sm font-medium text-white transition-colors hover:bg-[rgba(255,255,255,0.12)]"
               >
                 Refresh
               </button>
               <button
-                onClick={() => handleSave("Free trial content")}
+                onClick={() => handleSave('Free trial content')}
                 disabled={isLoading}
-                className="px-6 py-3 rounded-lg bg-[#3B82F6] hover:bg-[#2563EB] text-white transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                className="rounded-lg bg-[#3B82F6] px-6 py-3 text-sm font-medium text-white transition-colors hover:bg-[#2563EB] disabled:cursor-not-allowed disabled:opacity-50"
               >
-                {isLoading ? "Updating..." : "Update Content"}
+                {isLoading ? 'Updating...' : 'Update Content'}
               </button>
             </div>
           </div>
@@ -1754,22 +2061,29 @@ www.cheapstreamtv.com`
       )}
 
       {/* Logo Management Tab */}
-      {activeTab === "logo" && (
+      {activeTab === 'logo' && (
         <div className="max-w-5xl">
-          <div className="p-8 rounded-xl bg-[rgba(15,23,42,0.6)] border border-[rgba(255,255,255,0.1)] backdrop-blur-xl mb-6">
-            <h2 className="text-white text-2xl font-semibold mb-2">Logo Management</h2>
-            <p className="text-[#94A3B8] text-sm">Upload your site logo and favicon. Changes take effect immediately.</p>
+          <div className="mb-6 rounded-xl border border-[rgba(255,255,255,0.1)] bg-[rgba(15,23,42,0.6)] p-8 backdrop-blur-xl">
+            <h2 className="mb-2 text-2xl font-semibold text-white">
+              Logo Management
+            </h2>
+            <p className="text-sm text-[#94A3B8]">
+              Upload your site logo and favicon. Changes take effect
+              immediately.
+            </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+          <div className="mb-6 grid grid-cols-1 gap-6 md:grid-cols-2">
             {/* Main Logo */}
-            <div className="p-6 rounded-xl bg-[rgba(15,23,42,0.6)] border border-[rgba(255,255,255,0.1)] backdrop-blur-xl">
-              <h3 className="text-white text-base font-semibold mb-2">Main Logo</h3>
-              <p className="text-[#64748B] text-sm mb-4">
+            <div className="rounded-xl border border-[rgba(255,255,255,0.1)] bg-[rgba(15,23,42,0.6)] p-6 backdrop-blur-xl">
+              <h3 className="mb-2 text-base font-semibold text-white">
+                Main Logo
+              </h3>
+              <p className="mb-4 text-sm text-[#64748B]">
                 Used in the navbar and header (Recommended: 100x103px)
               </p>
 
-              <div className="relative w-full h-48 rounded-lg bg-white flex items-center justify-center mb-4 border-2 border-dashed border-[rgba(255,255,255,0.2)] overflow-hidden">
+              <div className="relative mb-4 flex h-48 w-full items-center justify-center overflow-hidden rounded-lg border-2 border-dashed border-[rgba(255,255,255,0.2)] bg-white">
                 {logoUrl ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
@@ -1779,18 +2093,20 @@ www.cheapstreamtv.com`
                   />
                 ) : (
                   <div className="text-center">
-                    <div className="w-16 h-16 mx-auto mb-2 flex items-center justify-center">
+                    <div className="mx-auto mb-2 flex h-16 w-16 items-center justify-center">
                       <span className="text-6xl">👑</span>
                     </div>
-                    <p className="text-[#3B82F6] font-semibold text-sm">No logo uploaded</p>
+                    <p className="text-sm font-semibold text-[#3B82F6]">
+                      No logo uploaded
+                    </p>
                   </div>
                 )}
                 {logoUrl && (
                   <button
                     onClick={() => setLogoUrl(null)}
-                    className="absolute top-2 right-2 w-8 h-8 rounded-full bg-[#EF4444] hover:bg-[#DC2626] flex items-center justify-center text-white transition-colors"
+                    className="absolute top-2 right-2 flex h-8 w-8 items-center justify-center rounded-full bg-[#EF4444] text-white transition-colors hover:bg-[#DC2626]"
                   >
-                    <X className="w-4 h-4" />
+                    <X className="h-4 w-4" />
                   </button>
                 )}
               </div>
@@ -1804,28 +2120,34 @@ www.cheapstreamtv.com`
               />
               <label
                 htmlFor="logo-upload"
-                className={`w-full px-4 py-3 rounded-lg text-white text-sm font-medium transition-colors flex items-center justify-center gap-2 cursor-pointer ${
+                className={`flex w-full cursor-pointer items-center justify-center gap-2 rounded-lg px-4 py-3 text-sm font-medium text-white transition-colors ${
                   isUploadingLogo
-                    ? 'bg-[#3B82F6]/60 cursor-not-allowed'
+                    ? 'cursor-not-allowed bg-[#3B82F6]/60'
                     : 'bg-[#3B82F6] hover:bg-[#2563EB]'
                 }`}
               >
                 {isUploadingLogo ? (
-                  <><Loader2 className="w-4 h-4 animate-spin" /> Uploading...</>
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" /> Uploading...
+                  </>
                 ) : (
-                  <><Upload className="w-4 h-4" /> Upload Main Logo</>
+                  <>
+                    <Upload className="h-4 w-4" /> Upload Main Logo
+                  </>
                 )}
               </label>
             </div>
 
             {/* Favicon */}
-            <div className="p-6 rounded-xl bg-[rgba(15,23,42,0.6)] border border-[rgba(255,255,255,0.1)] backdrop-blur-xl">
-              <h3 className="text-white text-base font-semibold mb-2">Favicon</h3>
-              <p className="text-[#64748B] text-sm mb-4">
+            <div className="rounded-xl border border-[rgba(255,255,255,0.1)] bg-[rgba(15,23,42,0.6)] p-6 backdrop-blur-xl">
+              <h3 className="mb-2 text-base font-semibold text-white">
+                Favicon
+              </h3>
+              <p className="mb-4 text-sm text-[#64748B]">
                 Browser tab icon (Recommended: 32x32px, ico or png)
               </p>
 
-              <div className="relative w-full h-48 rounded-lg bg-white flex items-center justify-center mb-4 border-2 border-dashed border-[rgba(255,255,255,0.2)] overflow-hidden">
+              <div className="relative mb-4 flex h-48 w-full items-center justify-center overflow-hidden rounded-lg border-2 border-dashed border-[rgba(255,255,255,0.2)] bg-white">
                 {faviconUrl ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
@@ -1835,16 +2157,18 @@ www.cheapstreamtv.com`
                   />
                 ) : (
                   <div className="text-center">
-                    <div className="text-6xl mb-2">👑</div>
-                    <p className="text-[#3B82F6] font-semibold text-sm">No favicon uploaded</p>
+                    <div className="mb-2 text-6xl">👑</div>
+                    <p className="text-sm font-semibold text-[#3B82F6]">
+                      No favicon uploaded
+                    </p>
                   </div>
                 )}
                 {faviconUrl && (
                   <button
                     onClick={() => setFaviconUrl(null)}
-                    className="absolute top-2 right-2 w-8 h-8 rounded-full bg-[#EF4444] hover:bg-[#DC2626] flex items-center justify-center text-white transition-colors"
+                    className="absolute top-2 right-2 flex h-8 w-8 items-center justify-center rounded-full bg-[#EF4444] text-white transition-colors hover:bg-[#DC2626]"
                   >
-                    <X className="w-4 h-4" />
+                    <X className="h-4 w-4" />
                   </button>
                 )}
               </div>
@@ -1858,29 +2182,39 @@ www.cheapstreamtv.com`
               />
               <label
                 htmlFor="favicon-upload"
-                className={`w-full px-4 py-3 rounded-lg text-white text-sm font-medium transition-colors flex items-center justify-center gap-2 cursor-pointer ${
+                className={`flex w-full cursor-pointer items-center justify-center gap-2 rounded-lg px-4 py-3 text-sm font-medium text-white transition-colors ${
                   isUploadingFavicon
-                    ? 'bg-[#3B82F6]/60 cursor-not-allowed'
+                    ? 'cursor-not-allowed bg-[#3B82F6]/60'
                     : 'bg-[#3B82F6] hover:bg-[#2563EB]'
                 }`}
               >
                 {isUploadingFavicon ? (
-                  <><Loader2 className="w-4 h-4 animate-spin" /> Uploading...</>
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" /> Uploading...
+                  </>
                 ) : (
-                  <><Upload className="w-4 h-4" /> Upload Favicon</>
+                  <>
+                    <Upload className="h-4 w-4" /> Upload Favicon
+                  </>
                 )}
               </label>
             </div>
           </div>
 
           {/* Important Notes */}
-          <div className="p-6 rounded-xl bg-[rgba(59,130,246,0.1)] border border-[rgba(59,130,246,0.3)]">
-            <h4 className="text-[#3B82F6] text-sm font-semibold mb-3">Important Notes:</h4>
-            <ul className="text-[#3B82F6] text-sm space-y-1.5 list-disc list-inside">
-              <li>Logos are stored in Cloudflare R2 under the branding/ folder</li>
+          <div className="rounded-xl border border-[rgba(59,130,246,0.3)] bg-[rgba(59,130,246,0.1)] p-6">
+            <h4 className="mb-3 text-sm font-semibold text-[#3B82F6]">
+              Important Notes:
+            </h4>
+            <ul className="list-inside list-disc space-y-1.5 text-sm text-[#3B82F6]">
+              <li>
+                Logos are stored in Cloudflare R2 under the branding/ folder
+              </li>
               <li>Supported formats: .JPG, .PNG, .WebP, .ICO</li>
               <li>Maximum file size: 5MB</li>
-              <li>Changes will reflect across the entire website immediately</li>
+              <li>
+                Changes will reflect across the entire website immediately
+              </li>
               <li>Use transparent backgrounds for better integration</li>
             </ul>
           </div>
@@ -1888,52 +2222,66 @@ www.cheapstreamtv.com`
       )}
 
       {/* Site Status Tab */}
-      {activeTab === "status" && (
+      {activeTab === 'status' && (
         <div className="max-w-5xl">
-          <div className="p-8 rounded-xl bg-[rgba(15,23,42,0.6)] border border-[rgba(255,255,255,0.1)] backdrop-blur-xl mb-6">
-            <h2 className="text-white text-2xl font-semibold mb-2">Site Status Management</h2>
+          <div className="mb-6 rounded-xl border border-[rgba(255,255,255,0.1)] bg-[rgba(15,23,42,0.6)] p-8 backdrop-blur-xl">
+            <h2 className="mb-2 text-2xl font-semibold text-white">
+              Site Status Management
+            </h2>
           </div>
 
           <div className="space-y-6">
             {/* Current Status */}
-            <div className="p-6 rounded-xl bg-[rgba(15,23,42,0.6)] border border-[rgba(255,255,255,0.1)] backdrop-blur-xl">
+            <div className="rounded-xl border border-[rgba(255,255,255,0.1)] bg-[rgba(15,23,42,0.6)] p-6 backdrop-blur-xl">
               <div className="flex items-center justify-between">
                 <div>
-                  <h3 className="text-white text-base font-semibold mb-2">Current Status</h3>
-                  <p className="text-[#64748B] text-sm">
-                    {siteStatus.isActive 
-                      ? "Your website is currently active and accessible to all users."
-                      : "Your website is under maintenance and not accessible to users."}
+                  <h3 className="mb-2 text-base font-semibold text-white">
+                    Current Status
+                  </h3>
+                  <p className="text-sm text-[#64748B]">
+                    {siteStatus.isActive
+                      ? 'Your website is currently active and accessible to all users.'
+                      : 'Your website is under maintenance and not accessible to users.'}
                   </p>
                 </div>
-                <span className={`px-4 py-2 rounded-full text-sm font-medium ${
-                  siteStatus.isActive 
-                    ? "bg-[#22C55E]/20 text-[#22C55E]" 
-                    : "bg-[#EF4444]/20 text-[#EF4444]"
-                }`}>
-                  {siteStatus.isActive ? "Active" : "Maintenance"}
+                <span
+                  className={`rounded-full px-4 py-2 text-sm font-medium ${
+                    siteStatus.isActive
+                      ? 'bg-[#22C55E]/20 text-[#22C55E]'
+                      : 'bg-[#EF4444]/20 text-[#EF4444]'
+                  }`}
+                >
+                  {siteStatus.isActive ? 'Active' : 'Maintenance'}
                 </span>
               </div>
             </div>
 
             {/* Toggle Site Status */}
-            <div className="p-6 rounded-xl bg-[rgba(15,23,42,0.6)] border border-[rgba(255,255,255,0.1)] backdrop-blur-xl">
-              <h3 className="text-white text-base font-semibold mb-4">Toggle Site Status</h3>
+            <div className="rounded-xl border border-[rgba(255,255,255,0.1)] bg-[rgba(15,23,42,0.6)] p-6 backdrop-blur-xl">
+              <h3 className="mb-4 text-base font-semibold text-white">
+                Toggle Site Status
+              </h3>
               <div className="flex items-start justify-between">
                 <div className="flex-1">
-                  <p className="text-white text-sm font-medium mb-1">Put site under maintenance</p>
-                  <p className="text-[#EF4444] text-sm">This will make your site inaccessible to users</p>
+                  <p className="mb-1 text-sm font-medium text-white">
+                    Put site under maintenance
+                  </p>
+                  <p className="text-sm text-[#EF4444]">
+                    This will make your site inaccessible to users
+                  </p>
                 </div>
                 <button
                   onClick={handleToggleMaintenance}
                   disabled={isLoading}
-                  className={`relative w-14 h-7 rounded-full transition-colors flex-shrink-0 ml-4 disabled:opacity-50 disabled:cursor-not-allowed ${
-                    !siteStatus.isActive ? "bg-[#EF4444]" : "bg-[rgba(255,255,255,0.18)]"
+                  className={`relative ml-4 h-7 w-14 flex-shrink-0 rounded-full transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
+                    !siteStatus.isActive
+                      ? 'bg-[#EF4444]'
+                      : 'bg-[rgba(255,255,255,0.18)]'
                   }`}
                 >
                   <div
-                    className={`absolute top-0.5 w-6 h-6 bg-white rounded-full transition-transform ${
-                      !siteStatus.isActive ? "translate-x-7" : "translate-x-0.5"
+                    className={`absolute top-0.5 h-6 w-6 rounded-full bg-white transition-transform ${
+                      !siteStatus.isActive ? 'translate-x-7' : 'translate-x-0.5'
                     }`}
                   />
                 </button>
@@ -1941,51 +2289,61 @@ www.cheapstreamtv.com`
             </div>
 
             {/* Maintenance Message */}
-            <div className="p-6 rounded-xl bg-[rgba(15,23,42,0.6)] border border-[rgba(255,255,255,0.1)] backdrop-blur-xl">
-              <h3 className="text-white text-base font-semibold mb-4">Maintenance Message</h3>
-              <label className="text-white text-sm font-medium mb-2 block">
+            <div className="rounded-xl border border-[rgba(255,255,255,0.1)] bg-[rgba(15,23,42,0.6)] p-6 backdrop-blur-xl">
+              <h3 className="mb-4 text-base font-semibold text-white">
+                Maintenance Message
+              </h3>
+              <label className="mb-2 block text-sm font-medium text-white">
                 Message to display during maintenance
               </label>
               <textarea
                 value={siteStatus.maintenanceMessage}
-                onChange={(e) => setSiteStatus({ ...siteStatus, maintenanceMessage: e.target.value })}
+                onChange={(e) =>
+                  setSiteStatus({
+                    ...siteStatus,
+                    maintenanceMessage: e.target.value,
+                  })
+                }
                 rows={3}
-                className="w-full bg-[rgba(0,0,0,0.4)] border border-[rgba(255,255,255,0.18)] rounded-lg px-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#3B82F6] resize-none"
+                className="w-full resize-none rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.4)] px-4 py-3 text-sm text-white focus:ring-2 focus:ring-[#3B82F6] focus:outline-none"
               />
 
               <button
                 onClick={handleUpdateMaintenanceMessage}
                 disabled={isLoading}
-                className="mt-4 px-6 py-3 rounded-lg bg-[#3B82F6] hover:bg-[#2563EB] text-white transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                className="mt-4 rounded-lg bg-[#3B82F6] px-6 py-3 text-sm font-medium text-white transition-colors hover:bg-[#2563EB] disabled:cursor-not-allowed disabled:opacity-50"
               >
-                {isLoading ? "Updating..." : "Update Message"}
+                {isLoading ? 'Updating...' : 'Update Message'}
               </button>
             </div>
           </div>
 
           {/* Confirmation dialog before enabling maintenance */}
-          <AlertDialog open={showMaintenanceConfirm} onOpenChange={setShowMaintenanceConfirm}>
-            <AlertDialogContent className="bg-[#0F172A] border-[rgba(255,255,255,0.1)] text-white">
+          <AlertDialog
+            open={showMaintenanceConfirm}
+            onOpenChange={setShowMaintenanceConfirm}
+          >
+            <AlertDialogContent className="border-[rgba(255,255,255,0.1)] bg-[#0F172A] text-white">
               <AlertDialogHeader>
-                <div className="w-12 h-12 rounded-full bg-[#EF4444]/20 flex items-center justify-center mb-2">
-                  <AlertTriangle className="w-6 h-6 text-[#EF4444]" />
+                <div className="mb-2 flex h-12 w-12 items-center justify-center rounded-full bg-[#EF4444]/20">
+                  <AlertTriangle className="h-6 w-6 text-[#EF4444]" />
                 </div>
-                <AlertDialogTitle className="text-white text-xl">
+                <AlertDialogTitle className="text-xl text-white">
                   Enable maintenance mode?
                 </AlertDialogTitle>
-                <AlertDialogDescription className="text-[#94A3B8] text-sm leading-relaxed">
-                  This will make your site inaccessible to all users. Only admins will be
-                  able to sign in and reach the admin panel. You can turn it off again any
-                  time from this screen.
+                <AlertDialogDescription className="text-sm leading-relaxed text-[#94A3B8]">
+                  This will make your site inaccessible to all users. Only
+                  admins will be able to sign in and reach the admin panel. You
+                  can turn it off again any time from this screen.
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
-                <AlertDialogCancel className="bg-transparent border-[rgba(255,255,255,0.18)] text-white hover:bg-[rgba(255,255,255,0.08)] hover:text-white">
+                <AlertDialogCancel className="border-[rgba(255,255,255,0.18)] bg-transparent text-white hover:bg-[rgba(255,255,255,0.08)] hover:text-white">
                   Cancel
                 </AlertDialogCancel>
                 <AlertDialogAction
                   onClick={confirmEnableMaintenance}
-                  className="bg-[#EF4444] hover:bg-[#DC2626] text-white"
+                  className="bg-[#EF4444] text-white hover:bg-[#DC2626]"
                 >
                   Enable Maintenance
                 </AlertDialogAction>
@@ -1995,239 +2353,88 @@ www.cheapstreamtv.com`
         </div>
       )}
 
-      {/* Page Edit Tab */}
-      {activeTab === "page" && (
-        <div className="max-w-5xl">
-          <div className="p-8 rounded-xl bg-[rgba(15,23,42,0.6)] border border-[rgba(255,255,255,0.1)] backdrop-blur-xl mb-6">
-            <h2 className="text-white text-2xl font-semibold mb-2">Page Edit</h2>
-            <p className="text-[#94A3B8] text-sm">
-              Manage single-page front-end page: banner content, meta (SEO), and page-specific content.
-            </p>
-          </div>
-
-          <div className="p-8 rounded-xl bg-[rgba(15,23,42,0.6)] border border-[rgba(255,255,255,0.1)] backdrop-blur-xl mb-6">
-            <h3 className="text-white text-base font-semibold mb-4">Editing: Name</h3>
-            <div className="flex flex-wrap gap-2">
-              {pageButtons.map((page) => (
-                <button
-                  key={page.id}
-                  onClick={() => setActivePage(page.id)}
-                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                    activePage === page.id
-                      ? "bg-[#3B82F6] text-white"
-                      : "bg-[rgba(255,255,255,0.08)] text-white hover:bg-[rgba(255,255,255,0.12)]"
-                  }`}
-                >
-                  {page.label}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div className="p-8 rounded-xl bg-[rgba(15,23,42,0.6)] border border-[rgba(255,255,255,0.1)] backdrop-blur-xl mb-6">
-            <h3 className="text-white text-lg font-semibold mb-6">Banner</h3>
-
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
-              <div>
-                <label className="text-white text-sm font-medium mb-2 block">Heading Text 1 (Normal)</label>
-                <input
-                  type="text"
-                  value={pageContent.headingPart1}
-                  onChange={(e) => setPageContent({ ...pageContent, headingPart1: e.target.value })}
-                  className="w-full bg-[rgba(0,0,0,0.4)] border border-[rgba(255,255,255,0.18)] rounded-lg px-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#3B82F6]"
-                />
-              </div>
-
-              <div>
-                <label className="text-white text-sm font-medium mb-2 block">
-                  Heading Part 2 <span className="text-[#F59E0B]">(Highlighted)</span>
-                </label>
-                <input
-                  type="text"
-                  value={pageContent.headingPart2}
-                  onChange={(e) => setPageContent({ ...pageContent, headingPart2: e.target.value })}
-                  className="w-full bg-[rgba(0,0,0,0.4)] border border-[rgba(255,255,255,0.18)] rounded-lg px-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#3B82F6]"
-                />
-              </div>
-            </div>
-
-            <div className="mb-4">
-              <label className="text-white text-sm font-medium mb-2 block">Description</label>
-              <textarea
-                value={pageContent.description}
-                onChange={(e) => setPageContent({ ...pageContent, description: e.target.value })}
-                rows={4}
-                className="w-full bg-[rgba(0,0,0,0.4)] border border-[rgba(255,255,255,0.18)] rounded-lg px-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#3B82F6] resize-none"
-              />
-            </div>
-
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-              <div>
-                <label className="text-white text-sm font-medium mb-2 block">Input Placeholder</label>
-                <input
-                  type="text"
-                  value={pageContent.inputPlaceholder}
-                  onChange={(e) => setPageContent({ ...pageContent, inputPlaceholder: e.target.value })}
-                  className="w-full bg-[rgba(0,0,0,0.4)] border border-[rgba(255,255,255,0.18)] rounded-lg px-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#3B82F6]"
-                />
-              </div>
-
-              <div>
-                <label className="text-white text-sm font-medium mb-2 block">Button Text</label>
-                <input
-                  type="text"
-                  value={pageContent.buttonText}
-                  onChange={(e) => setPageContent({ ...pageContent, buttonText: e.target.value })}
-                  className="w-full bg-[rgba(0,0,0,0.4)] border border-[rgba(255,255,255,0.18)] rounded-lg px-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#3B82F6]"
-                />
-              </div>
-            </div>
-          </div>
-
-          <div className="p-8 rounded-xl bg-[rgba(15,23,42,0.6)] border border-[rgba(255,255,255,0.1)] backdrop-blur-xl mb-6">
-            <h3 className="text-white text-lg font-semibold mb-6">Meta (SEO)</h3>
-
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
-              <div>
-                <label className="text-white text-sm font-medium mb-2 block">Page Title</label>
-                <input
-                  type="text"
-                  value={pageContent.pageTitle}
-                  onChange={(e) => setPageContent({ ...pageContent, pageTitle: e.target.value })}
-                  className="w-full bg-[rgba(0,0,0,0.4)] border border-[rgba(255,255,255,0.18)] rounded-lg px-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#3B82F6]"
-                />
-              </div>
-
-              <div>
-                <label className="text-white text-sm font-medium mb-2 block">Meta Description</label>
-                <input
-                  type="text"
-                  value={pageContent.metaDescription}
-                  onChange={(e) => setPageContent({ ...pageContent, metaDescription: e.target.value })}
-                  className="w-full bg-[rgba(0,0,0,0.4)] border border-[rgba(255,255,255,0.18)] rounded-lg px-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#3B82F6]"
-                />
-              </div>
-            </div>
-
-            <div className="mb-4">
-              <label className="text-white text-sm font-medium mb-2 block">Keywords</label>
-              <input
-                type="text"
-                value={pageContent.keywords}
-                onChange={(e) => setPageContent({ ...pageContent, keywords: e.target.value })}
-                className="w-full bg-[rgba(0,0,0,0.4)] border border-[rgba(255,255,255,0.18)] rounded-lg px-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#3B82F6]"
-              />
-            </div>
-
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-              <div>
-                <label className="text-white text-sm font-medium mb-2 block">Open Graph Title</label>
-                <input
-                  type="text"
-                  value={pageContent.ogTitle}
-                  onChange={(e) => setPageContent({ ...pageContent, ogTitle: e.target.value })}
-                  className="w-full bg-[rgba(0,0,0,0.4)] border border-[rgba(255,255,255,0.18)] rounded-lg px-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#3B82F6]"
-                />
-              </div>
-
-              <div>
-                <label className="text-white text-sm font-medium mb-2 block">Open Graph Description</label>
-                <input
-                  type="text"
-                  value={pageContent.ogDescription}
-                  onChange={(e) => setPageContent({ ...pageContent, ogDescription: e.target.value })}
-                  className="w-full bg-[rgba(0,0,0,0.4)] border border-[rgba(255,255,255,0.18)] rounded-lg px-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#3B82F6]"
-                />
-              </div>
-            </div>
-          </div>
-
-          <div className="flex items-center justify-start gap-4">
-            <button
-              onClick={handleRefresh}
-              className="px-6 py-3 rounded-lg bg-[rgba(255,255,255,0.08)] border border-[rgba(255,255,255,0.18)] text-white hover:bg-[rgba(255,255,255,0.12)] transition-colors text-sm font-medium"
-            >
-              Refresh
-            </button>
-            <button
-              onClick={() => handleSave("Page content")}
-              disabled={isLoading}
-              className="px-6 py-3 rounded-lg bg-[#3B82F6] hover:bg-[#2563EB] text-white transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {isLoading ? "Saving..." : "Save"}
-            </button>
-          </div>
-        </div>
-      )}
+      {/* Page Edit Tab — config-driven editor for every public page */}
+      {activeTab === 'page' && <PageEditor />}
 
       {/* Language Management Tab */}
-      {activeTab === "language" && (
+      {activeTab === 'language' && (
         <div className="max-w-5xl">
-          <div className="p-8 rounded-xl bg-[rgba(15,23,42,0.6)] border border-[rgba(255,255,255,0.1)] backdrop-blur-xl mb-6">
-            <h2 className="text-white text-2xl font-semibold mb-2">Language Management</h2>
-            <p className="text-[#94A3B8] text-sm">
-              Manage available languages for your website. Users will only see active languages in the language
-              selector.
+          <div className="mb-6 rounded-xl border border-[rgba(255,255,255,0.1)] bg-[rgba(15,23,42,0.6)] p-8 backdrop-blur-xl">
+            <h2 className="mb-2 text-2xl font-semibold text-white">
+              Language Management
+            </h2>
+            <p className="text-sm text-[#94A3B8]">
+              Manage available languages for your website. Users will only see
+              active languages in the language selector.
             </p>
           </div>
 
           {isLanguagesLoading ? (
             <div className="flex items-center justify-center py-20">
-              <Loader2 className="w-8 h-8 text-[#3B82F6] animate-spin" />
+              <Loader2 className="h-8 w-8 animate-spin text-[#3B82F6]" />
             </div>
           ) : (
             <>
               {/* Active Languages */}
-              <div className="p-8 rounded-xl bg-[rgba(15,23,42,0.6)] border border-[rgba(255,255,255,0.1)] backdrop-blur-xl mb-6">
-                <h3 className="text-white text-lg font-semibold mb-6">
-                  Active Languages ({languages.filter((l) => l.isActive).length})
+              <div className="mb-6 rounded-xl border border-[rgba(255,255,255,0.1)] bg-[rgba(15,23,42,0.6)] p-8 backdrop-blur-xl">
+                <h3 className="mb-6 text-lg font-semibold text-white">
+                  Active Languages ({languages.filter((l) => l.isActive).length}
+                  )
                 </h3>
 
                 {languages.filter((l) => l.isActive).length === 0 ? (
-                  <p className="text-[#64748B] text-sm">No active languages yet.</p>
+                  <p className="text-sm text-[#64748B]">
+                    No active languages yet.
+                  </p>
                 ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
                     {languages
                       .filter((l) => l.isActive)
                       .map((lang) => (
                         <div
                           key={lang.id}
-                          className="p-4 rounded-xl bg-[rgba(0,0,0,0.3)] border border-[rgba(255,255,255,0.1)]"
+                          className="rounded-xl border border-[rgba(255,255,255,0.1)] bg-[rgba(0,0,0,0.3)] p-4"
                         >
                           <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-lg bg-[rgba(59,130,246,0.15)] flex items-center justify-center flex-shrink-0 text-white text-sm font-bold">
+                            <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-[rgba(59,130,246,0.15)] text-sm font-bold text-white">
                               {lang.code}
                             </div>
-                            <div className="flex-1 min-w-0">
-                              <h4 className="text-white text-sm font-semibold truncate">
+                            <div className="min-w-0 flex-1">
+                              <h4 className="truncate text-sm font-semibold text-white">
                                 {lang.name}
                               </h4>
-                              <p className="text-[#64748B] text-xs">{lang.langCode}</p>
+                              <p className="text-xs text-[#64748B]">
+                                {lang.langCode}
+                              </p>
                             </div>
-                            <div className="flex items-center gap-3 flex-shrink-0">
+                            <div className="flex flex-shrink-0 items-center gap-3">
                               <button
                                 type="button"
-                                onClick={() => handleSetDefaultLanguage(lang.id)}
-                                className="flex items-center gap-1.5 text-white text-xs"
+                                onClick={() =>
+                                  handleSetDefaultLanguage(lang.id)
+                                }
+                                className="flex items-center gap-1.5 text-xs text-white"
                                 title="Set as default"
                               >
                                 <span
-                                  className={`w-4 h-4 rounded-full border-2 flex items-center justify-center transition-colors ${
+                                  className={`flex h-4 w-4 items-center justify-center rounded-full border-2 transition-colors ${
                                     lang.isDefault
                                       ? 'border-[#3B82F6] bg-[#3B82F6]'
                                       : 'border-[rgba(255,255,255,0.3)]'
                                   }`}
                                 >
                                   {lang.isDefault && (
-                                    <span className="w-1.5 h-1.5 rounded-full bg-white" />
+                                    <span className="h-1.5 w-1.5 rounded-full bg-white" />
                                   )}
                                 </span>
                                 Default
                               </button>
                               <button
-                                onClick={() => handleToggleLanguage(lang.id, false)}
+                                onClick={() =>
+                                  handleToggleLanguage(lang.id, false)
+                                }
                                 disabled={lang.isDefault}
-                                className="text-[#EF4444] hover:text-[#DC2626] text-xs font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                                className="text-xs font-medium text-[#EF4444] transition-colors hover:text-[#DC2626] disabled:cursor-not-allowed disabled:opacity-40"
                               >
                                 Deactivate
                               </button>
@@ -2240,35 +2447,42 @@ www.cheapstreamtv.com`
               </div>
 
               {/* Inactive Languages */}
-              <div className="p-8 rounded-xl bg-[rgba(15,23,42,0.6)] border border-[rgba(255,255,255,0.1)] backdrop-blur-xl mb-6">
-                <h3 className="text-white text-lg font-semibold mb-6">
-                  Inactive Languages ({languages.filter((l) => !l.isActive).length})
+              <div className="mb-6 rounded-xl border border-[rgba(255,255,255,0.1)] bg-[rgba(15,23,42,0.6)] p-8 backdrop-blur-xl">
+                <h3 className="mb-6 text-lg font-semibold text-white">
+                  Inactive Languages (
+                  {languages.filter((l) => !l.isActive).length})
                 </h3>
 
                 {languages.filter((l) => !l.isActive).length === 0 ? (
-                  <p className="text-[#64748B] text-sm">No inactive languages.</p>
+                  <p className="text-sm text-[#64748B]">
+                    No inactive languages.
+                  </p>
                 ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
                     {languages
                       .filter((l) => !l.isActive)
                       .map((lang) => (
                         <div
                           key={lang.id}
-                          className="p-4 rounded-xl bg-[rgba(0,0,0,0.3)] border border-[rgba(255,255,255,0.1)] opacity-75"
+                          className="rounded-xl border border-[rgba(255,255,255,0.1)] bg-[rgba(0,0,0,0.3)] p-4 opacity-75"
                         >
                           <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-lg bg-[rgba(148,163,184,0.15)] flex items-center justify-center flex-shrink-0 text-[#94A3B8] text-sm font-bold">
+                            <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-[rgba(148,163,184,0.15)] text-sm font-bold text-[#94A3B8]">
                               {lang.code}
                             </div>
-                            <div className="flex-1 min-w-0">
-                              <h4 className="text-white text-sm font-semibold truncate">
+                            <div className="min-w-0 flex-1">
+                              <h4 className="truncate text-sm font-semibold text-white">
                                 {lang.name}
                               </h4>
-                              <p className="text-[#64748B] text-xs">{lang.langCode}</p>
+                              <p className="text-xs text-[#64748B]">
+                                {lang.langCode}
+                              </p>
                             </div>
                             <button
-                              onClick={() => handleToggleLanguage(lang.id, true)}
-                              className="text-[#22C55E] hover:text-[#16A34A] text-xs font-medium transition-colors"
+                              onClick={() =>
+                                handleToggleLanguage(lang.id, true)
+                              }
+                              className="text-xs font-medium text-[#22C55E] transition-colors hover:text-[#16A34A]"
                             >
                               Activate
                             </button>
@@ -2280,16 +2494,19 @@ www.cheapstreamtv.com`
               </div>
 
               {/* Important Notes */}
-              <div className="p-6 rounded-xl bg-[rgba(59,130,246,0.1)] border border-[rgba(59,130,246,0.3)]">
-                <h4 className="text-[#3B82F6] text-sm font-semibold mb-3 flex items-center gap-2">
-                  <Info className="w-4 h-4" />
+              <div className="rounded-xl border border-[rgba(59,130,246,0.3)] bg-[rgba(59,130,246,0.1)] p-6">
+                <h4 className="mb-3 flex items-center gap-2 text-sm font-semibold text-[#3B82F6]">
+                  <Info className="h-4 w-4" />
                   Important Notes
                 </h4>
-                <ul className="text-[#3B82F6] text-sm space-y-1.5 list-disc list-inside">
+                <ul className="list-inside list-disc space-y-1.5 text-sm text-[#3B82F6]">
                   <li>At least one language must be active</li>
                   <li>The default language must be active</li>
                   <li>Changes will be reflected immediately on the website</li>
-                  <li>Users will only see active languages in the language selector</li>
+                  <li>
+                    Users will only see active languages in the language
+                    selector
+                  </li>
                 </ul>
               </div>
             </>
@@ -2298,61 +2515,78 @@ www.cheapstreamtv.com`
       )}
 
       {/* Addons Management Tab */}
-      {activeTab === "addons" && (
+      {activeTab === 'addons' && (
         <div className="max-w-5xl">
-          <div className="p-8 rounded-xl bg-[rgba(15,23,42,0.6)] border border-[rgba(255,255,255,0.1)] backdrop-blur-xl mb-6">
-            <h2 className="text-white text-2xl font-semibold mb-2">Addons Management</h2>
-            <p className="text-[#94A3B8] text-sm">
-              Enable or disable various third-party services and integrations for your website. Configure API keys for
-              enabled services.
+          <div className="mb-6 rounded-xl border border-[rgba(255,255,255,0.1)] bg-[rgba(15,23,42,0.6)] p-8 backdrop-blur-xl">
+            <h2 className="mb-2 text-2xl font-semibold text-white">
+              Addons Management
+            </h2>
+            <p className="text-sm text-[#94A3B8]">
+              Enable or disable various third-party services and integrations
+              for your website. Configure API keys for enabled services.
             </p>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+          <div className="mb-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
             {/* Google reCAPTCHA */}
-            <div className="p-6 rounded-xl bg-[rgba(15,23,42,0.6)] border border-[rgba(255,255,255,0.1)] backdrop-blur-xl">
-              <div className="flex items-start justify-between mb-4">
+            <div className="rounded-xl border border-[rgba(255,255,255,0.1)] bg-[rgba(15,23,42,0.6)] p-6 backdrop-blur-xl">
+              <div className="mb-4 flex items-start justify-between">
                 <div className="flex items-start gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-[#3B82F6]/20 flex items-center justify-center flex-shrink-0">
-                    <Shield className="w-5 h-5 text-[#3B82F6]" />
+                  <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-[#3B82F6]/20">
+                    <Shield className="h-5 w-5 text-[#3B82F6]" />
                   </div>
                   <div>
-                    <h3 className="text-white text-base font-semibold mb-1">Google reCAPTCHA</h3>
-                    <p className="text-[#64748B] text-sm">Protect login and registration forms from bots</p>
+                    <h3 className="mb-1 text-base font-semibold text-white">
+                      Google reCAPTCHA
+                    </h3>
+                    <p className="text-sm text-[#64748B]">
+                      Protect login and registration forms from bots
+                    </p>
                   </div>
                 </div>
                 <button
-                  onClick={() => toggleAddon("recaptcha")}
-                  className={`relative w-12 h-6 rounded-full transition-colors flex-shrink-0 ${
-                    addons.recaptcha.enabled ? "bg-[#3B82F6]" : "bg-[rgba(255,255,255,0.18)]"
+                  onClick={() => toggleAddon('recaptcha')}
+                  className={`relative h-6 w-12 flex-shrink-0 rounded-full transition-colors ${
+                    addons.recaptcha.enabled
+                      ? 'bg-[#3B82F6]'
+                      : 'bg-[rgba(255,255,255,0.18)]'
                   }`}
                 >
                   <div
-                    className={`absolute top-0.5 w-5 h-5 bg-white rounded-full transition-transform ${
-                      addons.recaptcha.enabled ? "translate-x-6" : "translate-x-0.5"
+                    className={`absolute top-0.5 h-5 w-5 rounded-full bg-white transition-transform ${
+                      addons.recaptcha.enabled
+                        ? 'translate-x-6'
+                        : 'translate-x-0.5'
                     }`}
                   />
                 </button>
               </div>
 
               {addons.recaptcha.enabled && (
-                <div className="space-y-3 pt-4 border-t border-[rgba(255,255,255,0.1)]">
+                <div className="space-y-3 border-t border-[rgba(255,255,255,0.1)] pt-4">
                   <div>
-                    <label className="text-white text-xs font-medium mb-2 block">Site Key</label>
+                    <label className="mb-2 block text-xs font-medium text-white">
+                      Site Key
+                    </label>
                     <input
                       type="text"
                       value={addons.recaptcha.siteKey}
                       onChange={(e) =>
                         setAddons({
                           ...addons,
-                          recaptcha: { ...addons.recaptcha, siteKey: e.target.value },
+                          recaptcha: {
+                            ...addons.recaptcha,
+                            siteKey: e.target.value,
+                          },
                         })
                       }
-                      className="w-full bg-[rgba(0,0,0,0.4)] border border-[rgba(255,255,255,0.18)] rounded-lg px-3 py-2 text-white text-xs focus:outline-none focus:ring-2 focus:ring-[#3B82F6]"
+                      className="w-full rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.4)] px-3 py-2 text-xs text-white focus:ring-2 focus:ring-[#3B82F6] focus:outline-none"
                     />
                   </div>
                   <div>
-                    <label className="text-white text-xs font-medium mb-2 block">Secret Key</label>
+                    <label className="mb-2 block text-xs font-medium text-white">
+                      Secret Key
+                    </label>
                     <input
                       type="text"
                       value={addons.recaptcha.secretKey}
@@ -2365,7 +2599,7 @@ www.cheapstreamtv.com`
                           },
                         })
                       }
-                      className="w-full bg-[rgba(0,0,0,0.4)] border border-[rgba(255,255,255,0.18)] rounded-lg px-3 py-2 text-white text-xs focus:outline-none focus:ring-2 focus:ring-[#3B82F6]"
+                      className="w-full rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.4)] px-3 py-2 text-xs text-white focus:ring-2 focus:ring-[#3B82F6] focus:outline-none"
                     />
                   </div>
                 </div>
@@ -2373,26 +2607,34 @@ www.cheapstreamtv.com`
             </div>
 
             {/* Trust Pilot */}
-            <div className="p-6 rounded-xl bg-[rgba(15,23,42,0.6)] border border-[rgba(255,255,255,0.1)] backdrop-blur-xl">
+            <div className="rounded-xl border border-[rgba(255,255,255,0.1)] bg-[rgba(15,23,42,0.6)] p-6 backdrop-blur-xl">
               <div className="flex items-start justify-between">
                 <div className="flex items-start gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-[#22C55E]/20 flex items-center justify-center flex-shrink-0">
-                    <Star className="w-5 h-5 text-[#22C55E]" />
+                  <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-[#22C55E]/20">
+                    <Star className="h-5 w-5 text-[#22C55E]" />
                   </div>
                   <div>
-                    <h3 className="text-white text-base font-semibold mb-1">Trust Pilot</h3>
-                    <p className="text-[#64748B] text-sm">Display customer reviews and ratings</p>
+                    <h3 className="mb-1 text-base font-semibold text-white">
+                      Trust Pilot
+                    </h3>
+                    <p className="text-sm text-[#64748B]">
+                      Display customer reviews and ratings
+                    </p>
                   </div>
                 </div>
                 <button
-                  onClick={() => toggleAddon("trustpilot")}
-                  className={`relative w-12 h-6 rounded-full transition-colors flex-shrink-0 ${
-                    addons.trustpilot.enabled ? "bg-[#3B82F6]" : "bg-[rgba(255,255,255,0.18)]"
+                  onClick={() => toggleAddon('trustpilot')}
+                  className={`relative h-6 w-12 flex-shrink-0 rounded-full transition-colors ${
+                    addons.trustpilot.enabled
+                      ? 'bg-[#3B82F6]'
+                      : 'bg-[rgba(255,255,255,0.18)]'
                   }`}
                 >
                   <div
-                    className={`absolute top-0.5 w-5 h-5 bg-white rounded-full transition-transform ${
-                      addons.trustpilot.enabled ? "translate-x-6" : "translate-x-0.5"
+                    className={`absolute top-0.5 h-5 w-5 rounded-full bg-white transition-transform ${
+                      addons.trustpilot.enabled
+                        ? 'translate-x-6'
+                        : 'translate-x-0.5'
                     }`}
                   />
                 </button>
@@ -2400,34 +2642,44 @@ www.cheapstreamtv.com`
             </div>
 
             {/* Google Analytics */}
-            <div className="p-6 rounded-xl bg-[rgba(15,23,42,0.6)] border border-[rgba(255,255,255,0.1)] backdrop-blur-xl">
-              <div className="flex items-start justify-between mb-4">
+            <div className="rounded-xl border border-[rgba(255,255,255,0.1)] bg-[rgba(15,23,42,0.6)] p-6 backdrop-blur-xl">
+              <div className="mb-4 flex items-start justify-between">
                 <div className="flex items-start gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-[#F59E0B]/20 flex items-center justify-center flex-shrink-0">
-                    <BarChart3 className="w-5 h-5 text-[#F59E0B]" />
+                  <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-[#F59E0B]/20">
+                    <BarChart3 className="h-5 w-5 text-[#F59E0B]" />
                   </div>
                   <div>
-                    <h3 className="text-white text-base font-semibold mb-1">Google Analytics</h3>
-                    <p className="text-[#64748B] text-sm">Track website traffic and user behavior</p>
+                    <h3 className="mb-1 text-base font-semibold text-white">
+                      Google Analytics
+                    </h3>
+                    <p className="text-sm text-[#64748B]">
+                      Track website traffic and user behavior
+                    </p>
                   </div>
                 </div>
                 <button
-                  onClick={() => toggleAddon("googleAnalytics")}
-                  className={`relative w-12 h-6 rounded-full transition-colors flex-shrink-0 ${
-                    addons.googleAnalytics.enabled ? "bg-[#3B82F6]" : "bg-[rgba(255,255,255,0.18)]"
+                  onClick={() => toggleAddon('googleAnalytics')}
+                  className={`relative h-6 w-12 flex-shrink-0 rounded-full transition-colors ${
+                    addons.googleAnalytics.enabled
+                      ? 'bg-[#3B82F6]'
+                      : 'bg-[rgba(255,255,255,0.18)]'
                   }`}
                 >
                   <div
-                    className={`absolute top-0.5 w-5 h-5 bg-white rounded-full transition-transform ${
-                      addons.googleAnalytics.enabled ? "translate-x-6" : "translate-x-0.5"
+                    className={`absolute top-0.5 h-5 w-5 rounded-full bg-white transition-transform ${
+                      addons.googleAnalytics.enabled
+                        ? 'translate-x-6'
+                        : 'translate-x-0.5'
                     }`}
                   />
                 </button>
               </div>
 
               {addons.googleAnalytics.enabled && (
-                <div className="pt-4 border-t border-[rgba(255,255,255,0.1)]">
-                  <label className="text-white text-xs font-medium mb-2 block">Measurement ID</label>
+                <div className="border-t border-[rgba(255,255,255,0.1)] pt-4">
+                  <label className="mb-2 block text-xs font-medium text-white">
+                    Measurement ID
+                  </label>
                   <input
                     type="text"
                     value={addons.googleAnalytics.measurementId}
@@ -2440,33 +2692,41 @@ www.cheapstreamtv.com`
                         },
                       })
                     }
-                    className="w-full bg-[rgba(0,0,0,0.4)] border border-[rgba(255,255,255,0.18)] rounded-lg px-3 py-2 text-white text-xs focus:outline-none focus:ring-2 focus:ring-[#3B82F6]"
+                    className="w-full rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.4)] px-3 py-2 text-xs text-white focus:ring-2 focus:ring-[#3B82F6] focus:outline-none"
                   />
                 </div>
               )}
             </div>
 
             {/* Microsoft Clarity */}
-            <div className="p-6 rounded-xl bg-[rgba(15,23,42,0.6)] border border-[rgba(255,255,255,0.1)] backdrop-blur-xl">
+            <div className="rounded-xl border border-[rgba(255,255,255,0.1)] bg-[rgba(15,23,42,0.6)] p-6 backdrop-blur-xl">
               <div className="flex items-start justify-between">
                 <div className="flex items-start gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-[#8B5CF6]/20 flex items-center justify-center flex-shrink-0">
-                    <Eye className="w-5 h-5 text-[#8B5CF6]" />
+                  <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-[#8B5CF6]/20">
+                    <Eye className="h-5 w-5 text-[#8B5CF6]" />
                   </div>
                   <div>
-                    <h3 className="text-white text-base font-semibold mb-1">Microsoft Clarity</h3>
-                    <p className="text-[#64748B] text-sm">Heatmaps and user session recordings</p>
+                    <h3 className="mb-1 text-base font-semibold text-white">
+                      Microsoft Clarity
+                    </h3>
+                    <p className="text-sm text-[#64748B]">
+                      Heatmaps and user session recordings
+                    </p>
                   </div>
                 </div>
                 <button
-                  onClick={() => toggleAddon("microsoftClarity")}
-                  className={`relative w-12 h-6 rounded-full transition-colors flex-shrink-0 ${
-                    addons.microsoftClarity.enabled ? "bg-[#3B82F6]" : "bg-[rgba(255,255,255,0.18)]"
+                  onClick={() => toggleAddon('microsoftClarity')}
+                  className={`relative h-6 w-12 flex-shrink-0 rounded-full transition-colors ${
+                    addons.microsoftClarity.enabled
+                      ? 'bg-[#3B82F6]'
+                      : 'bg-[rgba(255,255,255,0.18)]'
                   }`}
                 >
                   <div
-                    className={`absolute top-0.5 w-5 h-5 bg-white rounded-full transition-transform ${
-                      addons.microsoftClarity.enabled ? "translate-x-6" : "translate-x-0.5"
+                    className={`absolute top-0.5 h-5 w-5 rounded-full bg-white transition-transform ${
+                      addons.microsoftClarity.enabled
+                        ? 'translate-x-6'
+                        : 'translate-x-0.5'
                     }`}
                   />
                 </button>
@@ -2474,26 +2734,34 @@ www.cheapstreamtv.com`
             </div>
 
             {/* Cloudflare */}
-            <div className="p-6 rounded-xl bg-[rgba(15,23,42,0.6)] border border-[rgba(255,255,255,0.1)] backdrop-blur-xl">
+            <div className="rounded-xl border border-[rgba(255,255,255,0.1)] bg-[rgba(15,23,42,0.6)] p-6 backdrop-blur-xl">
               <div className="flex items-start justify-between">
                 <div className="flex items-start gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-[#F59E0B]/20 flex items-center justify-center flex-shrink-0">
-                    <Globe className="w-5 h-5 text-[#F59E0B]" />
+                  <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-[#F59E0B]/20">
+                    <Globe className="h-5 w-5 text-[#F59E0B]" />
                   </div>
                   <div>
-                    <h3 className="text-white text-base font-semibold mb-1">Cloudflare</h3>
-                    <p className="text-[#64748B] text-sm">CDN, security, and performance optimization</p>
+                    <h3 className="mb-1 text-base font-semibold text-white">
+                      Cloudflare
+                    </h3>
+                    <p className="text-sm text-[#64748B]">
+                      CDN, security, and performance optimization
+                    </p>
                   </div>
                 </div>
                 <button
-                  onClick={() => toggleAddon("cloudflare")}
-                  className={`relative w-12 h-6 rounded-full transition-colors flex-shrink-0 ${
-                    addons.cloudflare.enabled ? "bg-[#3B82F6]" : "bg-[rgba(255,255,255,0.18)]"
+                  onClick={() => toggleAddon('cloudflare')}
+                  className={`relative h-6 w-12 flex-shrink-0 rounded-full transition-colors ${
+                    addons.cloudflare.enabled
+                      ? 'bg-[#3B82F6]'
+                      : 'bg-[rgba(255,255,255,0.18)]'
                   }`}
                 >
                   <div
-                    className={`absolute top-0.5 w-5 h-5 bg-white rounded-full transition-transform ${
-                      addons.cloudflare.enabled ? "translate-x-6" : "translate-x-0.5"
+                    className={`absolute top-0.5 h-5 w-5 rounded-full bg-white transition-transform ${
+                      addons.cloudflare.enabled
+                        ? 'translate-x-6'
+                        : 'translate-x-0.5'
                     }`}
                   />
                 </button>
@@ -2501,26 +2769,34 @@ www.cheapstreamtv.com`
             </div>
 
             {/* GetButton.io */}
-            <div className="p-6 rounded-xl bg-[rgba(15,23,42,0.6)] border border-[rgba(255,255,255,0.1)] backdrop-blur-xl">
+            <div className="rounded-xl border border-[rgba(255,255,255,0.1)] bg-[rgba(15,23,42,0.6)] p-6 backdrop-blur-xl">
               <div className="flex items-start justify-between">
                 <div className="flex items-start gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-[#EC4899]/20 flex items-center justify-center flex-shrink-0">
-                    <MessageCircle className="w-5 h-5 text-[#EC4899]" />
+                  <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-[#EC4899]/20">
+                    <MessageCircle className="h-5 w-5 text-[#EC4899]" />
                   </div>
                   <div>
-                    <h3 className="text-white text-base font-semibold mb-1">GetButton.io</h3>
-                    <p className="text-[#64748B] text-sm">Live chat and customer support widget</p>
+                    <h3 className="mb-1 text-base font-semibold text-white">
+                      GetButton.io
+                    </h3>
+                    <p className="text-sm text-[#64748B]">
+                      Live chat and customer support widget
+                    </p>
                   </div>
                 </div>
                 <button
-                  onClick={() => toggleAddon("getbutton")}
-                  className={`relative w-12 h-6 rounded-full transition-colors flex-shrink-0 ${
-                    addons.getbutton.enabled ? "bg-[#3B82F6]" : "bg-[rgba(255,255,255,0.18)]"
+                  onClick={() => toggleAddon('getbutton')}
+                  className={`relative h-6 w-12 flex-shrink-0 rounded-full transition-colors ${
+                    addons.getbutton.enabled
+                      ? 'bg-[#3B82F6]'
+                      : 'bg-[rgba(255,255,255,0.18)]'
                   }`}
                 >
                   <div
-                    className={`absolute top-0.5 w-5 h-5 bg-white rounded-full transition-transform ${
-                      addons.getbutton.enabled ? "translate-x-6" : "translate-x-0.5"
+                    className={`absolute top-0.5 h-5 w-5 rounded-full bg-white transition-transform ${
+                      addons.getbutton.enabled
+                        ? 'translate-x-6'
+                        : 'translate-x-0.5'
                     }`}
                   />
                 </button>
@@ -2528,26 +2804,34 @@ www.cheapstreamtv.com`
             </div>
 
             {/* Tawk.to */}
-            <div className="p-6 rounded-xl bg-[rgba(15,23,42,0.6)] border border-[rgba(255,255,255,0.1)] backdrop-blur-xl">
+            <div className="rounded-xl border border-[rgba(255,255,255,0.1)] bg-[rgba(15,23,42,0.6)] p-6 backdrop-blur-xl">
               <div className="flex items-start justify-between">
                 <div className="flex items-start gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-[#06B6D4]/20 flex items-center justify-center flex-shrink-0">
-                    <MessageCircle className="w-5 h-5 text-[#06B6D4]" />
+                  <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-[#06B6D4]/20">
+                    <MessageCircle className="h-5 w-5 text-[#06B6D4]" />
                   </div>
                   <div>
-                    <h3 className="text-white text-base font-semibold mb-1">Tawk.to</h3>
-                    <p className="text-[#64748B] text-sm">Free live chat for customer support</p>
+                    <h3 className="mb-1 text-base font-semibold text-white">
+                      Tawk.to
+                    </h3>
+                    <p className="text-sm text-[#64748B]">
+                      Free live chat for customer support
+                    </p>
                   </div>
                 </div>
                 <button
-                  onClick={() => toggleAddon("tawkto")}
-                  className={`relative w-12 h-6 rounded-full transition-colors flex-shrink-0 ${
-                    addons.tawkto.enabled ? "bg-[#3B82F6]" : "bg-[rgba(255,255,255,0.18)]"
+                  onClick={() => toggleAddon('tawkto')}
+                  className={`relative h-6 w-12 flex-shrink-0 rounded-full transition-colors ${
+                    addons.tawkto.enabled
+                      ? 'bg-[#3B82F6]'
+                      : 'bg-[rgba(255,255,255,0.18)]'
                   }`}
                 >
                   <div
-                    className={`absolute top-0.5 w-5 h-5 bg-white rounded-full transition-transform ${
-                      addons.tawkto.enabled ? "translate-x-6" : "translate-x-0.5"
+                    className={`absolute top-0.5 h-5 w-5 rounded-full bg-white transition-transform ${
+                      addons.tawkto.enabled
+                        ? 'translate-x-6'
+                        : 'translate-x-0.5'
                     }`}
                   />
                 </button>
@@ -2558,16 +2842,16 @@ www.cheapstreamtv.com`
           <div className="flex items-center justify-start gap-4">
             <button
               onClick={handleRefresh}
-              className="px-6 py-3 rounded-lg bg-[rgba(255,255,255,0.08)] border border-[rgba(255,255,255,0.18)] text-white hover:bg-[rgba(255,255,255,0.12)] transition-colors text-sm font-medium"
+              className="rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(255,255,255,0.08)] px-6 py-3 text-sm font-medium text-white transition-colors hover:bg-[rgba(255,255,255,0.12)]"
             >
               Refresh
             </button>
             <button
-              onClick={() => handleSave("Addons")}
+              onClick={() => handleSave('Addons')}
               disabled={isLoading}
-              className="px-6 py-3 rounded-lg bg-[#3B82F6] hover:bg-[#2563EB] text-white transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+              className="rounded-lg bg-[#3B82F6] px-6 py-3 text-sm font-medium text-white transition-colors hover:bg-[#2563EB] disabled:cursor-not-allowed disabled:opacity-50"
             >
-              {isLoading ? "Updating..." : "Update Addons"}
+              {isLoading ? 'Updating...' : 'Update Addons'}
             </button>
           </div>
         </div>
