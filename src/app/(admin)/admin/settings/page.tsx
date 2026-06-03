@@ -210,15 +210,15 @@ www.cheapstreamtv.com`,
       siteKey: '6Lc4c7BJAAAAJCRKEkgnKJhyjtPvER__TxsMSp0H',
       secretKey: '6Lc4c7BJAAAAkkLJ7BQTh_NqverPynuSznTivEnO3',
     },
-    trustpilot: { enabled: false },
+    trustpilot: { enabled: false, businessUrl: '' },
     googleAnalytics: {
       enabled: true,
       measurementId: 'G-Y7TVVML9P',
     },
-    microsoftClarity: { enabled: false },
-    cloudflare: { enabled: false },
-    getbutton: { enabled: false },
-    tawkto: { enabled: false },
+    microsoftClarity: { enabled: false, projectId: '' },
+    cloudflare: { enabled: false, token: '' },
+    getbutton: { enabled: false, code: '' },
+    tawkto: { enabled: false, propertyId: '', widgetId: 'default' },
   });
 
   // Languages State (now API-driven)
@@ -367,6 +367,9 @@ www.cheapstreamtv.com`,
           },
           trustpilot: {
             enabled: addonsMap['addon_trustpilot_enabled'] === 'true',
+            businessUrl:
+              addonsMap['addon_trustpilot_business_url'] ||
+              addons.trustpilot.businessUrl,
           },
           googleAnalytics: {
             enabled: addonsMap['addon_ga_enabled'] === 'true',
@@ -376,14 +379,26 @@ www.cheapstreamtv.com`,
           },
           microsoftClarity: {
             enabled: addonsMap['addon_clarity_enabled'] === 'true',
+            projectId:
+              addonsMap['addon_clarity_project_id'] ||
+              addons.microsoftClarity.projectId,
           },
           cloudflare: {
             enabled: addonsMap['addon_cloudflare_enabled'] === 'true',
+            token:
+              addonsMap['addon_cloudflare_token'] || addons.cloudflare.token,
           },
           getbutton: {
             enabled: addonsMap['addon_getbutton_enabled'] === 'true',
+            code: addonsMap['addon_getbutton_code'] || addons.getbutton.code,
           },
-          tawkto: { enabled: addonsMap['addon_tawkto_enabled'] === 'true' },
+          tawkto: {
+            enabled: addonsMap['addon_tawkto_enabled'] === 'true',
+            propertyId:
+              addonsMap['addon_tawkto_property_id'] || addons.tawkto.propertyId,
+            widgetId:
+              addonsMap['addon_tawkto_widget_id'] || addons.tawkto.widgetId,
+          },
         });
       }
 
@@ -553,7 +568,45 @@ www.cheapstreamtv.com`,
             },
           ];
           break;
-        case 'Addons':
+        case 'Addons': {
+          // Block save if any addon is enabled but missing its required config
+          const missing: string[] = [];
+          if (addons.recaptcha.enabled) {
+            if (!addons.recaptcha.siteKey.trim())
+              missing.push('reCAPTCHA Site Key');
+            if (!addons.recaptcha.secretKey.trim())
+              missing.push('reCAPTCHA Secret Key');
+          }
+          if (
+            addons.trustpilot.enabled &&
+            !addons.trustpilot.businessUrl.trim()
+          )
+            missing.push('Trustpilot Business URL');
+          if (
+            addons.googleAnalytics.enabled &&
+            !addons.googleAnalytics.measurementId.trim()
+          )
+            missing.push('Google Analytics Measurement ID');
+          if (
+            addons.microsoftClarity.enabled &&
+            !addons.microsoftClarity.projectId.trim()
+          )
+            missing.push('Microsoft Clarity Project ID');
+          if (addons.cloudflare.enabled && !addons.cloudflare.token.trim())
+            missing.push('Cloudflare Web Analytics Token');
+          if (addons.getbutton.enabled && !addons.getbutton.code.trim())
+            missing.push('GetButton.io Widget Code');
+          if (addons.tawkto.enabled && !addons.tawkto.propertyId.trim())
+            missing.push('Tawk.to Property ID');
+
+          if (missing.length > 0) {
+            toast.error(
+              `Fill in required field${missing.length > 1 ? 's' : ''}: ${missing.join(', ')}`,
+            );
+            setIsLoading(false);
+            return;
+          }
+
           settings = [
             {
               key: 'addon_recaptcha_enabled',
@@ -572,6 +625,10 @@ www.cheapstreamtv.com`,
               value: String(addons.trustpilot.enabled),
             },
             {
+              key: 'addon_trustpilot_business_url',
+              value: addons.trustpilot.businessUrl,
+            },
+            {
               key: 'addon_ga_enabled',
               value: String(addons.googleAnalytics.enabled),
             },
@@ -584,19 +641,40 @@ www.cheapstreamtv.com`,
               value: String(addons.microsoftClarity.enabled),
             },
             {
+              key: 'addon_clarity_project_id',
+              value: addons.microsoftClarity.projectId,
+            },
+            {
               key: 'addon_cloudflare_enabled',
               value: String(addons.cloudflare.enabled),
+            },
+            {
+              key: 'addon_cloudflare_token',
+              value: addons.cloudflare.token,
             },
             {
               key: 'addon_getbutton_enabled',
               value: String(addons.getbutton.enabled),
             },
             {
+              key: 'addon_getbutton_code',
+              value: addons.getbutton.code,
+            },
+            {
               key: 'addon_tawkto_enabled',
               value: String(addons.tawkto.enabled),
             },
+            {
+              key: 'addon_tawkto_property_id',
+              value: addons.tawkto.propertyId,
+            },
+            {
+              key: 'addon_tawkto_widget_id',
+              value: addons.tawkto.widgetId,
+            },
           ];
           break;
+        }
         case 'Email content':
           settings = [{ key: 'email_setup_guide', value: emailContent }];
           break;
@@ -2464,6 +2542,29 @@ www.cheapstreamtv.com`,
                   />
                 </button>
               </div>
+
+              {addons.trustpilot.enabled && (
+                <div className="border-t border-[rgba(255,255,255,0.1)] pt-4">
+                  <label className="mb-2 block text-xs font-medium text-white">
+                    Business profile URL
+                  </label>
+                  <input
+                    type="text"
+                    value={addons.trustpilot.businessUrl}
+                    placeholder="https://www.trustpilot.com/review/example.com"
+                    onChange={(e) =>
+                      setAddons({
+                        ...addons,
+                        trustpilot: {
+                          ...addons.trustpilot,
+                          businessUrl: e.target.value,
+                        },
+                      })
+                    }
+                    className="w-full rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.4)] px-3 py-2 text-xs text-white focus:ring-2 focus:ring-[#3B82F6] focus:outline-none"
+                  />
+                </div>
+              )}
             </div>
 
             {/* Google Analytics */}
@@ -2556,6 +2657,29 @@ www.cheapstreamtv.com`,
                   />
                 </button>
               </div>
+
+              {addons.microsoftClarity.enabled && (
+                <div className="border-t border-[rgba(255,255,255,0.1)] pt-4">
+                  <label className="mb-2 block text-xs font-medium text-white">
+                    Project ID
+                  </label>
+                  <input
+                    type="text"
+                    value={addons.microsoftClarity.projectId}
+                    placeholder="abcd123xyz"
+                    onChange={(e) =>
+                      setAddons({
+                        ...addons,
+                        microsoftClarity: {
+                          ...addons.microsoftClarity,
+                          projectId: e.target.value,
+                        },
+                      })
+                    }
+                    className="w-full rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.4)] px-3 py-2 text-xs text-white focus:ring-2 focus:ring-[#3B82F6] focus:outline-none"
+                  />
+                </div>
+              )}
             </div>
 
             {/* Cloudflare */}
@@ -2591,6 +2715,29 @@ www.cheapstreamtv.com`,
                   />
                 </button>
               </div>
+
+              {addons.cloudflare.enabled && (
+                <div className="border-t border-[rgba(255,255,255,0.1)] pt-4">
+                  <label className="mb-2 block text-xs font-medium text-white">
+                    Web Analytics token
+                  </label>
+                  <input
+                    type="text"
+                    value={addons.cloudflare.token}
+                    placeholder="32-character token from Cloudflare → Analytics → Web Analytics"
+                    onChange={(e) =>
+                      setAddons({
+                        ...addons,
+                        cloudflare: {
+                          ...addons.cloudflare,
+                          token: e.target.value,
+                        },
+                      })
+                    }
+                    className="w-full rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.4)] px-3 py-2 text-xs text-white focus:ring-2 focus:ring-[#3B82F6] focus:outline-none"
+                  />
+                </div>
+              )}
             </div>
 
             {/* GetButton.io */}
@@ -2626,6 +2773,29 @@ www.cheapstreamtv.com`,
                   />
                 </button>
               </div>
+
+              {addons.getbutton.enabled && (
+                <div className="border-t border-[rgba(255,255,255,0.1)] pt-4">
+                  <label className="mb-2 block text-xs font-medium text-white">
+                    Widget code (account ID from GetButton.io)
+                  </label>
+                  <input
+                    type="text"
+                    value={addons.getbutton.code}
+                    placeholder="ABC123"
+                    onChange={(e) =>
+                      setAddons({
+                        ...addons,
+                        getbutton: {
+                          ...addons.getbutton,
+                          code: e.target.value,
+                        },
+                      })
+                    }
+                    className="w-full rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.4)] px-3 py-2 text-xs text-white focus:ring-2 focus:ring-[#3B82F6] focus:outline-none"
+                  />
+                </div>
+              )}
             </div>
 
             {/* Tawk.to */}
@@ -2661,6 +2831,53 @@ www.cheapstreamtv.com`,
                   />
                 </button>
               </div>
+
+              {addons.tawkto.enabled && (
+                <div className="border-t border-[rgba(255,255,255,0.1)] pt-4">
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                    <div>
+                      <label className="mb-2 block text-xs font-medium text-white">
+                        Property ID
+                      </label>
+                      <input
+                        type="text"
+                        value={addons.tawkto.propertyId}
+                        placeholder="5e4abc12345..."
+                        onChange={(e) =>
+                          setAddons({
+                            ...addons,
+                            tawkto: {
+                              ...addons.tawkto,
+                              propertyId: e.target.value,
+                            },
+                          })
+                        }
+                        className="w-full rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.4)] px-3 py-2 text-xs text-white focus:ring-2 focus:ring-[#3B82F6] focus:outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="mb-2 block text-xs font-medium text-white">
+                        Widget ID
+                      </label>
+                      <input
+                        type="text"
+                        value={addons.tawkto.widgetId}
+                        placeholder="default"
+                        onChange={(e) =>
+                          setAddons({
+                            ...addons,
+                            tawkto: {
+                              ...addons.tawkto,
+                              widgetId: e.target.value,
+                            },
+                          })
+                        }
+                        className="w-full rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.4)] px-3 py-2 text-xs text-white focus:ring-2 focus:ring-[#3B82F6] focus:outline-none"
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 

@@ -5,6 +5,7 @@ import { BrandingProvider } from '@/contexts/BrandingContext';
 import { MaintenanceGuard } from '@/components/providers/MaintenanceGuard';
 import { Toaster } from '@/components/ui/sonner';
 import { GoogleTranslate } from '@/components/google-translate';
+import { AddonsLoader } from '@/components/addons-loader';
 import {
   SITE_URL,
   SITE_NAME,
@@ -104,6 +105,7 @@ export default function RootLayout({
                 {children}
                 <Toaster />
                 <GoogleTranslate />
+                <AddonsLoader />
               </MaintenanceGuard>
             </BrandingProvider>
           </ThemeProvider>
