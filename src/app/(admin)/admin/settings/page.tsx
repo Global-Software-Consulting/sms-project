@@ -573,34 +573,35 @@ www.cheapstreamtv.com`,
           break;
         case 'Addons': {
           // Block save if any addon is enabled but missing its required config
+          const isEmpty = (v: string | undefined): boolean => !(v ?? '').trim();
           const missing: string[] = [];
           if (addons.recaptcha.enabled) {
-            if (!addons.recaptcha.siteKey.trim())
+            if (isEmpty(addons.recaptcha.siteKey))
               missing.push('reCAPTCHA Site Key');
-            if (!addons.recaptcha.secretKey.trim())
+            if (isEmpty(addons.recaptcha.secretKey))
               missing.push('reCAPTCHA Secret Key');
           }
           if (addons.trustpilot.enabled) {
-            if (!addons.trustpilot.businessUrl.trim())
+            if (isEmpty(addons.trustpilot.businessUrl))
               missing.push('Trustpilot Business URL');
-            if (!addons.trustpilot.businessUnitId.trim())
+            if (isEmpty(addons.trustpilot.businessUnitId))
               missing.push('Trustpilot Business Unit ID');
           }
           if (
             addons.googleAnalytics.enabled &&
-            !addons.googleAnalytics.measurementId.trim()
+            isEmpty(addons.googleAnalytics.measurementId)
           )
             missing.push('Google Analytics Measurement ID');
           if (
             addons.microsoftClarity.enabled &&
-            !addons.microsoftClarity.projectId.trim()
+            isEmpty(addons.microsoftClarity.projectId)
           )
             missing.push('Microsoft Clarity Project ID');
-          if (addons.cloudflare.enabled && !addons.cloudflare.token.trim())
+          if (addons.cloudflare.enabled && isEmpty(addons.cloudflare.token))
             missing.push('Cloudflare Web Analytics Token');
-          if (addons.getbutton.enabled && !addons.getbutton.code.trim())
+          if (addons.getbutton.enabled && isEmpty(addons.getbutton.code))
             missing.push('GetButton.io Widget Code');
-          if (addons.tawkto.enabled && !addons.tawkto.propertyId.trim())
+          if (addons.tawkto.enabled && isEmpty(addons.tawkto.propertyId))
             missing.push('Tawk.to Property ID');
 
           if (missing.length > 0) {
@@ -611,6 +612,7 @@ www.cheapstreamtv.com`,
             return;
           }
 
+          const str = (v: string | undefined): string => v ?? '';
           settings = [
             {
               key: 'addon_recaptcha_enabled',
@@ -618,11 +620,11 @@ www.cheapstreamtv.com`,
             },
             {
               key: 'addon_recaptcha_site_key',
-              value: addons.recaptcha.siteKey,
+              value: str(addons.recaptcha.siteKey),
             },
             {
               key: 'addon_recaptcha_secret_key',
-              value: addons.recaptcha.secretKey,
+              value: str(addons.recaptcha.secretKey),
             },
             {
               key: 'addon_trustpilot_enabled',
@@ -630,11 +632,11 @@ www.cheapstreamtv.com`,
             },
             {
               key: 'addon_trustpilot_business_url',
-              value: addons.trustpilot.businessUrl,
+              value: str(addons.trustpilot.businessUrl),
             },
             {
               key: 'addon_trustpilot_business_unit_id',
-              value: addons.trustpilot.businessUnitId,
+              value: str(addons.trustpilot.businessUnitId),
             },
             {
               key: 'addon_ga_enabled',
@@ -642,7 +644,7 @@ www.cheapstreamtv.com`,
             },
             {
               key: 'addon_ga_measurement_id',
-              value: addons.googleAnalytics.measurementId,
+              value: str(addons.googleAnalytics.measurementId),
             },
             {
               key: 'addon_clarity_enabled',
@@ -650,7 +652,7 @@ www.cheapstreamtv.com`,
             },
             {
               key: 'addon_clarity_project_id',
-              value: addons.microsoftClarity.projectId,
+              value: str(addons.microsoftClarity.projectId),
             },
             {
               key: 'addon_cloudflare_enabled',
@@ -658,7 +660,7 @@ www.cheapstreamtv.com`,
             },
             {
               key: 'addon_cloudflare_token',
-              value: addons.cloudflare.token,
+              value: str(addons.cloudflare.token),
             },
             {
               key: 'addon_getbutton_enabled',
@@ -666,7 +668,7 @@ www.cheapstreamtv.com`,
             },
             {
               key: 'addon_getbutton_code',
-              value: addons.getbutton.code,
+              value: str(addons.getbutton.code),
             },
             {
               key: 'addon_tawkto_enabled',
@@ -674,11 +676,11 @@ www.cheapstreamtv.com`,
             },
             {
               key: 'addon_tawkto_property_id',
-              value: addons.tawkto.propertyId,
+              value: str(addons.tawkto.propertyId),
             },
             {
               key: 'addon_tawkto_widget_id',
-              value: addons.tawkto.widgetId,
+              value: str(addons.tawkto.widgetId),
             },
           ];
           break;
