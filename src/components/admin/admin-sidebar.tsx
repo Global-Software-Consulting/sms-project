@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useState } from 'react';
 import { useBranding } from '@/contexts/BrandingContext';
+import { SocialIcons } from '@/components/social-icons';
 import {
   LayoutDashboard,
   Users,
@@ -135,6 +136,13 @@ export function AdminSidebar() {
               );
             })}
           </nav>
+
+          <div className="border-t border-[rgba(255,255,255,0.06)] px-4 py-3">
+            <SocialIcons
+              className="flex flex-wrap items-center gap-2"
+              iconClassName="h-4 w-4"
+            />
+          </div>
         </div>
       </aside>
     </>

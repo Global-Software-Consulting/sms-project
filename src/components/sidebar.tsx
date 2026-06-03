@@ -22,6 +22,7 @@ import {
 import { cn } from './ui/utils';
 import { Button } from './ui/button';
 import { useBranding } from '@/contexts/BrandingContext';
+import { SocialIcons } from '@/components/social-icons';
 
 interface SidebarProps {
   isOpen: boolean;
@@ -76,12 +77,18 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
                 href="/dashboard"
                 className="flex min-w-0 flex-1 items-center space-x-2"
               >
-                <div className="from-sidebar-primary to-accent flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-gradient-to-br overflow-hidden">
+                <div className="from-sidebar-primary to-accent flex h-8 w-8 flex-shrink-0 items-center justify-center overflow-hidden rounded-lg bg-gradient-to-br">
                   {siteLogo ? (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img src={siteLogo} alt="Logo" className="w-full h-full object-contain" />
+                    <img
+                      src={siteLogo}
+                      alt="Logo"
+                      className="h-full w-full object-contain"
+                    />
                   ) : (
-                    <span className="text-sidebar-primary-foreground text-sm font-bold">S</span>
+                    <span className="text-sidebar-primary-foreground text-sm font-bold">
+                      S
+                    </span>
                   )}
                 </div>
                 <span className="truncate font-bold">BestSMSHQ</span>
@@ -155,6 +162,15 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
               })}
             </ul>
           </nav>
+
+          {isOpen && (
+            <div className="border-sidebar-border/40 border-t px-4 py-3">
+              <SocialIcons
+                className="flex flex-wrap items-center gap-2"
+                iconClassName="h-4 w-4"
+              />
+            </div>
+          )}
         </div>
       </aside>
     </>
