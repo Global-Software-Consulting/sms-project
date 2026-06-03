@@ -210,7 +210,7 @@ www.cheapstreamtv.com`,
       siteKey: '6Lc4c7BJAAAAJCRKEkgnKJhyjtPvER__TxsMSp0H',
       secretKey: '6Lc4c7BJAAAAkkLJ7BQTh_NqverPynuSznTivEnO3',
     },
-    trustpilot: { enabled: false, businessUrl: '' },
+    trustpilot: { enabled: false, businessUrl: '', businessUnitId: '' },
     googleAnalytics: {
       enabled: true,
       measurementId: 'G-Y7TVVML9P',
@@ -370,6 +370,9 @@ www.cheapstreamtv.com`,
             businessUrl:
               addonsMap['addon_trustpilot_business_url'] ||
               addons.trustpilot.businessUrl,
+            businessUnitId:
+              addonsMap['addon_trustpilot_business_unit_id'] ||
+              addons.trustpilot.businessUnitId,
           },
           googleAnalytics: {
             enabled: addonsMap['addon_ga_enabled'] === 'true',
@@ -577,11 +580,12 @@ www.cheapstreamtv.com`,
             if (!addons.recaptcha.secretKey.trim())
               missing.push('reCAPTCHA Secret Key');
           }
-          if (
-            addons.trustpilot.enabled &&
-            !addons.trustpilot.businessUrl.trim()
-          )
-            missing.push('Trustpilot Business URL');
+          if (addons.trustpilot.enabled) {
+            if (!addons.trustpilot.businessUrl.trim())
+              missing.push('Trustpilot Business URL');
+            if (!addons.trustpilot.businessUnitId.trim())
+              missing.push('Trustpilot Business Unit ID');
+          }
           if (
             addons.googleAnalytics.enabled &&
             !addons.googleAnalytics.measurementId.trim()
@@ -627,6 +631,10 @@ www.cheapstreamtv.com`,
             {
               key: 'addon_trustpilot_business_url',
               value: addons.trustpilot.businessUrl,
+            },
+            {
+              key: 'addon_trustpilot_business_unit_id',
+              value: addons.trustpilot.businessUnitId,
             },
             {
               key: 'addon_ga_enabled',
@@ -2545,24 +2553,48 @@ www.cheapstreamtv.com`,
 
               {addons.trustpilot.enabled && (
                 <div className="border-t border-[rgba(255,255,255,0.1)] pt-4">
-                  <label className="mb-2 block text-xs font-medium text-white">
-                    Business profile URL
-                  </label>
-                  <input
-                    type="text"
-                    value={addons.trustpilot.businessUrl}
-                    placeholder="https://www.trustpilot.com/review/example.com"
-                    onChange={(e) =>
-                      setAddons({
-                        ...addons,
-                        trustpilot: {
-                          ...addons.trustpilot,
-                          businessUrl: e.target.value,
-                        },
-                      })
-                    }
-                    className="w-full rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.4)] px-3 py-2 text-xs text-white focus:ring-2 focus:ring-[#3B82F6] focus:outline-none"
-                  />
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                    <div>
+                      <label className="mb-2 block text-xs font-medium text-white">
+                        Business profile URL
+                      </label>
+                      <input
+                        type="text"
+                        value={addons.trustpilot.businessUrl}
+                        placeholder="https://www.trustpilot.com/review/example.com"
+                        onChange={(e) =>
+                          setAddons({
+                            ...addons,
+                            trustpilot: {
+                              ...addons.trustpilot,
+                              businessUrl: e.target.value,
+                            },
+                          })
+                        }
+                        className="w-full rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.4)] px-3 py-2 text-xs text-white focus:ring-2 focus:ring-[#3B82F6] focus:outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="mb-2 block text-xs font-medium text-white">
+                        Business Unit ID
+                      </label>
+                      <input
+                        type="text"
+                        value={addons.trustpilot.businessUnitId}
+                        placeholder="24-char ID from Trustpilot widget code"
+                        onChange={(e) =>
+                          setAddons({
+                            ...addons,
+                            trustpilot: {
+                              ...addons.trustpilot,
+                              businessUnitId: e.target.value,
+                            },
+                          })
+                        }
+                        className="w-full rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.4)] px-3 py-2 text-xs text-white focus:ring-2 focus:ring-[#3B82F6] focus:outline-none"
+                      />
+                    </div>
+                  </div>
                 </div>
               )}
             </div>

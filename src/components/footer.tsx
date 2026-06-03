@@ -5,6 +5,7 @@ import { ExternalLink, ChevronRight } from 'lucide-react';
 import { useBranding } from '@/contexts/BrandingContext';
 import { getPublicAds, type Ad } from '@/lib/api/adminModulesApi';
 import { SocialIcons } from '@/components/social-icons';
+import { TrustpilotWidget } from '@/components/trustpilot-widget';
 import {
   Dialog,
   DialogContent,
@@ -57,6 +58,7 @@ export function Footer() {
               and secure.
             </p>
             <SocialIcons />
+            <TrustpilotWidget />
           </div>
 
           {/* Product */}
