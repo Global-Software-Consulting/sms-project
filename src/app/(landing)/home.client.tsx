@@ -27,6 +27,7 @@ import { getPlans, MembershipPlan } from '@/lib/api/membershipApi';
 import { getProviders, type SmsProvider } from '@/lib/api/smsApi';
 import { apiClient } from '@/config/api-client.config';
 import { API_ENDPOINTS } from '@/config/server.config';
+import { useAuth } from '@/hooks/useAuth';
 
 interface Review {
   id: string;
@@ -60,6 +61,25 @@ const fallbackReviews = [
 ];
 
 export default function HomeClient() {
+  const { isAuthenticated, isAdmin } = useAuth();
+  const [authMounted, setAuthMounted] = useState(false);
+  useEffect(() => {
+    setAuthMounted(true);
+  }, []);
+  const showAuthedCta = authMounted && isAuthenticated;
+  const ctaHref = isAdmin ? '/admin' : '/dashboard';
+  const heroCtaLabel = showAuthedCta
+    ? isAdmin
+      ? 'Go to Admin'
+      : 'Go to Dashboard'
+    : 'Get Started';
+  const finalCtaLabel = showAuthedCta
+    ? isAdmin
+      ? 'Open Admin'
+      : 'Open Dashboard'
+    : 'Start Receiving SMS Now';
+  const ctaTargetHref = showAuthedCta ? ctaHref : '/auth/signup';
+
   const [plans, setPlans] = useState<MembershipPlan[]>([]);
   const [plansLoading, setPlansLoading] = useState(true);
   const [providers, setProviders] = useState<SmsProvider[]>([]);
@@ -236,8 +256,8 @@ export default function HomeClient() {
               size="lg"
               className="btn-premium w-full text-base sm:w-auto"
             >
-              <Link href="/auth/signup">
-                Get Started <ArrowRight className="ml-2 h-4 w-4" />
+              <Link href={ctaTargetHref}>
+                {heroCtaLabel} <ArrowRight className="ml-2 h-4 w-4" />
               </Link>
             </Button>
             <Button
@@ -678,8 +698,8 @@ export default function HomeClient() {
             Join thousands of satisfied customers using BestSMSHQ
           </p>
           <Button asChild size="lg" className="btn-premium text-base">
-            <Link href="/auth/signup">
-              Start Receiving SMS Now <ArrowRight className="ml-2 h-4 w-4" />
+            <Link href={ctaTargetHref}>
+              {finalCtaLabel} <ArrowRight className="ml-2 h-4 w-4" />
             </Link>
           </Button>
         </div>
