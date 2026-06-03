@@ -455,6 +455,7 @@ export const API_ENDPOINTS = {
       STATS: '/admin/notifications/stats',
       DETAIL: (id: string) => `/admin/notifications/${id}`,
       SEND_BULK: '/admin/notifications/bulk',
+      AUDIENCE_COUNTS: '/admin/notifications/audience-counts',
       TEMPLATES: '/admin/notifications/templates',
     },
 

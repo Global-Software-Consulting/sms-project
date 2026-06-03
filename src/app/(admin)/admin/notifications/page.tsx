@@ -1,54 +1,68 @@
 'use client';
 
-import { useState, useEffect } from "react";
+import { useState, useEffect } from 'react';
 import { AdminPageHeader } from '@/components/admin/page-header';
 import { AdminGlassCard } from '@/components/admin/glass-card';
 import { AdminFormInput } from '@/components/admin/form-input';
 import { toast } from 'sonner';
-import { Send, Eye, Mail, Bell, X } from "lucide-react";
+import { Send, Eye, Mail, Bell, X } from 'lucide-react';
 import { apiClient } from '@/config/api-client.config';
 import { API_ENDPOINTS } from '@/config/server.config';
-import { getAdminUserCountries, type UserCountryCount } from '@/lib/api/adminApi';
+import {
+  getAdminUserCountries,
+  getBulkAudienceCounts,
+  type UserCountryCount,
+  type BulkAudienceCounts,
+} from '@/lib/api/adminApi';
 
 export default function AdminNotificationsPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
-  const [notificationType, setNotificationType] = useState<"email" | "website">("email");
+  const [notificationType, setNotificationType] = useState<'email' | 'website'>(
+    'email',
+  );
 
   const [emailFormData, setEmailFormData] = useState({
-    targetUsers: "all",
+    targetUsers: 'all',
     countries: [] as string[],
     roles: [] as string[],
-    minSpent: "",
-    subject: "",
-    message: "",
+    minSpent: '',
+    subject: '',
+    message: '',
   });
 
   const [websiteFormData, setWebsiteFormData] = useState({
-    targetUsers: "all",
+    targetUsers: 'all',
     countries: [] as string[],
     roles: [] as string[],
-    minSpent: "",
-    title: "",
-    message: "",
+    minSpent: '',
+    title: '',
+    message: '',
   });
 
   const targetLabels: Record<string, string> = {
-    all: "All Users",
-    "logged-in": "Logged-in Users",
-    purchased: "Purchased Users",
-    "no-purchase": "Logged-in (No Purchase)",
+    all: 'All Users',
+    'logged-in': 'Logged-in Users',
+    purchased: 'Purchased Users',
+    'no-purchase': 'Logged-in (No Purchase)',
   };
 
   const handlePreview = () => {
-    const formData = notificationType === "email" ? emailFormData : websiteFormData;
+    const formData =
+      notificationType === 'email' ? emailFormData : websiteFormData;
 
-    if (notificationType === "email" && (!emailFormData.subject || !emailFormData.message)) {
-      toast.error("Please fill in subject and message");
+    if (
+      notificationType === 'email' &&
+      (!emailFormData.subject || !emailFormData.message)
+    ) {
+      toast.error('Please fill in subject and message');
       return;
     }
-    if (notificationType === "website" && (!websiteFormData.title || !websiteFormData.message)) {
-      toast.error("Please fill in title and message");
+    if (
+      notificationType === 'website' &&
+      (!websiteFormData.title || !websiteFormData.message)
+    ) {
+      toast.error('Please fill in title and message');
       return;
     }
 
@@ -56,48 +70,77 @@ export default function AdminNotificationsPage() {
   };
 
   const handleSend = async () => {
-    if (notificationType === "email" && (!emailFormData.subject || !emailFormData.message)) {
-      toast.error("Please fill in subject and message");
+    if (
+      notificationType === 'email' &&
+      (!emailFormData.subject || !emailFormData.message)
+    ) {
+      toast.error('Please fill in subject and message');
       return;
     }
 
-    if (notificationType === "website" && (!websiteFormData.title || !websiteFormData.message)) {
-      toast.error("Please fill in title and message");
+    if (
+      notificationType === 'website' &&
+      (!websiteFormData.title || !websiteFormData.message)
+    ) {
+      toast.error('Please fill in title and message');
       return;
     }
 
     setIsLoading(true);
     try {
-      const formData = notificationType === "email" ? emailFormData : websiteFormData;
-      const isAllUsers = formData.targetUsers === "all";
-      const isActiveOnly = formData.targetUsers === "logged-in" || formData.targetUsers === "no-purchase";
-      const isMembersOnly = formData.targetUsers === "purchased";
+      const formData =
+        notificationType === 'email' ? emailFormData : websiteFormData;
+      const isAllUsers = formData.targetUsers === 'all';
+      const isActiveOnly =
+        formData.targetUsers === 'logged-in' ||
+        formData.targetUsers === 'no-purchase';
+      const isMembersOnly = formData.targetUsers === 'purchased';
 
       await apiClient.post(API_ENDPOINTS.ADMIN.NOTIFICATIONS.SEND_BULK, {
-        title: notificationType === "email" ? emailFormData.subject : websiteFormData.title,
+        title:
+          notificationType === 'email'
+            ? emailFormData.subject
+            : websiteFormData.title,
         message: formData.message,
-        type: "SYSTEM" as const,
-        sendEmail: notificationType === "email",
+        type: 'SYSTEM' as const,
+        sendEmail: notificationType === 'email',
         activeUsersOnly: isActiveOnly || isAllUsers,
         membersOnly: isMembersOnly,
         userIds: [],
         countries: formData.countries,
         roles: formData.roles,
-        registeredAfter: "",
-        registeredBefore: "",
+        registeredAfter: '',
+        registeredBefore: '',
         minWalletBalance: formData.minSpent ? Number(formData.minSpent) : 0,
         data: {},
       });
 
-      toast.success(`${notificationType === "email" ? "Email" : "Website notification"} sent successfully!`);
+      toast.success(
+        `${notificationType === 'email' ? 'Email' : 'Website notification'} sent successfully!`,
+      );
 
-      if (notificationType === "email") {
-        setEmailFormData({ targetUsers: "all", countries: [], roles: [], minSpent: "", subject: "", message: "" });
+      if (notificationType === 'email') {
+        setEmailFormData({
+          targetUsers: 'all',
+          countries: [],
+          roles: [],
+          minSpent: '',
+          subject: '',
+          message: '',
+        });
       } else {
-        setWebsiteFormData({ targetUsers: "all", countries: [], roles: [], minSpent: "", title: "", message: "" });
+        setWebsiteFormData({
+          targetUsers: 'all',
+          countries: [],
+          roles: [],
+          minSpent: '',
+          title: '',
+          message: '',
+        });
       }
     } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : "Failed to send notification";
+      const message =
+        error instanceof Error ? error.message : 'Failed to send notification';
       toast.error(message);
     } finally {
       setIsLoading(false);
@@ -106,6 +149,7 @@ export default function AdminNotificationsPage() {
 
   const [countries, setCountries] = useState<UserCountryCount[]>([]);
   const [isLoadingCountries, setIsLoadingCountries] = useState(true);
+  const [audience, setAudience] = useState<BulkAudienceCounts | null>(null);
 
   useEffect(() => {
     const fetchCountries = async () => {
@@ -114,7 +158,7 @@ export default function AdminNotificationsPage() {
         setCountries(
           list
             .filter((c) => c.country)
-            .sort((a, b) => a.country.localeCompare(b.country))
+            .sort((a, b) => a.country.localeCompare(b.country)),
         );
       } catch (error) {
         console.error('Failed to fetch user countries:', error);
@@ -124,9 +168,24 @@ export default function AdminNotificationsPage() {
       }
     };
     fetchCountries();
+
+    // Audience counts power the "(N users)" labels on each Target Users
+    // tab. Best-effort: a failure leaves the labels blank rather than
+    // erroring the whole page.
+    getBulkAudienceCounts()
+      .then(setAudience)
+      .catch(() => setAudience(null));
   }, []);
 
-  const roles = ["USER", "VIEWER", "SUPPORT", "FINANCE", "MANAGER", "ADMIN", "OWNER"];
+  const roles = [
+    'USER',
+    'VIEWER',
+    'SUPPORT',
+    'FINANCE',
+    'MANAGER',
+    'ADMIN',
+    'OWNER',
+  ];
 
   return (
     <div className="p-4 lg:p-8">
@@ -136,27 +195,27 @@ export default function AdminNotificationsPage() {
       />
 
       {/* Notification Type Tabs */}
-      <div className="flex items-center gap-2 mb-6">
+      <div className="mb-6 flex items-center gap-2">
         <button
-          onClick={() => setNotificationType("email")}
-          className={`flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-medium transition-all ${
-            notificationType === "email"
-              ? "bg-[#3B82F6] text-white"
-              : "bg-[rgba(255,255,255,0.05)] border border-[rgba(255,255,255,0.18)] text-[#94A3B8] hover:bg-[rgba(255,255,255,0.08)]"
+          onClick={() => setNotificationType('email')}
+          className={`flex items-center gap-2 rounded-xl px-6 py-3 text-sm font-medium transition-all ${
+            notificationType === 'email'
+              ? 'bg-[#3B82F6] text-white'
+              : 'border border-[rgba(255,255,255,0.18)] bg-[rgba(255,255,255,0.05)] text-[#94A3B8] hover:bg-[rgba(255,255,255,0.08)]'
           }`}
         >
-          <Mail className="w-4 h-4" />
+          <Mail className="h-4 w-4" />
           Email Notification
         </button>
         <button
-          onClick={() => setNotificationType("website")}
-          className={`flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-medium transition-all ${
-            notificationType === "website"
-              ? "bg-[#3B82F6] text-white"
-              : "bg-[rgba(255,255,255,0.05)] border border-[rgba(255,255,255,0.18)] text-[#94A3B8] hover:bg-[rgba(255,255,255,0.08)]"
+          onClick={() => setNotificationType('website')}
+          className={`flex items-center gap-2 rounded-xl px-6 py-3 text-sm font-medium transition-all ${
+            notificationType === 'website'
+              ? 'bg-[#3B82F6] text-white'
+              : 'border border-[rgba(255,255,255,0.18)] bg-[rgba(255,255,255,0.05)] text-[#94A3B8] hover:bg-[rgba(255,255,255,0.08)]'
           }`}
         >
-          <Bell className="w-4 h-4" />
+          <Bell className="h-4 w-4" />
           Website Notification
         </button>
       </div>
@@ -165,94 +224,164 @@ export default function AdminNotificationsPage() {
         <div className="space-y-6">
           {/* Target Users */}
           <div>
-            <label className="text-white text-sm font-medium mb-3 block">
+            <label className="mb-3 block text-sm font-medium text-white">
               Target Users <span className="text-[#EF4444]">*</span>
             </label>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
               <button
                 onClick={() => {
-                  if (notificationType === "email") {
-                    setEmailFormData({ ...emailFormData, targetUsers: "all" });
+                  if (notificationType === 'email') {
+                    setEmailFormData({ ...emailFormData, targetUsers: 'all' });
                   } else {
-                    setWebsiteFormData({ ...websiteFormData, targetUsers: "all" });
+                    setWebsiteFormData({
+                      ...websiteFormData,
+                      targetUsers: 'all',
+                    });
                   }
                 }}
-                className={`p-4 rounded-xl border transition-all text-left ${
-                  (notificationType === "email" ? emailFormData : websiteFormData).targetUsers === "all"
-                    ? "bg-[rgba(59,130,246,0.1)] border-[#3B82F6] text-white"
-                    : "bg-[rgba(255,255,255,0.03)] border-[rgba(255,255,255,0.18)] text-[#94A3B8] hover:border-[rgba(255,255,255,0.3)]"
+                className={`rounded-xl border p-4 text-left transition-all ${
+                  (notificationType === 'email'
+                    ? emailFormData
+                    : websiteFormData
+                  ).targetUsers === 'all'
+                    ? 'border-[#3B82F6] bg-[rgba(59,130,246,0.1)] text-white'
+                    : 'border-[rgba(255,255,255,0.18)] bg-[rgba(255,255,255,0.03)] text-[#94A3B8] hover:border-[rgba(255,255,255,0.3)]'
                 }`}
               >
-                <div className="font-medium mb-1">All Users</div>
+                <div className="mb-1 flex items-center justify-between font-medium">
+                  <span>All Users</span>
+                  {audience && (
+                    <span className="rounded-full bg-[rgba(255,255,255,0.08)] px-2 py-0.5 text-xs font-semibold tabular-nums">
+                      {audience.all.toLocaleString()}
+                    </span>
+                  )}
+                </div>
                 <div className="text-xs opacity-80">Send to everyone</div>
               </button>
 
               <button
                 onClick={() => {
-                  if (notificationType === "email") {
-                    setEmailFormData({ ...emailFormData, targetUsers: "logged-in" });
+                  if (notificationType === 'email') {
+                    setEmailFormData({
+                      ...emailFormData,
+                      targetUsers: 'logged-in',
+                    });
                   } else {
-                    setWebsiteFormData({ ...websiteFormData, targetUsers: "logged-in" });
+                    setWebsiteFormData({
+                      ...websiteFormData,
+                      targetUsers: 'logged-in',
+                    });
                   }
                 }}
-                className={`p-4 rounded-xl border transition-all text-left ${
-                  (notificationType === "email" ? emailFormData : websiteFormData).targetUsers === "logged-in"
-                    ? "bg-[rgba(59,130,246,0.1)] border-[#3B82F6] text-white"
-                    : "bg-[rgba(255,255,255,0.03)] border-[rgba(255,255,255,0.18)] text-[#94A3B8] hover:border-[rgba(255,255,255,0.3)]"
+                className={`rounded-xl border p-4 text-left transition-all ${
+                  (notificationType === 'email'
+                    ? emailFormData
+                    : websiteFormData
+                  ).targetUsers === 'logged-in'
+                    ? 'border-[#3B82F6] bg-[rgba(59,130,246,0.1)] text-white'
+                    : 'border-[rgba(255,255,255,0.18)] bg-[rgba(255,255,255,0.03)] text-[#94A3B8] hover:border-[rgba(255,255,255,0.3)]'
                 }`}
               >
-                <div className="font-medium mb-1">Logged-in Users</div>
+                <div className="mb-1 flex items-center justify-between font-medium">
+                  <span>Logged-in Users</span>
+                  {audience && (
+                    <span className="rounded-full bg-[rgba(255,255,255,0.08)] px-2 py-0.5 text-xs font-semibold tabular-nums">
+                      {audience.loggedIn.toLocaleString()}
+                    </span>
+                  )}
+                </div>
                 <div className="text-xs opacity-80">Active users only</div>
               </button>
 
               <button
                 onClick={() => {
-                  if (notificationType === "email") {
-                    setEmailFormData({ ...emailFormData, targetUsers: "purchased" });
+                  if (notificationType === 'email') {
+                    setEmailFormData({
+                      ...emailFormData,
+                      targetUsers: 'purchased',
+                    });
                   } else {
-                    setWebsiteFormData({ ...websiteFormData, targetUsers: "purchased" });
+                    setWebsiteFormData({
+                      ...websiteFormData,
+                      targetUsers: 'purchased',
+                    });
                   }
                 }}
-                className={`p-4 rounded-xl border transition-all text-left ${
-                  (notificationType === "email" ? emailFormData : websiteFormData).targetUsers === "purchased"
-                    ? "bg-[rgba(59,130,246,0.1)] border-[#3B82F6] text-white"
-                    : "bg-[rgba(255,255,255,0.03)] border-[rgba(255,255,255,0.18)] text-[#94A3B8] hover:border-[rgba(255,255,255,0.3)]"
+                className={`rounded-xl border p-4 text-left transition-all ${
+                  (notificationType === 'email'
+                    ? emailFormData
+                    : websiteFormData
+                  ).targetUsers === 'purchased'
+                    ? 'border-[#3B82F6] bg-[rgba(59,130,246,0.1)] text-white'
+                    : 'border-[rgba(255,255,255,0.18)] bg-[rgba(255,255,255,0.03)] text-[#94A3B8] hover:border-[rgba(255,255,255,0.3)]'
                 }`}
               >
-                <div className="font-medium mb-1">Purchased Users</div>
+                <div className="mb-1 flex items-center justify-between font-medium">
+                  <span>Purchased Users</span>
+                  {audience && (
+                    <span className="rounded-full bg-[rgba(255,255,255,0.08)] px-2 py-0.5 text-xs font-semibold tabular-nums">
+                      {audience.purchased.toLocaleString()}
+                    </span>
+                  )}
+                </div>
                 <div className="text-xs opacity-80">Users with purchases</div>
               </button>
 
               <button
                 onClick={() => {
-                  if (notificationType === "email") {
-                    setEmailFormData({ ...emailFormData, targetUsers: "no-purchase" });
+                  if (notificationType === 'email') {
+                    setEmailFormData({
+                      ...emailFormData,
+                      targetUsers: 'no-purchase',
+                    });
                   } else {
-                    setWebsiteFormData({ ...websiteFormData, targetUsers: "no-purchase" });
+                    setWebsiteFormData({
+                      ...websiteFormData,
+                      targetUsers: 'no-purchase',
+                    });
                   }
                 }}
-                className={`p-4 rounded-xl border transition-all text-left ${
-                  (notificationType === "email" ? emailFormData : websiteFormData).targetUsers === "no-purchase"
-                    ? "bg-[rgba(59,130,246,0.1)] border-[#3B82F6] text-white"
-                    : "bg-[rgba(255,255,255,0.03)] border-[rgba(255,255,255,0.18)] text-[#94A3B8] hover:border-[rgba(255,255,255,0.3)]"
+                className={`rounded-xl border p-4 text-left transition-all ${
+                  (notificationType === 'email'
+                    ? emailFormData
+                    : websiteFormData
+                  ).targetUsers === 'no-purchase'
+                    ? 'border-[#3B82F6] bg-[rgba(59,130,246,0.1)] text-white'
+                    : 'border-[rgba(255,255,255,0.18)] bg-[rgba(255,255,255,0.03)] text-[#94A3B8] hover:border-[rgba(255,255,255,0.3)]'
                 }`}
               >
-                <div className="font-medium mb-1">Logged-in (No Purchase)</div>
-                <div className="text-xs opacity-80">Active but no purchases</div>
+                <div className="mb-1 flex items-center justify-between font-medium">
+                  <span>Logged-in (No Purchase)</span>
+                  {audience && (
+                    <span className="rounded-full bg-[rgba(255,255,255,0.08)] px-2 py-0.5 text-xs font-semibold tabular-nums">
+                      {audience.loggedInNoPurchase.toLocaleString()}
+                    </span>
+                  )}
+                </div>
+                <div className="text-xs opacity-80">
+                  Active but no purchases
+                </div>
               </button>
             </div>
           </div>
 
           {/* Filters Section */}
-          <div className="p-6 rounded-xl bg-[rgba(255,255,255,0.03)] border border-[rgba(255,255,255,0.18)]">
-            <h3 className="text-white text-base font-semibold mb-4">Filters (Optional)</h3>
+          <div className="rounded-xl border border-[rgba(255,255,255,0.18)] bg-[rgba(255,255,255,0.03)] p-6">
+            <h3 className="mb-4 text-base font-semibold text-white">
+              Filters (Optional)
+            </h3>
 
             <div className="space-y-4">
               {/* Countries - Pill Multi-select */}
               <div>
-                <div className="flex items-center justify-between mb-2">
-                  <label className="text-white text-sm font-medium">
-                    Countries {countries.length > 0 && <span className="text-[#64748B]">({countries.length})</span>}
+                <div className="mb-2 flex items-center justify-between">
+                  <label className="text-sm font-medium text-white">
+                    Countries{' '}
+                    {countries.length > 0 && (
+                      <span className="text-[#64748B]">
+                        ({countries.length})
+                      </span>
+                    )}
                   </label>
                   {!isLoadingCountries && countries.length > 0 && (
                     <div className="flex items-center gap-2">
@@ -260,24 +389,36 @@ export default function AdminNotificationsPage() {
                         type="button"
                         onClick={() => {
                           const all = countries.map((c) => c.country);
-                          if (notificationType === "email") {
-                            setEmailFormData({ ...emailFormData, countries: all });
+                          if (notificationType === 'email') {
+                            setEmailFormData({
+                              ...emailFormData,
+                              countries: all,
+                            });
                           } else {
-                            setWebsiteFormData({ ...websiteFormData, countries: all });
+                            setWebsiteFormData({
+                              ...websiteFormData,
+                              countries: all,
+                            });
                           }
                         }}
                         className="text-xs text-[#3B82F6] hover:underline"
                       >
                         Select all
                       </button>
-                      <span className="text-[#64748B] text-xs">·</span>
+                      <span className="text-xs text-[#64748B]">·</span>
                       <button
                         type="button"
                         onClick={() => {
-                          if (notificationType === "email") {
-                            setEmailFormData({ ...emailFormData, countries: [] });
+                          if (notificationType === 'email') {
+                            setEmailFormData({
+                              ...emailFormData,
+                              countries: [],
+                            });
                           } else {
-                            setWebsiteFormData({ ...websiteFormData, countries: [] });
+                            setWebsiteFormData({
+                              ...websiteFormData,
+                              countries: [],
+                            });
                           }
                         }}
                         className="text-xs text-[#64748B] hover:text-white"
@@ -288,41 +429,62 @@ export default function AdminNotificationsPage() {
                   )}
                 </div>
                 {isLoadingCountries ? (
-                  <div className="p-4 rounded-xl bg-[rgba(255,255,255,0.05)] border border-[rgba(255,255,255,0.18)] text-[#64748B] text-sm">
+                  <div className="rounded-xl border border-[rgba(255,255,255,0.18)] bg-[rgba(255,255,255,0.05)] p-4 text-sm text-[#64748B]">
                     Loading countries...
                   </div>
                 ) : countries.length === 0 ? (
-                  <div className="p-4 rounded-xl bg-[rgba(255,255,255,0.05)] border border-[rgba(255,255,255,0.18)] text-[#64748B] text-sm">
+                  <div className="rounded-xl border border-[rgba(255,255,255,0.18)] bg-[rgba(255,255,255,0.05)] p-4 text-sm text-[#64748B]">
                     No user countries available
                   </div>
                 ) : (
-                  <div className="max-h-[200px] overflow-y-auto p-3 rounded-xl bg-[rgba(255,255,255,0.05)] border border-[rgba(255,255,255,0.18)]">
+                  <div className="max-h-[200px] overflow-y-auto rounded-xl border border-[rgba(255,255,255,0.18)] bg-[rgba(255,255,255,0.05)] p-3">
                     <div className="flex flex-wrap gap-2">
                       {countries.map((c) => {
-                        const selected = notificationType === "email" ? emailFormData.countries : websiteFormData.countries;
+                        const selected =
+                          notificationType === 'email'
+                            ? emailFormData.countries
+                            : websiteFormData.countries;
                         const isSelected = selected.includes(c.country);
                         return (
                           <button
                             key={c.country}
                             type="button"
                             onClick={() => {
-                              const current = notificationType === "email" ? emailFormData.countries : websiteFormData.countries;
+                              const current =
+                                notificationType === 'email'
+                                  ? emailFormData.countries
+                                  : websiteFormData.countries;
                               const next = isSelected
                                 ? current.filter((x) => x !== c.country)
                                 : [...current, c.country];
-                              if (notificationType === "email") {
-                                setEmailFormData({ ...emailFormData, countries: next });
+                              if (notificationType === 'email') {
+                                setEmailFormData({
+                                  ...emailFormData,
+                                  countries: next,
+                                });
                               } else {
-                                setWebsiteFormData({ ...websiteFormData, countries: next });
+                                setWebsiteFormData({
+                                  ...websiteFormData,
+                                  countries: next,
+                                });
                               }
                             }}
-                            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                            className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-all ${
                               isSelected
-                                ? 'bg-[#3B82F6] text-white border border-[#3B82F6]'
-                                : 'bg-[rgba(255,255,255,0.05)] text-[#94A3B8] border border-[rgba(255,255,255,0.18)] hover:bg-[rgba(255,255,255,0.1)] hover:text-white'
+                                ? 'border border-[#3B82F6] bg-[#3B82F6] text-white'
+                                : 'border border-[rgba(255,255,255,0.18)] bg-[rgba(255,255,255,0.05)] text-[#94A3B8] hover:bg-[rgba(255,255,255,0.1)] hover:text-white'
                             }`}
                           >
-                            {c.country}
+                            <span>{c.country}</span>
+                            <span
+                              className={`rounded-full px-1.5 py-0.5 text-[10px] font-semibold tabular-nums ${
+                                isSelected
+                                  ? 'bg-white/20'
+                                  : 'bg-[rgba(255,255,255,0.08)]'
+                              }`}
+                            >
+                              {c.count.toLocaleString()}
+                            </span>
                           </button>
                         );
                       })}
@@ -333,27 +495,35 @@ export default function AdminNotificationsPage() {
 
               {/* Roles - Pill Multi-select */}
               <div>
-                <div className="flex items-center justify-between mb-2">
-                  <label className="text-white text-sm font-medium">Roles</label>
+                <div className="mb-2 flex items-center justify-between">
+                  <label className="text-sm font-medium text-white">
+                    Roles
+                  </label>
                   <div className="flex items-center gap-2">
                     <button
                       type="button"
                       onClick={() => {
-                        if (notificationType === "email") {
-                          setEmailFormData({ ...emailFormData, roles: [...roles] });
+                        if (notificationType === 'email') {
+                          setEmailFormData({
+                            ...emailFormData,
+                            roles: [...roles],
+                          });
                         } else {
-                          setWebsiteFormData({ ...websiteFormData, roles: [...roles] });
+                          setWebsiteFormData({
+                            ...websiteFormData,
+                            roles: [...roles],
+                          });
                         }
                       }}
                       className="text-xs text-[#3B82F6] hover:underline"
                     >
                       Select all
                     </button>
-                    <span className="text-[#64748B] text-xs">·</span>
+                    <span className="text-xs text-[#64748B]">·</span>
                     <button
                       type="button"
                       onClick={() => {
-                        if (notificationType === "email") {
+                        if (notificationType === 'email') {
                           setEmailFormData({ ...emailFormData, roles: [] });
                         } else {
                           setWebsiteFormData({ ...websiteFormData, roles: [] });
@@ -365,30 +535,42 @@ export default function AdminNotificationsPage() {
                     </button>
                   </div>
                 </div>
-                <div className="p-3 rounded-xl bg-[rgba(255,255,255,0.05)] border border-[rgba(255,255,255,0.18)]">
+                <div className="rounded-xl border border-[rgba(255,255,255,0.18)] bg-[rgba(255,255,255,0.05)] p-3">
                   <div className="flex flex-wrap gap-2">
                     {roles.map((role) => {
-                      const selected = notificationType === "email" ? emailFormData.roles : websiteFormData.roles;
+                      const selected =
+                        notificationType === 'email'
+                          ? emailFormData.roles
+                          : websiteFormData.roles;
                       const isSelected = selected.includes(role);
                       return (
                         <button
                           key={role}
                           type="button"
                           onClick={() => {
-                            const current = notificationType === "email" ? emailFormData.roles : websiteFormData.roles;
+                            const current =
+                              notificationType === 'email'
+                                ? emailFormData.roles
+                                : websiteFormData.roles;
                             const next = isSelected
                               ? current.filter((x) => x !== role)
                               : [...current, role];
-                            if (notificationType === "email") {
-                              setEmailFormData({ ...emailFormData, roles: next });
+                            if (notificationType === 'email') {
+                              setEmailFormData({
+                                ...emailFormData,
+                                roles: next,
+                              });
                             } else {
-                              setWebsiteFormData({ ...websiteFormData, roles: next });
+                              setWebsiteFormData({
+                                ...websiteFormData,
+                                roles: next,
+                              });
                             }
                           }}
-                          className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                          className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-all ${
                             isSelected
-                              ? 'bg-[#3B82F6] text-white border border-[#3B82F6]'
-                              : 'bg-[rgba(255,255,255,0.05)] text-[#94A3B8] border border-[rgba(255,255,255,0.18)] hover:bg-[rgba(255,255,255,0.1)] hover:text-white'
+                              ? 'border border-[#3B82F6] bg-[#3B82F6] text-white'
+                              : 'border border-[rgba(255,255,255,0.18)] bg-[rgba(255,255,255,0.05)] text-[#94A3B8] hover:bg-[rgba(255,255,255,0.1)] hover:text-white'
                           }`}
                         >
                           {role}
@@ -405,9 +587,13 @@ export default function AdminNotificationsPage() {
                 name="minSpent"
                 type="number"
                 placeholder="0.00"
-                value={notificationType === "email" ? emailFormData.minSpent : websiteFormData.minSpent}
+                value={
+                  notificationType === 'email'
+                    ? emailFormData.minSpent
+                    : websiteFormData.minSpent
+                }
                 onChange={(value) => {
-                  if (notificationType === "email") {
+                  if (notificationType === 'email') {
                     setEmailFormData({ ...emailFormData, minSpent: value });
                   } else {
                     setWebsiteFormData({ ...websiteFormData, minSpent: value });
@@ -418,7 +604,7 @@ export default function AdminNotificationsPage() {
           </div>
 
           {/* Message Content */}
-          {notificationType === "email" ? (
+          {notificationType === 'email' ? (
             <>
               <AdminFormInput
                 label="Email Subject"
@@ -426,21 +612,28 @@ export default function AdminNotificationsPage() {
                 required
                 placeholder="Enter email subject"
                 value={emailFormData.subject}
-                onChange={(value) => setEmailFormData({ ...emailFormData, subject: value })}
+                onChange={(value) =>
+                  setEmailFormData({ ...emailFormData, subject: value })
+                }
               />
 
               <div>
-                <label className="text-white text-sm font-medium mb-2 block">
+                <label className="mb-2 block text-sm font-medium text-white">
                   Email Message <span className="text-[#EF4444]">*</span>
                 </label>
                 <textarea
                   value={emailFormData.message}
-                  onChange={(e) => setEmailFormData({ ...emailFormData, message: e.target.value })}
+                  onChange={(e) =>
+                    setEmailFormData({
+                      ...emailFormData,
+                      message: e.target.value,
+                    })
+                  }
                   rows={10}
-                  className="w-full bg-[rgba(255,255,255,0.08)] border border-[rgba(255,255,255,0.18)] rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#3B82F6] resize-none"
+                  className="w-full resize-none rounded-xl border border-[rgba(255,255,255,0.18)] bg-[rgba(255,255,255,0.08)] px-4 py-3 text-sm text-white focus:ring-2 focus:ring-[#3B82F6] focus:outline-none"
                   placeholder="Enter your email message here..."
                 />
-                <p className="text-[#64748B] text-xs mt-2">
+                <p className="mt-2 text-xs text-[#64748B]">
                   Rich text editor with HTML support
                 </p>
               </div>
@@ -453,18 +646,25 @@ export default function AdminNotificationsPage() {
                 required
                 placeholder="Enter notification title"
                 value={websiteFormData.title}
-                onChange={(value) => setWebsiteFormData({ ...websiteFormData, title: value })}
+                onChange={(value) =>
+                  setWebsiteFormData({ ...websiteFormData, title: value })
+                }
               />
 
               <div>
-                <label className="text-white text-sm font-medium mb-2 block">
+                <label className="mb-2 block text-sm font-medium text-white">
                   Notification Message <span className="text-[#EF4444]">*</span>
                 </label>
                 <textarea
                   value={websiteFormData.message}
-                  onChange={(e) => setWebsiteFormData({ ...websiteFormData, message: e.target.value })}
+                  onChange={(e) =>
+                    setWebsiteFormData({
+                      ...websiteFormData,
+                      message: e.target.value,
+                    })
+                  }
                   rows={6}
-                  className="w-full bg-[rgba(255,255,255,0.08)] border border-[rgba(255,255,255,0.18)] rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#3B82F6] resize-none"
+                  className="w-full resize-none rounded-xl border border-[rgba(255,255,255,0.18)] bg-[rgba(255,255,255,0.08)] px-4 py-3 text-sm text-white focus:ring-2 focus:ring-[#3B82F6] focus:outline-none"
                   placeholder="Enter your notification message here..."
                 />
               </div>
@@ -475,24 +675,24 @@ export default function AdminNotificationsPage() {
           <div className="flex items-center gap-4 pt-4">
             <button
               onClick={handlePreview}
-              className="flex-1 px-6 py-3 rounded-xl bg-[rgba(255,255,255,0.08)] border border-[rgba(255,255,255,0.18)] text-white hover:bg-[rgba(255,255,255,0.12)] transition-colors font-medium flex items-center justify-center gap-2"
+              className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-[rgba(255,255,255,0.18)] bg-[rgba(255,255,255,0.08)] px-6 py-3 font-medium text-white transition-colors hover:bg-[rgba(255,255,255,0.12)]"
             >
-              <Eye className="w-5 h-5" />
+              <Eye className="h-5 w-5" />
               Preview
             </button>
             <button
               onClick={handleSend}
               disabled={isLoading}
-              className="flex-1 px-6 py-3 rounded-xl bg-[#3B82F6] hover:bg-[#2563EB] text-white transition-colors font-medium flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-[#3B82F6] px-6 py-3 font-medium text-white transition-colors hover:bg-[#2563EB] disabled:cursor-not-allowed disabled:opacity-50"
             >
               {isLoading ? (
                 <>
-                  <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  <span className="h-5 w-5 animate-spin rounded-full border-2 border-white/30 border-t-white" />
                   Sending...
                 </>
               ) : (
                 <>
-                  <Send className="w-5 h-5" />
+                  <Send className="h-5 w-5" />
                   Send Notification
                 </>
               )}
@@ -501,93 +701,123 @@ export default function AdminNotificationsPage() {
         </div>
       </AdminGlassCard>
       {/* Preview Modal */}
-      {showPreview && (() => {
-        const formData = notificationType === "email" ? emailFormData : websiteFormData;
-        return (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-            <div className="w-full max-w-lg mx-4 rounded-2xl bg-[#1E293B] border border-[rgba(255,255,255,0.18)] shadow-2xl">
-              <div className="flex items-center justify-between p-6 border-b border-[rgba(255,255,255,0.1)]">
-                <h3 className="text-white text-lg font-semibold">Notification Preview</h3>
-                <button
-                  onClick={() => setShowPreview(false)}
-                  className="text-[#94A3B8] hover:text-white transition-colors"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-
-              <div className="p-6 space-y-4">
-                <div className="flex items-center gap-2 text-sm">
-                  {notificationType === "email" ? <Mail className="w-4 h-4 text-[#3B82F6]" /> : <Bell className="w-4 h-4 text-[#3B82F6]" />}
-                  <span className="text-[#3B82F6] font-medium capitalize">{notificationType} Notification</span>
+      {showPreview &&
+        (() => {
+          const formData =
+            notificationType === 'email' ? emailFormData : websiteFormData;
+          return (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+              <div className="mx-4 w-full max-w-lg rounded-2xl border border-[rgba(255,255,255,0.18)] bg-[#1E293B] shadow-2xl">
+                <div className="flex items-center justify-between border-b border-[rgba(255,255,255,0.1)] p-6">
+                  <h3 className="text-lg font-semibold text-white">
+                    Notification Preview
+                  </h3>
+                  <button
+                    onClick={() => setShowPreview(false)}
+                    className="text-[#94A3B8] transition-colors hover:text-white"
+                  >
+                    <X className="h-5 w-5" />
+                  </button>
                 </div>
 
-                <div>
-                  <span className="text-[#64748B] text-xs uppercase tracking-wider">Target</span>
-                  <p className="text-white text-sm mt-1">{targetLabels[formData.targetUsers]}</p>
-                </div>
-
-                {formData.countries.length > 0 && (
-                  <div>
-                    <span className="text-[#64748B] text-xs uppercase tracking-wider">Countries</span>
-                    <p className="text-white text-sm mt-1">{formData.countries.join(", ")}</p>
+                <div className="space-y-4 p-6">
+                  <div className="flex items-center gap-2 text-sm">
+                    {notificationType === 'email' ? (
+                      <Mail className="h-4 w-4 text-[#3B82F6]" />
+                    ) : (
+                      <Bell className="h-4 w-4 text-[#3B82F6]" />
+                    )}
+                    <span className="font-medium text-[#3B82F6] capitalize">
+                      {notificationType} Notification
+                    </span>
                   </div>
-                )}
 
-                {formData.roles.length > 0 && (
                   <div>
-                    <span className="text-[#64748B] text-xs uppercase tracking-wider">Roles</span>
-                    <p className="text-white text-sm mt-1">{formData.roles.join(", ")}</p>
+                    <span className="text-xs tracking-wider text-[#64748B] uppercase">
+                      Target
+                    </span>
+                    <p className="mt-1 text-sm text-white">
+                      {targetLabels[formData.targetUsers]}
+                    </p>
                   </div>
-                )}
 
-                {formData.minSpent && (
+                  {formData.countries.length > 0 && (
+                    <div>
+                      <span className="text-xs tracking-wider text-[#64748B] uppercase">
+                        Countries
+                      </span>
+                      <p className="mt-1 text-sm text-white">
+                        {formData.countries.join(', ')}
+                      </p>
+                    </div>
+                  )}
+
+                  {formData.roles.length > 0 && (
+                    <div>
+                      <span className="text-xs tracking-wider text-[#64748B] uppercase">
+                        Roles
+                      </span>
+                      <p className="mt-1 text-sm text-white">
+                        {formData.roles.join(', ')}
+                      </p>
+                    </div>
+                  )}
+
+                  {formData.minSpent && (
+                    <div>
+                      <span className="text-xs tracking-wider text-[#64748B] uppercase">
+                        Min Spent
+                      </span>
+                      <p className="mt-1 text-sm text-white">
+                        ${formData.minSpent}
+                      </p>
+                    </div>
+                  )}
+
                   <div>
-                    <span className="text-[#64748B] text-xs uppercase tracking-wider">Min Spent</span>
-                    <p className="text-white text-sm mt-1">${formData.minSpent}</p>
+                    <span className="text-xs tracking-wider text-[#64748B] uppercase">
+                      {notificationType === 'email' ? 'Subject' : 'Title'}
+                    </span>
+                    <p className="mt-1 text-sm font-medium text-white">
+                      {notificationType === 'email'
+                        ? emailFormData.subject
+                        : websiteFormData.title}
+                    </p>
                   </div>
-                )}
 
-                <div>
-                  <span className="text-[#64748B] text-xs uppercase tracking-wider">
-                    {notificationType === "email" ? "Subject" : "Title"}
-                  </span>
-                  <p className="text-white text-sm mt-1 font-medium">
-                    {notificationType === "email" ? emailFormData.subject : websiteFormData.title}
-                  </p>
+                  <div>
+                    <span className="text-xs tracking-wider text-[#64748B] uppercase">
+                      Message
+                    </span>
+                    <p className="mt-1 max-h-40 overflow-y-auto rounded-xl bg-[rgba(255,255,255,0.05)] p-4 text-sm whitespace-pre-wrap text-white">
+                      {formData.message}
+                    </p>
+                  </div>
                 </div>
 
-                <div>
-                  <span className="text-[#64748B] text-xs uppercase tracking-wider">Message</span>
-                  <p className="text-white text-sm mt-1 whitespace-pre-wrap bg-[rgba(255,255,255,0.05)] rounded-xl p-4 max-h-40 overflow-y-auto">
-                    {formData.message}
-                  </p>
+                <div className="flex items-center gap-3 border-t border-[rgba(255,255,255,0.1)] p-6">
+                  <button
+                    onClick={() => setShowPreview(false)}
+                    className="flex-1 rounded-xl border border-[rgba(255,255,255,0.18)] bg-[rgba(255,255,255,0.08)] px-6 py-3 font-medium text-white transition-colors hover:bg-[rgba(255,255,255,0.12)]"
+                  >
+                    Edit
+                  </button>
+                  <button
+                    onClick={() => {
+                      setShowPreview(false);
+                      handleSend();
+                    }}
+                    disabled={isLoading}
+                    className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-[#3B82F6] px-6 py-3 font-medium text-white transition-colors hover:bg-[#2563EB] disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    <Send className="h-4 w-4" />
+                    Confirm & Send
+                  </button>
                 </div>
-              </div>
-
-              <div className="flex items-center gap-3 p-6 border-t border-[rgba(255,255,255,0.1)]">
-                <button
-                  onClick={() => setShowPreview(false)}
-                  className="flex-1 px-6 py-3 rounded-xl bg-[rgba(255,255,255,0.08)] border border-[rgba(255,255,255,0.18)] text-white hover:bg-[rgba(255,255,255,0.12)] transition-colors font-medium"
-                >
-                  Edit
-                </button>
-                <button
-                  onClick={() => {
-                    setShowPreview(false);
-                    handleSend();
-                  }}
-                  disabled={isLoading}
-                  className="flex-1 px-6 py-3 rounded-xl bg-[#3B82F6] hover:bg-[#2563EB] text-white transition-colors font-medium flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <Send className="w-4 h-4" />
-                  Confirm & Send
-                </button>
               </div>
             </div>
-          </div>
-        );
-      })()}
+          );
+        })()}
     </div>
   );
 }
