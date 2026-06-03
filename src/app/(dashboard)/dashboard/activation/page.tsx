@@ -54,6 +54,7 @@ import {
   formatPrice,
 } from '@/lib/api/smsApi';
 import { getWalletBalance, formatBalance } from '@/lib/api/walletApi';
+import { safeServiceIcon } from '@/lib/service-icon';
 
 type CountryFilterType = 'all' | 'favorites' | 'available';
 type PriceSortType = 'none' | 'low-high' | 'high-low';
@@ -76,8 +77,8 @@ export default function Activation() {
   // "No services available" empty state, before the fetch effect kicks in.
   const [isLoadingServices, setIsLoadingServices] = useState(true);
 
-  // Paginated services state — fetched 200 at a time on scroll.
-  const SERVICES_PAGE_SIZE = 200;
+  // Paginated services state — fetched 100 at a time on scroll.
+  const SERVICES_PAGE_SIZE = 100;
   const [servicesPage, setServicesPage] = useState(1);
   const [hasMoreServices, setHasMoreServices] = useState(false);
   // Full count from backend meta.total — separate from loaded length so
@@ -774,15 +775,27 @@ export default function Activation() {
                       {/* Service + Country */}
                       <div className="flex min-w-0 flex-1 items-center gap-2.5">
                         <div className="bg-primary/10 flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm">
-                          {order.service?.iconUrl ? (
-                            <img
-                              src={order.service.iconUrl}
-                              alt=""
-                              className="h-5 w-5"
-                            />
-                          ) : (
-                            '📱'
-                          )}
+                          {(() => {
+                            const safe = safeServiceIcon(
+                              order.service?.iconUrl,
+                              order.service?.name,
+                            );
+                            return safe ? (
+                              <img
+                                src={safe}
+                                alt=""
+                                className="h-5 w-5"
+                                loading="lazy"
+                                referrerPolicy="no-referrer"
+                                onError={(e) => {
+                                  (e.target as HTMLImageElement).style.display =
+                                    'none';
+                                }}
+                              />
+                            ) : (
+                              '📱'
+                            );
+                          })()}
                         </div>
                         <div className="min-w-0">
                           <div className="flex flex-wrap items-center gap-2">
@@ -1044,11 +1057,31 @@ export default function Activation() {
                       )}
                     >
                       <div className="bg-muted flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-sm">
-                        {svc.iconUrl ? (
-                          <img src={svc.iconUrl} alt="" className="h-5 w-5" />
-                        ) : (
-                          '📱'
-                        )}
+                        {(() => {
+                          const safe = safeServiceIcon(
+                            svc.iconUrl,
+                            svc.name || svc.slug,
+                          );
+                          return safe ? (
+                            <img
+                              src={safe}
+                              alt=""
+                              className="h-5 w-5"
+                              loading="lazy"
+                              referrerPolicy="no-referrer"
+                              onError={(e) => {
+                                // Google's favicon CDN redirects to
+                                // t[1-3].gstatic.com which 404s for
+                                // niche brands. Hide the broken img;
+                                // the parent's emoji shows through.
+                                (e.target as HTMLImageElement).style.display =
+                                  'none';
+                              }}
+                            />
+                          ) : (
+                            '📱'
+                          );
+                        })()}
                       </div>
 
                       <div className="min-w-0 flex-1">
