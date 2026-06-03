@@ -28,6 +28,7 @@ import { getProviders, type SmsProvider } from '@/lib/api/smsApi';
 export default function ApiClient() {
   const [activeEndpoint, setActiveEndpoint] = useState('create');
   const [providers, setProviders] = useState<SmsProvider[]>([]);
+  const [providersLoaded, setProvidersLoaded] = useState(false);
 
   useEffect(() => {
     getProviders()
@@ -36,7 +37,8 @@ export default function ApiClient() {
           (res?.providers || []).filter((p) => p.isActive !== false),
         ),
       )
-      .catch(() => setProviders([]));
+      .catch(() => setProviders([]))
+      .finally(() => setProvidersLoaded(true));
   }, []);
 
   const hasTier = useCallback(
@@ -413,44 +415,48 @@ print(response.json())`}</code>
           </div>
 
           <div className="grid gap-6 md:grid-cols-3">
-            <Card>
-              <CardHeader>
-                <Badge className="mb-2 w-fit bg-blue-500">💰 V1 Standard</Badge>
-                <CardTitle className="text-lg">Standard Tier</CardTitle>
-                <CardDescription>
-                  Standard services - best price. Suitable for customers looking
-                  for basic and affordable options.
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="bg-muted overflow-x-auto rounded-lg p-3 font-mono text-xs">
-                  <code className="text-blue-500">"provider": "v1"</code>
-                </div>
-                <ul className="mt-4 space-y-2">
-                  <li className="flex items-start space-x-2 text-sm">
-                    <CheckCircle2 className="text-success mt-0.5 h-4 w-4" />
-                    <span>Affordable pricing</span>
-                  </li>
-                  <li className="flex items-start space-x-2 text-sm">
-                    <CheckCircle2 className="text-success mt-0.5 h-4 w-4" />
-                    <span>Standard delivery speed</span>
-                  </li>
-                  <li className="flex items-start space-x-2 text-sm">
-                    <CheckCircle2 className="text-success mt-0.5 h-4 w-4" />
-                    <span>Wide service coverage</span>
-                  </li>
-                  <li className="flex items-start space-x-2 text-sm">
-                    <CheckCircle2 className="text-success mt-0.5 h-4 w-4" />
-                    <span>Regular priority</span>
-                  </li>
-                </ul>
-                <p className="mt-4 text-sm font-semibold">
-                  From $1.50 per activation
-                </p>
-              </CardContent>
-            </Card>
+            {providersLoaded && hasTier('V1') && (
+              <Card>
+                <CardHeader>
+                  <Badge className="mb-2 w-fit bg-blue-500">
+                    💰 V1 Standard
+                  </Badge>
+                  <CardTitle className="text-lg">Standard Tier</CardTitle>
+                  <CardDescription>
+                    Standard services - best price. Suitable for customers
+                    looking for basic and affordable options.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="bg-muted overflow-x-auto rounded-lg p-3 font-mono text-xs">
+                    <code className="text-blue-500">"provider": "v1"</code>
+                  </div>
+                  <ul className="mt-4 space-y-2">
+                    <li className="flex items-start space-x-2 text-sm">
+                      <CheckCircle2 className="text-success mt-0.5 h-4 w-4" />
+                      <span>Affordable pricing</span>
+                    </li>
+                    <li className="flex items-start space-x-2 text-sm">
+                      <CheckCircle2 className="text-success mt-0.5 h-4 w-4" />
+                      <span>Standard delivery speed</span>
+                    </li>
+                    <li className="flex items-start space-x-2 text-sm">
+                      <CheckCircle2 className="text-success mt-0.5 h-4 w-4" />
+                      <span>Wide service coverage</span>
+                    </li>
+                    <li className="flex items-start space-x-2 text-sm">
+                      <CheckCircle2 className="text-success mt-0.5 h-4 w-4" />
+                      <span>Regular priority</span>
+                    </li>
+                  </ul>
+                  <p className="mt-4 text-sm font-semibold">
+                    From $1.50 per activation
+                  </p>
+                </CardContent>
+              </Card>
+            )}
 
-            {hasTier('V2') && (
+            {providersLoaded && hasTier('V2') && (
               <Card className="border-primary border-2">
                 <CardHeader>
                   <Badge className="bg-primary mb-2 w-fit">💎 V2 Premium</Badge>
@@ -489,7 +495,7 @@ print(response.json())`}</code>
               </Card>
             )}
 
-            {hasTier('V3') && (
+            {providersLoaded && hasTier('V3') && (
               <Card className="border-warning border-2">
                 <CardHeader>
                   <Badge className="bg-warning text-warning-foreground mb-2 w-fit">

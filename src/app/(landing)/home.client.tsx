@@ -63,6 +63,7 @@ export default function HomeClient() {
   const [plans, setPlans] = useState<MembershipPlan[]>([]);
   const [plansLoading, setPlansLoading] = useState(true);
   const [providers, setProviders] = useState<SmsProvider[]>([]);
+  const [providersLoaded, setProvidersLoaded] = useState(false);
   const [reviews, setReviews] =
     useState<typeof fallbackReviews>(fallbackReviews);
   const [reviewsLoading, setReviewsLoading] = useState(true);
@@ -114,6 +115,8 @@ export default function HomeClient() {
       setProviders((res?.providers || []).filter((p) => p.isActive !== false));
     } catch (error) {
       console.error('Failed to fetch providers for landing pricing:', error);
+    } finally {
+      setProvidersLoaded(true);
     }
   }, []);
 
@@ -278,47 +281,51 @@ export default function HomeClient() {
 
           <div className="grid gap-6 md:grid-cols-3">
             {/* Standard V1 */}
-            <Card className="border-2">
-              <CardHeader>
-                <Badge className="mb-2 w-fit bg-blue-500">💰 Standard V1</Badge>
-                <CardTitle className="text-xl">Standard Activation</CardTitle>
-                <CardDescription>
-                  Standard services - best price. Suitable for customers looking
-                  for basic and affordable options.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-3">
-                  <div className="flex items-center space-x-2">
-                    <CheckCircle2 className="text-success h-5 w-5" />
-                    <span className="text-sm">Affordable pricing</span>
+            {providersLoaded && hasTier('V1') && (
+              <Card className="border-2">
+                <CardHeader>
+                  <Badge className="mb-2 w-fit bg-blue-500">
+                    💰 Standard V1
+                  </Badge>
+                  <CardTitle className="text-xl">Standard Activation</CardTitle>
+                  <CardDescription>
+                    Standard services - best price. Suitable for customers
+                    looking for basic and affordable options.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-3">
+                    <div className="flex items-center space-x-2">
+                      <CheckCircle2 className="text-success h-5 w-5" />
+                      <span className="text-sm">Affordable pricing</span>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <CheckCircle2 className="text-success h-5 w-5" />
+                      <span className="text-sm">Standard delivery speed</span>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <CheckCircle2 className="text-success h-5 w-5" />
+                      <span className="text-sm">Wide service coverage</span>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <CheckCircle2 className="text-success h-5 w-5" />
+                      <span className="text-sm">Regular priority</span>
+                    </div>
                   </div>
-                  <div className="flex items-center space-x-2">
-                    <CheckCircle2 className="text-success h-5 w-5" />
-                    <span className="text-sm">Standard delivery speed</span>
+                  <div className="pt-4">
+                    <p className="text-2xl font-bold">
+                      {fromPriceFor('V1', 'From $1.50')}
+                    </p>
+                    <p className="text-muted-foreground text-sm">
+                      per activation
+                    </p>
                   </div>
-                  <div className="flex items-center space-x-2">
-                    <CheckCircle2 className="text-success h-5 w-5" />
-                    <span className="text-sm">Wide service coverage</span>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <CheckCircle2 className="text-success h-5 w-5" />
-                    <span className="text-sm">Regular priority</span>
-                  </div>
-                </div>
-                <div className="pt-4">
-                  <p className="text-2xl font-bold">
-                    {fromPriceFor('V1', 'From $1.50')}
-                  </p>
-                  <p className="text-muted-foreground text-sm">
-                    per activation
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+            )}
 
             {/* Premium V2 */}
-            {hasTier('V2') && (
+            {providersLoaded && hasTier('V2') && (
               <Card className="border-primary relative overflow-hidden border-2">
                 <div className="bg-primary text-primary-foreground absolute top-0 right-0 px-3 py-1 text-xs font-semibold">
                   POPULAR
@@ -373,7 +380,7 @@ export default function HomeClient() {
             )}
 
             {/* Elite V3 */}
-            {hasTier('V3') && (
+            {providersLoaded && hasTier('V3') && (
               <Card className="border-warning relative overflow-hidden border-2">
                 <div className="bg-warning text-warning-foreground absolute top-0 right-0 px-3 py-1 text-xs font-semibold">
                   BEST
