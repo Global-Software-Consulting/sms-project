@@ -4,25 +4,28 @@ import { useRouter } from 'next/navigation';
 
 /**
  * Workaround for a long-standing Next.js App Router quirk where the
- * first click on a <Link> after the page has been idle (or after a
- * route with metadata) is silently dropped — the URL doesn't change,
- * the navigation doesn't fire, and only the second click works.
+ * first click on a <Link> after the page has been idle (or on routes
+ * with metadata) is silently dropped — URL doesn't change, navigation
+ * never fires, second click works.
  *
  * See: vercel/next.js#43972, vercel/next.js#57565
  *
- * Listen for anchor-element clicks in the capture phase. If the click
- * targets an in-app path (same-origin, no modifier keys, default mouse
- * button) AND no other handler has called preventDefault, fall through
- * to router.push so the navigation always commits. If Link's own
- * onClick already prevented default, we do nothing.
+ * Strategy: intercept the bubble phase. By bubble time, any inline
+ * onClick / Link logic has already had its chance. We then take over
+ * for plain in-app left-clicks by preventing the default and routing
+ * through router.push directly. This bypasses Next's internal Link
+ * click handler entirely, so the navigation always commits on the
+ * first click.
+ *
+ * Cmd/Ctrl/Shift/Alt + click, middle-button, target=_blank, cross-
+ * origin, hash-only same-page, and preventDefault'd clicks are all
+ * left alone.
  */
 export function LinkClickRecovery() {
   const router = useRouter();
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
-      // Only main-button clicks without modifiers (let Cmd/Ctrl+click etc
-      // through to the browser as normal new-tab behavior).
       if (
         e.button !== 0 ||
         e.metaKey ||
@@ -37,9 +40,10 @@ export function LinkClickRecovery() {
       if (!a) return;
       const href = a.getAttribute('href');
       if (!href || href.startsWith('#')) return;
-      // External / new-tab links: let the browser handle them.
       const target = a.getAttribute('target');
       if (target && target !== '_self') return;
+      // Skip plain <a> that opted out of SPA routing.
+      if (a.hasAttribute('download')) return;
       let url: URL;
       try {
         url = new URL(href, window.location.href);
@@ -55,18 +59,15 @@ export function LinkClickRecovery() {
       ) {
         return;
       }
-      // Schedule a fallback navigation on the next microtask. If Next's
-      // Link took the click, it will already have called router.push by
-      // then and this is a no-op against the same href. If Link silently
-      // dropped the click (the bug), this recovers the navigation.
-      queueMicrotask(() => {
-        if (window.location.href !== url.href) {
-          router.push(url.pathname + url.search + url.hash);
-        }
-      });
+      // Take over the click. If Link's own handler ran first it called
+      // router.push(url); calling it again here is idempotent because
+      // Next dedupes pushes to the current pending href. If Link
+      // silently dropped the click (the bug), this one commits.
+      e.preventDefault();
+      router.push(url.pathname + url.search + url.hash);
     };
-    document.addEventListener('click', handler, true);
-    return () => document.removeEventListener('click', handler, true);
+    document.addEventListener('click', handler);
+    return () => document.removeEventListener('click', handler);
   }, [router]);
 
   return null;

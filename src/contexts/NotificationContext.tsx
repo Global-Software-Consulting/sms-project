@@ -165,7 +165,11 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
 
     const socket = io(`${SOCKET_URL}/notifications`, {
       auth: { token: tokens.accessToken },
-      transports: ['websocket', 'polling'],
+      // polling first, upgrade to WebSocket only if the proxy allows it.
+      // Cloudflare/some-CDN setups return 400 on the WS upgrade; reversing
+      // the order lets the connection survive on polling while WS upgrades
+      // are attempted in the background.
+      transports: ['polling', 'websocket'],
       reconnection: true,
       reconnectionAttempts: Infinity,
       reconnectionDelay: 3000,
