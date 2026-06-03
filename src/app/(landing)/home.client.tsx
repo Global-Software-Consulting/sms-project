@@ -54,8 +54,7 @@ const fallbackReviews = [
   {
     name: 'Emma Davis',
     role: 'Marketing Manager',
-    content:
-      'VIP membership pays for itself. The discounts are incredible.',
+    content: 'VIP membership pays for itself. The discounts are incredible.',
     rating: 5,
   },
 ];
@@ -64,7 +63,8 @@ export default function HomeClient() {
   const [plans, setPlans] = useState<MembershipPlan[]>([]);
   const [plansLoading, setPlansLoading] = useState(true);
   const [providers, setProviders] = useState<SmsProvider[]>([]);
-  const [reviews, setReviews] = useState<typeof fallbackReviews>(fallbackReviews);
+  const [reviews, setReviews] =
+    useState<typeof fallbackReviews>(fallbackReviews);
   const [reviewsLoading, setReviewsLoading] = useState(true);
 
   const fetchPlans = useCallback(async () => {
@@ -84,9 +84,11 @@ export default function HomeClient() {
     try {
       setReviewsLoading(true);
       const response = await apiClient.get<{ data: Review[] }>(
-        API_ENDPOINTS.REVIEWS.FEATURED
+        API_ENDPOINTS.REVIEWS.FEATURED,
       );
-      const data = Array.isArray(response) ? response : (response as any).data ?? response;
+      const data = Array.isArray(response)
+        ? response
+        : ((response as any).data ?? response);
       if (Array.isArray(data) && data.length > 0) {
         setReviews(
           data.map((r: Review) => ({
@@ -94,7 +96,7 @@ export default function HomeClient() {
             role: r.title || 'Customer',
             content: r.text,
             rating: r.rating,
-          }))
+          })),
         );
       }
     } catch (error) {
@@ -109,7 +111,7 @@ export default function HomeClient() {
   const fetchProviders = useCallback(async () => {
     try {
       const res = await getProviders();
-      setProviders((res?.providers || []).filter(p => p.isActive !== false));
+      setProviders((res?.providers || []).filter((p) => p.isActive !== false));
     } catch (error) {
       console.error('Failed to fetch providers for landing pricing:', error);
     }
@@ -127,7 +129,10 @@ export default function HomeClient() {
   const fromPriceFor = useCallback(
     (versionPrefix: 'V1' | 'V2' | 'V3', fallback: string): string => {
       const match = providers.find(
-        p => (p.version || '').startsWith(versionPrefix) && p.fromPrice != null && p.fromPrice > 0,
+        (p) =>
+          (p.version || '').startsWith(versionPrefix) &&
+          p.fromPrice != null &&
+          p.fromPrice > 0,
       );
       return match ? `From $${match.fromPrice!.toFixed(2)}` : fallback;
     },
@@ -191,7 +196,6 @@ export default function HomeClient() {
     },
   ];
 
-
   return (
     <div className="w-full">
       {/* Hero Section */}
@@ -221,7 +225,7 @@ export default function HomeClient() {
               className="btn-premium w-full text-base sm:w-auto"
             >
               <Link href="/auth/signup">
-                Get Started Free <ArrowRight className="ml-2 h-4 w-4" />
+                Get Started <ArrowRight className="ml-2 h-4 w-4" />
               </Link>
             </Button>
             <Button
@@ -294,7 +298,9 @@ export default function HomeClient() {
                   </div>
                 </div>
                 <div className="pt-4">
-                  <p className="text-2xl font-bold">{fromPriceFor('V1', 'From $1.50')}</p>
+                  <p className="text-2xl font-bold">
+                    {fromPriceFor('V1', 'From $1.50')}
+                  </p>
                   <p className="text-muted-foreground text-sm">
                     per activation
                   </p>
@@ -416,7 +422,9 @@ export default function HomeClient() {
       <section className="border-border container mx-auto border-t px-4 py-12 sm:py-16 md:py-20">
         <div className="mx-auto max-w-4xl">
           <div className="mb-8 space-y-4 text-center sm:mb-12">
-            <h2 className="text-2xl font-bold sm:text-3xl md:text-4xl">How It Works</h2>
+            <h2 className="text-2xl font-bold sm:text-3xl md:text-4xl">
+              How It Works
+            </h2>
             <p className="text-muted-foreground text-base sm:text-lg">
               Get started in three simple steps
             </p>
@@ -462,7 +470,9 @@ export default function HomeClient() {
       <section className="border-border container mx-auto border-t px-4 py-12 sm:py-16 md:py-20">
         <div className="mx-auto max-w-6xl">
           <div className="mb-8 space-y-4 text-center sm:mb-12">
-            <h2 className="text-2xl font-bold sm:text-3xl md:text-4xl">Key Features</h2>
+            <h2 className="text-2xl font-bold sm:text-3xl md:text-4xl">
+              Key Features
+            </h2>
             <p className="text-muted-foreground text-base sm:text-lg">
               Everything you need for SMS verification
             </p>
@@ -498,7 +508,9 @@ export default function HomeClient() {
       <section className="border-border container mx-auto border-t px-4 py-12 sm:py-16 md:py-20">
         <div className="mx-auto max-w-6xl">
           <div className="mb-8 space-y-4 text-center sm:mb-12">
-            <h2 className="text-2xl font-bold sm:text-3xl md:text-4xl">Membership Plans</h2>
+            <h2 className="text-2xl font-bold sm:text-3xl md:text-4xl">
+              Membership Plans
+            </h2>
             <p className="text-muted-foreground text-base sm:text-lg">
               Save more with our membership tiers
             </p>
@@ -557,7 +569,9 @@ export default function HomeClient() {
                       variant={plan.isPopular ? 'default' : 'outline'}
                     >
                       <Link href="/dashboard/membership">
-                        {parseFloat(plan.price) === 0 ? 'Get Started' : 'Upgrade'}
+                        {parseFloat(plan.price) === 0
+                          ? 'Get Started'
+                          : 'Upgrade'}
                       </Link>
                     </Button>
                   </CardContent>

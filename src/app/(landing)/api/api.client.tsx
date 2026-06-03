@@ -87,7 +87,7 @@ export default function ApiClient() {
           <div className="flex flex-col items-center justify-center gap-4 pt-4 sm:flex-row">
             <Button asChild size="lg">
               <Link href="/auth/signup">
-                Get Started Free <ArrowRight className="ml-2 h-4 w-4" />
+                Get Started <ArrowRight className="ml-2 h-4 w-4" />
               </Link>
             </Button>
             <Button asChild size="lg" variant="outline">
@@ -146,7 +146,9 @@ export default function ApiClient() {
       <section className="border-border container mx-auto border-t px-4 py-12 sm:py-16 md:py-20">
         <div className="mx-auto max-w-5xl">
           <div className="mb-12 space-y-4 text-center">
-            <h2 className="text-2xl font-bold sm:text-3xl md:text-4xl">Quick Start</h2>
+            <h2 className="text-2xl font-bold sm:text-3xl md:text-4xl">
+              Quick Start
+            </h2>
             <p className="text-muted-foreground text-lg">
               Get up and running in minutes
             </p>
@@ -424,7 +426,9 @@ print(response.json())`}</code>
                     <span>Regular priority</span>
                   </li>
                 </ul>
-                <p className="mt-4 text-sm font-semibold">From $1.50 per activation</p>
+                <p className="mt-4 text-sm font-semibold">
+                  From $1.50 per activation
+                </p>
               </CardContent>
             </Card>
 
@@ -459,7 +463,9 @@ print(response.json())`}</code>
                     <span>VIP priority routing</span>
                   </li>
                 </ul>
-                <p className="mt-4 text-sm font-semibold">From $2.50 per activation</p>
+                <p className="mt-4 text-sm font-semibold">
+                  From $2.50 per activation
+                </p>
               </CardContent>
             </Card>
 
@@ -497,7 +503,9 @@ print(response.json())`}</code>
                     <span>Maximum priority + support</span>
                   </li>
                 </ul>
-                <p className="mt-4 text-sm font-semibold">From $3.50 per activation</p>
+                <p className="mt-4 text-sm font-semibold">
+                  From $3.50 per activation
+                </p>
               </CardContent>
             </Card>
           </div>
@@ -508,7 +516,9 @@ print(response.json())`}</code>
       <section className="border-border container mx-auto border-t px-4 py-12 sm:py-16 md:py-20">
         <div className="mx-auto max-w-5xl">
           <div className="mb-12 space-y-4 text-center">
-            <h2 className="text-2xl font-bold sm:text-3xl md:text-4xl">API Endpoints</h2>
+            <h2 className="text-2xl font-bold sm:text-3xl md:text-4xl">
+              API Endpoints
+            </h2>
             <p className="text-muted-foreground text-lg">
               Complete reference of available endpoints
             </p>
@@ -628,7 +638,7 @@ print(response.json())`}</code>
           <div className="flex flex-col items-center justify-center gap-4 sm:flex-row">
             <Button asChild size="lg">
               <Link href="/auth/signup">
-                Get Started Free <ArrowRight className="ml-2 h-4 w-4" />
+                Get Started <ArrowRight className="ml-2 h-4 w-4" />
               </Link>
             </Button>
             <Button asChild size="lg" variant="outline">
