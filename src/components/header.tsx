@@ -8,6 +8,7 @@ import { useState, useEffect } from 'react';
 import { cn } from './ui/utils';
 import { useBranding } from '@/contexts/BrandingContext';
 import { LanguagePickerDropdown } from './google-translate';
+import { useAuth } from '@/hooks/useAuth';
 
 export function Header() {
   const { theme, setTheme } = useTheme();
@@ -16,6 +17,11 @@ export function Header() {
   const [langOpen, setLangOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
   const pathname = usePathname();
+  const { isAuthenticated, isAdmin } = useAuth();
+  // Avoid hydration flash — only flip the CTAs after the client has mounted.
+  const showAuthedCta = mounted && isAuthenticated;
+  const homeHref = isAdmin ? '/admin' : '/dashboard';
+  const homeLabel = isAdmin ? 'Admin' : 'Dashboard';
 
   useEffect(() => {
     setMounted(true);
@@ -42,12 +48,18 @@ export function Header() {
       <div className="container mx-auto flex h-14 items-center justify-between gap-2 px-4 sm:h-16">
         {/* Logo */}
         <Link href="/" className="flex flex-shrink-0 items-center space-x-2">
-          <div className="from-primary to-accent flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-br sm:h-10 sm:w-10 overflow-hidden">
+          <div className="from-primary to-accent flex h-8 w-8 items-center justify-center overflow-hidden rounded-xl bg-gradient-to-br sm:h-10 sm:w-10">
             {siteLogo ? (
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={siteLogo} alt="Logo" className="w-full h-full object-contain" />
+              <img
+                src={siteLogo}
+                alt="Logo"
+                className="h-full w-full object-contain"
+              />
             ) : (
-              <span className="text-primary-foreground text-base font-bold sm:text-xl">S</span>
+              <span className="text-primary-foreground text-base font-bold sm:text-xl">
+                S
+              </span>
             )}
           </div>
           <span className="hidden text-base font-bold sm:inline-block sm:text-xl">
@@ -76,7 +88,7 @@ export function Header() {
         {/* Actions */}
         <div className="flex flex-shrink-0 items-center gap-1.5 sm:gap-2">
           {/* Language Picker */}
-          <div className="relative notranslate">
+          <div className="notranslate relative">
             <Button
               variant="ghost"
               size="icon"
@@ -89,7 +101,10 @@ export function Header() {
             >
               <Globe className="h-4 w-4" />
             </Button>
-            <LanguagePickerDropdown isOpen={langOpen} onClose={() => setLangOpen(false)} />
+            <LanguagePickerDropdown
+              isOpen={langOpen}
+              onClose={() => setLangOpen(false)}
+            />
           </div>
 
           {mounted && (
@@ -105,18 +120,26 @@ export function Header() {
             </Button>
           )}
 
-          <Button
-            asChild
-            variant="ghost"
-            size="sm"
-            className="hidden md:inline-flex"
-          >
-            <Link href="/auth/login">Sign In</Link>
-          </Button>
+          {showAuthedCta ? (
+            <Button asChild size="sm" className="hidden md:inline-flex">
+              <Link href={homeHref}>{homeLabel}</Link>
+            </Button>
+          ) : (
+            <>
+              <Button
+                asChild
+                variant="ghost"
+                size="sm"
+                className="hidden md:inline-flex"
+              >
+                <Link href="/auth/login">Sign In</Link>
+              </Button>
 
-          <Button asChild size="sm" className="hidden md:inline-flex">
-            <Link href="/auth/signup">Get Started</Link>
-          </Button>
+              <Button asChild size="sm" className="hidden md:inline-flex">
+                <Link href="/auth/signup">Get Started</Link>
+              </Button>
+            </>
+          )}
 
           {/* Mobile Menu Button */}
           <Button
@@ -159,19 +182,32 @@ export function Header() {
             </Link>
           ))}
           <div className="flex flex-col gap-2 pt-4 pb-2">
-            <Button asChild variant="outline" className="w-full">
-              <Link href="/auth/login" onClick={() => setMobileMenuOpen(false)}>
-                Sign In
-              </Link>
-            </Button>
-            <Button asChild className="w-full">
-              <Link
-                href="/auth/signup"
-                onClick={() => setMobileMenuOpen(false)}
-              >
-                Get Started
-              </Link>
-            </Button>
+            {showAuthedCta ? (
+              <Button asChild className="w-full">
+                <Link href={homeHref} onClick={() => setMobileMenuOpen(false)}>
+                  {homeLabel}
+                </Link>
+              </Button>
+            ) : (
+              <>
+                <Button asChild variant="outline" className="w-full">
+                  <Link
+                    href="/auth/login"
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    Sign In
+                  </Link>
+                </Button>
+                <Button asChild className="w-full">
+                  <Link
+                    href="/auth/signup"
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    Get Started
+                  </Link>
+                </Button>
+              </>
+            )}
           </div>
         </nav>
       </div>
