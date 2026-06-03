@@ -645,6 +645,107 @@ export const deleteReview = async (id: string): Promise<void> => {
 };
 
 // ============================================
+// REVIEWS — bulk + scheduled posting + unique-name pool
+// (CheapStreamTV-style admin tools)
+// ============================================
+
+export const bulkApproveReviews = async (
+  ids: string[],
+): Promise<{ updated: number }> => {
+  const res = await apiClient.post<{ updated: number }>(
+    API_ENDPOINTS.ADMIN.REVIEWS.BULK_APPROVE,
+    { ids },
+  );
+  return res.data;
+};
+
+export const bulkRejectReviews = async (
+  ids: string[],
+  reason?: string,
+): Promise<{ updated: number }> => {
+  const res = await apiClient.post<{ updated: number }>(
+    API_ENDPOINTS.ADMIN.REVIEWS.BULK_REJECT,
+    { ids, reason },
+  );
+  return res.data;
+};
+
+export const bulkDeleteReviews = async (
+  ids: string[],
+): Promise<{ deleted: number }> => {
+  const res = await apiClient.post<{ deleted: number }>(
+    API_ENDPOINTS.ADMIN.REVIEWS.BULK_DELETE,
+    { ids },
+  );
+  return res.data;
+};
+
+export interface BulkScheduleRequest {
+  reviews: string[];
+  timerRange: { min: number; max: number }; // seconds
+  ratingRange: { min: number; max: number };
+  startImmediately?: boolean;
+}
+
+export interface BulkScheduleResponse {
+  scheduled: number;
+  total: number;
+  nextPosting: string | null;
+  skipped: string[];
+}
+
+export const scheduleBulkReviews = async (
+  body: BulkScheduleRequest,
+): Promise<BulkScheduleResponse> => {
+  const res = await apiClient.post<BulkScheduleResponse>(
+    API_ENDPOINTS.ADMIN.REVIEWS.BULK_SCHEDULE,
+    body,
+  );
+  return res.data;
+};
+
+export interface UniqueName {
+  id: string;
+  name: string;
+  reviewUsed: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface UniqueNamesResponse {
+  data: UniqueName[];
+  meta: { total: number; page: number; limit: number; totalPages: number };
+}
+
+export const listUniqueNames = async (params?: {
+  page?: number;
+  limit?: number;
+  used?: boolean;
+  search?: string;
+}): Promise<UniqueNamesResponse> => {
+  const res = await apiClient.get<UniqueNamesResponse>(
+    API_ENDPOINTS.ADMIN.REVIEWS.UNIQUE_NAMES,
+    { params },
+  );
+  return res.data;
+};
+
+export const addUniqueNames = async (body: {
+  name?: string;
+  names?: string[];
+}): Promise<{ added: number; duplicates: number }> => {
+  const res = await apiClient.post<{ added: number; duplicates: number }>(
+    API_ENDPOINTS.ADMIN.REVIEWS.UNIQUE_NAMES,
+    body,
+  );
+  return res.data;
+};
+
+export const deleteUniqueName = async (id: string): Promise<void> => {
+  await apiClient.delete(API_ENDPOINTS.ADMIN.REVIEWS.UNIQUE_NAME_DETAIL(id));
+};
+
+// ============================================
 // NOTIFICATIONS Types & Functions
 // ============================================
 

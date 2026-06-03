@@ -446,6 +446,13 @@ export const API_ENDPOINTS = {
       APPROVE: (id: string) => `/admin/reviews/${id}/approve`,
       REJECT: (id: string) => `/admin/reviews/${id}/reject`,
       FEATURE: (id: string) => `/admin/reviews/${id}/feature`,
+      BULK_APPROVE: '/admin/reviews/bulk/approve',
+      BULK_REJECT: '/admin/reviews/bulk/reject',
+      BULK_DELETE: '/admin/reviews/bulk/delete',
+      BULK_SCHEDULE: '/admin/reviews/bulk/schedule',
+      BULK_SCHEDULED: '/admin/reviews/bulk/scheduled',
+      UNIQUE_NAMES: '/admin/reviews/unique-names',
+      UNIQUE_NAME_DETAIL: (id: string) => `/admin/reviews/unique-names/${id}`,
     },
 
     // Admin Notifications
