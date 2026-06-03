@@ -96,6 +96,39 @@ export default function RootLayout({
       <head>
         <JsonLd data={organizationSchema()} />
         <JsonLd data={websiteSchema()} />
+        {/*
+          Google Translate (and a few browser extensions) wrap text nodes
+          in <font> tags, which makes React throw
+          "Cannot read properties of null (reading 'removeChild')"
+          on the first navigation that unmounts touched text. Patch
+          Node.prototype.removeChild / insertBefore so they no-op when
+          the reference node has been re-parented by a third party.
+          Loaded inline in <head> so it runs before React commits any DOM.
+        */}
+        <script
+          // eslint-disable-next-line react/no-danger
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function () {
+                if (typeof Node === 'undefined') return;
+                var origRemove = Node.prototype.removeChild;
+                Node.prototype.removeChild = function (child) {
+                  if (child && child.parentNode !== this) {
+                    return child;
+                  }
+                  return origRemove.apply(this, arguments);
+                };
+                var origInsert = Node.prototype.insertBefore;
+                Node.prototype.insertBefore = function (newNode, refNode) {
+                  if (refNode && refNode.parentNode !== this) {
+                    return newNode;
+                  }
+                  return origInsert.apply(this, arguments);
+                };
+              })();
+            `,
+          }}
+        />
       </head>
       <body suppressHydrationWarning>
         <StoreProvider>
