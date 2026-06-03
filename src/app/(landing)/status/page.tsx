@@ -13,7 +13,7 @@ export const metadata = buildMetadata({
 export default function Status() {
   const services = [
     { name: 'API Services', status: 'operational', uptime: '99.99%' },
-    { name: 'SMS Gateway', status: 'operational', uptime: '99.95%' },
+    { name: 'SMS Delivery', status: 'operational', uptime: '99.95%' },
     { name: 'Payment Processing', status: 'operational', uptime: '99.97%' },
     { name: 'Web Dashboard', status: 'operational', uptime: '99.98%' },
   ];

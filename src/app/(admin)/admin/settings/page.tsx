@@ -77,7 +77,7 @@ type TabType =
   | 'page'
   | 'email'
   | 'addons'
-  | 'trial'
+  | 'rate-limits'
   | 'logo'
   | 'status'
   | 'language';
@@ -88,7 +88,7 @@ const validTabs: TabType[] = [
   'page',
   'email',
   'addons',
-  'trial',
+  'rate-limits',
   'logo',
   'status',
   'language',
@@ -182,24 +182,6 @@ www.cheapstreamtv.com`,
       'Thank you for choosing Cheap Streamwhere great entertainment meets unbeatable value. We look forward to assisting you!',
   });
 
-  // Free Trial State
-  const [freeTrial, setFreeTrial] = useState({
-    mainTitle: 'Start Your Free Trial',
-    description:
-      'Experience 4 hours of premium entertainment. Try top-tier live channels and on-demand content with no commitment.',
-    sectionTitle: 'What Do You Get with Your Free Trial?',
-    items: [
-      'Instant activation - No credit card required',
-      'Full HD & 4K streams',
-      'Works on all devices (Mobile, PC, Smart TV, Firestick, m3u, MAG, Enigma)',
-      '27,000+ Live Channels',
-      '131,000+ VOD',
-      '52,000+ TV Series',
-      'Friendly support via ticket or WhatsApp',
-      'Get a real feel before you subscribe',
-    ],
-  });
-
   // Site Status State
   const [siteStatus, setSiteStatus] = useState({
     isActive: true,
@@ -230,15 +212,22 @@ www.cheapstreamtv.com`,
       siteKey: '6Lc4c7BJAAAAJCRKEkgnKJhyjtPvER__TxsMSp0H',
       secretKey: '6Lc4c7BJAAAAkkLJ7BQTh_NqverPynuSznTivEnO3',
     },
-    trustpilot: { enabled: false },
+    trustpilot: { enabled: false, businessUrl: '', businessUnitId: '' },
     googleAnalytics: {
       enabled: true,
       measurementId: 'G-Y7TVVML9P',
     },
-    microsoftClarity: { enabled: false },
-    cloudflare: { enabled: false },
-    getbutton: { enabled: false },
-    tawkto: { enabled: false },
+    microsoftClarity: { enabled: false, projectId: '' },
+    cloudflare: { enabled: false, token: '' },
+    getbutton: { enabled: false, code: '' },
+    tawkto: { enabled: false, propertyId: '', widgetId: 'default' },
+  });
+
+  // API Rate Limits per tier (req/min)
+  const [rateLimits, setRateLimits] = useState({
+    basic: '10',
+    pro: '100',
+    vip: '1000',
   });
 
   // Languages State (now API-driven)
@@ -387,6 +376,12 @@ www.cheapstreamtv.com`,
           },
           trustpilot: {
             enabled: addonsMap['addon_trustpilot_enabled'] === 'true',
+            businessUrl:
+              addonsMap['addon_trustpilot_business_url'] ||
+              addons.trustpilot.businessUrl,
+            businessUnitId:
+              addonsMap['addon_trustpilot_business_unit_id'] ||
+              addons.trustpilot.businessUnitId,
           },
           googleAnalytics: {
             enabled: addonsMap['addon_ga_enabled'] === 'true',
@@ -396,18 +391,42 @@ www.cheapstreamtv.com`,
           },
           microsoftClarity: {
             enabled: addonsMap['addon_clarity_enabled'] === 'true',
+            projectId:
+              addonsMap['addon_clarity_project_id'] ||
+              addons.microsoftClarity.projectId,
           },
           cloudflare: {
             enabled: addonsMap['addon_cloudflare_enabled'] === 'true',
+            token:
+              addonsMap['addon_cloudflare_token'] || addons.cloudflare.token,
           },
           getbutton: {
             enabled: addonsMap['addon_getbutton_enabled'] === 'true',
+            code: addonsMap['addon_getbutton_code'] || addons.getbutton.code,
           },
-          tawkto: { enabled: addonsMap['addon_tawkto_enabled'] === 'true' },
+          tawkto: {
+            enabled: addonsMap['addon_tawkto_enabled'] === 'true',
+            propertyId:
+              addonsMap['addon_tawkto_property_id'] || addons.tawkto.propertyId,
+            widgetId:
+              addonsMap['addon_tawkto_widget_id'] || addons.tawkto.widgetId,
+          },
         });
       }
 
-      // Parse content settings (page content, email content, free trial)
+      // Parse API rate limits (api category, falls back to defaults)
+      const apiSettings = grouped['api'] || [];
+      const apiMap: Record<string, string> = {};
+      apiSettings.forEach((s) => {
+        apiMap[s.key] = s.value;
+      });
+      setRateLimits({
+        basic: apiMap['api_rate_limit_basic'] || '10',
+        pro: apiMap['api_rate_limit_pro'] || '100',
+        vip: apiMap['api_rate_limit_vip'] || '1000',
+      });
+
+      // Parse content settings (page content, email content)
       const contentSettings = grouped['content'] || [];
       const generalSettings = grouped['general'] || [];
       const contentMap: Record<string, string> = {};
@@ -418,9 +437,7 @@ www.cheapstreamtv.com`,
       });
       generalSettings.forEach((s) => {
         if (
-          (s.key.startsWith('page_') ||
-            s.key.startsWith('email_') ||
-            s.key.startsWith('trial_')) &&
+          (s.key.startsWith('page_') || s.key.startsWith('email_')) &&
           !contentMap[s.key]
         ) {
           contentMap[s.key] = s.value;
@@ -430,19 +447,6 @@ www.cheapstreamtv.com`,
       // Email content
       if (contentMap['email_setup_guide']) {
         setEmailContent(contentMap['email_setup_guide']);
-      }
-
-      // Free trial content
-      if (contentMap['trial_main_title'] || contentMap['trial_description']) {
-        setFreeTrial({
-          mainTitle: contentMap['trial_main_title'] || freeTrial.mainTitle,
-          description: contentMap['trial_description'] || freeTrial.description,
-          sectionTitle:
-            contentMap['trial_section_title'] || freeTrial.sectionTitle,
-          items: contentMap['trial_items']
-            ? JSON.parse(contentMap['trial_items'])
-            : freeTrial.items,
-        });
       }
 
       // Page content for home page (default)
@@ -588,7 +592,48 @@ www.cheapstreamtv.com`,
             },
           ];
           break;
-        case 'Addons':
+        case 'Addons': {
+          // Block save if any addon is enabled but missing its required config
+          const isEmpty = (v: string | undefined): boolean => !(v ?? '').trim();
+          const missing: string[] = [];
+          if (addons.recaptcha.enabled) {
+            if (isEmpty(addons.recaptcha.siteKey))
+              missing.push('reCAPTCHA Site Key');
+            if (isEmpty(addons.recaptcha.secretKey))
+              missing.push('reCAPTCHA Secret Key');
+          }
+          if (addons.trustpilot.enabled) {
+            if (isEmpty(addons.trustpilot.businessUrl))
+              missing.push('Trustpilot Business URL');
+            if (isEmpty(addons.trustpilot.businessUnitId))
+              missing.push('Trustpilot Business Unit ID');
+          }
+          if (
+            addons.googleAnalytics.enabled &&
+            isEmpty(addons.googleAnalytics.measurementId)
+          )
+            missing.push('Google Analytics Measurement ID');
+          if (
+            addons.microsoftClarity.enabled &&
+            isEmpty(addons.microsoftClarity.projectId)
+          )
+            missing.push('Microsoft Clarity Project ID');
+          if (addons.cloudflare.enabled && isEmpty(addons.cloudflare.token))
+            missing.push('Cloudflare Web Analytics Token');
+          if (addons.getbutton.enabled && isEmpty(addons.getbutton.code))
+            missing.push('GetButton.io Widget Code');
+          if (addons.tawkto.enabled && isEmpty(addons.tawkto.propertyId))
+            missing.push('Tawk.to Property ID');
+
+          if (missing.length > 0) {
+            toast.error(
+              `Fill in required field${missing.length > 1 ? 's' : ''}: ${missing.join(', ')}`,
+            );
+            setIsLoading(false);
+            return;
+          }
+
+          const str = (v: string | undefined): string => v ?? '';
           settings = [
             {
               key: 'addon_recaptcha_enabled',
@@ -596,15 +641,23 @@ www.cheapstreamtv.com`,
             },
             {
               key: 'addon_recaptcha_site_key',
-              value: addons.recaptcha.siteKey,
+              value: str(addons.recaptcha.siteKey),
             },
             {
               key: 'addon_recaptcha_secret_key',
-              value: addons.recaptcha.secretKey,
+              value: str(addons.recaptcha.secretKey),
             },
             {
               key: 'addon_trustpilot_enabled',
               value: String(addons.trustpilot.enabled),
+            },
+            {
+              key: 'addon_trustpilot_business_url',
+              value: str(addons.trustpilot.businessUrl),
+            },
+            {
+              key: 'addon_trustpilot_business_unit_id',
+              value: str(addons.trustpilot.businessUnitId),
             },
             {
               key: 'addon_ga_enabled',
@@ -612,36 +665,69 @@ www.cheapstreamtv.com`,
             },
             {
               key: 'addon_ga_measurement_id',
-              value: addons.googleAnalytics.measurementId,
+              value: str(addons.googleAnalytics.measurementId),
             },
             {
               key: 'addon_clarity_enabled',
               value: String(addons.microsoftClarity.enabled),
             },
             {
+              key: 'addon_clarity_project_id',
+              value: str(addons.microsoftClarity.projectId),
+            },
+            {
               key: 'addon_cloudflare_enabled',
               value: String(addons.cloudflare.enabled),
+            },
+            {
+              key: 'addon_cloudflare_token',
+              value: str(addons.cloudflare.token),
             },
             {
               key: 'addon_getbutton_enabled',
               value: String(addons.getbutton.enabled),
             },
             {
+              key: 'addon_getbutton_code',
+              value: str(addons.getbutton.code),
+            },
+            {
               key: 'addon_tawkto_enabled',
               value: String(addons.tawkto.enabled),
             },
+            {
+              key: 'addon_tawkto_property_id',
+              value: str(addons.tawkto.propertyId),
+            },
+            {
+              key: 'addon_tawkto_widget_id',
+              value: str(addons.tawkto.widgetId),
+            },
           ];
           break;
+        }
+        case 'Rate limits': {
+          const num = (v: string): string => {
+            const n = parseInt((v ?? '').trim(), 10);
+            return Number.isFinite(n) && n > 0 ? String(n) : '';
+          };
+          const b = num(rateLimits.basic);
+          const p = num(rateLimits.pro);
+          const v = num(rateLimits.vip);
+          if (!b || !p || !v) {
+            toast.error('Each rate limit must be a positive number (req/min).');
+            setIsLoading(false);
+            return;
+          }
+          settings = [
+            { key: 'api_rate_limit_basic', value: b },
+            { key: 'api_rate_limit_pro', value: p },
+            { key: 'api_rate_limit_vip', value: v },
+          ];
+          break;
+        }
         case 'Email content':
           settings = [{ key: 'email_setup_guide', value: emailContent }];
-          break;
-        case 'Free trial content':
-          settings = [
-            { key: 'trial_main_title', value: freeTrial.mainTitle },
-            { key: 'trial_description', value: freeTrial.description },
-            { key: 'trial_section_title', value: freeTrial.sectionTitle },
-            { key: 'trial_items', value: JSON.stringify(freeTrial.items) },
-          ];
           break;
         case 'Page content':
           settings = [
@@ -971,26 +1057,6 @@ www.cheapstreamtv.com`,
     });
   };
 
-  const removeTrialItem = (index: number) => {
-    setFreeTrial({
-      ...freeTrial,
-      items: freeTrial.items.filter((_, i) => i !== index),
-    });
-  };
-
-  const addTrialItem = () => {
-    setFreeTrial({
-      ...freeTrial,
-      items: [...freeTrial.items, ''],
-    });
-  };
-
-  const updateTrialItem = (index: number, value: string) => {
-    const newItems = [...freeTrial.items];
-    newItems[index] = value;
-    setFreeTrial({ ...freeTrial, items: newItems });
-  };
-
   const fetchSiteStatus = useCallback(async () => {
     try {
       const data = await getMaintenanceSettings();
@@ -1199,7 +1265,7 @@ www.cheapstreamtv.com`,
     { id: 'page', label: 'Page Edit' },
     { id: 'email', label: 'Email Content Management' },
     { id: 'addons', label: 'Addons Management' },
-    { id: 'trial', label: 'Free Trial Management' },
+    { id: 'rate-limits', label: 'API Rate Limits' },
     { id: 'logo', label: 'Logo Management' },
     { id: 'status', label: 'Site Status' },
     { id: 'language', label: 'Language Management' },
@@ -1949,99 +2015,53 @@ www.cheapstreamtv.com`,
         </div>
       )}
 
-      {/* Free Trial Management Tab */}
-      {activeTab === 'trial' && (
+      {/* API Rate Limits Tab */}
+      {activeTab === 'rate-limits' && (
         <div className="max-w-5xl">
           <div className="mb-6 rounded-xl border border-[rgba(255,255,255,0.1)] bg-[rgba(15,23,42,0.6)] p-8 backdrop-blur-xl">
             <h2 className="mb-2 text-2xl font-semibold text-white">
-              Free Trial Management
+              API Rate Limits
             </h2>
             <p className="text-sm text-[#94A3B8]">
-              Manage your free trial content from admin panel
+              Set the per-minute request limit shown for each plan tier on the
+              public /api page, the knowledge-base API guide, and the user
+              dashboard. Values must be positive integers.
             </p>
           </div>
 
-          <div className="space-y-6">
-            {/* Main Title & Description */}
-            <div className="rounded-xl border border-[rgba(255,255,255,0.1)] bg-[rgba(15,23,42,0.6)] p-6 backdrop-blur-xl">
-              <h3 className="mb-4 text-base font-semibold text-white">
-                Main Title
-              </h3>
-              <input
-                type="text"
-                value={freeTrial.mainTitle}
-                onChange={(e) =>
-                  setFreeTrial({ ...freeTrial, mainTitle: e.target.value })
-                }
-                className="mb-4 w-full rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.4)] px-4 py-3 text-sm text-white focus:ring-2 focus:ring-[#3B82F6] focus:outline-none"
-              />
-
-              <h3 className="mb-4 text-base font-semibold text-white">
-                Description
-              </h3>
-              <textarea
-                value={freeTrial.description}
-                onChange={(e) =>
-                  setFreeTrial({ ...freeTrial, description: e.target.value })
-                }
-                rows={3}
-                className="w-full resize-none rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.4)] px-4 py-3 text-sm text-white focus:ring-2 focus:ring-[#3B82F6] focus:outline-none"
-              />
-            </div>
-
-            {/* Features Section */}
-            <div className="rounded-xl border border-[rgba(255,255,255,0.1)] bg-[rgba(15,23,42,0.6)] p-6 backdrop-blur-xl">
-              <h3 className="mb-4 text-base font-semibold text-white">
-                Features
-              </h3>
-
-              <div className="mb-4">
-                <label className="mb-2 block text-sm font-medium text-white">
-                  Section Title
-                </label>
-                <input
-                  type="text"
-                  value={freeTrial.sectionTitle}
-                  onChange={(e) =>
-                    setFreeTrial({ ...freeTrial, sectionTitle: e.target.value })
-                  }
-                  className="w-full rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.4)] px-4 py-3 text-sm text-white focus:ring-2 focus:ring-[#3B82F6] focus:outline-none"
-                />
-              </div>
-
-              <h4 className="mb-3 text-sm font-medium text-white">
-                Feature Items
-              </h4>
-              <div className="mb-4 space-y-2">
-                {freeTrial.items.map((item, index) => (
-                  <div key={index} className="flex items-center gap-2">
+          <div className="rounded-xl border border-[rgba(255,255,255,0.1)] bg-[rgba(15,23,42,0.6)] p-6 backdrop-blur-xl">
+            <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
+              {(
+                [
+                  { id: 'basic', label: 'Basic tier' },
+                  { id: 'pro', label: 'Pro tier' },
+                  { id: 'vip', label: 'VIP tier' },
+                ] as const
+              ).map((tier) => (
+                <div key={tier.id}>
+                  <label className="mb-2 block text-sm font-medium text-white">
+                    {tier.label}
+                  </label>
+                  <div className="flex items-center gap-2">
                     <input
-                      type="text"
-                      value={item}
-                      onChange={(e) => updateTrialItem(index, e.target.value)}
-                      className="flex-1 rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.4)] px-4 py-2.5 text-sm text-white focus:ring-2 focus:ring-[#3B82F6] focus:outline-none"
+                      type="number"
+                      min={1}
+                      value={rateLimits[tier.id]}
+                      onChange={(e) =>
+                        setRateLimits({
+                          ...rateLimits,
+                          [tier.id]: e.target.value,
+                        })
+                      }
+                      className="w-full rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.4)] px-4 py-3 text-sm text-white focus:ring-2 focus:ring-[#3B82F6] focus:outline-none"
                     />
-                    <button
-                      onClick={() => removeTrialItem(index)}
-                      className="rounded-lg bg-[#EF4444] px-3 py-2.5 text-sm font-medium text-white transition-colors hover:bg-[#DC2626]"
-                    >
-                      Remove
-                    </button>
+                    <span className="text-xs text-[#64748B]">req/min</span>
                   </div>
-                ))}
-              </div>
-
-              <button
-                onClick={addTrialItem}
-                className="flex items-center gap-2 rounded-lg bg-[#22C55E] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[#16A34A]"
-              >
-                <Plus className="h-4 w-4" />
-                Add Item
-              </button>
+                </div>
+              ))}
             </div>
 
-            {/* Action Buttons */}
-            <div className="flex items-center justify-start gap-4">
+            <div className="mt-6 flex items-center justify-start gap-4">
               <button
                 onClick={handleRefresh}
                 className="rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(255,255,255,0.08)] px-6 py-3 text-sm font-medium text-white transition-colors hover:bg-[rgba(255,255,255,0.12)]"
@@ -2049,11 +2069,11 @@ www.cheapstreamtv.com`,
                 Refresh
               </button>
               <button
-                onClick={() => handleSave('Free trial content')}
+                onClick={() => handleSave('Rate limits')}
                 disabled={isLoading}
                 className="rounded-lg bg-[#3B82F6] px-6 py-3 text-sm font-medium text-white transition-colors hover:bg-[#2563EB] disabled:cursor-not-allowed disabled:opacity-50"
               >
-                {isLoading ? 'Updating...' : 'Update Content'}
+                {isLoading ? 'Saving...' : 'Save'}
               </button>
             </div>
           </div>
@@ -2639,6 +2659,53 @@ www.cheapstreamtv.com`,
                   />
                 </button>
               </div>
+
+              {addons.trustpilot.enabled && (
+                <div className="border-t border-[rgba(255,255,255,0.1)] pt-4">
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                    <div>
+                      <label className="mb-2 block text-xs font-medium text-white">
+                        Business profile URL
+                      </label>
+                      <input
+                        type="text"
+                        value={addons.trustpilot.businessUrl}
+                        placeholder="https://www.trustpilot.com/review/example.com"
+                        onChange={(e) =>
+                          setAddons({
+                            ...addons,
+                            trustpilot: {
+                              ...addons.trustpilot,
+                              businessUrl: e.target.value,
+                            },
+                          })
+                        }
+                        className="w-full rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.4)] px-3 py-2 text-xs text-white focus:ring-2 focus:ring-[#3B82F6] focus:outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="mb-2 block text-xs font-medium text-white">
+                        Business Unit ID
+                      </label>
+                      <input
+                        type="text"
+                        value={addons.trustpilot.businessUnitId}
+                        placeholder="24-char ID from Trustpilot widget code"
+                        onChange={(e) =>
+                          setAddons({
+                            ...addons,
+                            trustpilot: {
+                              ...addons.trustpilot,
+                              businessUnitId: e.target.value,
+                            },
+                          })
+                        }
+                        className="w-full rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.4)] px-3 py-2 text-xs text-white focus:ring-2 focus:ring-[#3B82F6] focus:outline-none"
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Google Analytics */}
@@ -2731,6 +2798,29 @@ www.cheapstreamtv.com`,
                   />
                 </button>
               </div>
+
+              {addons.microsoftClarity.enabled && (
+                <div className="border-t border-[rgba(255,255,255,0.1)] pt-4">
+                  <label className="mb-2 block text-xs font-medium text-white">
+                    Project ID
+                  </label>
+                  <input
+                    type="text"
+                    value={addons.microsoftClarity.projectId}
+                    placeholder="abcd123xyz"
+                    onChange={(e) =>
+                      setAddons({
+                        ...addons,
+                        microsoftClarity: {
+                          ...addons.microsoftClarity,
+                          projectId: e.target.value,
+                        },
+                      })
+                    }
+                    className="w-full rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.4)] px-3 py-2 text-xs text-white focus:ring-2 focus:ring-[#3B82F6] focus:outline-none"
+                  />
+                </div>
+              )}
             </div>
 
             {/* Cloudflare */}
@@ -2766,6 +2856,29 @@ www.cheapstreamtv.com`,
                   />
                 </button>
               </div>
+
+              {addons.cloudflare.enabled && (
+                <div className="border-t border-[rgba(255,255,255,0.1)] pt-4">
+                  <label className="mb-2 block text-xs font-medium text-white">
+                    Web Analytics token
+                  </label>
+                  <input
+                    type="text"
+                    value={addons.cloudflare.token}
+                    placeholder="32-character token from Cloudflare → Analytics → Web Analytics"
+                    onChange={(e) =>
+                      setAddons({
+                        ...addons,
+                        cloudflare: {
+                          ...addons.cloudflare,
+                          token: e.target.value,
+                        },
+                      })
+                    }
+                    className="w-full rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.4)] px-3 py-2 text-xs text-white focus:ring-2 focus:ring-[#3B82F6] focus:outline-none"
+                  />
+                </div>
+              )}
             </div>
 
             {/* GetButton.io */}
@@ -2801,6 +2914,29 @@ www.cheapstreamtv.com`,
                   />
                 </button>
               </div>
+
+              {addons.getbutton.enabled && (
+                <div className="border-t border-[rgba(255,255,255,0.1)] pt-4">
+                  <label className="mb-2 block text-xs font-medium text-white">
+                    Widget code (account ID from GetButton.io)
+                  </label>
+                  <input
+                    type="text"
+                    value={addons.getbutton.code}
+                    placeholder="ABC123"
+                    onChange={(e) =>
+                      setAddons({
+                        ...addons,
+                        getbutton: {
+                          ...addons.getbutton,
+                          code: e.target.value,
+                        },
+                      })
+                    }
+                    className="w-full rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.4)] px-3 py-2 text-xs text-white focus:ring-2 focus:ring-[#3B82F6] focus:outline-none"
+                  />
+                </div>
+              )}
             </div>
 
             {/* Tawk.to */}
@@ -2836,6 +2972,53 @@ www.cheapstreamtv.com`,
                   />
                 </button>
               </div>
+
+              {addons.tawkto.enabled && (
+                <div className="border-t border-[rgba(255,255,255,0.1)] pt-4">
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                    <div>
+                      <label className="mb-2 block text-xs font-medium text-white">
+                        Property ID
+                      </label>
+                      <input
+                        type="text"
+                        value={addons.tawkto.propertyId}
+                        placeholder="5e4abc12345..."
+                        onChange={(e) =>
+                          setAddons({
+                            ...addons,
+                            tawkto: {
+                              ...addons.tawkto,
+                              propertyId: e.target.value,
+                            },
+                          })
+                        }
+                        className="w-full rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.4)] px-3 py-2 text-xs text-white focus:ring-2 focus:ring-[#3B82F6] focus:outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="mb-2 block text-xs font-medium text-white">
+                        Widget ID
+                      </label>
+                      <input
+                        type="text"
+                        value={addons.tawkto.widgetId}
+                        placeholder="default"
+                        onChange={(e) =>
+                          setAddons({
+                            ...addons,
+                            tawkto: {
+                              ...addons.tawkto,
+                              widgetId: e.target.value,
+                            },
+                          })
+                        }
+                        className="w-full rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.4)] px-3 py-2 text-xs text-white focus:ring-2 focus:ring-[#3B82F6] focus:outline-none"
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 

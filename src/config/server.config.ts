@@ -17,6 +17,7 @@ export const API_ENDPOINTS = {
     MAINTENANCE: '/settings/maintenance',
     SOCIAL_LINKS: '/settings/social-links',
     ADDONS: '/settings/addons',
+    RATE_LIMITS: '/settings/rate-limits',
   },
 
   // ========================

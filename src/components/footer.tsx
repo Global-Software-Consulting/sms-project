@@ -1,22 +1,11 @@
 'use client';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
-import {
-  Twitter,
-  Github,
-  Linkedin,
-  Facebook,
-  Instagram,
-  Youtube,
-  Music,
-  Send,
-  ExternalLink,
-  ChevronRight,
-} from 'lucide-react';
+import { ExternalLink, ChevronRight } from 'lucide-react';
 import { useBranding } from '@/contexts/BrandingContext';
 import { getPublicAds, type Ad } from '@/lib/api/adminModulesApi';
-import { apiClient } from '@/config/api-client.config';
-import { API_ENDPOINTS } from '@/config/server.config';
+import { SocialIcons } from '@/components/social-icons';
+import { TrustpilotWidget } from '@/components/trustpilot-widget';
 import {
   Dialog,
   DialogContent,
@@ -27,89 +16,18 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 
-type SocialKey =
-  | 'twitter'
-  | 'facebook'
-  | 'instagram'
-  | 'linkedin'
-  | 'youtube'
-  | 'tiktok'
-  | 'telegram'
-  | 'github';
-
-const SOCIAL_ICONS: Record<SocialKey, React.ComponentType<{ className?: string }>> = {
-  twitter: Twitter,
-  facebook: Facebook,
-  instagram: Instagram,
-  linkedin: Linkedin,
-  youtube: Youtube,
-  tiktok: Music,
-  telegram: Send,
-  github: Github,
-};
-
-const SOCIAL_LABELS: Record<SocialKey, string> = {
-  twitter: 'Twitter',
-  facebook: 'Facebook',
-  instagram: 'Instagram',
-  linkedin: 'LinkedIn',
-  youtube: 'YouTube',
-  tiktok: 'TikTok',
-  telegram: 'Telegram',
-  github: 'GitHub',
-};
-
 export function Footer() {
   const currentYear = new Date().getFullYear();
   const { siteLogo } = useBranding();
   const [ads, setAds] = useState<Ad[]>([]);
   const [selectedAd, setSelectedAd] = useState<Ad | null>(null);
-  const [socialLinks, setSocialLinks] = useState<{ key: SocialKey; url: string }[]>([]);
 
   useEffect(() => {
     getPublicAds()
-      .then((data) => setAds(Array.isArray(data) ? data.filter((a) => a.isActive) : []))
+      .then((data) =>
+        setAds(Array.isArray(data) ? data.filter((a) => a.isActive) : []),
+      )
       .catch(() => setAds([]));
-  }, []);
-
-  useEffect(() => {
-    apiClient
-      .get<Record<string, unknown>>(API_ENDPOINTS.PUBLIC.SOCIAL_LINKS)
-      .then((res) => {
-        const d = (res.data || {}) as Record<string, unknown>;
-        const links: { key: SocialKey; url: string }[] = [];
-
-        (Object.keys(SOCIAL_ICONS) as SocialKey[]).forEach((key) => {
-          // Handle multiple possible shapes:
-          //   { twitter: { url, visible } }
-          //   { twitter: "https://..." }
-          //   { twitter_url: "...", twitter_visible: "true" }
-          //   { social_twitter_url: "...", social_twitter_visible: "true" }
-          const nested = d[key] as
-            | { url?: string; visible?: boolean | string }
-            | string
-            | undefined;
-          let url = '';
-          let visible = true;
-          if (typeof nested === 'string') {
-            url = nested;
-          } else if (nested && typeof nested === 'object') {
-            url = nested.url || '';
-            visible = nested.visible !== false && nested.visible !== 'false';
-          } else {
-            url =
-              (d[`${key}_url`] as string) ||
-              (d[`social_${key}_url`] as string) ||
-              '';
-            const vis = d[`${key}_visible`] ?? d[`social_${key}_visible`];
-            visible = vis !== false && vis !== 'false';
-          }
-          if (url && visible) links.push({ key, url });
-        });
-
-        setSocialLinks(links);
-      })
-      .catch(() => setSocialLinks([]));
   }, []);
 
   return (
@@ -119,12 +37,18 @@ export function Footer() {
           {/* Brand — full width on smallest, half on sm */}
           <div className="col-span-2 space-y-4 sm:col-span-2 md:col-span-1">
             <div className="flex items-center space-x-2">
-              <div className="from-primary to-accent flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br sm:h-10 sm:w-10 overflow-hidden">
+              <div className="from-primary to-accent flex h-9 w-9 items-center justify-center overflow-hidden rounded-xl bg-gradient-to-br sm:h-10 sm:w-10">
                 {siteLogo ? (
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img src={siteLogo} alt="Logo" className="w-full h-full object-contain" />
+                  <img
+                    src={siteLogo}
+                    alt="Logo"
+                    className="h-full w-full object-contain"
+                  />
                 ) : (
-                  <span className="text-primary-foreground text-base font-bold sm:text-xl">S</span>
+                  <span className="text-primary-foreground text-base font-bold sm:text-xl">
+                    S
+                  </span>
                 )}
               </div>
               <span className="text-lg font-bold sm:text-xl">BestSMSHQ</span>
@@ -133,25 +57,8 @@ export function Footer() {
               Premium SMS activation and number rental platform. Fast, reliable,
               and secure.
             </p>
-            {socialLinks.length > 0 && (
-              <div className="flex flex-wrap gap-3">
-                {socialLinks.map(({ key, url }) => {
-                  const Icon = SOCIAL_ICONS[key];
-                  return (
-                    <a
-                      key={key}
-                      href={url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      aria-label={SOCIAL_LABELS[key]}
-                      className="text-muted-foreground hover:text-foreground p-1 transition-colors"
-                    >
-                      <Icon className="h-5 w-5" />
-                    </a>
-                  );
-                })}
-              </div>
-            )}
+            <SocialIcons />
+            <TrustpilotWidget />
           </div>
 
           {/* Product */}
@@ -301,11 +208,11 @@ export function Footer() {
             </ul>
           </div>
 
-          {/* Our Products (Ads) */}
+          {/* Our Websites (Ads) */}
           {ads.length > 0 && (
             <div className="col-span-2 sm:col-span-2 md:col-span-4 lg:col-span-1">
               <h4 className="mb-3 text-sm font-semibold sm:mb-4 sm:text-base">
-                Our Products
+                Our Websites
               </h4>
               <div className="space-y-3">
                 {ads.map((ad) => (
@@ -325,7 +232,7 @@ export function Footer() {
                       <p className="truncate text-sm font-medium">{ad.title}</p>
                       {/* Description hidden on hover, replaced by "View Details" */}
                       {ad.description && (
-                        <p className="text-muted-foreground truncate text-xs group-hover:opacity-0 transition-opacity">
+                        <p className="text-muted-foreground truncate text-xs transition-opacity group-hover:opacity-0">
                           {ad.description}
                         </p>
                       )}
@@ -381,7 +288,10 @@ export function Footer() {
       </div>
 
       {/* Ad details dialog */}
-      <Dialog open={!!selectedAd} onOpenChange={(open) => !open && setSelectedAd(null)}>
+      <Dialog
+        open={!!selectedAd}
+        onOpenChange={(open) => !open && setSelectedAd(null)}
+      >
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>{selectedAd?.title}</DialogTitle>

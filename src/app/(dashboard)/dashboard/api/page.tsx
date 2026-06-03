@@ -50,12 +50,13 @@ import {
   formatUsageCount,
   copyToClipboard as copyKey,
 } from '@/lib/api/apiKeysApi';
+import { getProviders, type SmsProvider } from '@/lib/api/smsApi';
 
 type ProviderType = 'v1' | 'v2' | 'v3';
 
 const DEFAULT_PERMISSIONS: ApiKeyPermissions = {
-  canActivate: true,   // maps to canOrder
-  canRent: false,      // maps to canManage
+  canActivate: true, // maps to canOrder
+  canRent: false, // maps to canManage
   canViewBalance: true, // maps to canWallet
   canViewHistory: true, // maps to canRead
 };
@@ -69,12 +70,43 @@ export default function APIAccess() {
 
   // UI state
   const [activeTab, setActiveTab] = useState<ProviderType>('v1');
-  const [showKeyValues, setShowKeyValues] = useState<Record<string, boolean>>({});
+  const [availableTiers, setAvailableTiers] = useState<ProviderType[]>([
+    'v1',
+    'v2',
+    'v3',
+  ]);
+
+  useEffect(() => {
+    getProviders()
+      .then((res) => {
+        const active = (res?.providers || []).filter(
+          (p: SmsProvider) => p.isActive !== false,
+        );
+        const tiers: ProviderType[] = (
+          ['v1', 'v2', 'v3'] as ProviderType[]
+        ).filter((t) =>
+          active.some((p) => (p.version || '').toLowerCase().startsWith(t)),
+        );
+        if (tiers.length > 0) {
+          setAvailableTiers(tiers);
+          if (!tiers.includes(activeTab)) setActiveTab(tiers[0]);
+        }
+      })
+      .catch(() => {
+        /* keep defaults */
+      });
+    // run once on mount
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  const [showKeyValues, setShowKeyValues] = useState<Record<string, boolean>>(
+    {},
+  );
 
   // Create key dialog
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [newKeyName, setNewKeyName] = useState('');
-  const [newKeyPermissions, setNewKeyPermissions] = useState<ApiKeyPermissions>(DEFAULT_PERMISSIONS);
+  const [newKeyPermissions, setNewKeyPermissions] =
+    useState<ApiKeyPermissions>(DEFAULT_PERMISSIONS);
   const [isCreating, setIsCreating] = useState(false);
   const [createdKey, setCreatedKey] = useState<ApiKeyCreated | null>(null);
 
@@ -137,9 +169,10 @@ export default function APIAccess() {
         canRead: newKeyPermissions.canViewHistory,
       });
       setCreatedKey(response);
-      setApiKeys(prev => [response.apiKey, ...prev]);
+      setApiKeys((prev) => [response.apiKey, ...prev]);
       toast.success('API key created!', {
-        description: 'Make sure to copy your key now. You won\'t be able to see it again.',
+        description:
+          "Make sure to copy your key now. You won't be able to see it again.",
       });
     } catch (err: any) {
       console.error('Create key error:', err);
@@ -158,10 +191,10 @@ export default function APIAccess() {
     try {
       setIsRevoking(true);
       await revokeApiKey(keyToRevoke.id);
-      setApiKeys(prev =>
-        prev.map(k =>
-          k.id === keyToRevoke.id ? { ...k, status: 'REVOKED' as const } : k
-        )
+      setApiKeys((prev) =>
+        prev.map((k) =>
+          k.id === keyToRevoke.id ? { ...k, status: 'REVOKED' as const } : k,
+        ),
       );
       toast.success('API key revoked');
       setShowRevokeDialog(false);
@@ -188,7 +221,7 @@ export default function APIAccess() {
 
   // Toggle key visibility
   const toggleKeyVisibility = (keyId: string) => {
-    setShowKeyValues(prev => ({
+    setShowKeyValues((prev) => ({
       ...prev,
       [keyId]: !prev[keyId],
     }));
@@ -209,7 +242,7 @@ export default function APIAccess() {
       icon: '💰',
       description: 'Cost-effective API access with standard performance',
       features: ['Standard rate limits', 'Basic support', '99%+ uptime SLA'],
-      endpoint: 'https://api.smspro.com/v1',
+      endpoint: 'https://api.bestsmshq.com/api/v1',
     },
     v2: {
       name: 'Premium V2',
@@ -221,7 +254,7 @@ export default function APIAccess() {
         '99.9%+ uptime SLA',
         'Faster response times',
       ],
-      endpoint: 'https://api.smspro.com/v2',
+      endpoint: 'https://api.bestsmshq.com/api/v1',
     },
     v3: {
       name: 'Basic V3',
@@ -233,7 +266,7 @@ export default function APIAccess() {
         '99.99%+ uptime SLA',
         'Guaranteed instant delivery',
       ],
-      endpoint: 'https://api.smspro.com/v3',
+      endpoint: 'https://api.bestsmshq.com/api/v1',
     },
   };
 
@@ -282,14 +315,17 @@ export default function APIAccess() {
               <p className="text-muted-foreground mt-1 text-sm">
                 Create an API key to get started with the API
               </p>
-              <Button className="mt-4" onClick={() => setShowCreateDialog(true)}>
+              <Button
+                className="mt-4"
+                onClick={() => setShowCreateDialog(true)}
+              >
                 <Plus className="mr-2 h-4 w-4" />
                 Create Your First Key
               </Button>
             </div>
           ) : (
             <div className="space-y-4">
-              {apiKeys.map(key => (
+              {apiKeys.map((key) => (
                 <div
                   key={key.id}
                   className="border-border bg-card rounded-lg border p-4"
@@ -299,7 +335,9 @@ export default function APIAccess() {
                       <div className="mb-1 flex items-center gap-2">
                         <h4 className="font-semibold">{key.name}</h4>
                         <Badge
-                          variant={key.status === 'ACTIVE' ? 'default' : 'destructive'}
+                          variant={
+                            key.status === 'ACTIVE' ? 'default' : 'destructive'
+                          }
                         >
                           {key.status}
                         </Badge>
@@ -368,31 +406,53 @@ export default function APIAccess() {
             value={activeTab}
             onValueChange={(v) => setActiveTab(v as ProviderType)}
           >
-            <TabsList className="grid w-full grid-cols-3 sm:max-w-2xl">
-              <TabsTrigger value="v1" className="space-x-1 text-xs sm:space-x-2 sm:text-sm">
-                <span>💰</span>
-                <span className="hidden sm:inline">V1 Standard</span>
-                <span className="sm:hidden">Standard</span>
-              </TabsTrigger>
-              <TabsTrigger value="v2" className="space-x-1 text-xs sm:space-x-2 sm:text-sm">
-                <span>💎</span>
-                <span className="hidden sm:inline">V2 Premium</span>
-                <span className="sm:hidden">Premium</span>
-              </TabsTrigger>
-              <TabsTrigger value="v3" className="space-x-1 text-xs sm:space-x-2 sm:text-sm">
-                <span>👑</span>
-                <span className="hidden sm:inline">V3 Basic</span>
-                <span className="sm:hidden">Basic</span>
-              </TabsTrigger>
+            <TabsList
+              className="grid w-full sm:max-w-2xl"
+              style={{
+                gridTemplateColumns: `repeat(${availableTiers.length}, minmax(0, 1fr))`,
+              }}
+            >
+              {availableTiers.includes('v1') && (
+                <TabsTrigger
+                  value="v1"
+                  className="space-x-1 text-xs sm:space-x-2 sm:text-sm"
+                >
+                  <span>💰</span>
+                  <span className="hidden sm:inline">V1 Standard</span>
+                  <span className="sm:hidden">Standard</span>
+                </TabsTrigger>
+              )}
+              {availableTiers.includes('v2') && (
+                <TabsTrigger
+                  value="v2"
+                  className="space-x-1 text-xs sm:space-x-2 sm:text-sm"
+                >
+                  <span>💎</span>
+                  <span className="hidden sm:inline">V2 Premium</span>
+                  <span className="sm:hidden">Premium</span>
+                </TabsTrigger>
+              )}
+              {availableTiers.includes('v3') && (
+                <TabsTrigger
+                  value="v3"
+                  className="space-x-1 text-xs sm:space-x-2 sm:text-sm"
+                >
+                  <span>👑</span>
+                  <span className="hidden sm:inline">V3 Basic</span>
+                  <span className="sm:hidden">Basic</span>
+                </TabsTrigger>
+              )}
             </TabsList>
 
-            {(['v1', 'v2', 'v3'] as ProviderType[]).map(provider => (
+            {availableTiers.map((provider) => (
               <TabsContent key={provider} value={provider} className="mt-6">
                 <div className="space-y-6">
                   {/* Provider Info */}
                   <div className="bg-muted/50 border-border rounded-lg border p-4">
                     <div className="flex items-start space-x-3">
-                      <div className="text-3xl">{providerInfo[provider].icon}</div>
+                      <div className="text-3xl">
+                        {providerInfo[provider].icon}
+                      </div>
                       <div className="flex-1">
                         <h4 className="mb-1 font-semibold">
                           {providerInfo[provider].name} API
@@ -434,7 +494,10 @@ export default function APIAccess() {
                           variant="outline"
                           size="icon"
                           onClick={() =>
-                            handleCopy(providerInfo[provider].endpoint, 'Endpoint copied')
+                            handleCopy(
+                              providerInfo[provider].endpoint,
+                              'Endpoint copied',
+                            )
                           }
                         >
                           <Copy className="h-4 w-4" />
@@ -444,8 +507,9 @@ export default function APIAccess() {
                       <div className="bg-warning/10 border-warning/20 mt-4 flex items-start space-x-2 rounded-lg border p-4">
                         <AlertCircle className="text-warning mt-0.5 h-4 w-4 shrink-0" />
                         <p className="text-warning-foreground text-sm">
-                          <strong>Security Warning:</strong> Keep your API key secure.
-                          Don't share it publicly or commit it to version control.
+                          <strong>Security Warning:</strong> Keep your API key
+                          secure. Don't share it publicly or commit it to
+                          version control.
                         </p>
                       </div>
                     </CardContent>
@@ -476,7 +540,7 @@ export default function APIAccess() {
                             onClick={() =>
                               handleCopy(
                                 `curl -X GET "${providerInfo[provider].endpoint}/services" -H "Authorization: Bearer YOUR_API_KEY"`,
-                                'Command copied'
+                                'Command copied',
                               )
                             }
                           >
@@ -503,7 +567,7 @@ export default function APIAccess() {
                             onClick={() =>
                               handleCopy(
                                 `curl -X POST "${providerInfo[provider].endpoint}/activations" -H "Authorization: Bearer YOUR_API_KEY" -H "Content-Type: application/json" -d '{"service": "whatsapp", "country": "us", "provider": "${provider}"}'`,
-                                'Command copied'
+                                'Command copied',
                               )
                             }
                           >
@@ -513,7 +577,9 @@ export default function APIAccess() {
                       </div>
 
                       <div>
-                        <h4 className="mb-2 font-semibold">3. Check SMS Status</h4>
+                        <h4 className="mb-2 font-semibold">
+                          3. Check SMS Status
+                        </h4>
                         <div className="relative">
                           <pre className="bg-muted overflow-x-auto rounded-lg p-4 text-sm">
                             <code>{`curl -X GET "${providerInfo[provider].endpoint}/activations/{id}" \\
@@ -526,7 +592,7 @@ export default function APIAccess() {
                             onClick={() =>
                               handleCopy(
                                 `curl -X GET "${providerInfo[provider].endpoint}/activations/{id}" -H "Authorization: Bearer YOUR_API_KEY"`,
-                                'Command copied'
+                                'Command copied',
                               )
                             }
                           >
@@ -536,7 +602,9 @@ export default function APIAccess() {
                       </div>
 
                       <div>
-                        <h4 className="mb-2 font-semibold">4. Cancel Activation</h4>
+                        <h4 className="mb-2 font-semibold">
+                          4. Cancel Activation
+                        </h4>
                         <div className="relative">
                           <pre className="bg-muted overflow-x-auto rounded-lg p-4 text-sm">
                             <code>{`curl -X DELETE "${providerInfo[provider].endpoint}/activations/{id}" \\
@@ -549,7 +617,7 @@ export default function APIAccess() {
                             onClick={() =>
                               handleCopy(
                                 `curl -X DELETE "${providerInfo[provider].endpoint}/activations/{id}" -H "Authorization: Bearer YOUR_API_KEY"`,
-                                'Command copied'
+                                'Command copied',
                               )
                             }
                           >
@@ -579,7 +647,7 @@ export default function APIAccess() {
             </div>
             <Button asChild size="lg" className="shrink-0">
               <a
-                href="https://docs.smspro.com"
+                href="/knowledge-base/api"
                 target="_blank"
                 rel="noopener noreferrer"
               >
@@ -600,7 +668,7 @@ export default function APIAccess() {
             </DialogTitle>
             <DialogDescription>
               {createdKey
-                ? 'Make sure to copy your API key now. You won\'t be able to see it again!'
+                ? "Make sure to copy your API key now. You won't be able to see it again!"
                 : 'Create a new API key for programmatic access'}
             </DialogDescription>
           </DialogHeader>
@@ -655,7 +723,7 @@ export default function APIAccess() {
                       id="canActivate"
                       checked={newKeyPermissions.canActivate}
                       onCheckedChange={(checked) =>
-                        setNewKeyPermissions(prev => ({
+                        setNewKeyPermissions((prev) => ({
                           ...prev,
                           canActivate: !!checked,
                         }))
@@ -670,7 +738,7 @@ export default function APIAccess() {
                       id="canRent"
                       checked={newKeyPermissions.canRent}
                       onCheckedChange={(checked) =>
-                        setNewKeyPermissions(prev => ({
+                        setNewKeyPermissions((prev) => ({
                           ...prev,
                           canRent: !!checked,
                         }))
@@ -685,7 +753,7 @@ export default function APIAccess() {
                       id="canViewBalance"
                       checked={newKeyPermissions.canViewBalance}
                       onCheckedChange={(checked) =>
-                        setNewKeyPermissions(prev => ({
+                        setNewKeyPermissions((prev) => ({
                           ...prev,
                           canViewBalance: !!checked,
                         }))
@@ -700,7 +768,7 @@ export default function APIAccess() {
                       id="canViewHistory"
                       checked={newKeyPermissions.canViewHistory}
                       onCheckedChange={(checked) =>
-                        setNewKeyPermissions(prev => ({
+                        setNewKeyPermissions((prev) => ({
                           ...prev,
                           canViewHistory: !!checked,
                         }))

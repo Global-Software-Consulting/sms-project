@@ -21,11 +21,41 @@ import {
   ArrowRight,
   Copy,
 } from 'lucide-react';
-import { useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { toast } from 'sonner';
+import { getProviders, type SmsProvider } from '@/lib/api/smsApi';
+import { getRateLimits, type RateLimits } from '@/lib/api/rateLimitsApi';
 
 export default function ApiClient() {
   const [activeEndpoint, setActiveEndpoint] = useState('create');
+  const [providers, setProviders] = useState<SmsProvider[]>([]);
+  const [providersLoaded, setProvidersLoaded] = useState(false);
+  const [rateLimits, setRateLimits] = useState<RateLimits>({
+    basic: '10',
+    pro: '100',
+    vip: '1000',
+  });
+
+  useEffect(() => {
+    getProviders()
+      .then((res) =>
+        setProviders(
+          (res?.providers || []).filter((p) => p.isActive !== false),
+        ),
+      )
+      .catch(() => setProviders([]))
+      .finally(() => setProvidersLoaded(true));
+
+    getRateLimits()
+      .then(setRateLimits)
+      .catch(() => {});
+  }, []);
+
+  const hasTier = useCallback(
+    (versionPrefix: 'V1' | 'V2' | 'V3'): boolean =>
+      providers.some((p) => (p.version || '').startsWith(versionPrefix)),
+    [providers],
+  );
 
   const copyCode = (code: string) => {
     navigator.clipboard.writeText(code);
@@ -35,31 +65,31 @@ export default function ApiClient() {
   const endpoints = [
     {
       method: 'POST',
-      path: '/v1/activations',
+      path: '/api/v1/sms/activate',
       title: 'Create Activation',
       description: 'Purchase a new SMS activation number',
     },
     {
       method: 'GET',
-      path: '/v1/activations/:id',
+      path: '/api/v1/sms/orders/:id',
       title: 'Get Activation Status',
       description: 'Check status and retrieve SMS code',
     },
     {
       method: 'POST',
-      path: '/v1/activations/:id/cancel',
+      path: '/api/v1/sms/orders/:id/cancel',
       title: 'Cancel Activation',
       description: 'Cancel an activation and get refund',
     },
     {
       method: 'GET',
-      path: '/v1/services',
+      path: '/api/v1/sms/services',
       title: 'List Services',
       description: 'Get available services and pricing',
     },
     {
       method: 'GET',
-      path: '/v1/balance',
+      path: '/api/v1/wallet/balance',
       title: 'Get Balance',
       description: 'Check your account balance',
     },
@@ -87,7 +117,7 @@ export default function ApiClient() {
           <div className="flex flex-col items-center justify-center gap-4 pt-4 sm:flex-row">
             <Button asChild size="lg">
               <Link href="/auth/signup">
-                Get Started Free <ArrowRight className="ml-2 h-4 w-4" />
+                Get Started <ArrowRight className="ml-2 h-4 w-4" />
               </Link>
             </Button>
             <Button asChild size="lg" variant="outline">
@@ -146,7 +176,9 @@ export default function ApiClient() {
       <section className="border-border container mx-auto border-t px-4 py-12 sm:py-16 md:py-20">
         <div className="mx-auto max-w-5xl">
           <div className="mb-12 space-y-4 text-center">
-            <h2 className="text-2xl font-bold sm:text-3xl md:text-4xl">Quick Start</h2>
+            <h2 className="text-2xl font-bold sm:text-3xl md:text-4xl">
+              Quick Start
+            </h2>
             <p className="text-muted-foreground text-lg">
               Get up and running in minutes
             </p>
@@ -221,7 +253,7 @@ export default function ApiClient() {
                         variant="ghost"
                         className="absolute top-2 right-2 opacity-0 transition-opacity group-hover:opacity-100"
                         onClick={() =>
-                          copyCode(`curl -X POST "https://api.smspro.com/v1/activations" \\
+                          copyCode(`curl -X POST "https://api.bestsmshq.com/api/v1/sms/activate" \\
   -H "Authorization: Bearer YOUR_API_KEY" \\
   -H "Content-Type: application/json" \\
   -d '{
@@ -234,7 +266,7 @@ export default function ApiClient() {
                         <Copy className="h-4 w-4" />
                       </Button>
                       <pre className="text-xs">
-                        <code>{`curl -X POST "https://api.smspro.com/v1/activations" \\
+                        <code>{`curl -X POST "https://api.bestsmshq.com/api/v1/sms/activate" \\
   -H "Authorization: Bearer YOUR_API_KEY" \\
   -H "Content-Type: application/json" \\
   -d '{
@@ -253,7 +285,7 @@ export default function ApiClient() {
                         variant="ghost"
                         className="absolute top-2 right-2 opacity-0 transition-opacity group-hover:opacity-100"
                         onClick={() =>
-                          copyCode(`const response = await fetch('https://api.smspro.com/v1/activations', {
+                          copyCode(`const response = await fetch('https://api.bestsmshq.com/api/v1/sms/activate', {
   method: 'POST',
   headers: {
     'Authorization': 'Bearer YOUR_API_KEY',
@@ -273,7 +305,7 @@ console.log(data);`)
                         <Copy className="h-4 w-4" />
                       </Button>
                       <pre className="text-xs">
-                        <code>{`const response = await fetch('https://api.smspro.com/v1/activations', {
+                        <code>{`const response = await fetch('https://api.bestsmshq.com/api/v1/sms/activate', {
   method: 'POST',
   headers: {
     'Authorization': 'Bearer YOUR_API_KEY',
@@ -301,7 +333,7 @@ console.log(data);`}</code>
                         onClick={() =>
                           copyCode(`import requests
 
-url = "https://api.smspro.com/v1/activations"
+url = "https://api.bestsmshq.com/api/v1/sms/activate"
 headers = {
     "Authorization": "Bearer YOUR_API_KEY",
     "Content-Type": "application/json"
@@ -321,7 +353,7 @@ print(response.json())`)
                       <pre className="text-xs">
                         <code>{`import requests
 
-url = "https://api.smspro.com/v1/activations"
+url = "https://api.bestsmshq.com/api/v1/sms/activate"
 headers = {
     "Authorization": "Bearer YOUR_API_KEY",
     "Content-Type": "application/json"
@@ -393,113 +425,127 @@ print(response.json())`}</code>
           </div>
 
           <div className="grid gap-6 md:grid-cols-3">
-            <Card>
-              <CardHeader>
-                <Badge className="mb-2 w-fit bg-blue-500">💰 V1 Standard</Badge>
-                <CardTitle className="text-lg">Standard Tier</CardTitle>
-                <CardDescription>
-                  Standard services - best price. Suitable for customers looking
-                  for basic and affordable options.
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="bg-muted overflow-x-auto rounded-lg p-3 font-mono text-xs">
-                  <code className="text-blue-500">"provider": "v1"</code>
-                </div>
-                <ul className="mt-4 space-y-2">
-                  <li className="flex items-start space-x-2 text-sm">
-                    <CheckCircle2 className="text-success mt-0.5 h-4 w-4" />
-                    <span>Affordable pricing</span>
-                  </li>
-                  <li className="flex items-start space-x-2 text-sm">
-                    <CheckCircle2 className="text-success mt-0.5 h-4 w-4" />
-                    <span>Standard delivery speed</span>
-                  </li>
-                  <li className="flex items-start space-x-2 text-sm">
-                    <CheckCircle2 className="text-success mt-0.5 h-4 w-4" />
-                    <span>Wide service coverage</span>
-                  </li>
-                  <li className="flex items-start space-x-2 text-sm">
-                    <CheckCircle2 className="text-success mt-0.5 h-4 w-4" />
-                    <span>Regular priority</span>
-                  </li>
-                </ul>
-                <p className="mt-4 text-sm font-semibold">From $1.50 per activation</p>
-              </CardContent>
-            </Card>
+            {providersLoaded && hasTier('V1') && (
+              <Card>
+                <CardHeader>
+                  <Badge className="mb-2 w-fit bg-blue-500">
+                    💰 V1 Standard
+                  </Badge>
+                  <CardTitle className="text-lg">Standard Tier</CardTitle>
+                  <CardDescription>
+                    Standard services - best price. Suitable for customers
+                    looking for basic and affordable options.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="bg-muted overflow-x-auto rounded-lg p-3 font-mono text-xs">
+                    <code className="text-blue-500">"provider": "v1"</code>
+                  </div>
+                  <ul className="mt-4 space-y-2">
+                    <li className="flex items-start space-x-2 text-sm">
+                      <CheckCircle2 className="text-success mt-0.5 h-4 w-4" />
+                      <span>Affordable pricing</span>
+                    </li>
+                    <li className="flex items-start space-x-2 text-sm">
+                      <CheckCircle2 className="text-success mt-0.5 h-4 w-4" />
+                      <span>Standard delivery speed</span>
+                    </li>
+                    <li className="flex items-start space-x-2 text-sm">
+                      <CheckCircle2 className="text-success mt-0.5 h-4 w-4" />
+                      <span>Wide service coverage</span>
+                    </li>
+                    <li className="flex items-start space-x-2 text-sm">
+                      <CheckCircle2 className="text-success mt-0.5 h-4 w-4" />
+                      <span>Regular priority</span>
+                    </li>
+                  </ul>
+                  <p className="mt-4 text-sm font-semibold">
+                    From $1.50 per activation
+                  </p>
+                </CardContent>
+              </Card>
+            )}
 
-            <Card className="border-primary border-2">
-              <CardHeader>
-                <Badge className="bg-primary mb-2 w-fit">💎 V2 Premium</Badge>
-                <CardTitle className="text-lg">Premium Tier</CardTitle>
-                <CardDescription>
-                  Faster delivery and higher success rate. Ideal for customers
-                  looking for more reliable results and quicker processing.
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="bg-muted overflow-x-auto rounded-lg p-3 font-mono text-xs">
-                  <code className="text-primary">"provider": "v2"</code>
-                </div>
-                <ul className="mt-4 space-y-2">
-                  <li className="flex items-start space-x-2 text-sm">
-                    <CheckCircle2 className="text-primary mt-0.5 h-4 w-4" />
-                    <span>Lightning-fast delivery</span>
-                  </li>
-                  <li className="flex items-start space-x-2 text-sm">
-                    <CheckCircle2 className="text-primary mt-0.5 h-4 w-4" />
-                    <span>Higher success rate</span>
-                  </li>
-                  <li className="flex items-start space-x-2 text-sm">
-                    <CheckCircle2 className="text-primary mt-0.5 h-4 w-4" />
-                    <span>Premium providers only</span>
-                  </li>
-                  <li className="flex items-start space-x-2 text-sm">
-                    <CheckCircle2 className="text-primary mt-0.5 h-4 w-4" />
-                    <span>VIP priority routing</span>
-                  </li>
-                </ul>
-                <p className="mt-4 text-sm font-semibold">From $2.50 per activation</p>
-              </CardContent>
-            </Card>
+            {providersLoaded && hasTier('V2') && (
+              <Card className="border-primary border-2">
+                <CardHeader>
+                  <Badge className="bg-primary mb-2 w-fit">💎 V2 Premium</Badge>
+                  <CardTitle className="text-lg">Premium Tier</CardTitle>
+                  <CardDescription>
+                    Faster delivery and higher success rate. Ideal for customers
+                    looking for more reliable results and quicker processing.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="bg-muted overflow-x-auto rounded-lg p-3 font-mono text-xs">
+                    <code className="text-primary">"provider": "v2"</code>
+                  </div>
+                  <ul className="mt-4 space-y-2">
+                    <li className="flex items-start space-x-2 text-sm">
+                      <CheckCircle2 className="text-primary mt-0.5 h-4 w-4" />
+                      <span>Lightning-fast delivery</span>
+                    </li>
+                    <li className="flex items-start space-x-2 text-sm">
+                      <CheckCircle2 className="text-primary mt-0.5 h-4 w-4" />
+                      <span>Higher success rate</span>
+                    </li>
+                    <li className="flex items-start space-x-2 text-sm">
+                      <CheckCircle2 className="text-primary mt-0.5 h-4 w-4" />
+                      <span>Premium providers only</span>
+                    </li>
+                    <li className="flex items-start space-x-2 text-sm">
+                      <CheckCircle2 className="text-primary mt-0.5 h-4 w-4" />
+                      <span>VIP priority routing</span>
+                    </li>
+                  </ul>
+                  <p className="mt-4 text-sm font-semibold">
+                    From $2.50 per activation
+                  </p>
+                </CardContent>
+              </Card>
+            )}
 
-            <Card className="border-warning border-2">
-              <CardHeader>
-                <Badge className="bg-warning text-warning-foreground mb-2 w-fit">
-                  👑 V3 Elite
-                </Badge>
-                <CardTitle className="text-lg">Elite Tier</CardTitle>
-                <CardDescription>
-                  The highest quality service with priority routing and 99.9%
-                  success rate. Best for customers who demand the absolute best
-                  with premium providers and priority support.
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="bg-muted overflow-x-auto rounded-lg p-3 font-mono text-xs">
-                  <code className="text-warning">"provider": "v3"</code>
-                </div>
-                <ul className="mt-4 space-y-2">
-                  <li className="flex items-start space-x-2 text-sm">
-                    <CheckCircle2 className="text-warning mt-0.5 h-4 w-4" />
-                    <span>Instant guaranteed delivery</span>
-                  </li>
-                  <li className="flex items-start space-x-2 text-sm">
-                    <CheckCircle2 className="text-warning mt-0.5 h-4 w-4" />
-                    <span>99.9% success rate</span>
-                  </li>
-                  <li className="flex items-start space-x-2 text-sm">
-                    <CheckCircle2 className="text-warning mt-0.5 h-4 w-4" />
-                    <span>Basic providers only</span>
-                  </li>
-                  <li className="flex items-start space-x-2 text-sm">
-                    <CheckCircle2 className="text-warning mt-0.5 h-4 w-4" />
-                    <span>Maximum priority + support</span>
-                  </li>
-                </ul>
-                <p className="mt-4 text-sm font-semibold">From $3.50 per activation</p>
-              </CardContent>
-            </Card>
+            {providersLoaded && hasTier('V3') && (
+              <Card className="border-warning border-2">
+                <CardHeader>
+                  <Badge className="bg-warning text-warning-foreground mb-2 w-fit">
+                    👑 V3 Elite
+                  </Badge>
+                  <CardTitle className="text-lg">Elite Tier</CardTitle>
+                  <CardDescription>
+                    The highest quality service with priority routing and 99.9%
+                    success rate. Best for customers who demand the absolute
+                    best with premium providers and priority support.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="bg-muted overflow-x-auto rounded-lg p-3 font-mono text-xs">
+                    <code className="text-warning">"provider": "v3"</code>
+                  </div>
+                  <ul className="mt-4 space-y-2">
+                    <li className="flex items-start space-x-2 text-sm">
+                      <CheckCircle2 className="text-warning mt-0.5 h-4 w-4" />
+                      <span>Instant guaranteed delivery</span>
+                    </li>
+                    <li className="flex items-start space-x-2 text-sm">
+                      <CheckCircle2 className="text-warning mt-0.5 h-4 w-4" />
+                      <span>99.9% success rate</span>
+                    </li>
+                    <li className="flex items-start space-x-2 text-sm">
+                      <CheckCircle2 className="text-warning mt-0.5 h-4 w-4" />
+                      <span>Basic providers only</span>
+                    </li>
+                    <li className="flex items-start space-x-2 text-sm">
+                      <CheckCircle2 className="text-warning mt-0.5 h-4 w-4" />
+                      <span>Maximum priority + support</span>
+                    </li>
+                  </ul>
+                  <p className="mt-4 text-sm font-semibold">
+                    From $3.50 per activation
+                  </p>
+                </CardContent>
+              </Card>
+            )}
           </div>
         </div>
       </section>
@@ -508,7 +554,9 @@ print(response.json())`}</code>
       <section className="border-border container mx-auto border-t px-4 py-12 sm:py-16 md:py-20">
         <div className="mx-auto max-w-5xl">
           <div className="mb-12 space-y-4 text-center">
-            <h2 className="text-2xl font-bold sm:text-3xl md:text-4xl">API Endpoints</h2>
+            <h2 className="text-2xl font-bold sm:text-3xl md:text-4xl">
+              API Endpoints
+            </h2>
             <p className="text-muted-foreground text-lg">
               Complete reference of available endpoints
             </p>
@@ -571,19 +619,19 @@ print(response.json())`}</code>
                   <span className="text-muted-foreground text-sm">
                     Basic tier
                   </span>
-                  <Badge variant="secondary">10 req/min</Badge>
+                  <Badge variant="secondary">{rateLimits.basic} req/min</Badge>
                 </div>
                 <div className="border-border flex items-center justify-between border-b py-2">
                   <span className="text-muted-foreground text-sm">
                     Pro tier
                   </span>
-                  <Badge variant="secondary">100 req/min</Badge>
+                  <Badge variant="secondary">{rateLimits.pro} req/min</Badge>
                 </div>
                 <div className="flex items-center justify-between py-2">
                   <span className="text-muted-foreground text-sm">
                     VIP tier
                   </span>
-                  <Badge className="bg-primary">1000 req/min</Badge>
+                  <Badge className="bg-primary">{rateLimits.vip} req/min</Badge>
                 </div>
               </CardContent>
             </Card>
@@ -628,7 +676,7 @@ print(response.json())`}</code>
           <div className="flex flex-col items-center justify-center gap-4 sm:flex-row">
             <Button asChild size="lg">
               <Link href="/auth/signup">
-                Get Started Free <ArrowRight className="ml-2 h-4 w-4" />
+                Get Started <ArrowRight className="ml-2 h-4 w-4" />
               </Link>
             </Button>
             <Button asChild size="lg" variant="outline">
