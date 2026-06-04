@@ -4,20 +4,23 @@ const nextConfig: NextConfig = {
   typescript: {
     ignoreBuildErrors: true,
   },
-  // Production-only navigation fix: Next.js caches prefetched RSC
-  // payloads. On live, the cached payload was hijacking the first
-  // click — URL updated but no network request fired and the
-  // transition never committed, so the page only loaded on the
-  // second click. dynamic:0 already forced fresh fetches on dynamic
-  // segments; static:0 widens that to pages Next classifies as
-  // static so the second-click symptom doesn't slip through there.
-  // Trade-off is one extra small RSC fetch per nav — worth it.
-  // Local dev is unaffected (cache already disabled in dev).
-  experimental: {
-    staleTimes: {
-      dynamic: 0,
-      static: 0,
-    },
-  },
+  // NOTE on the "first click changes URL but page doesn't load" bug
+  // (prod-only, never reproduces in dev):
+  //
+  // We previously set `experimental.staleTimes: { dynamic: 0, static: 0 }`
+  // hoping to force a fresh fetch on every click. In practice that
+  // worked against us: in production, Next aggressively prefetches RSC
+  // payloads when a <Link> enters the viewport. With staleTimes: 0,
+  // the prefetched payload was treated as immediately stale, so on the
+  // click Next discarded it and started a fresh fetch — URL bar moved,
+  // but the new tree wasn't ready, and the route commit waited. Once
+  // the upstream warmed up (10–20s of mount fetches finishing), the
+  // refetch returned instantly and clicks worked first-try.
+  //
+  // The fix is to let Next use its default staleTimes so prefetched
+  // payloads are honored. Removing the override entirely so we inherit
+  // the framework default (dynamic: 0s, static: 5min as of Next 14+).
+  // Local dev was always unaffected because dev mode doesn't prefetch
+  // RSC payloads the same way.
 };
 export default nextConfig;
