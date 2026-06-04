@@ -530,7 +530,7 @@ export default function APIAccess() {
                           1. Get Available Services
                         </h4>
                         <div className="relative">
-                          <pre className="bg-muted overflow-x-auto rounded-lg p-4 pr-12 text-sm">
+                          <pre className="bg-muted rounded-lg p-4 pr-12 text-xs break-all whitespace-pre-wrap sm:overflow-x-auto sm:text-sm sm:break-normal sm:whitespace-pre">
                             <code>{`curl -X GET "${providerInfo[provider].endpoint}/services" \\
   -H "Authorization: Bearer YOUR_API_KEY"`}</code>
                           </pre>
@@ -555,7 +555,7 @@ export default function APIAccess() {
                           2. Order SMS Activation
                         </h4>
                         <div className="relative">
-                          <pre className="bg-muted overflow-x-auto rounded-lg p-4 pr-12 text-sm">
+                          <pre className="bg-muted rounded-lg p-4 pr-12 text-xs break-all whitespace-pre-wrap sm:overflow-x-auto sm:text-sm sm:break-normal sm:whitespace-pre">
                             <code>{`curl -X POST "${providerInfo[provider].endpoint}/activations" \\
   -H "Authorization: Bearer YOUR_API_KEY" \\
   -H "Content-Type: application/json" \\
@@ -582,7 +582,7 @@ export default function APIAccess() {
                           3. Check SMS Status
                         </h4>
                         <div className="relative">
-                          <pre className="bg-muted overflow-x-auto rounded-lg p-4 pr-12 text-sm">
+                          <pre className="bg-muted rounded-lg p-4 pr-12 text-xs break-all whitespace-pre-wrap sm:overflow-x-auto sm:text-sm sm:break-normal sm:whitespace-pre">
                             <code>{`curl -X GET "${providerInfo[provider].endpoint}/activations/{id}" \\
   -H "Authorization: Bearer YOUR_API_KEY"`}</code>
                           </pre>
@@ -607,7 +607,7 @@ export default function APIAccess() {
                           4. Cancel Activation
                         </h4>
                         <div className="relative">
-                          <pre className="bg-muted overflow-x-auto rounded-lg p-4 pr-12 text-sm">
+                          <pre className="bg-muted rounded-lg p-4 pr-12 text-xs break-all whitespace-pre-wrap sm:overflow-x-auto sm:text-sm sm:break-normal sm:whitespace-pre">
                             <code>{`curl -X DELETE "${providerInfo[provider].endpoint}/activations/{id}" \\
   -H "Authorization: Bearer YOUR_API_KEY"`}</code>
                           </pre>
