@@ -63,9 +63,9 @@ export function Footer() {
 
           {/* Product */}
           <div>
-            <h4 className="mb-3 text-sm font-semibold sm:mb-4 sm:text-base">
+            <h3 className="mb-3 text-sm font-semibold sm:mb-4 sm:text-base">
               Product
-            </h4>
+            </h3>
             <ul className="space-y-2">
               <li>
                 <Link
@@ -112,9 +112,9 @@ export function Footer() {
 
           {/* Resources */}
           <div>
-            <h4 className="mb-3 text-sm font-semibold sm:mb-4 sm:text-base">
+            <h3 className="mb-3 text-sm font-semibold sm:mb-4 sm:text-base">
               Resources
-            </h4>
+            </h3>
             <ul className="space-y-2">
               <li>
                 <Link
@@ -161,9 +161,9 @@ export function Footer() {
 
           {/* Company */}
           <div>
-            <h4 className="mb-3 text-sm font-semibold sm:mb-4 sm:text-base">
+            <h3 className="mb-3 text-sm font-semibold sm:mb-4 sm:text-base">
               Company
-            </h4>
+            </h3>
             <ul className="space-y-2">
               <li>
                 <Link
@@ -211,9 +211,9 @@ export function Footer() {
           {/* Our Websites (Ads) */}
           {ads.length > 0 && (
             <div className="col-span-2 sm:col-span-2 md:col-span-4 lg:col-span-1">
-              <h4 className="mb-3 text-sm font-semibold sm:mb-4 sm:text-base">
+              <h3 className="mb-3 text-sm font-semibold sm:mb-4 sm:text-base">
                 Our Websites
-              </h4>
+              </h3>
               <div className="space-y-3">
                 {ads.map((ad) => (
                   <div
