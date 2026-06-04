@@ -1028,6 +1028,16 @@ export default function WalletPage() {
                   Enter amount above to enable payment methods
                 </p>
               )}
+
+              {/* Gateway tier bonus preview */}
+              {paymentPreview &&
+                paymentPreview.gatewayBonus !== undefined &&
+                paymentPreview.gatewayBonus > 0 && (
+                  <p className="text-success flex items-center gap-1.5 text-sm">
+                    <CheckCircle2 className="h-4 w-4" />
+                    {`Gateway bonus: +$${paymentPreview.gatewayBonus.toFixed(2)} — you'll receive $${paymentPreview.amountCredited.toFixed(2)}`}
+                  </p>
+                )}
             </div>
 
             {/* Coupon Code - Always visible, right after amount like CheapStreamTV */}

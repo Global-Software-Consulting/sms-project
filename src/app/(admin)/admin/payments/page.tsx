@@ -573,7 +573,7 @@ export default function AdminPaymentsPage() {
         feeFixed: feeFixed,
         feePercent: feePercent,
         serviceFeeEnabled: methodFormData.serviceFeeEnabled,
-        imageUrl: methodFormData.imageUrl || undefined,
+        imageUrl: methodFormData.imageUrl,
         settings:
           Object.keys(cleanSettings).length > 0 ? cleanSettings : undefined,
       });
@@ -858,8 +858,17 @@ export default function AdminPaymentsPage() {
                   className="rounded-xl border border-[rgba(255,255,255,0.1)] bg-[rgba(15,23,42,0.6)] p-6 backdrop-blur-xl transition-all hover:border-[rgba(59,130,246,0.5)]"
                 >
                   <div className="mb-4 flex items-start gap-3">
-                    <div className="rounded-lg border border-[rgba(59,130,246,0.3)] bg-[rgba(59,130,246,0.1)] p-3">
-                      {getGatewayIcon(method.type)}
+                    <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-[rgba(59,130,246,0.3)] bg-[rgba(59,130,246,0.1)] p-1">
+                      {method.imageUrl ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={method.imageUrl}
+                          alt={method.displayName}
+                          className="h-full w-full object-contain"
+                        />
+                      ) : (
+                        getGatewayIcon(method.type)
+                      )}
                     </div>
                     <div className="flex-1">
                       <h3 className="mb-2 line-clamp-2 text-sm font-semibold text-white">

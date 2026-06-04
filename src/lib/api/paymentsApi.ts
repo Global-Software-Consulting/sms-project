@@ -200,6 +200,7 @@ export interface PaymentPreviewResponse {
   feePassToUser: boolean;
   totalCharge: number;
   amountCredited: number;
+  gatewayBonus?: number;
   feeDetails: {
     fixed: number;
     percent: number;
