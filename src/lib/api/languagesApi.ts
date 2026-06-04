@@ -29,7 +29,6 @@ export interface UpdateLanguageRequest {
   name?: string;
   flag?: string;
   sortOrder?: number;
-  isDefault?: boolean;
 }
 
 // ============================================
@@ -84,6 +83,20 @@ function extractList(raw: unknown): RawLanguage[] {
   return [];
 }
 
+// Backend returns the default language code as a sibling of the list
+// (e.g. `{ data: { availableLanguages: [...], defaultLanguage: 'en' } }`).
+// Extract it so callers can mark the matching language as default.
+function extractDefaultLanguage(raw: unknown): string | undefined {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return undefined;
+  const r = raw as Record<string, unknown>;
+  if (typeof r.defaultLanguage === 'string') return r.defaultLanguage;
+  if (r.data && typeof r.data === 'object' && !Array.isArray(r.data)) {
+    const d = r.data as Record<string, unknown>;
+    if (typeof d.defaultLanguage === 'string') return d.defaultLanguage;
+  }
+  return undefined;
+}
+
 function normalize(raw: RawLanguage): Language {
   // Backend uses `code` for the Google Translate code (e.g. "en")
   // and `flag` for the country/flag code (e.g. "GB"). Map to our field names:
@@ -107,7 +120,14 @@ function normalize(raw: RawLanguage): Language {
 }
 
 function normalizeList(raw: unknown): Language[] {
-  return extractList(raw).map(normalize);
+  const defaultLang = extractDefaultLanguage(raw);
+  return extractList(raw).map((item) => {
+    const normalized = normalize(item);
+    if (defaultLang && normalized.langCode === defaultLang) {
+      return { ...normalized, isDefault: true };
+    }
+    return normalized;
+  });
 }
 
 function normalizeOne(raw: unknown): Language {
@@ -141,13 +161,21 @@ export const getAllLanguages = async (): Promise<Language[]> => {
 };
 
 // POST /v1/admin/languages
-export const createLanguage = async (data: CreateLanguageRequest): Promise<Language> => {
-  const response = await apiClient.post(API_ENDPOINTS.ADMIN.LANGUAGES.ROOT, data);
+export const createLanguage = async (
+  data: CreateLanguageRequest,
+): Promise<Language> => {
+  const response = await apiClient.post(
+    API_ENDPOINTS.ADMIN.LANGUAGES.ROOT,
+    data,
+  );
   return normalizeOne(response.data);
 };
 
 // PATCH /v1/admin/languages/:id/toggle — body: { isActive: boolean }
-export const toggleLanguage = async (id: string, isActive: boolean): Promise<Language> => {
+export const toggleLanguage = async (
+  id: string,
+  isActive: boolean,
+): Promise<Language> => {
   const response = await apiClient.patch(
     API_ENDPOINTS.ADMIN.LANGUAGES.TOGGLE(id),
     { isActive },
@@ -155,7 +183,9 @@ export const toggleLanguage = async (id: string, isActive: boolean): Promise<Lan
   return normalizeOne(response.data);
 };
 
-// PATCH /v1/admin/languages/:id — update name/flag/sortOrder/isDefault
+// PATCH /v1/admin/languages/:id — update name/flag/sortOrder
+// (backend does not accept isDefault here; set the `default_language`
+// system setting instead via bulkUpdateSettings)
 export const updateLanguage = async (
   id: string,
   data: UpdateLanguageRequest,
