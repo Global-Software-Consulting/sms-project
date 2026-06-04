@@ -359,14 +359,14 @@ export default function BinanceScraperSessionPage() {
 
       <Card>
         <CardHeader>
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <CardTitle className="text-base">All Session Tries</CardTitle>
               <CardDescription>
                 Every Binance Pay verification attempt — auto + manual
               </CardDescription>
             </div>
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               {(
                 [
                   { id: 'all', label: 'All' },
@@ -417,7 +417,41 @@ export default function BinanceScraperSessionPage() {
           </div>
         </CardHeader>
         <CardContent className="p-0">
-          <div className="overflow-x-auto">
+          {!logsLoading &&
+            logs.filter((log) =>
+              auditFilter === 'all'
+                ? true
+                : log.status === auditFilter.toUpperCase(),
+            ).length === 0 && (
+              <div className="flex flex-col items-center justify-center px-6 py-16 text-center">
+                <div className="bg-muted/40 mb-3 flex size-12 items-center justify-center rounded-full">
+                  <RefreshCw className="text-muted-foreground size-5" />
+                </div>
+                <p className="text-sm font-medium text-white">
+                  No {auditFilter === 'all' ? '' : auditFilter} session tries
+                </p>
+                <p className="text-muted-foreground mt-1 text-xs">
+                  Verification attempts will appear here as they happen.
+                </p>
+              </div>
+            )}
+          {logsLoading && (
+            <div className="flex items-center justify-center py-16">
+              <Loader2 className="text-muted-foreground size-5 animate-spin" />
+            </div>
+          )}
+          <div
+            className={`overflow-x-auto ${
+              !logsLoading &&
+              logs.filter((log) =>
+                auditFilter === 'all'
+                  ? true
+                  : log.status === auditFilter.toUpperCase(),
+              ).length === 0
+                ? 'hidden'
+                : ''
+            }`}
+          >
             <table className="w-full text-sm">
               <thead>
                 <tr className="bg-muted/50 text-muted-foreground border-b text-xs uppercase">
@@ -537,29 +571,6 @@ export default function BinanceScraperSessionPage() {
                       </tr>
                     );
                   })}
-                {!logsLoading &&
-                  logs.filter((log) =>
-                    auditFilter === 'all'
-                      ? true
-                      : log.status === auditFilter.toUpperCase(),
-                  ).length === 0 && (
-                    <tr>
-                      <td
-                        colSpan={7}
-                        className="text-muted-foreground py-12 text-center text-sm"
-                      >
-                        No {auditFilter === 'all' ? '' : auditFilter} session
-                        tries
-                      </td>
-                    </tr>
-                  )}
-                {logsLoading && (
-                  <tr>
-                    <td colSpan={7} className="py-12 text-center">
-                      <Loader2 className="text-muted-foreground mx-auto size-5 animate-spin" />
-                    </td>
-                  </tr>
-                )}
               </tbody>
             </table>
           </div>
