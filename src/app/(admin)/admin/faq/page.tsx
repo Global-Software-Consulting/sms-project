@@ -232,17 +232,17 @@ export default function AdminFaqPage() {
   }
 
   return (
-    <div className="p-8">
+    <div className="p-4 lg:p-8">
       <div className="mb-8">
-        <h1 className="mb-2 text-3xl font-semibold text-white">
+        <h1 className="mb-2 text-2xl font-semibold text-white sm:text-3xl">
           FAQ Management
         </h1>
-        <p className="text-[#94A3B8]">
+        <p className="text-sm text-[#94A3B8] sm:text-base">
           Create and manage help articles to assist your users.
         </p>
       </div>
 
-      <div className="mb-8 grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
+      <div className="mb-8 grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-2 lg:grid-cols-4 lg:gap-6">
         {categories.map((category, index) => (
           <AdminGlassCard key={category.id}>
             <div
@@ -289,15 +289,15 @@ export default function AdminFaqPage() {
         </AdminGlassCard>
       </div>
 
-      <div className="mb-6 flex items-center justify-between">
-        <div className="relative">
+      <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="relative w-full sm:max-w-96 sm:flex-1">
           <Search className="absolute top-1/2 left-4 h-5 w-5 -translate-y-1/2 text-[#64748B]" />
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search articles..."
-            className="w-96 rounded-xl border border-[rgba(255,255,255,0.18)] bg-[rgba(255,255,255,0.08)] py-3 pr-4 pl-12 text-sm text-white placeholder:text-[#64748B] focus:ring-2 focus:ring-[#3B82F6] focus:outline-none"
+            className="w-full rounded-xl border border-[rgba(255,255,255,0.18)] bg-[rgba(255,255,255,0.08)] py-3 pr-4 pl-12 text-base text-white placeholder:text-[#64748B] focus:ring-2 focus:ring-[#3B82F6] focus:outline-none sm:text-sm"
           />
         </div>
         <button
@@ -312,7 +312,7 @@ export default function AdminFaqPage() {
             });
             setShowArticleModal(true);
           }}
-          className="flex items-center gap-2 rounded-xl bg-[#3B82F6] px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-[#2563EB]"
+          className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#3B82F6] px-4 py-2.5 text-base font-medium text-white transition-colors hover:bg-[#2563EB] sm:w-auto sm:justify-start sm:text-sm"
         >
           <Plus className="h-5 w-5" />
           Create Article
