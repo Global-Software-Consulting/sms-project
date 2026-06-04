@@ -441,8 +441,14 @@ export default function AdminSupportPage() {
               <MoreVertical className="h-4 w-4" />
             </button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="min-w-[160px]">
-            <DropdownMenuItem onSelect={() => handleViewChat(item)}>
+          <DropdownMenuContent
+            align="end"
+            className="min-w-[160px] border-[rgba(255,255,255,0.1)] bg-[#1E293B] p-1 text-white"
+          >
+            <DropdownMenuItem
+              onSelect={() => handleViewChat(item)}
+              className="cursor-pointer text-white focus:bg-[rgba(59,130,246,0.15)] focus:text-white"
+            >
               <Eye className="mr-2 h-4 w-4 text-[#3B82F6]" />
               View Chat
             </DropdownMenuItem>
@@ -452,7 +458,7 @@ export default function AdminSupportPage() {
                   setSelectedTicket(item);
                   setIsCloseModalOpen(true);
                 }}
-                className="text-[#EF4444] focus:text-[#EF4444]"
+                className="cursor-pointer text-[#EF4444] focus:bg-[rgba(239,68,68,0.12)] focus:text-[#EF4444]"
               >
                 <XCircle className="mr-2 h-4 w-4" />
                 Close ticket
