@@ -633,7 +633,7 @@ export default function AdminBlogsPage() {
       />
 
       {/* Navigation Tabs */}
-      <div className="mb-8 flex items-center gap-6 overflow-x-auto border-b border-[rgba(255,255,255,0.18)]">
+      <div className="mb-8 flex items-center gap-6 overflow-x-auto border-b border-[rgba(255,255,255,0.18)] [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {tabs.map((tab) => (
           <button
             key={tab.id}
@@ -655,14 +655,14 @@ export default function AdminBlogsPage() {
       {/* Add Blog Manually Tab */}
       {activeTab === 'manual' && (
         <AdminGlassCard>
-          <div className="mb-6 flex items-center justify-between">
+          <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <h2 className="text-xl font-semibold text-white">Manage Blogs</h2>
-            <div className="flex items-center gap-3">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
               <Select
                 value={statusFilter}
                 onValueChange={(v) => setStatusFilter(v)}
               >
-                <SelectTrigger className="rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(255,255,255,0.08)] px-4 py-2 text-base text-white focus-visible:ring-2 focus-visible:ring-[#3B82F6] focus-visible:outline-none data-[size=default]:h-auto data-[size=default]:min-h-11 lg:text-sm">
+                <SelectTrigger className="w-full rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(255,255,255,0.08)] px-4 py-2 text-base text-white focus-visible:ring-2 focus-visible:ring-[#3B82F6] focus-visible:outline-none data-[size=default]:h-auto data-[size=default]:min-h-11 sm:w-auto lg:text-sm">
                   <SelectValue placeholder="All Blogs" />
                 </SelectTrigger>
                 <SelectContent className="max-h-72 border-[rgba(255,255,255,0.18)] bg-[#1E293B] text-white">
@@ -697,7 +697,7 @@ export default function AdminBlogsPage() {
                   resetBlogForm();
                   setIsCreateBlogModalOpen(true);
                 }}
-                className="flex items-center gap-2 rounded-lg bg-[#06B6D4] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[#0891B2]"
+                className="flex w-full items-center justify-center gap-2 rounded-lg bg-[#06B6D4] px-4 py-2 text-base font-medium whitespace-nowrap text-white transition-colors hover:bg-[#0891B2] sm:w-auto sm:justify-start sm:text-sm"
               >
                 <Plus className="h-4 w-4" />
                 Create Blog
@@ -1011,10 +1011,10 @@ export default function AdminBlogsPage() {
       {/* Category Management Tab */}
       {activeTab === 'category' && (
         <AdminGlassCard>
-          <div className="mb-6 flex items-center gap-6 border-b border-[rgba(255,255,255,0.18)]">
+          <div className="mb-6 flex items-center gap-6 overflow-x-auto border-b border-[rgba(255,255,255,0.18)] [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             <button
               onClick={() => setCategorySubTab('category')}
-              className={`relative px-2 pb-3 text-sm font-medium transition-colors ${
+              className={`relative shrink-0 px-2 pb-3 text-sm font-medium whitespace-nowrap transition-colors ${
                 categorySubTab === 'category'
                   ? 'text-[#3B82F6]'
                   : 'text-[#64748B] hover:text-white'
@@ -1027,7 +1027,7 @@ export default function AdminBlogsPage() {
             </button>
             <button
               onClick={() => setCategorySubTab('subcategory')}
-              className={`relative px-2 pb-3 text-sm font-medium transition-colors ${
+              className={`relative shrink-0 px-2 pb-3 text-sm font-medium whitespace-nowrap transition-colors ${
                 categorySubTab === 'subcategory'
                   ? 'text-[#3B82F6]'
                   : 'text-[#64748B] hover:text-white'
@@ -1040,7 +1040,7 @@ export default function AdminBlogsPage() {
             </button>
           </div>
 
-          <div className="mb-6 flex items-center justify-between">
+          <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <h2 className="text-xl font-semibold text-white">
               {categorySubTab === 'category'
                 ? 'Manage Categories'
@@ -1051,7 +1051,7 @@ export default function AdminBlogsPage() {
                 resetCategoryForm();
                 setIsCreateCategoryModalOpen(true);
               }}
-              className="rounded-lg bg-[#06B6D4] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[#0891B2]"
+              className="w-full rounded-lg bg-[#06B6D4] px-4 py-2 text-base font-medium whitespace-nowrap text-white transition-colors hover:bg-[#0891B2] sm:w-auto sm:text-sm"
             >
               + Create{' '}
               {categorySubTab === 'category' ? 'Category' : 'Sub-Category'}
@@ -1065,13 +1065,13 @@ export default function AdminBlogsPage() {
             ).map((category) => (
               <div
                 key={category.id}
-                className="flex items-center justify-between rounded-xl border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.3)] p-4"
+                className="flex flex-col gap-3 rounded-xl border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.3)] p-4 sm:flex-row sm:items-center sm:justify-between"
               >
-                <div>
-                  <h3 className="mb-1 text-base font-semibold text-white">
+                <div className="min-w-0">
+                  <h3 className="mb-1 text-base font-semibold break-words text-white">
                     {category.name}
                   </h3>
-                  <p className="text-sm text-[#64748B]">
+                  <p className="text-sm break-words text-[#64748B]">
                     Slug: {category.slug}
                     {category.parent && (
                       <span> • Parent: {category.parent.name}</span>
@@ -1084,13 +1084,13 @@ export default function AdminBlogsPage() {
                 <div className="flex items-center gap-2">
                   <button
                     onClick={() => openEditCategory(category)}
-                    className="rounded-lg bg-[#3B82F6] px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-[#2563EB]"
+                    className="flex-1 rounded-lg bg-[#3B82F6] px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-[#2563EB] sm:flex-none"
                   >
                     Edit
                   </button>
                   <button
                     onClick={() => openDeleteCategory(category)}
-                    className="rounded-lg bg-[#EF4444] px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-[#DC2626]"
+                    className="flex-1 rounded-lg bg-[#EF4444] px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-[#DC2626] sm:flex-none"
                   >
                     Delete
                   </button>
@@ -1114,14 +1114,14 @@ export default function AdminBlogsPage() {
       {/* Author Pool Tab */}
       {activeTab === 'author' && (
         <AdminGlassCard>
-          <div className="mb-6 flex items-center justify-between">
+          <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <h2 className="text-xl font-semibold text-white">Manage Authors</h2>
             <button
               onClick={() => {
                 resetAuthorForm();
                 setIsCreateAuthorModalOpen(true);
               }}
-              className="rounded-lg bg-[#06B6D4] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[#0891B2]"
+              className="w-full rounded-lg bg-[#06B6D4] px-4 py-2 text-base font-medium whitespace-nowrap text-white transition-colors hover:bg-[#0891B2] sm:w-auto sm:text-sm"
             >
               + Create Author
             </button>
@@ -1131,21 +1131,21 @@ export default function AdminBlogsPage() {
             {authors.map((author) => (
               <div
                 key={author.id}
-                className="flex items-center justify-between rounded-xl border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.3)] p-4"
+                className="flex flex-col gap-3 rounded-xl border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.3)] p-4 sm:flex-row sm:items-center sm:justify-between"
               >
-                <div className="flex items-center gap-4">
+                <div className="flex min-w-0 items-center gap-4">
                   {author.avatar && (
                     <img
                       src={author.avatar}
                       alt={author.name}
-                      className="h-12 w-12 rounded-full object-cover"
+                      className="h-12 w-12 shrink-0 rounded-full object-cover"
                     />
                   )}
-                  <div>
-                    <h3 className="mb-1 text-base font-semibold text-white">
+                  <div className="min-w-0">
+                    <h3 className="mb-1 text-base font-semibold break-words text-white">
                       {author.name}
                     </h3>
-                    <p className="text-sm text-[#3B82F6]">
+                    <p className="text-sm break-words text-[#3B82F6]">
                       {author.bio || 'No bio'}
                     </p>
                     {author._count && (
@@ -1158,13 +1158,13 @@ export default function AdminBlogsPage() {
                 <div className="flex items-center gap-2">
                   <button
                     onClick={() => openEditAuthor(author)}
-                    className="rounded-lg bg-[#3B82F6] px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-[#2563EB]"
+                    className="flex-1 rounded-lg bg-[#3B82F6] px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-[#2563EB] sm:flex-none"
                   >
                     Edit
                   </button>
                   <button
                     onClick={() => openDeleteAuthor(author)}
-                    className="rounded-lg bg-[#EF4444] px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-[#DC2626]"
+                    className="flex-1 rounded-lg bg-[#EF4444] px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-[#DC2626] sm:flex-none"
                   >
                     Delete
                   </button>
@@ -1183,17 +1183,17 @@ export default function AdminBlogsPage() {
       {/* Image Auto Editor Tab */}
       {activeTab === 'image' && (
         <div className="space-y-6">
-          <div className="rounded-xl border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.3)] p-6">
+          <div className="rounded-xl border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.3)] p-4 sm:p-6">
             <h3 className="mb-4 text-base font-semibold text-white">
               Upload Images
             </h3>
-            <button className="flex items-center gap-2 rounded-lg bg-[#06B6D4] px-6 py-3 text-sm font-medium text-white transition-colors hover:bg-[#0891B2]">
+            <button className="flex w-full items-center justify-center gap-2 rounded-lg bg-[#06B6D4] px-6 py-3 text-base font-medium text-white transition-colors hover:bg-[#0891B2] sm:w-auto sm:text-sm">
               <Upload className="h-5 w-5" />
               Choose Images
             </button>
           </div>
 
-          <div className="rounded-xl border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.3)] p-6">
+          <div className="rounded-xl border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.3)] p-4 sm:p-6">
             <h3 className="mb-4 text-base font-semibold text-white">
               Search Name for Images
             </h3>
@@ -1204,15 +1204,15 @@ export default function AdminBlogsPage() {
                 setImageConfig({ ...imageConfig, searchName: e.target.value })
               }
               placeholder="e.g., How to use IPTV in Bangladesh"
-              className="w-full rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(255,255,255,0.08)] px-4 py-3 text-sm text-white placeholder:text-[#64748B] focus:ring-2 focus:ring-[#3B82F6] focus:outline-none"
+              className="w-full rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(255,255,255,0.08)] px-4 py-3 text-base text-white placeholder:text-[#64748B] focus:ring-2 focus:ring-[#3B82F6] focus:outline-none sm:text-sm"
             />
           </div>
 
-          <div className="rounded-xl border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.3)] p-6">
+          <div className="rounded-xl border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.3)] p-4 sm:p-6">
             <h3 className="mb-4 text-base font-semibold text-white">
               Processing Settings
             </h3>
-            <div className="mb-4 grid grid-cols-2 gap-4 md:grid-cols-4">
+            <div className="mb-4 grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-4">
               <div>
                 <label className="mb-2 block text-sm font-medium text-white">
                   Crop (%)
@@ -1231,7 +1231,7 @@ export default function AdminBlogsPage() {
                           [key]: e.target.value,
                         })
                       }
-                      className="w-full rounded border border-[rgba(255,255,255,0.18)] bg-[rgba(255,255,255,0.08)] px-2 py-1 text-xs text-white"
+                      className="w-full rounded border border-[rgba(255,255,255,0.18)] bg-[rgba(255,255,255,0.08)] px-2 py-2 text-center text-sm text-white"
                     />
                   ))}
                 </div>
@@ -1254,7 +1254,7 @@ export default function AdminBlogsPage() {
                           [key]: e.target.value,
                         })
                       }
-                      className="w-full rounded border border-[rgba(255,255,255,0.18)] bg-[rgba(255,255,255,0.08)] px-2 py-1 text-xs text-white"
+                      className="w-full rounded border border-[rgba(255,255,255,0.18)] bg-[rgba(255,255,255,0.08)] px-2 py-2 text-center text-sm text-white"
                     />
                   ))}
                 </div>
@@ -1277,7 +1277,7 @@ export default function AdminBlogsPage() {
                           [key]: e.target.value,
                         })
                       }
-                      className="w-full rounded border border-[rgba(255,255,255,0.18)] bg-[rgba(255,255,255,0.08)] px-2 py-1 text-xs text-white"
+                      className="w-full rounded border border-[rgba(255,255,255,0.18)] bg-[rgba(255,255,255,0.08)] px-2 py-2 text-center text-sm text-white"
                     />
                   ))}
                 </div>
@@ -1300,14 +1300,14 @@ export default function AdminBlogsPage() {
                           [key]: e.target.value,
                         })
                       }
-                      className="w-full rounded border border-[rgba(255,255,255,0.18)] bg-[rgba(255,255,255,0.08)] px-2 py-1 text-xs text-white"
+                      className="w-full rounded border border-[rgba(255,255,255,0.18)] bg-[rgba(255,255,255,0.08)] px-2 py-2 text-center text-sm text-white"
                     />
                   ))}
                 </div>
               </div>
             </div>
-            <div className="flex items-center gap-6">
-              <label className="flex items-center gap-2 text-sm text-white">
+            <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
+              <label className="flex items-center gap-2 text-sm whitespace-nowrap text-white">
                 <input
                   type="checkbox"
                   checked={imageConfig.convertWebP}
@@ -1321,7 +1321,7 @@ export default function AdminBlogsPage() {
                 />
                 Convert to WebP
               </label>
-              <label className="flex items-center gap-2 text-sm text-white">
+              <label className="flex items-center gap-2 text-sm whitespace-nowrap text-white">
                 <input
                   type="checkbox"
                   checked={imageConfig.stripEXIF}
