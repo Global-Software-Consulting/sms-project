@@ -207,64 +207,19 @@ export default function RootLayout({
                     }
                   });
 
-                  // Pre-hydration first-click recovery.
-                  // On fresh page load, Next.js Link's onClick attaches and
-                  // calls preventDefault — but the SPA router may not be
-                  // initialized yet, so the click is consumed and no
-                  // navigation fires. Users see "first click does nothing,
-                  // second click works".
-                  // Listen for anchor clicks at the document. Capture-phase
-                  // here records the intended href; after 220ms we check
-                  // whether the URL actually changed. If not (the click was
-                  // dropped pre-hydration) AND the page is older than 2s
-                  // (so we only do this near initial load, not during
-                  // normal SPA navigation), force a full-page navigate so
-                  // the user always lands on the target. After Next's own
-                  // navigation succeeds once, this listener stays passive
-                  // for the rest of the session.
-                  var pageLoadAt = Date.now();
-                  document.addEventListener('click', function (ev) {
-                    try {
-                      if (
-                        ev.button !== 0 ||
-                        ev.metaKey ||
-                        ev.ctrlKey ||
-                        ev.shiftKey ||
-                        ev.altKey ||
-                        ev.defaultPrevented
-                      ) return;
-                      var t = ev.target;
-                      var a = t && t.closest ? t.closest('a') : null;
-                      if (!a) return;
-                      var href = a.getAttribute('href');
-                      if (!href || href[0] === '#') return;
-                      var target = a.getAttribute('target');
-                      if (target && target !== '_self') return;
-                      if (a.hasAttribute('download')) return;
-                      var u;
-                      try {
-                        u = new URL(href, location.href);
-                      } catch (e) { return; }
-                      if (u.origin !== location.origin) return;
-                      if (
-                        u.pathname === location.pathname &&
-                        u.search === location.search &&
-                        u.hash
-                      ) return;
-                      var fromUrl = location.href;
-                      setTimeout(function () {
-                        var stillNotMoved =
-                          location.href === fromUrl &&
-                          location.href !== u.href;
-                        var earlyInPageLife = Date.now() - pageLoadAt < 8000;
-                        if (stillNotMoved && earlyInPageLife) {
-                          // Pre-hydration click swallowed by Link without
-                          // a navigation. Hard-navigate so the user lands.
-                          location.href = u.href;
-                        }
-                      }, 220);
-                    } catch (e) { /* ignore */ }
-                  }, true);
+                  // Previously this script also installed a pre-hydration
+                  // anchor-click fallback that hard-navigated to the href
+                  // if the URL hadn't moved within 220ms. Live diagnostic
+                  // on the Contabo deployment (where RSC roundtrips are
+                  // ~300ms, not the <50ms of local dev) showed the 220ms
+                  // timeout was firing BEFORE the in-flight RSC fetch
+                  // returned — triggering location.href and aborting every
+                  // in-flight request (mass ERR_ABORTED). That presented as
+                  // "URL changed, page didn't render" because providers
+                  // (Branding/Maintenance/Addons) aborted mid-flight. The
+                  // post-hydration <LinkClickRecovery /> component is the
+                  // proper place for this — it sees the actual router
+                  // state, not just window.location.
                 }
               })();
             `,
