@@ -92,7 +92,7 @@ export function Header() {
             <Button
               variant="ghost"
               size="icon"
-              className="h-9 w-9"
+              className="size-icon h-9 !min-h-0 w-9 shrink-0 !p-0"
               onClick={(e) => {
                 e.stopPropagation();
                 setLangOpen((v) => !v);
@@ -111,7 +111,7 @@ export function Header() {
             <Button
               variant="ghost"
               size="icon"
-              className="h-9 w-9"
+              className="size-icon h-9 !min-h-0 w-9 shrink-0 !p-0"
               onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
             >
               <Sun className="h-4 w-4 scale-100 rotate-0 transition-all dark:scale-0 dark:-rotate-90" />
@@ -145,7 +145,7 @@ export function Header() {
           <Button
             variant="ghost"
             size="icon"
-            className="h-9 w-9 md:hidden"
+            className="size-icon h-9 !min-h-0 w-9 shrink-0 !p-0 md:hidden"
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
             aria-label={mobileMenuOpen ? 'Close menu' : 'Open menu'}
           >
