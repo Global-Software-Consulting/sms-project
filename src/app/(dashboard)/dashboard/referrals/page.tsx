@@ -84,7 +84,10 @@ import {
   type Payout,
   type CryptoCurrency,
 } from '@/lib/api/referralsApi';
-import { getAvailableCoupons, type AvailableCoupon } from '@/lib/api/couponsApi';
+import {
+  getAvailableCoupons,
+  type AvailableCoupon,
+} from '@/lib/api/couponsApi';
 
 // Crypto currency options for withdrawal
 const CRYPTO_OPTIONS: { value: CryptoCurrency; label: string }[] = [
@@ -97,11 +100,12 @@ const CRYPTO_OPTIONS: { value: CryptoCurrency; label: string }[] = [
 export default function ReferralDashboard() {
   const { user } = useAuth();
   const [copied, setCopied] = useState(false);
-  
+
   // Withdraw Funds Modal (Crypto)
   const [withdrawModal, setWithdrawModal] = useState(false);
   const [withdrawAmount, setWithdrawAmount] = useState('');
-  const [withdrawCrypto, setWithdrawCrypto] = useState<CryptoCurrency>('USDT_TRC20');
+  const [withdrawCrypto, setWithdrawCrypto] =
+    useState<CryptoCurrency>('USDT_TRC20');
   const [withdrawAddress, setWithdrawAddress] = useState('');
   const [withdrawMessage, setWithdrawMessage] = useState('');
   const [isWithdrawing, setIsWithdrawing] = useState(false);
@@ -116,12 +120,16 @@ export default function ReferralDashboard() {
 
   // API data
   const [profile, setProfile] = useState<ReferralProfile | null>(null);
-  const [referralLink, setReferralLink] = useState<ReferralLinkType | null>(null);
+  const [referralLink, setReferralLink] = useState<ReferralLinkType | null>(
+    null,
+  );
   const [stats, setStats] = useState<ReferralStats | null>(null);
   const [referrals, setReferrals] = useState<Referral[]>([]);
   const [commissions, setCommissions] = useState<Commission[]>([]);
   const [payouts, setPayouts] = useState<Payout[]>([]);
-  const [availableCoupons, setAvailableCoupons] = useState<AvailableCoupon[]>([]);
+  const [availableCoupons, setAvailableCoupons] = useState<AvailableCoupon[]>(
+    [],
+  );
 
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
@@ -136,16 +144,23 @@ export default function ReferralDashboard() {
       setIsLoading(true);
       setError(null);
 
-      const [profileRes, linkRes, statsRes, referralsRes, commissionsRes, payoutsRes, couponsRes] =
-        await Promise.allSettled([
-          getReferralProfile(),
-          getReferralLink(),
-          getReferralStats(),
-          getReferrals({ limit: 20 }),
-          getCommissions({ limit: 20 }),
-          getPayouts({ limit: 20 }),
-          getAvailableCoupons(),
-        ]);
+      const [
+        profileRes,
+        linkRes,
+        statsRes,
+        referralsRes,
+        commissionsRes,
+        payoutsRes,
+        couponsRes,
+      ] = await Promise.allSettled([
+        getReferralProfile(),
+        getReferralLink(),
+        getReferralStats(),
+        getReferrals({ limit: 20 }),
+        getCommissions({ limit: 20 }),
+        getPayouts({ limit: 20 }),
+        getAvailableCoupons(),
+      ]);
 
       if (profileRes.status === 'fulfilled') {
         setProfile(profileRes.value);
@@ -221,7 +236,9 @@ export default function ReferralDashboard() {
       });
       fetchData();
     } catch (err: any) {
-      toast.error(err.response?.data?.message || 'Failed to request withdrawal');
+      toast.error(
+        err.response?.data?.message || 'Failed to request withdrawal',
+      );
     } finally {
       setIsWithdrawing(false);
     }
@@ -249,7 +266,9 @@ export default function ReferralDashboard() {
       });
       fetchData();
     } catch (err: any) {
-      toast.error(err.response?.data?.message || 'Failed to add funds to balance');
+      toast.error(
+        err.response?.data?.message || 'Failed to add funds to balance',
+      );
     } finally {
       setIsAddingBalance(false);
     }
@@ -286,8 +305,15 @@ export default function ReferralDashboard() {
   const formatDateTime = (dateString: string) => {
     const date = new Date(dateString);
     return {
-      date: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
-      time: date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
+      date: date.toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+      }),
+      time: date.toLocaleTimeString('en-US', {
+        hour: '2-digit',
+        minute: '2-digit',
+      }),
     };
   };
 
@@ -319,17 +345,20 @@ export default function ReferralDashboard() {
   }
 
   const tierInfo = stats ? getTierInfo(stats.currentTier) : null;
-  const commissionRate = stats?.currentCommissionRate || profile?.commissionRate || 10;
+  const commissionRate =
+    stats?.currentCommissionRate || profile?.commissionRate || 10;
   const availableBalance = profile?.pendingEarnings || 0;
   const totalEarnings = stats?.totalEarnings || profile?.totalEarnings || 0;
   const pendingEarnings = stats?.pendingEarnings || 0;
   const paidEarnings = stats?.paidEarnings || profile?.paidEarnings || 0;
   const minPayoutAmount = profile?.minPayoutAmount || 10;
 
-  const displayName = user?.username || user?.firstName || user?.email?.split('@')[0] || 'User';
+  const displayName =
+    user?.username || user?.firstName || user?.email?.split('@')[0] || 'User';
   const handle = user?.username || user?.email?.split('@')[0] || '';
   const totalReferredSales = stats?.totalSpending ?? 0;
-  const totalReferralCount = stats?.totalReferrals ?? profile?.totalReferrals ?? 0;
+  const totalReferralCount =
+    stats?.totalReferrals ?? profile?.totalReferrals ?? 0;
 
   return (
     <div className="space-y-6">
@@ -343,7 +372,7 @@ export default function ReferralDashboard() {
 
       {/* Your Affiliate Profile */}
       <Card className="card-hover-lift">
-        <CardContent className="p-6">
+        <CardContent className="p-4 sm:p-6">
           <h2 className="text-muted-foreground mb-6 text-xs font-semibold tracking-[0.2em]">
             <span className="from-primary to-accent bg-gradient-to-r bg-clip-text text-transparent">
               Y
@@ -351,10 +380,10 @@ export default function ReferralDashboard() {
             OUR AFFILIATE PROFILE
           </h2>
 
-          <div className="mb-6 flex items-center justify-between gap-4">
-            <div className="flex items-center gap-4 min-w-0">
+          <div className="mb-6 flex items-center justify-between gap-3 sm:gap-4">
+            <div className="flex min-w-0 items-center gap-3 sm:gap-4">
               <div className="relative flex-shrink-0">
-                <div className="from-primary/30 to-accent/30 h-14 w-14 overflow-hidden rounded-full bg-gradient-to-br ring-2 ring-[var(--glass-border)]">
+                <div className="from-primary/30 to-accent/30 h-12 w-12 overflow-hidden rounded-full bg-gradient-to-br ring-2 ring-[var(--glass-border)] sm:h-14 sm:w-14">
                   {user?.avatar ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
@@ -370,21 +399,25 @@ export default function ReferralDashboard() {
                 </div>
                 <Link
                   href="/dashboard/settings"
-                  className="bg-background hover:bg-muted border-border absolute -top-1 -left-1 flex h-6 w-6 items-center justify-center rounded-full border transition-colors"
+                  className="bg-background hover:bg-muted border-border absolute -right-1 -bottom-1 flex h-5 !min-h-0 w-5 items-center justify-center rounded-full border transition-colors sm:h-6 sm:w-6"
                   aria-label="Edit profile"
                 >
-                  <Pencil className="h-3 w-3" />
+                  <Pencil className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
                 </Link>
               </div>
               <div className="min-w-0">
                 <div className="flex items-center gap-1.5">
-                  <span className="truncate text-base font-semibold">{displayName}</span>
+                  <span className="truncate text-base font-semibold">
+                    {displayName}
+                  </span>
                   {user?.emailVerified && (
                     <BadgeCheck className="h-4 w-4 flex-shrink-0 fill-[#3B82F6] text-white" />
                   )}
                 </div>
                 {handle && (
-                  <p className="text-muted-foreground truncate text-sm">@{handle}</p>
+                  <p className="text-muted-foreground truncate text-sm">
+                    @{handle}
+                  </p>
                 )}
               </div>
             </div>
@@ -404,18 +437,28 @@ export default function ReferralDashboard() {
 
           <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <span className="text-muted-foreground text-sm">Total Referred Sales:</span>
+              <span className="text-muted-foreground text-sm">
+                Total Referred Sales:
+              </span>
               <span className="text-base font-semibold">
                 {formatAmount(totalReferredSales)}
               </span>
             </div>
             <div className="flex items-center justify-between">
-              <span className="text-muted-foreground text-sm">Total Referrals:</span>
-              <span className="text-base font-semibold">{totalReferralCount}</span>
+              <span className="text-muted-foreground text-sm">
+                Total Referrals:
+              </span>
+              <span className="text-base font-semibold">
+                {totalReferralCount}
+              </span>
             </div>
             <div className="flex items-center justify-between">
-              <span className="text-muted-foreground text-sm">Current Rank:</span>
-              <span className="text-base font-semibold">{tierInfo?.name || '—'}</span>
+              <span className="text-muted-foreground text-sm">
+                Current Rank:
+              </span>
+              <span className="text-base font-semibold">
+                {tierInfo?.name || '—'}
+              </span>
             </div>
           </div>
 
@@ -519,9 +562,9 @@ export default function ReferralDashboard() {
       </div>
 
       {/* Commission Rate Banner */}
-      <Card className="border-primary/30 from-primary/5 to-primary/10 bg-gradient-to-r">
-        <CardContent className="py-4">
-          <div className="flex flex-wrap items-center justify-between gap-4">
+      <Card className="border-primary/30 from-primary/5 to-primary/10 overflow-hidden bg-gradient-to-r">
+        <CardContent className="px-4 py-4 sm:px-6">
+          <div className="flex flex-col items-stretch gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:gap-4">
             <div className="flex min-w-0 items-center gap-3">
               <div className="bg-primary/20 rounded-full p-3">
                 <Percent className="text-primary h-5 w-5" />
@@ -535,7 +578,7 @@ export default function ReferralDashboard() {
                 </p>
               </div>
             </div>
-            <div className="flex shrink-0 items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2 sm:shrink-0">
               {tierInfo && (
                 <Badge variant="default" className="px-3 py-1.5 text-sm">
                   <Award className="mr-1 h-3 w-3" />
@@ -556,8 +599,8 @@ export default function ReferralDashboard() {
         <CardHeader>
           <CardTitle>Your Referral Link</CardTitle>
           <CardDescription>
-            Share this link to earn {commissionRate}% commission on
-            all purchases made by referred users
+            Share this link to earn {commissionRate}% commission on all
+            purchases made by referred users
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -566,13 +609,25 @@ export default function ReferralDashboard() {
             <label className="text-sm font-medium">Referral Code</label>
             <div className="flex gap-2">
               <Input
-                value={referralLink?.customCode || referralLink?.code || profile?.referralCode || ''}
+                value={
+                  referralLink?.customCode ||
+                  referralLink?.code ||
+                  profile?.referralCode ||
+                  ''
+                }
                 readOnly
                 className="bg-muted/50 font-mono text-lg font-semibold"
               />
               <Button
                 variant={copied ? 'default' : 'outline'}
-                onClick={() => copyToClipboard(referralLink?.customCode || referralLink?.code || profile?.referralCode || '')}
+                onClick={() =>
+                  copyToClipboard(
+                    referralLink?.customCode ||
+                      referralLink?.code ||
+                      profile?.referralCode ||
+                      '',
+                  )
+                }
                 className="min-w-[100px]"
               >
                 {copied ? (
@@ -595,12 +650,24 @@ export default function ReferralDashboard() {
             <label className="text-sm font-medium">Full Referral Link</label>
             <div className="flex gap-2">
               <Input
-                value={referralLink?.customLink || referralLink?.link || profile?.referralLink || ''}
+                value={
+                  referralLink?.customLink ||
+                  referralLink?.link ||
+                  profile?.referralLink ||
+                  ''
+                }
                 readOnly
                 className="bg-muted/50 text-sm"
               />
               <Button
-                onClick={() => copyToClipboard(referralLink?.customLink || referralLink?.link || profile?.referralLink || '')}
+                onClick={() =>
+                  copyToClipboard(
+                    referralLink?.customLink ||
+                      referralLink?.link ||
+                      profile?.referralLink ||
+                      '',
+                  )
+                }
                 className="min-w-[120px]"
               >
                 <Copy className="mr-2 h-4 w-4" />
@@ -627,9 +694,7 @@ export default function ReferralDashboard() {
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="text-primary mt-0.5">•</span>
-                  <span>
-                    Earn {commissionRate}% on all their purchases
-                  </span>
+                  <span>Earn {commissionRate}% on all their purchases</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="text-primary mt-0.5">•</span>
@@ -670,7 +735,9 @@ export default function ReferralDashboard() {
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Card className="card-hover-lift">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Referrals</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              Total Referrals
+            </CardTitle>
             <div className="rounded-lg bg-blue-500/10 p-2">
               <Users className="h-4 w-4 text-blue-500" />
             </div>
@@ -712,7 +779,9 @@ export default function ReferralDashboard() {
 
         <Card className="card-hover-lift">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Spending</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              Total Spending
+            </CardTitle>
             <div className="bg-success/10 rounded-lg p-2">
               <DollarSign className="text-success h-4 w-4" />
             </div>
@@ -749,18 +818,27 @@ export default function ReferralDashboard() {
             <div className="space-y-2">
               <div className="flex items-center justify-between text-sm">
                 <span className="text-muted-foreground">
-                  {formatAmount(stats.totalSpending)} spent • {formatAmount(stats.spendingToNextTier || 0)} more to unlock {stats.nextTier}
+                  {formatAmount(stats.totalSpending)} spent •{' '}
+                  {formatAmount(stats.spendingToNextTier || 0)} more to unlock{' '}
+                  {stats.nextTier}
                 </span>
                 <span className="text-primary font-semibold">
                   {stats.nextTierCommissionRate}% rate
                 </span>
               </div>
               <Progress
-                value={stats.spendingToNextTier ? ((stats.totalSpending / (stats.totalSpending + stats.spendingToNextTier)) * 100) : 100}
+                value={
+                  stats.spendingToNextTier
+                    ? (stats.totalSpending /
+                        (stats.totalSpending + stats.spendingToNextTier)) *
+                      100
+                    : 100
+                }
                 className="h-3"
               />
               <p className="text-muted-foreground text-xs">
-                Spend {formatAmount(stats.spendingToNextTier || 0)} more to increase commission to {stats.nextTierCommissionRate}%
+                Spend {formatAmount(stats.spendingToNextTier || 0)} more to
+                increase commission to {stats.nextTierCommissionRate}%
               </p>
             </div>
           </CardContent>
@@ -791,7 +869,9 @@ export default function ReferralDashboard() {
                           {maskEmail(ref.referredEmail)}
                         </p>
                         <Badge
-                          variant={ref.status === 'QUALIFIED' ? 'default' : 'secondary'}
+                          variant={
+                            ref.status === 'QUALIFIED' ? 'default' : 'secondary'
+                          }
                           className="flex-shrink-0 text-xs"
                         >
                           {getReferralStatusLabel(ref.status)}
@@ -799,7 +879,8 @@ export default function ReferralDashboard() {
                       </div>
                       <p className="text-muted-foreground text-xs">
                         Joined {formatDate(ref.createdAt)}
-                        {ref.qualifiedAt && ` • Qualified ${formatDate(ref.qualifiedAt)}`}
+                        {ref.qualifiedAt &&
+                          ` • Qualified ${formatDate(ref.qualifiedAt)}`}
                       </p>
                     </div>
                     <div className="ml-4 flex-shrink-0 text-right">
@@ -845,14 +926,17 @@ export default function ReferralDashboard() {
                             {comm.sourceType}
                           </p>
                           <Badge
-                            variant={comm.status === 'PAID' ? 'default' : 'secondary'}
+                            variant={
+                              comm.status === 'PAID' ? 'default' : 'secondary'
+                            }
                             className="flex-shrink-0 text-xs"
                           >
                             {getCommissionStatusLabel(comm.status)}
                           </Badge>
                         </div>
                         <p className="text-muted-foreground text-xs">
-                          {comm.commissionRate}% of {formatAmount(comm.sourceAmount)}
+                          {comm.commissionRate}% of{' '}
+                          {formatAmount(comm.sourceAmount)}
                         </p>
                         <p className="text-muted-foreground mt-0.5 text-xs">
                           {dateTime.date} • {dateTime.time}
@@ -919,7 +1003,9 @@ export default function ReferralDashboard() {
                           </TableCell>
                           <TableCell>
                             <Badge
-                              variant={comm.status === 'PAID' ? 'default' : 'secondary'}
+                              variant={
+                                comm.status === 'PAID' ? 'default' : 'secondary'
+                              }
                               className="text-xs"
                             >
                               {getCommissionStatusLabel(comm.status)}
@@ -950,7 +1036,9 @@ export default function ReferralDashboard() {
           {/* Balance Display - Like CheapStreamTV */}
           <div className="space-y-4">
             <div>
-              <p className="text-muted-foreground mb-2 text-sm">Total Withdrawable Funds:</p>
+              <p className="text-muted-foreground mb-2 text-sm">
+                Total Withdrawable Funds:
+              </p>
               <div className="bg-primary rounded-lg px-4 py-3 text-center">
                 <p className="text-primary-foreground text-2xl font-bold">
                   {formatAmount(availableBalance)}
@@ -958,7 +1046,9 @@ export default function ReferralDashboard() {
               </div>
             </div>
             <div>
-              <p className="text-muted-foreground mb-2 text-sm">Total Referral Earnings:</p>
+              <p className="text-muted-foreground mb-2 text-sm">
+                Total Referral Earnings:
+              </p>
               <div className="bg-primary rounded-lg px-4 py-3 text-center">
                 <p className="text-primary-foreground text-2xl font-bold">
                   {formatAmount(totalEarnings)}
@@ -988,7 +1078,8 @@ export default function ReferralDashboard() {
 
           {/* Info Text */}
           <p className="text-muted-foreground text-center text-xs">
-            *You can use your main balance to buy plans or withdraw referral earnings to your preferred payment method.
+            *You can use your main balance to buy plans or withdraw referral
+            earnings to your preferred payment method.
           </p>
 
           {/* Balance Summary Grid */}
@@ -1028,14 +1119,21 @@ export default function ReferralDashboard() {
                     </TableHeader>
                     <TableBody>
                       {payouts.map((payout) => {
-                        const statusInfo = getWithdrawalStatusBadge(payout.status);
+                        const statusInfo = getWithdrawalStatusBadge(
+                          payout.status,
+                        );
                         const StatusIcon = statusInfo.icon;
                         return (
-                          <TableRow key={payout.id} className="hover:bg-muted/50">
+                          <TableRow
+                            key={payout.id}
+                            className="hover:bg-muted/50"
+                          >
                             <TableCell className="text-sm">
                               {formatDate(payout.createdAt)}
                             </TableCell>
-                            <TableCell className="text-sm">{payout.method}</TableCell>
+                            <TableCell className="text-sm">
+                              {payout.method}
+                            </TableCell>
                             <TableCell>
                               <Badge
                                 variant={statusInfo.variant}
@@ -1089,7 +1187,9 @@ export default function ReferralDashboard() {
                         {coupon.code}
                       </Badge>
                       <Badge
-                        variant={coupon.type === 'PERCENTAGE' ? 'default' : 'outline'}
+                        variant={
+                          coupon.type === 'PERCENTAGE' ? 'default' : 'outline'
+                        }
                         className="text-xs"
                       >
                         {coupon.type === 'PERCENTAGE'
@@ -1116,7 +1216,8 @@ export default function ReferralDashboard() {
                       )}
                       {coupon.expiresAt && (
                         <span className="text-warning">
-                          Expires: {new Date(coupon.expiresAt).toLocaleDateString()}
+                          Expires:{' '}
+                          {new Date(coupon.expiresAt).toLocaleDateString()}
                         </span>
                       )}
                       <span className="text-muted-foreground">
@@ -1142,7 +1243,9 @@ export default function ReferralDashboard() {
             <div className="text-muted-foreground py-8 text-center">
               <Ticket className="mx-auto mb-2 h-8 w-8 opacity-50" />
               <p className="text-sm">No coupons available at the moment</p>
-              <p className="mt-1 text-xs">Check back later for special offers!</p>
+              <p className="mt-1 text-xs">
+                Check back later for special offers!
+              </p>
             </div>
           )}
         </CardContent>
@@ -1159,7 +1262,9 @@ export default function ReferralDashboard() {
             <div className="bg-primary/10 border-primary/20 rounded-lg border p-3">
               <p className="text-sm">
                 <span className="text-primary">Available Balance:</span>{' '}
-                <span className="font-semibold">{formatAmount(availableBalance)}</span>
+                <span className="font-semibold">
+                  {formatAmount(availableBalance)}
+                </span>
               </p>
             </div>
 
@@ -1182,7 +1287,9 @@ export default function ReferralDashboard() {
               <Label>Currency:</Label>
               <Select
                 value={withdrawCrypto}
-                onValueChange={(value) => setWithdrawCrypto(value as CryptoCurrency)}
+                onValueChange={(value) =>
+                  setWithdrawCrypto(value as CryptoCurrency)
+                }
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select currency" />
@@ -1266,8 +1373,12 @@ export default function ReferralDashboard() {
             {/* Available Referral Earnings */}
             <div className="bg-primary/10 border-primary/20 rounded-lg border p-3">
               <p className="text-sm">
-                <span className="text-primary">Available Referral Earnings:</span>{' '}
-                <span className="font-semibold">{formatAmount(availableBalance)}</span>
+                <span className="text-primary">
+                  Available Referral Earnings:
+                </span>{' '}
+                <span className="font-semibold">
+                  {formatAmount(availableBalance)}
+                </span>
               </p>
             </div>
 
@@ -1288,18 +1399,22 @@ export default function ReferralDashboard() {
                   <button
                     key={amt}
                     onClick={() =>
-                      setAddBalanceAmount(Math.min(amt, availableBalance).toString())
+                      setAddBalanceAmount(
+                        Math.min(amt, availableBalance).toString(),
+                      )
                     }
                     disabled={amt > availableBalance}
-                    className="border-border bg-muted/50 hover:bg-muted disabled:opacity-50 rounded border px-3 py-1 text-xs transition-colors"
+                    className="border-border bg-muted/50 hover:bg-muted rounded border px-3 py-1 text-xs transition-colors disabled:opacity-50"
                   >
                     ${amt}
                   </button>
                 ))}
                 <button
-                  onClick={() => setAddBalanceAmount(availableBalance.toString())}
+                  onClick={() =>
+                    setAddBalanceAmount(availableBalance.toString())
+                  }
                   disabled={availableBalance <= 0}
-                  className="border-primary/50 bg-primary/10 text-primary hover:bg-primary/20 disabled:opacity-50 rounded border px-3 py-1 text-xs transition-colors"
+                  className="border-primary/50 bg-primary/10 text-primary hover:bg-primary/20 rounded border px-3 py-1 text-xs transition-colors disabled:opacity-50"
                 >
                   Max
                 </button>
@@ -1310,7 +1425,10 @@ export default function ReferralDashboard() {
             <div className="bg-warning/10 border-warning/30 text-warning-foreground flex items-start gap-2 rounded-lg border p-3">
               <AlertTriangle className="text-warning mt-0.5 h-4 w-4 flex-shrink-0" />
               <p className="text-xs">
-                <strong>Warning:</strong> Once added to your main balance, these funds cannot be withdrawn back to referral earnings. You can use your main balance to buy plans or withdraw to your preferred payment method.
+                <strong>Warning:</strong> Once added to your main balance, these
+                funds cannot be withdrawn back to referral earnings. You can use
+                your main balance to buy plans or withdraw to your preferred
+                payment method.
               </p>
             </div>
 

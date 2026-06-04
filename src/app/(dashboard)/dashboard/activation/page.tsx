@@ -972,7 +972,7 @@ export default function Activation() {
       {/* Two-column layout: Step 1 + Step 2 */}
       <div className="grid gap-5 md:grid-cols-2">
         {/* STEP 1: Select a Service */}
-        <Card className="flex max-h-[560px] flex-col">
+        <Card className="flex max-h-[560px] flex-col overflow-hidden">
           <CardHeader className="shrink-0 pb-3">
             <div className="flex items-center gap-3">
               <div className="bg-primary text-primary-foreground flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-sm font-bold">
@@ -984,7 +984,7 @@ export default function Activation() {
             </div>
           </CardHeader>
 
-          <CardContent className="flex min-h-0 flex-1 flex-col gap-3">
+          <CardContent className="flex min-h-0 flex-1 flex-col gap-3 px-3 sm:px-6">
             {/* Search */}
             <div className="relative">
               <Search className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
@@ -1134,7 +1134,7 @@ export default function Activation() {
         </Card>
 
         {/* STEP 2: Select Country */}
-        <Card className="flex max-h-[560px] flex-col">
+        <Card className="flex max-h-[560px] flex-col overflow-hidden">
           <CardHeader className="shrink-0 pb-3">
             <div className="flex items-center gap-3">
               <div
@@ -1161,7 +1161,7 @@ export default function Activation() {
             </div>
           </CardHeader>
 
-          <CardContent className="flex min-h-0 flex-1 flex-col gap-3">
+          <CardContent className="flex min-h-0 flex-1 flex-col gap-3 px-3 sm:px-6">
             {!selectedService ? (
               /* Empty state */
               <div className="flex flex-1 flex-col items-center justify-center gap-3 py-12 text-center">
@@ -1334,7 +1334,7 @@ export default function Activation() {
                             {/* Name + count */}
                             <div className="min-w-0 flex-1">
                               <div className="flex items-center gap-2">
-                                <span className="text-sm font-medium">
+                                <span className="truncate text-sm font-medium capitalize">
                                   {country.name}
                                 </span>
                               </div>
@@ -1343,20 +1343,24 @@ export default function Activation() {
                               </span>
                             </div>
 
-                            {/* Price with discount indicator */}
-                            <div className="shrink-0 text-right">
+                            {/* Price with discount indicator — strike-through
+                                stacks above on mobile so the row doesn't get
+                                so wide that it overlaps the country name. */}
+                            <div className="flex shrink-0 flex-col items-end text-right">
                               {bestProduct.discountPercent &&
                               bestProduct.discountPercent > 0 ? (
                                 <>
                                   <span className="text-muted-foreground text-xs line-through">
                                     {formatPrice(bestProduct.price)}
                                   </span>
-                                  <span className="ml-1 text-sm font-bold text-green-600 tabular-nums dark:text-green-400">
-                                    {formatPrice(bestProduct.yourPrice)}
-                                  </span>
-                                  <span className="ml-1 text-xs font-medium text-green-600 dark:text-green-400">
-                                    -{bestProduct.discountPercent}%
-                                  </span>
+                                  <div className="flex items-center gap-1">
+                                    <span className="text-sm font-bold text-green-600 tabular-nums dark:text-green-400">
+                                      {formatPrice(bestProduct.yourPrice)}
+                                    </span>
+                                    <span className="text-xs font-medium text-green-600 dark:text-green-400">
+                                      -{bestProduct.discountPercent}%
+                                    </span>
+                                  </div>
                                 </>
                               ) : (
                                 <span className="text-sm font-bold tabular-nums">
