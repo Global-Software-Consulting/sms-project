@@ -273,10 +273,16 @@ export default function Dashboard() {
     return `${diffHours}h`;
   };
 
-  // Get country flag emoji
+  // Get country flag emoji. Only valid ISO alpha-2 codes (2 A-Z letters)
+  // map to a real flag — anything else (full country name, lowercase, digits)
+  // would render as a string of orphan regional indicator letters, which
+  // browsers show as boxed letters instead of a flag. Return empty in that
+  // case so the UI just shows the country name on its own.
   const getCountryFlag = (code: string): string => {
-    const codePoints = code
-      .toUpperCase()
+    if (!code) return '';
+    const trimmed = code.trim().toUpperCase();
+    if (!/^[A-Z]{2}$/.test(trimmed)) return '';
+    const codePoints = trimmed
       .split('')
       .map((char) => 127397 + char.charCodeAt(0));
     return String.fromCodePoint(...codePoints);

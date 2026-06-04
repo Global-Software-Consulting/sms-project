@@ -1,16 +1,6 @@
 'use client';
 import { useTheme } from 'next-themes';
-import {
-  Moon,
-  Sun,
-  Bell,
-  User,
-  Check,
-  X,
-  Menu,
-  Loader2,
-  Globe,
-} from 'lucide-react';
+import { Moon, Sun, Bell, User, Check, X, Loader2, Globe } from 'lucide-react';
 import { LanguagePickerDropdown } from './google-translate';
 import { Button } from './ui/button';
 import {
@@ -142,25 +132,16 @@ export function DashboardHeader({ onMenuClick }: DashboardHeaderProps = {}) {
   return (
     <header className="border-border sticky top-0 z-40 w-full border-b backdrop-blur-[var(--glass-blur)] [background:var(--glass-secondary)]">
       <div className="flex h-14 items-center justify-between gap-2 px-3 sm:h-16 sm:px-4 md:px-6">
-        {/* Left side - Mobile menu button */}
+        {/* Left side — logo only. Mobile uses the bottom nav (Home/Activate/
+            Wallet/Referrals/More) for navigation, so no hamburger here. */}
         <div className="flex min-w-0 items-center gap-2">
-          {onMenuClick && (
-            <button
-              className="hover:bg-muted flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg transition-colors lg:hidden"
-              onClick={onMenuClick}
-              aria-label="Open menu"
-            >
-              <Menu className="h-5 w-5" />
-            </button>
-          )}
-          {/* Logo shown only on mobile when sidebar is hidden */}
           <span className="truncate text-sm font-bold lg:hidden">
             BestSMSHQ
           </span>
         </div>
 
         {/* Right side - Actions */}
-        <div className="flex flex-shrink-0 items-center gap-1.5 sm:gap-2 sm:space-x-1">
+        <div className="flex flex-shrink-0 items-center gap-2 sm:gap-2 sm:space-x-1">
           {/* Wallet Balance */}
           <div className="bg-card border-border flex items-center space-x-1 rounded-lg border px-2 py-1.5 sm:space-x-2 sm:px-3">
             <span className="text-muted-foreground hidden text-xs sm:inline sm:text-sm">
