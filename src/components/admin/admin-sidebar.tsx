@@ -72,13 +72,16 @@ export function AdminSidebar() {
 
   return (
     <>
-      {/* Mobile Menu Button */}
-      <button
-        onClick={() => setIsOpen(!isOpen)}
-        className="fixed top-4 left-4 z-50 rounded-xl border border-[rgba(255,255,255,0.18)] bg-[rgba(255,255,255,0.08)] p-2 text-white lg:hidden"
-      >
-        {isOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
-      </button>
+      {/* Mobile Menu Button (open only — close lives inside the sidebar header) */}
+      {!isOpen && (
+        <button
+          onClick={() => setIsOpen(true)}
+          aria-label="Open menu"
+          className="size-icon fixed top-4 left-4 z-50 flex h-10 !min-h-0 w-10 items-center justify-center rounded-xl border border-[rgba(255,255,255,0.18)] bg-[rgba(255,255,255,0.08)] !p-0 text-white lg:hidden"
+        >
+          <Menu className="h-6 w-6" />
+        </button>
+      )}
 
       {/* Overlay */}
       {isOpen && (
@@ -108,10 +111,17 @@ export function AdminSidebar() {
                 <MessageSquare className="h-6 w-6 text-white" />
               )}
             </div>
-            <div>
+            <div className="min-w-0 flex-1">
               <h1 className="text-lg font-semibold text-white">BestSMSHQ</h1>
               <p className="text-xs text-[#64748B]">Admin Panel</p>
             </div>
+            <button
+              onClick={() => setIsOpen(false)}
+              aria-label="Close menu"
+              className="size-icon flex h-9 !min-h-0 w-9 shrink-0 items-center justify-center rounded-lg !p-0 text-[#94A3B8] transition-colors hover:bg-[rgba(255,255,255,0.08)] hover:text-white lg:hidden"
+            >
+              <X className="h-5 w-5" />
+            </button>
           </div>
 
           <nav className="space-y-1">
