@@ -566,7 +566,7 @@ export default function AdminReferralsPage() {
       </AdminGlassCard>
 
       {/* Stats Grid */}
-      <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-2 lg:mb-8 lg:grid-cols-4 lg:gap-6">
+      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-2 lg:mb-8 lg:grid-cols-4 lg:gap-6">
         <AdminStatCard
           title="Total Affiliates"
           value={isStatsLoading ? '...' : String(stats?.totalAffiliates ?? 0)}

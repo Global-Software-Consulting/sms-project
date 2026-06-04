@@ -125,7 +125,7 @@ export default function AdminAnalyticsPage() {
       </div>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6 mb-6 lg:mb-8">
+      <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6 mb-6 lg:mb-8">
         <AdminStatCard
           title={dashboard?.totalUsers?.label ?? "Total Users"}
           value={dashboard?.totalUsers?.value ?? "—"}
@@ -152,7 +152,7 @@ export default function AdminAnalyticsPage() {
         />
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6 mb-6 lg:mb-8">
+      <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6 mb-6 lg:mb-8">
         <AdminStatCard
           title={dashboard?.failedActivations?.label ?? "Failed Activations"}
           value={dashboard?.failedActivations?.value ?? "—"}

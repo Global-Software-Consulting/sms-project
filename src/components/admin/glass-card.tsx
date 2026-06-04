@@ -8,7 +8,9 @@ interface GlassCardProps {
 
 export function AdminGlassCard({ children, className = '' }: GlassCardProps) {
   return (
-    <div className={`bg-[rgba(255,255,255,0.08)] border border-[rgba(255,255,255,0.18)] rounded-2xl p-6 backdrop-blur-xl shadow-[0_10px_30px_rgba(0,0,0,0.25)] ${className}`}>
+    <div
+      className={`rounded-2xl border border-[rgba(255,255,255,0.18)] bg-[rgba(255,255,255,0.08)] p-4 shadow-[0_10px_30px_rgba(0,0,0,0.25)] backdrop-blur-xl sm:p-6 ${className}`}
+    >
       {children}
     </div>
   );
