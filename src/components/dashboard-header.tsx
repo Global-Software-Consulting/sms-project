@@ -159,7 +159,7 @@ export function DashboardHeader({ onMenuClick }: DashboardHeaderProps = {}) {
             <Button
               variant="ghost"
               size="icon"
-              className="h-9 w-9"
+              className="size-icon h-9 !min-h-0 w-9 !p-0"
               onClick={(e) => {
                 e.stopPropagation();
                 setLangOpen((v) => !v);
@@ -179,7 +179,7 @@ export function DashboardHeader({ onMenuClick }: DashboardHeaderProps = {}) {
             <Button
               variant="ghost"
               size="icon"
-              className="h-9 w-9"
+              className="size-icon h-9 !min-h-0 w-9 !p-0"
               onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
               aria-label="Toggle theme"
             >
@@ -195,7 +195,7 @@ export function DashboardHeader({ onMenuClick }: DashboardHeaderProps = {}) {
               <Button
                 variant="ghost"
                 size="icon"
-                className="relative h-9 w-9"
+                className="size-icon relative h-9 !min-h-0 w-9 !p-0"
                 aria-label="Notifications"
               >
                 <Bell className="h-4 w-4" />
@@ -208,7 +208,9 @@ export function DashboardHeader({ onMenuClick }: DashboardHeaderProps = {}) {
             </DropdownMenuTrigger>
             <DropdownMenuContent
               align="end"
-              className="w-[calc(100vw-2rem)] max-w-sm sm:w-80 md:w-96"
+              sideOffset={8}
+              collisionPadding={8}
+              className="w-[calc(100vw-1rem)] max-w-sm sm:w-80 md:w-96"
             >
               <div className="flex items-center justify-between px-2 py-2">
                 <DropdownMenuLabel className="p-0">
@@ -316,10 +318,10 @@ export function DashboardHeader({ onMenuClick }: DashboardHeaderProps = {}) {
               <Button
                 variant="ghost"
                 size="icon"
-                className="relative h-9 w-9"
+                className="size-icon relative h-9 !min-h-0 w-9 shrink-0 !p-0"
                 aria-label="User menu"
               >
-                <div className="bg-primary text-primary-foreground flex h-8 w-8 items-center justify-center rounded-full">
+                <div className="bg-primary text-primary-foreground flex h-8 w-8 shrink-0 items-center justify-center rounded-full">
                   <User className="h-4 w-4" />
                 </div>
               </Button>
