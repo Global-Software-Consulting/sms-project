@@ -1978,8 +1978,8 @@ export default function AdminSmsServicesPage() {
       {activeTab === 'vip' && (
         <div className="space-y-6">
           {/* VIP Controls */}
-          <div className="rounded-xl border border-[rgba(255,255,255,0.1)] bg-[rgba(15,23,42,0.6)] p-6 backdrop-blur-xl">
-            <div className="flex items-center justify-between">
+          <div className="rounded-xl border border-[rgba(255,255,255,0.1)] bg-[rgba(15,23,42,0.6)] p-4 backdrop-blur-xl sm:p-6">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <h3 className="mb-1 text-lg font-semibold text-white">
                   VIP Categories
@@ -1989,7 +1989,7 @@ export default function AdminSmsServicesPage() {
                   providers
                 </p>
               </div>
-              <div className="flex items-center gap-3">
+              <div className="flex flex-wrap items-center gap-3">
                 {/* Toggle VIP On/Off */}
                 <div className="flex items-center gap-2">
                   <span className="text-sm text-[#94A3B8]">
@@ -1998,7 +1998,7 @@ export default function AdminSmsServicesPage() {
                   <button
                     onClick={handleToggleVip}
                     disabled={isTogglingVip}
-                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                    className={`size-icon relative inline-flex h-6 w-11 items-center rounded-full !p-0 transition-colors ${
                       isVipEnabled
                         ? 'bg-[#22C55E]'
                         : 'bg-[rgba(255,255,255,0.18)]'
@@ -2102,23 +2102,23 @@ export default function AdminSmsServicesPage() {
                         key={country.id}
                         className="rounded-lg border border-[rgba(255,255,255,0.05)] bg-[rgba(0,0,0,0.2)] p-4"
                       >
-                        <div className="mb-2 flex items-center justify-between">
-                          <div className="flex items-center gap-2">
+                        <div className="mb-2 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                          <div className="flex min-w-0 flex-wrap items-center gap-2">
                             {country.iconUrl && (
                               <img
                                 src={country.iconUrl}
                                 alt={country.name}
-                                className="h-5 w-5 rounded"
+                                className="h-5 w-5 shrink-0 rounded"
                               />
                             )}
-                            <span className="text-sm font-medium text-white">
+                            <span className="text-sm font-medium break-words text-white">
                               {country.name}
                             </span>
                             <span className="text-xs text-[#64748B]">
                               ({country.code})
                             </span>
                           </div>
-                          <span className="rounded-full bg-[#F59E0B]/20 px-2 py-1 text-xs font-medium text-[#F59E0B]">
+                          <span className="self-start rounded-full bg-[#F59E0B]/20 px-2 py-1 text-xs font-medium whitespace-nowrap text-[#F59E0B] sm:self-auto">
                             Best Rating: {country.bestRating}/5
                           </span>
                         </div>
@@ -3586,7 +3586,7 @@ export default function AdminSmsServicesPage() {
                     isPriceLocked: !selectedServicePrice.isPriceLocked,
                   })
                 }
-                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                className={`size-icon relative inline-flex h-6 w-11 items-center rounded-full !p-0 transition-colors ${
                   selectedServicePrice.isPriceLocked
                     ? 'bg-[#3B82F6]'
                     : 'bg-[rgba(255,255,255,0.18)]'
@@ -4046,13 +4046,13 @@ export default function AdminSmsServicesPage() {
       {showIconManagementModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
           <div className="flex max-h-[90vh] w-full max-w-4xl flex-col overflow-hidden rounded-xl border border-[rgba(255,255,255,0.1)] bg-[#0F172A]">
-            <div className="sticky top-0 z-10 border-b border-[rgba(255,255,255,0.1)] bg-[#0F172A] p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h2 className="mb-1 text-2xl font-semibold text-white">
+            <div className="sticky top-0 z-10 border-b border-[rgba(255,255,255,0.1)] bg-[#0F172A] p-4 sm:p-6">
+              <div className="flex items-center justify-between gap-3">
+                <div className="min-w-0">
+                  <h2 className="mb-1 text-xl font-semibold text-white sm:text-2xl">
                     Manage Service Icons
                   </h2>
-                  <p className="text-sm text-[#94A3B8]">
+                  <p className="text-xs text-[#94A3B8] sm:text-sm">
                     Upload or set icon URLs for services
                   </p>
                 </div>
@@ -4073,20 +4073,20 @@ export default function AdminSmsServicesPage() {
               {/* Filters — sticky to the top of the scroll container so
                   search/filter buttons stay reachable while admin scrolls
                   through the grid below. */}
-              <div className="sticky top-0 z-20 flex items-center gap-3 border-b border-[rgba(255,255,255,0.05)] bg-[#0F172A] px-6 py-4">
-                <div className="relative flex-1">
+              <div className="sticky top-0 z-20 flex flex-col gap-2 border-b border-[rgba(255,255,255,0.05)] bg-[#0F172A] px-4 py-4 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3 sm:px-6">
+                <div className="relative w-full sm:flex-1">
                   <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-[#64748B]" />
                   <input
                     type="text"
                     placeholder="Search services..."
                     value={iconSearchQuery}
                     onChange={(e) => setIconSearchQuery(e.target.value)}
-                    className="w-full rounded-lg border border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.05)] py-2.5 pr-4 pl-10 text-sm text-white placeholder:text-[#64748B] focus:ring-2 focus:ring-[#8B5CF6] focus:outline-none"
+                    className="w-full rounded-lg border border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.05)] py-2.5 pr-4 pl-10 text-base text-white placeholder:text-[#64748B] focus:ring-2 focus:ring-[#8B5CF6] focus:outline-none sm:text-sm"
                   />
                 </div>
                 <button
                   onClick={() => handleIconFilterChange(!iconFilterMissing)}
-                  className={`flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium whitespace-nowrap transition-all ${
+                  className={`flex w-full items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-base font-medium whitespace-nowrap transition-all sm:w-auto sm:justify-start sm:text-sm ${
                     iconFilterMissing
                       ? 'bg-[#EF4444] text-white'
                       : 'border border-[rgba(255,255,255,0.18)] bg-[rgba(255,255,255,0.05)] text-[#94A3B8] hover:bg-[rgba(255,255,255,0.08)]'
@@ -4098,7 +4098,7 @@ export default function AdminSmsServicesPage() {
                   onClick={() => handleBackfillIcons(false)}
                   disabled={isBackfillingIcons}
                   title="Fill in icons for services that don't have one. Doesn't touch existing icons."
-                  className="flex items-center gap-2 rounded-lg bg-[#22C55E] px-4 py-2.5 text-sm font-medium whitespace-nowrap text-white transition-colors hover:bg-[#16A34A] disabled:cursor-not-allowed disabled:opacity-50"
+                  className="flex w-full items-center justify-center gap-2 rounded-lg bg-[#22C55E] px-4 py-2.5 text-base font-medium whitespace-nowrap text-white transition-colors hover:bg-[#16A34A] disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto sm:justify-start sm:text-sm"
                 >
                   {isBackfillingIcons ? (
                     <Loader2 className="h-4 w-4 animate-spin" />
@@ -4111,7 +4111,7 @@ export default function AdminSmsServicesPage() {
                   onClick={() => handleBackfillIcons(true)}
                   disabled={isBackfillingIcons}
                   title="Re-resolve ALL public CDN icons (fixes broken simpleicons URLs). Admin storage uploads are preserved."
-                  className="flex items-center gap-2 rounded-lg bg-[#F59E0B] px-4 py-2.5 text-sm font-medium whitespace-nowrap text-white transition-colors hover:bg-[#D97706] disabled:cursor-not-allowed disabled:opacity-50"
+                  className="flex w-full items-center justify-center gap-2 rounded-lg bg-[#F59E0B] px-4 py-2.5 text-base font-medium whitespace-nowrap text-white transition-colors hover:bg-[#D97706] disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto sm:justify-start sm:text-sm"
                 >
                   {isBackfillingIcons ? (
                     <Loader2 className="h-4 w-4 animate-spin" />

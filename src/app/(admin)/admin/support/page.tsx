@@ -436,7 +436,7 @@ export default function AdminSupportPage() {
             <button
               type="button"
               aria-label="Open ticket actions"
-              className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-[#94A3B8] transition-colors hover:bg-[rgba(255,255,255,0.06)] hover:text-white"
+              className="size-icon inline-flex h-8 w-8 items-center justify-center rounded-[8px] border border-[rgba(255,255,255,0.18)] bg-[rgba(255,255,255,0.05)] !p-0 text-white transition-colors hover:bg-[rgba(255,255,255,0.12)]"
             >
               <MoreVertical className="h-4 w-4" />
             </button>

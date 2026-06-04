@@ -463,6 +463,20 @@ html {
   border-radius: 4px;
 }
 
+/* Suppress the gold focus ring on Radix surfaces that already paint
+   their own focus / hover state (DropdownMenuItem, SelectItem, ...).
+   The ring made hovered items look like they had an extra rounded
+   border around them. */
+[data-slot='dropdown-menu-item']:focus-visible,
+[data-slot='dropdown-menu-item']:focus,
+[data-slot='dropdown-menu-checkbox-item']:focus-visible,
+[data-slot='dropdown-menu-radio-item']:focus-visible,
+[data-slot='dropdown-menu-sub-trigger']:focus-visible,
+[data-slot='select-item']:focus-visible {
+  outline: none !important;
+  border-radius: 0 !important;
+}
+
 /* Glass morphism hover effect */
 .glass-hover {
   transition: all 0.3s ease;
@@ -979,7 +993,7 @@ pre code {
 
 /* Mobile Specific Enhancements */
 @media (max-width: 768px) {
-  button,
+  button:not([class*='size-icon']),
   a,
   input,
   select,
