@@ -25,7 +25,14 @@ import {
   Hash,
   Search,
   Filter,
+  MoreVertical,
 } from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import {
   Select,
   SelectContent,
@@ -307,35 +314,49 @@ export default function AdminActivationsPage() {
 
       case 'actions':
         return (
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => handleViewOrder(item)}
-              className="rounded-lg p-2 transition-colors hover:bg-[rgba(255,255,255,0.08)]"
-              title="View Details"
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button
+                type="button"
+                aria-label="Open order actions"
+                className="size-icon inline-flex h-8 w-8 items-center justify-center rounded-[8px] border border-[rgba(255,255,255,0.18)] bg-[rgba(255,255,255,0.05)] !p-0 text-white transition-colors hover:bg-[rgba(255,255,255,0.12)]"
+              >
+                <MoreVertical className="h-4 w-4" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent
+              align="end"
+              className="min-w-[160px] border-[rgba(255,255,255,0.1)] bg-[#1E293B] p-1 text-white"
             >
-              <Eye className="h-4 w-4 text-[#3B82F6]" />
-            </button>
-            <button
-              onClick={() => handleExtendTime(item)}
-              className="rounded-lg p-2 transition-colors hover:bg-[rgba(255,255,255,0.08)]"
-              title="Extend Time"
-            >
-              <Clock className="h-4 w-4 text-[#F59E0B]" />
-            </button>
-            <button
-              onClick={() => {
-                if (canCancelOrder(item.status)) {
-                  handleCancelOrder(item);
-                } else {
-                  toast.error('This order cannot be cancelled');
-                }
-              }}
-              className="rounded-lg p-2 transition-colors hover:bg-[rgba(255,255,255,0.08)]"
-              title="Cancel"
-            >
-              <X className="h-4 w-4 text-[#EF4444]" />
-            </button>
-          </div>
+              <DropdownMenuItem
+                onSelect={() => handleViewOrder(item)}
+                className="cursor-pointer text-white focus:bg-[rgba(59,130,246,0.15)] focus:text-white"
+              >
+                <Eye className="mr-2 h-4 w-4 text-[#3B82F6]" />
+                View Details
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onSelect={() => handleExtendTime(item)}
+                className="cursor-pointer text-white focus:bg-[rgba(245,158,11,0.15)] focus:text-white"
+              >
+                <Clock className="mr-2 h-4 w-4 text-[#F59E0B]" />
+                Extend Time
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onSelect={() => {
+                  if (canCancelOrder(item.status)) {
+                    handleCancelOrder(item);
+                  } else {
+                    toast.error('This order cannot be cancelled');
+                  }
+                }}
+                className="cursor-pointer text-[#EF4444] focus:bg-[rgba(239,68,68,0.15)] focus:text-[#EF4444]"
+              >
+                <X className="mr-2 h-4 w-4" />
+                Cancel Order
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         );
 
       default:
