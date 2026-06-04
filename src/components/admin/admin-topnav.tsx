@@ -230,12 +230,17 @@ export function AdminTopNav() {
       await logout();
       router.push('/auth/login');
     } catch (error: any) {
-      const message =
-        error?.response?.data?.message || 'Failed to change password';
+      const raw = error?.response?.data?.message;
+      const message = Array.isArray(raw)
+        ? raw.join('. ')
+        : typeof raw === 'string'
+          ? raw
+          : 'Failed to change password';
+      const lower = message.toLowerCase();
       if (
-        message.toLowerCase().includes('current') ||
-        message.toLowerCase().includes('incorrect') ||
-        message.toLowerCase().includes('wrong')
+        lower.includes('current') ||
+        lower.includes('incorrect') ||
+        lower.includes('wrong')
       ) {
         setPasswordStep('verify');
         setCurrentPassword('');
