@@ -27,7 +27,29 @@ const FALLBACK_LANGUAGES: LanguageOption[] = [
   { code: '', label: 'English (Original)' },
 ];
 
+// Lazy-load Google Translate. The widget sets ~32 third-party cookies
+// from translate.google.com and tanks the Best Practices Lighthouse
+// score. Defer loading until either:
+//   (a) the user opens the language picker (LanguagePickerDropdown
+//       dispatches a "gt:activate" window event)
+//   (b) a `googtrans` cookie is already present from a prior session
+// First-page-load visitors who never use the picker pay zero cost.
 export function GoogleTranslate() {
+  const [shouldLoad, setShouldLoad] = useState(false);
+
+  useEffect(() => {
+    if (
+      typeof document !== 'undefined' &&
+      /(^|; )googtrans=/.test(document.cookie)
+    ) {
+      setShouldLoad(true);
+      return;
+    }
+    const activate = () => setShouldLoad(true);
+    window.addEventListener('gt:activate', activate);
+    return () => window.removeEventListener('gt:activate', activate);
+  }, []);
+
   return (
     <>
       <div
@@ -39,47 +61,50 @@ export function GoogleTranslate() {
           opacity: 0,
         }}
       />
-      <Script
-        src="https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"
-        strategy="afterInteractive"
-        onReady={() => {
-          // Google's script (?cb=googleTranslateElementInit) calls
-          // window.googleTranslateElementInit as soon as it loads.
-          // Defining the callback inside onLoad raced with Google's
-          // own call, leaving TranslateElement undefined and throwing
-          // "TranslateElement is not a constructor" in the console.
-          //
-          // Define the callback if missing, then poll briefly until
-          // TranslateElement is actually attached before constructing.
-          if (!window.googleTranslateElementInit) {
-            window.googleTranslateElementInit = () => {
+      {shouldLoad && (
+        <Script
+          src="https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"
+          strategy="afterInteractive"
+          onReady={() => {
+            // Google's script (?cb=googleTranslateElementInit) calls
+            // window.googleTranslateElementInit as soon as it loads.
+            // Defining the callback inside onLoad raced with Google's
+            // own call, leaving TranslateElement undefined and throwing
+            // "TranslateElement is not a constructor" in the console.
+            //
+            // Define the callback if missing, then poll briefly until
+            // TranslateElement is actually attached before constructing.
+            if (!window.googleTranslateElementInit) {
+              window.googleTranslateElementInit = () => {
+                if (
+                  typeof window.google?.translate?.TranslateElement ===
+                  'function'
+                ) {
+                  new window.google.translate.TranslateElement(
+                    { pageLanguage: 'en', autoDisplay: false },
+                    'google_translate_element',
+                  );
+                }
+              };
+            }
+            let tries = 0;
+            const intv = setInterval(() => {
               if (
                 typeof window.google?.translate?.TranslateElement === 'function'
               ) {
-                new window.google.translate.TranslateElement(
-                  { pageLanguage: 'en', autoDisplay: false },
-                  'google_translate_element',
-                );
+                clearInterval(intv);
+                try {
+                  window.googleTranslateElementInit?.();
+                } catch {
+                  /* ignore — best effort */
+                }
+              } else if (++tries > 40) {
+                clearInterval(intv); // give up after ~4s
               }
-            };
-          }
-          let tries = 0;
-          const intv = setInterval(() => {
-            if (
-              typeof window.google?.translate?.TranslateElement === 'function'
-            ) {
-              clearInterval(intv);
-              try {
-                window.googleTranslateElementInit?.();
-              } catch {
-                /* ignore — best effort */
-              }
-            } else if (++tries > 40) {
-              clearInterval(intv); // give up after ~4s
-            }
-          }, 100);
-        }}
-      />
+            }, 100);
+          }}
+        />
+      )}
       <style jsx global>{`
         .goog-te-banner-frame {
           display: none !important;
@@ -143,6 +168,13 @@ export function LanguagePickerDropdown({
   const [languages, setLanguages] =
     useState<LanguageOption[]>(FALLBACK_LANGUAGES);
   const ref = useRef<HTMLDivElement>(null);
+
+  // Signal GoogleTranslate to load its third-party script. Kept out of
+  // the initial bundle to protect the Best Practices Lighthouse score.
+  useEffect(() => {
+    if (!isOpen) return;
+    window.dispatchEvent(new Event('gt:activate'));
+  }, [isOpen]);
 
   // Fetch active languages from public API the first time the dropdown opens
   useEffect(() => {
