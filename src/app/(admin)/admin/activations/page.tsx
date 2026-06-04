@@ -27,6 +27,13 @@ import {
   Filter,
 } from 'lucide-react';
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
   adminGetOrders,
   adminGetOrder,
   adminRefundOrder,
@@ -409,27 +416,34 @@ export default function AdminActivationsPage() {
           </button>
         </div>
         <div className="flex items-center gap-3">
-          <select
-            value={statusFilter}
-            onChange={(e) => {
-              setStatusFilter(e.target.value);
+          <Select
+            value={statusFilter || '__all__'}
+            onValueChange={(v) => {
+              setStatusFilter(v === '__all__' ? '' : v);
               setCurrentPage(1);
             }}
-            className="w-full rounded-xl border border-[rgba(255,255,255,0.18)] bg-[rgba(255,255,255,0.08)] px-4 py-3 text-base text-white focus:ring-2 focus:ring-[#3B82F6] focus:outline-none lg:w-auto lg:text-sm [&>option]:bg-[#1E293B] [&>option]:text-white"
           >
-            <option value="" className="bg-[#1E293B] text-white">
-              All Status
-            </option>
-            {statusFilterOptions.map((status) => (
-              <option
-                key={status}
-                value={status}
-                className="bg-[#1E293B] text-white"
+            <SelectTrigger className="w-full rounded-xl border border-[rgba(255,255,255,0.18)] bg-[rgba(255,255,255,0.08)] px-4 py-3 text-base text-white focus-visible:ring-2 focus-visible:ring-[#3B82F6] focus-visible:outline-none data-[size=default]:h-auto lg:w-auto lg:text-sm">
+              <SelectValue placeholder="All Status" />
+            </SelectTrigger>
+            <SelectContent className="max-h-72 border-[rgba(255,255,255,0.18)] bg-[#1E293B] text-white">
+              <SelectItem
+                value="__all__"
+                className="text-white focus:bg-[rgba(59,130,246,0.15)] focus:text-white"
               >
-                {getOrderStatusLabel(status as SmsOrderStatus)}
-              </option>
-            ))}
-          </select>
+                All Status
+              </SelectItem>
+              {statusFilterOptions.map((status) => (
+                <SelectItem
+                  key={status}
+                  value={status}
+                  className="text-white focus:bg-[rgba(59,130,246,0.15)] focus:text-white"
+                >
+                  {getOrderStatusLabel(status as SmsOrderStatus)}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
       </div>
 

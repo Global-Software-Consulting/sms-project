@@ -1,6 +1,13 @@
 'use client';
 import { useRef } from 'react';
 import { Search, Filter, X } from 'lucide-react';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 interface FilterBarProps {
   searchPlaceholder?: string;
@@ -72,26 +79,35 @@ export function AdminFilterBar({
                 <label className="mb-2 block text-sm font-medium text-white">
                   {filter.label}
                 </label>
-                <select
-                  value={filter.value}
-                  onChange={(e) => filter.onChange?.(e.target.value)}
-                  className="w-full rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(255,255,255,0.08)] px-4 py-2.5 text-sm text-white focus:ring-2 focus:ring-[#3B82F6] focus:outline-none [&>option]:bg-[#1E293B] [&>option]:text-white"
+                <Select
+                  value={filter.value || '__all__'}
+                  onValueChange={(v) =>
+                    filter.onChange?.(v === '__all__' ? '' : v)
+                  }
                 >
-                  {filter.showAllOption !== false && (
-                    <option value="" className="bg-[#1E293B] text-white">
-                      All {filter.label}
-                    </option>
-                  )}
-                  {filter.options.map((option, i) => (
-                    <option
-                      key={i}
-                      value={option}
-                      className="bg-[#1E293B] text-white"
-                    >
-                      {filter.optionLabels ? filter.optionLabels[i] : option}
-                    </option>
-                  ))}
-                </select>
+                  <SelectTrigger className="w-full rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(255,255,255,0.08)] px-4 py-2.5 text-base text-white focus-visible:ring-2 focus-visible:ring-[#3B82F6] focus-visible:outline-none data-[size=default]:h-auto data-[size=default]:min-h-11 lg:text-sm">
+                    <SelectValue placeholder={`All ${filter.label}`} />
+                  </SelectTrigger>
+                  <SelectContent className="max-h-72 border-[rgba(255,255,255,0.18)] bg-[#1E293B] text-white">
+                    {filter.showAllOption !== false && (
+                      <SelectItem
+                        value="__all__"
+                        className="text-white focus:bg-[rgba(59,130,246,0.15)] focus:text-white"
+                      >
+                        All {filter.label}
+                      </SelectItem>
+                    )}
+                    {filter.options.map((option, i) => (
+                      <SelectItem
+                        key={i}
+                        value={option}
+                        className="text-white focus:bg-[rgba(59,130,246,0.15)] focus:text-white"
+                      >
+                        {filter.optionLabels ? filter.optionLabels[i] : option}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             ))}
           </div>

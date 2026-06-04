@@ -58,6 +58,13 @@ import {
 import { apiClient } from '@/config/api-client.config';
 import { API_ENDPOINTS } from '@/config/server.config';
 import { type MembershipPlan } from '@/lib/api/membershipApi';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 interface Service {
   id: string;
@@ -2243,19 +2250,43 @@ export default function AdminSmsServicesPage() {
                 <span className="text-sm whitespace-nowrap text-[#94A3B8]">
                   Per page:
                 </span>
-                <select
-                  value={pricingLimit}
-                  onChange={(e) => {
-                    setPricingLimit(Number(e.target.value));
+                <Select
+                  value={String(pricingLimit)}
+                  onValueChange={(v) => {
+                    setPricingLimit(Number(v));
                     setPricingPage(1);
                   }}
-                  className="cursor-pointer rounded-lg border border-[rgba(255,255,255,0.1)] bg-[#1E293B] px-3 py-2.5 text-sm text-white focus:ring-2 focus:ring-[#3B82F6] focus:outline-none [&>option]:bg-[#1E293B] [&>option]:text-white"
                 >
-                  <option value={50}>50</option>
-                  <option value={100}>100</option>
-                  <option value={150}>150</option>
-                  <option value={200}>200</option>
-                </select>
+                  <SelectTrigger className="cursor-pointer rounded-lg border border-[rgba(255,255,255,0.1)] bg-[#1E293B] px-3 py-2.5 text-base text-white focus-visible:ring-2 focus-visible:ring-[#3B82F6] focus-visible:outline-none data-[size=default]:h-auto data-[size=default]:min-h-11 lg:text-sm">
+                    <SelectValue placeholder="Per page" />
+                  </SelectTrigger>
+                  <SelectContent className="max-h-72 border-[rgba(255,255,255,0.18)] bg-[#1E293B] text-white">
+                    <SelectItem
+                      value="50"
+                      className="text-white focus:bg-[rgba(59,130,246,0.15)] focus:text-white"
+                    >
+                      50
+                    </SelectItem>
+                    <SelectItem
+                      value="100"
+                      className="text-white focus:bg-[rgba(59,130,246,0.15)] focus:text-white"
+                    >
+                      100
+                    </SelectItem>
+                    <SelectItem
+                      value="150"
+                      className="text-white focus:bg-[rgba(59,130,246,0.15)] focus:text-white"
+                    >
+                      150
+                    </SelectItem>
+                    <SelectItem
+                      value="200"
+                      className="text-white focus:bg-[rgba(59,130,246,0.15)] focus:text-white"
+                    >
+                      200
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
               <button
                 onClick={() => {
@@ -2784,37 +2815,102 @@ export default function AdminSmsServicesPage() {
                     <span className="text-sm whitespace-nowrap text-[#94A3B8]">
                       Category:
                     </span>
-                    <select
-                      value={serviceCategoryFilter}
-                      onChange={(e) => setServiceCategoryFilter(e.target.value)}
-                      className="cursor-pointer rounded-lg border border-[rgba(255,255,255,0.1)] bg-[#1E293B] px-3 py-2 text-sm text-white focus:ring-2 focus:ring-[#3B82F6] focus:outline-none [&>option]:bg-[#1E293B] [&>option]:text-white"
+                    <Select
+                      value={serviceCategoryFilter || '__all__'}
+                      onValueChange={(v) =>
+                        setServiceCategoryFilter(v === '__all__' ? '' : v)
+                      }
                     >
-                      <option value="">All</option>
-                      <option value="social">Social Media</option>
-                      <option value="messaging">Messaging</option>
-                      <option value="finance">Finance</option>
-                      <option value="gaming">Gaming</option>
-                      <option value="shopping">Shopping</option>
-                      <option value="other">Other</option>
-                    </select>
+                      <SelectTrigger className="cursor-pointer rounded-lg border border-[rgba(255,255,255,0.1)] bg-[#1E293B] px-3 py-2 text-base text-white focus-visible:ring-2 focus-visible:ring-[#3B82F6] focus-visible:outline-none data-[size=default]:h-auto data-[size=default]:min-h-11 lg:text-sm">
+                        <SelectValue placeholder="All" />
+                      </SelectTrigger>
+                      <SelectContent className="max-h-72 border-[rgba(255,255,255,0.18)] bg-[#1E293B] text-white">
+                        <SelectItem
+                          value="__all__"
+                          className="text-white focus:bg-[rgba(59,130,246,0.15)] focus:text-white"
+                        >
+                          All
+                        </SelectItem>
+                        <SelectItem
+                          value="social"
+                          className="text-white focus:bg-[rgba(59,130,246,0.15)] focus:text-white"
+                        >
+                          Social Media
+                        </SelectItem>
+                        <SelectItem
+                          value="messaging"
+                          className="text-white focus:bg-[rgba(59,130,246,0.15)] focus:text-white"
+                        >
+                          Messaging
+                        </SelectItem>
+                        <SelectItem
+                          value="finance"
+                          className="text-white focus:bg-[rgba(59,130,246,0.15)] focus:text-white"
+                        >
+                          Finance
+                        </SelectItem>
+                        <SelectItem
+                          value="gaming"
+                          className="text-white focus:bg-[rgba(59,130,246,0.15)] focus:text-white"
+                        >
+                          Gaming
+                        </SelectItem>
+                        <SelectItem
+                          value="shopping"
+                          className="text-white focus:bg-[rgba(59,130,246,0.15)] focus:text-white"
+                        >
+                          Shopping
+                        </SelectItem>
+                        <SelectItem
+                          value="other"
+                          className="text-white focus:bg-[rgba(59,130,246,0.15)] focus:text-white"
+                        >
+                          Other
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
                   <div className="flex items-center gap-2">
                     <span className="text-sm whitespace-nowrap text-[#94A3B8]">
                       Per page:
                     </span>
-                    <select
-                      value={servicesLimit}
-                      onChange={(e) => {
-                        setServicesLimit(Number(e.target.value));
+                    <Select
+                      value={String(servicesLimit)}
+                      onValueChange={(v) => {
+                        setServicesLimit(Number(v));
                         setServicesPage(1);
                       }}
-                      className="cursor-pointer rounded-lg border border-[rgba(255,255,255,0.1)] bg-[#1E293B] px-3 py-2 text-sm text-white focus:ring-2 focus:ring-[#3B82F6] focus:outline-none [&>option]:bg-[#1E293B] [&>option]:text-white"
                     >
-                      <option value={50}>50</option>
-                      <option value={100}>100</option>
-                      <option value={150}>150</option>
-                      <option value={200}>200</option>
-                    </select>
+                      <SelectTrigger className="cursor-pointer rounded-lg border border-[rgba(255,255,255,0.1)] bg-[#1E293B] px-3 py-2 text-base text-white focus-visible:ring-2 focus-visible:ring-[#3B82F6] focus-visible:outline-none data-[size=default]:h-auto data-[size=default]:min-h-11 lg:text-sm">
+                        <SelectValue placeholder="Per page" />
+                      </SelectTrigger>
+                      <SelectContent className="max-h-72 border-[rgba(255,255,255,0.18)] bg-[#1E293B] text-white">
+                        <SelectItem
+                          value="50"
+                          className="text-white focus:bg-[rgba(59,130,246,0.15)] focus:text-white"
+                        >
+                          50
+                        </SelectItem>
+                        <SelectItem
+                          value="100"
+                          className="text-white focus:bg-[rgba(59,130,246,0.15)] focus:text-white"
+                        >
+                          100
+                        </SelectItem>
+                        <SelectItem
+                          value="150"
+                          className="text-white focus:bg-[rgba(59,130,246,0.15)] focus:text-white"
+                        >
+                          150
+                        </SelectItem>
+                        <SelectItem
+                          value="200"
+                          className="text-white focus:bg-[rgba(59,130,246,0.15)] focus:text-white"
+                        >
+                          200
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
                 </div>
 
@@ -3252,22 +3348,51 @@ export default function AdminSmsServicesPage() {
                   <label className="mb-2 block text-sm font-medium text-white">
                     Version
                   </label>
-                  <select
+                  <Select
                     value={providerFormData.version}
-                    onChange={(e) =>
+                    onValueChange={(v) =>
                       setProviderFormData({
                         ...providerFormData,
-                        version: e.target.value,
+                        version: v,
                       })
                     }
-                    className="w-full rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.4)] px-4 py-3 text-sm text-white focus:ring-2 focus:ring-[#3B82F6] focus:outline-none"
                   >
-                    <option value="V1_STANDARD">V1 - Premium</option>
-                    <option value="V2">V2 - Standard</option>
-                    <option value="V3">V3 - Basic</option>
-                    <option value="V4">V4</option>
-                    <option value="V5">V5</option>
-                  </select>
+                    <SelectTrigger className="w-full rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.4)] px-4 py-3 text-sm text-white focus-visible:ring-2 focus-visible:ring-[#3B82F6] focus-visible:outline-none data-[size=default]:h-auto data-[size=default]:min-h-12">
+                      <SelectValue placeholder="Select version" />
+                    </SelectTrigger>
+                    <SelectContent className="max-h-72 border-[rgba(255,255,255,0.18)] bg-[#1E293B] text-white">
+                      <SelectItem
+                        value="V1_STANDARD"
+                        className="text-white focus:bg-[rgba(59,130,246,0.15)] focus:text-white"
+                      >
+                        V1 - Premium
+                      </SelectItem>
+                      <SelectItem
+                        value="V2"
+                        className="text-white focus:bg-[rgba(59,130,246,0.15)] focus:text-white"
+                      >
+                        V2 - Standard
+                      </SelectItem>
+                      <SelectItem
+                        value="V3"
+                        className="text-white focus:bg-[rgba(59,130,246,0.15)] focus:text-white"
+                      >
+                        V3 - Basic
+                      </SelectItem>
+                      <SelectItem
+                        value="V4"
+                        className="text-white focus:bg-[rgba(59,130,246,0.15)] focus:text-white"
+                      >
+                        V4
+                      </SelectItem>
+                      <SelectItem
+                        value="V5"
+                        className="text-white focus:bg-[rgba(59,130,246,0.15)] focus:text-white"
+                      >
+                        V5
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
 
                 <div>
@@ -3703,21 +3828,35 @@ export default function AdminSmsServicesPage() {
                   <label className="mb-2 block text-sm font-medium text-white">
                     Status
                   </label>
-                  <select
+                  <Select
                     value={
                       subscriptionFormData.isActive ? 'active' : 'inactive'
                     }
-                    onChange={(e) =>
+                    onValueChange={(v) =>
                       setSubscriptionFormData({
                         ...subscriptionFormData,
-                        isActive: e.target.value === 'active',
+                        isActive: v === 'active',
                       })
                     }
-                    className="w-full rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.4)] px-4 py-3 text-sm text-white focus:ring-2 focus:ring-[#3B82F6] focus:outline-none"
                   >
-                    <option value="active">Active</option>
-                    <option value="inactive">Inactive</option>
-                  </select>
+                    <SelectTrigger className="w-full rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.4)] px-4 py-3 text-sm text-white focus-visible:ring-2 focus-visible:ring-[#3B82F6] focus-visible:outline-none data-[size=default]:h-auto data-[size=default]:min-h-12">
+                      <SelectValue placeholder="Select status" />
+                    </SelectTrigger>
+                    <SelectContent className="max-h-72 border-[rgba(255,255,255,0.18)] bg-[#1E293B] text-white">
+                      <SelectItem
+                        value="active"
+                        className="text-white focus:bg-[rgba(59,130,246,0.15)] focus:text-white"
+                      >
+                        Active
+                      </SelectItem>
+                      <SelectItem
+                        value="inactive"
+                        className="text-white focus:bg-[rgba(59,130,246,0.15)] focus:text-white"
+                      >
+                        Inactive
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
 

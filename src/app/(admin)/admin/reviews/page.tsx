@@ -35,6 +35,13 @@ import {
   type AdminReview,
   type UniqueName,
 } from '@/lib/api/adminModulesApi';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 type TabKey = 'reviews' | 'bulk' | 'names';
 
@@ -998,17 +1005,38 @@ export default function AdminReviewsPage() {
                 placeholder="Search names..."
                 className="rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.4)] px-3 py-2 text-sm text-white md:w-72"
               />
-              <select
-                value={nameUsedFilter}
-                onChange={(e) =>
-                  setNameUsedFilter(e.target.value as '' | 'true' | 'false')
+              <Select
+                value={nameUsedFilter === '' ? '__all__' : nameUsedFilter}
+                onValueChange={(v) =>
+                  setNameUsedFilter(
+                    v === '__all__' ? '' : (v as 'true' | 'false'),
+                  )
                 }
-                className="rounded-lg border border-[rgba(255,255,255,0.18)] bg-[#1E293B] px-3 py-2 text-sm text-white"
               >
-                <option value="">All names</option>
-                <option value="false">Available</option>
-                <option value="true">In use</option>
-              </select>
+                <SelectTrigger className="rounded-lg border border-[rgba(255,255,255,0.18)] bg-[#1E293B] px-3 py-2 text-base text-white focus-visible:ring-2 focus-visible:ring-[#3B82F6] focus-visible:outline-none data-[size=default]:h-auto data-[size=default]:min-h-11 lg:text-sm">
+                  <SelectValue placeholder="All names" />
+                </SelectTrigger>
+                <SelectContent className="max-h-72 border-[rgba(255,255,255,0.18)] bg-[#1E293B] text-white">
+                  <SelectItem
+                    value="__all__"
+                    className="text-white focus:bg-[rgba(59,130,246,0.15)] focus:text-white"
+                  >
+                    All names
+                  </SelectItem>
+                  <SelectItem
+                    value="false"
+                    className="text-white focus:bg-[rgba(59,130,246,0.15)] focus:text-white"
+                  >
+                    Available
+                  </SelectItem>
+                  <SelectItem
+                    value="true"
+                    className="text-white focus:bg-[rgba(59,130,246,0.15)] focus:text-white"
+                  >
+                    In use
+                  </SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
             {namesLoading ? (

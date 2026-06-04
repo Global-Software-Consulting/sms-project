@@ -30,6 +30,13 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
   getPaymentGateways,
   updatePaymentGateway,
   togglePaymentGateway,
@@ -2789,21 +2796,33 @@ export default function AdminPaymentsPage() {
                       <label className="mb-2 block text-sm font-medium text-white">
                         Fee Type
                       </label>
-                      <select
+                      <Select
                         value={methodFormData.serviceFeeType}
-                        onChange={(e) =>
+                        onValueChange={(v) =>
                           setMethodFormData({
                             ...methodFormData,
-                            serviceFeeType: e.target.value as
-                              | 'percentage'
-                              | 'fixed',
+                            serviceFeeType: v as 'percentage' | 'fixed',
                           })
                         }
-                        className="w-full rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.4)] px-4 py-3 text-sm text-white focus:ring-2 focus:ring-[#3B82F6] focus:outline-none"
                       >
-                        <option value="percentage">Percentage (%)</option>
-                        <option value="fixed">Fixed ($)</option>
-                      </select>
+                        <SelectTrigger className="w-full rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.4)] px-4 py-3 text-sm text-white focus-visible:ring-2 focus-visible:ring-[#3B82F6] focus-visible:outline-none data-[size=default]:h-auto data-[size=default]:min-h-12">
+                          <SelectValue placeholder="Select fee type" />
+                        </SelectTrigger>
+                        <SelectContent className="max-h-72 border-[rgba(255,255,255,0.18)] bg-[#1E293B] text-white">
+                          <SelectItem
+                            value="percentage"
+                            className="text-white focus:bg-[rgba(59,130,246,0.15)] focus:text-white"
+                          >
+                            Percentage (%)
+                          </SelectItem>
+                          <SelectItem
+                            value="fixed"
+                            className="text-white focus:bg-[rgba(59,130,246,0.15)] focus:text-white"
+                          >
+                            Fixed ($)
+                          </SelectItem>
+                        </SelectContent>
+                      </Select>
                     </div>
                     <div>
                       <label className="mb-2 block text-sm font-medium text-white">
@@ -2948,19 +2967,33 @@ export default function AdminPaymentsPage() {
                 <label className="mb-2 block text-sm font-medium text-white">
                   Transaction Type
                 </label>
-                <select
+                <Select
                   value={balanceFormData.transactionType}
-                  onChange={(e) =>
+                  onValueChange={(v) =>
                     setBalanceFormData({
                       ...balanceFormData,
-                      transactionType: e.target.value as 'add' | 'deduct',
+                      transactionType: v as 'add' | 'deduct',
                     })
                   }
-                  className="w-full rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.4)] px-4 py-3 text-sm text-white focus:ring-2 focus:ring-[#3B82F6] focus:outline-none"
                 >
-                  <option value="add">Add Balance</option>
-                  <option value="deduct">Deduct Balance</option>
-                </select>
+                  <SelectTrigger className="w-full rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.4)] px-4 py-3 text-sm text-white focus-visible:ring-2 focus-visible:ring-[#3B82F6] focus-visible:outline-none data-[size=default]:h-auto data-[size=default]:min-h-12">
+                    <SelectValue placeholder="Select transaction type" />
+                  </SelectTrigger>
+                  <SelectContent className="max-h-72 border-[rgba(255,255,255,0.18)] bg-[#1E293B] text-white">
+                    <SelectItem
+                      value="add"
+                      className="text-white focus:bg-[rgba(59,130,246,0.15)] focus:text-white"
+                    >
+                      Add Balance
+                    </SelectItem>
+                    <SelectItem
+                      value="deduct"
+                      className="text-white focus:bg-[rgba(59,130,246,0.15)] focus:text-white"
+                    >
+                      Deduct Balance
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
 
               <div>
