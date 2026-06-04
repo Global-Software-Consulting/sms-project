@@ -2169,9 +2169,9 @@ export default function AdminSmsServicesPage() {
       {activeTab === 'pricing' && (
         <div className="space-y-6">
           {/* Global Markup Control */}
-          <div className="rounded-xl border border-[rgba(255,255,255,0.1)] bg-[rgba(15,23,42,0.6)] p-6 backdrop-blur-xl">
+          <div className="rounded-xl border border-[rgba(255,255,255,0.1)] bg-[rgba(15,23,42,0.6)] p-4 backdrop-blur-xl sm:p-6">
             <div className="mb-4 flex items-center gap-3">
-              <Percent className="h-6 w-6 text-[#F59E0B]" />
+              <Percent className="h-6 w-6 shrink-0 text-[#F59E0B]" />
               <h3 className="text-lg font-semibold text-white">
                 Global Markup Control
               </h3>
@@ -2181,8 +2181,8 @@ export default function AdminSmsServicesPage() {
               increase prices, negative values decrease.
             </p>
 
-            <div className="flex items-center gap-4">
-              <div className="max-w-md flex-1">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-end">
+              <div className="w-full sm:max-w-md sm:flex-1">
                 <label className="mb-2 block text-sm font-medium text-white">
                   Markup Percentage (%)
                 </label>
@@ -2192,7 +2192,7 @@ export default function AdminSmsServicesPage() {
                   onChange={(e) =>
                     setGlobalMarkup(parseFloat(e.target.value) || 0)
                   }
-                  className="w-full rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.4)] px-4 py-3 text-sm text-white focus:ring-2 focus:ring-[#3B82F6] focus:outline-none"
+                  className="w-full rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.4)] px-4 py-3 text-base text-white focus:ring-2 focus:ring-[#3B82F6] focus:outline-none sm:text-sm"
                   placeholder="Enter markup percentage"
                   step="0.1"
                 />
@@ -2204,7 +2204,7 @@ export default function AdminSmsServicesPage() {
               <button
                 onClick={handleApplyGlobalMarkup}
                 disabled={isLoading}
-                className="mt-6 flex items-center gap-2 rounded-lg bg-[#F59E0B] px-6 py-3 text-sm font-medium text-white transition-colors hover:bg-[#D97706] disabled:opacity-50"
+                className="flex w-full items-center justify-center gap-2 rounded-lg bg-[#F59E0B] px-6 py-3 text-base font-medium whitespace-nowrap text-white transition-colors hover:bg-[#D97706] disabled:opacity-50 sm:mb-7 sm:w-auto sm:text-sm"
               >
                 {isLoading ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
