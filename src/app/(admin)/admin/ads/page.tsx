@@ -181,16 +181,16 @@ export default function AdminAdsPage() {
       </div>
 
       {/* Header Card */}
-      <div className="mb-6 rounded-xl border border-[rgba(255,255,255,0.1)] bg-[rgba(15,23,42,0.6)] p-8 backdrop-blur-xl">
-        <div className="flex items-center justify-between">
+      <div className="mb-6 rounded-xl border border-[rgba(255,255,255,0.1)] bg-[rgba(15,23,42,0.6)] p-4 backdrop-blur-xl sm:p-8">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h2 className="mb-1 text-2xl font-semibold text-white">
+            <h2 className="text-xl font-semibold text-white sm:mb-1 sm:text-2xl">
               AD MANAGEMENT
             </h2>
           </div>
           <button
             onClick={handleAddAd}
-            className="flex items-center gap-2 rounded-lg bg-[#06B6D4] px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-[#0891B2]"
+            className="flex w-full items-center justify-center gap-2 rounded-lg bg-[#06B6D4] px-5 py-2.5 text-base font-medium whitespace-nowrap text-white transition-colors hover:bg-[#0891B2] sm:w-auto sm:text-sm"
           >
             <Plus className="h-4 w-4" />
             Add New Ad
