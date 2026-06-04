@@ -194,7 +194,7 @@ export function LanguagePickerDropdown({
   return (
     <div
       ref={ref}
-      className="notranslate absolute top-full right-0 z-[99999] mt-2 w-64 overflow-hidden rounded-xl border border-[rgba(255,255,255,0.15)] bg-[#0F172A] shadow-2xl"
+      className="notranslate fixed top-14 right-2 left-2 z-[99999] overflow-hidden rounded-xl border border-[rgba(255,255,255,0.15)] bg-[#0F172A] shadow-2xl sm:absolute sm:top-full sm:right-0 sm:left-auto sm:mt-2 sm:w-64"
     >
       {/* Search */}
       <div className="border-b border-[rgba(255,255,255,0.1)] p-3">

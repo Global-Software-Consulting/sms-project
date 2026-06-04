@@ -1,15 +1,18 @@
 'use client';
 
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Bell, Check, X, Trash2, Loader2, ChevronLeft, ChevronRight } from 'lucide-react';
+import {
+  Bell,
+  Check,
+  X,
+  Trash2,
+  Loader2,
+  ChevronLeft,
+  ChevronRight,
+} from 'lucide-react';
 import { useState } from 'react';
 import { useNotifications } from '@/contexts/NotificationContext';
 import { getNotificationIcon } from '@/lib/api/notificationsApi';
@@ -53,13 +56,22 @@ export default function Notifications() {
   };
 
   const getNotificationBgColor = (type: string): string => {
-    if (type.startsWith('PAYMENT_') || type === 'ORDER_REFUNDED') return 'bg-green-500/10 border-green-500/20';
+    if (type.startsWith('PAYMENT_') || type === 'ORDER_REFUNDED')
+      return 'bg-green-500/10 border-green-500/20';
     if (type.startsWith('ORDER_')) return 'bg-blue-500/10 border-blue-500/20';
     if (type === 'SMS_RECEIVED') return 'bg-cyan-500/10 border-cyan-500/20';
-    if (type.startsWith('MEMBERSHIP_')) return 'bg-purple-500/10 border-purple-500/20';
-    if (type.startsWith('REFERRAL_')) return 'bg-orange-500/10 border-orange-500/20';
-    if (type === 'SECURITY_ALERT' || type === 'ACCOUNT_WARNING' || type === 'ORDER_CANCELLED') return 'bg-red-500/10 border-red-500/20';
-    if (type === 'PROMO' || type === 'WELCOME') return 'bg-pink-500/10 border-pink-500/20';
+    if (type.startsWith('MEMBERSHIP_'))
+      return 'bg-purple-500/10 border-purple-500/20';
+    if (type.startsWith('REFERRAL_'))
+      return 'bg-orange-500/10 border-orange-500/20';
+    if (
+      type === 'SECURITY_ALERT' ||
+      type === 'ACCOUNT_WARNING' ||
+      type === 'ORDER_CANCELLED'
+    )
+      return 'bg-red-500/10 border-red-500/20';
+    if (type === 'PROMO' || type === 'WELCOME')
+      return 'bg-pink-500/10 border-pink-500/20';
     return 'bg-gray-500/10 border-gray-500/20';
   };
 
@@ -144,7 +156,7 @@ export default function Notifications() {
 
       {/* Notifications List */}
       <Card>
-        <CardHeader>
+        <CardHeader className="px-3 sm:px-6">
           <Tabs
             value={filter}
             onValueChange={handleFilterChange}
@@ -156,7 +168,7 @@ export default function Notifications() {
             </TabsList>
           </Tabs>
         </CardHeader>
-        <CardContent>
+        <CardContent className="px-3 sm:px-6">
           {isLoading ? (
             <div className="flex items-center justify-center py-12">
               <Loader2 className="text-muted-foreground h-8 w-8 animate-spin" />
@@ -176,7 +188,7 @@ export default function Notifications() {
               {notifications.map((notification) => (
                 <div
                   key={notification.id}
-                  className={`group relative flex items-start gap-4 rounded-lg border p-4 transition-all ${
+                  className={`group relative flex items-start gap-3 rounded-lg border p-3 transition-all sm:gap-4 sm:p-4 ${
                     !notification.read
                       ? 'bg-primary/5 border-primary/20 hover:bg-primary/10'
                       : 'hover:bg-muted/50'
@@ -184,7 +196,7 @@ export default function Notifications() {
                 >
                   {/* Icon */}
                   <div
-                    className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-full border text-2xl ${getNotificationBgColor(notification.type)}`}
+                    className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full border text-xl sm:h-12 sm:w-12 sm:text-2xl ${getNotificationBgColor(notification.type)}`}
                   >
                     {getNotificationIcon(notification.type)}
                   </div>
@@ -192,14 +204,16 @@ export default function Notifications() {
                   {/* Content */}
                   <div className="min-w-0 flex-1 space-y-1">
                     <div className="flex items-start justify-between gap-2">
-                      <h4 className="flex items-center gap-2 leading-tight font-semibold">
-                        {notification.title}
+                      <h4 className="flex min-w-0 items-center gap-2 text-sm leading-tight font-semibold sm:text-base">
+                        <span className="min-w-0 break-words">
+                          {notification.title}
+                        </span>
                         {!notification.read && (
                           <div className="bg-primary h-2 w-2 shrink-0 rounded-full" />
                         )}
                       </h4>
                     </div>
-                    <p className="text-muted-foreground text-sm">
+                    <p className="text-muted-foreground text-xs break-words sm:text-sm">
                       {notification.message}
                     </p>
                     <p className="text-muted-foreground text-xs">
@@ -213,7 +227,7 @@ export default function Notifications() {
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="h-8 w-8"
+                        className="size-icon h-8 !min-h-0 w-8 !p-0"
                         onClick={() => markAsRead(notification.id)}
                       >
                         <Check className="h-4 w-4" />
@@ -222,7 +236,7 @@ export default function Notifications() {
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="text-destructive hover:text-destructive h-8 w-8 opacity-0 transition-opacity group-hover:opacity-100"
+                      className="text-destructive hover:text-destructive size-icon h-8 !min-h-0 w-8 !p-0 sm:opacity-0 sm:transition-opacity sm:group-hover:opacity-100"
                       onClick={() => removeNotification(notification.id)}
                     >
                       <X className="h-4 w-4" />

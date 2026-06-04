@@ -21,7 +21,17 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Star, Loader2, AlertCircle, CheckCircle2, Clock, XCircle, Eye, Edit2, Trash2 } from 'lucide-react';
+import {
+  Star,
+  Loader2,
+  AlertCircle,
+  CheckCircle2,
+  Clock,
+  XCircle,
+  Eye,
+  Edit2,
+  Trash2,
+} from 'lucide-react';
 import { toast } from 'sonner';
 import {
   getMySlots,
@@ -49,7 +59,9 @@ export default function ReviewsDashboard() {
 
   // Preview / Edit / Delete dialog state
   const [selectedReview, setSelectedReview] = useState<UserReview | null>(null);
-  const [dialogMode, setDialogMode] = useState<'preview' | 'edit' | 'delete' | null>(null);
+  const [dialogMode, setDialogMode] = useState<
+    'preview' | 'edit' | 'delete' | null
+  >(null);
   const [editRating, setEditRating] = useState(0);
   const [editTitle, setEditTitle] = useState('');
   const [editText, setEditText] = useState('');
@@ -272,7 +284,9 @@ export default function ReviewsDashboard() {
         <CardContent>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <div className="bg-primary/10 rounded-lg p-4 text-center">
-              <p className="text-primary text-3xl font-bold">{availableSlots}</p>
+              <p className="text-primary text-3xl font-bold">
+                {availableSlots}
+              </p>
               <p className="text-muted-foreground text-sm">Available Slots</p>
             </div>
             <div className="bg-muted rounded-lg p-4 text-center">
@@ -289,7 +303,9 @@ export default function ReviewsDashboard() {
             </div>
           </div>
           <div className="mt-4 flex flex-wrap items-center justify-between gap-2">
-            <Badge variant="secondary">Earn 1 slot per ${dollarPerSlot} spent</Badge>
+            <Badge variant="secondary">
+              Earn 1 slot per ${dollarPerSlot} spent
+            </Badge>
             {nextSlotAt > 0 && (
               <p className="text-muted-foreground text-sm">
                 ${nextSlotAt.toFixed(2)} more to earn next slot
@@ -311,16 +327,17 @@ export default function ReviewsDashboard() {
           {/* Rating */}
           <div className="space-y-2">
             <Label>Rating *</Label>
-            <div className="flex space-x-2">
+            <div className="flex gap-1 sm:gap-2">
               {[1, 2, 3, 4, 5].map((star) => (
                 <button
                   key={star}
                   onClick={() => setRating(star)}
-                  className="transition-transform hover:scale-110"
+                  className="size-icon !min-h-0 !p-0 transition-transform hover:scale-110"
                   type="button"
+                  aria-label={`Rate ${star} star${star > 1 ? 's' : ''}`}
                 >
                   <Star
-                    className={`h-8 w-8 ${
+                    className={`h-7 w-7 sm:h-8 sm:w-8 ${
                       star <= rating
                         ? 'fill-warning text-warning'
                         : 'text-muted-foreground'
@@ -331,7 +348,15 @@ export default function ReviewsDashboard() {
             </div>
             {rating > 0 && (
               <p className="text-muted-foreground text-sm">
-                {rating === 5 ? 'Excellent!' : rating === 4 ? 'Great!' : rating === 3 ? 'Good' : rating === 2 ? 'Fair' : 'Poor'}
+                {rating === 5
+                  ? 'Excellent!'
+                  : rating === 4
+                    ? 'Great!'
+                    : rating === 3
+                      ? 'Good'
+                      : rating === 2
+                        ? 'Fair'
+                        : 'Poor'}
               </p>
             )}
           </div>
@@ -357,7 +382,7 @@ export default function ReviewsDashboard() {
               rows={6}
               maxLength={2000}
             />
-            <p className="text-muted-foreground text-xs text-right">
+            <p className="text-muted-foreground text-right text-xs">
               {reviewText.length}/2000 characters
             </p>
           </div>
@@ -378,7 +403,12 @@ export default function ReviewsDashboard() {
           <Button
             size="lg"
             onClick={handleSubmitReview}
-            disabled={availableSlots === 0 || isSubmitting || rating === 0 || !reviewText.trim()}
+            disabled={
+              availableSlots === 0 ||
+              isSubmitting ||
+              rating === 0 ||
+              !reviewText.trim()
+            }
           >
             {isSubmitting ? (
               <>
@@ -387,14 +417,16 @@ export default function ReviewsDashboard() {
               </>
             ) : (
               <>
-                Submit Review ({availableSlots} slot{availableSlots !== 1 ? 's' : ''} available)
+                Submit Review ({availableSlots} slot
+                {availableSlots !== 1 ? 's' : ''} available)
               </>
             )}
           </Button>
 
           {availableSlots === 0 && (
             <p className="text-muted-foreground text-sm">
-              You need to spend more to earn review slots. Spend ${dollarPerSlot} to earn 1 slot.
+              You need to spend more to earn review slots. Spend $
+              {dollarPerSlot} to earn 1 slot.
             </p>
           )}
         </CardContent>
@@ -409,11 +441,14 @@ export default function ReviewsDashboard() {
         <CardContent className="space-y-4">
           {myReviews.length > 0 ? (
             myReviews.map((review) => (
-              <div key={review.id} className="border-border rounded-lg border p-4 transition-colors hover:bg-muted/30">
+              <div
+                key={review.id}
+                className="border-border hover:bg-muted/30 rounded-lg border p-4 transition-colors"
+              >
                 <div className="mb-2 flex items-start justify-between gap-3">
                   <div className="min-w-0 flex-1">
                     {review.title && (
-                      <h4 className="font-semibold truncate">{review.title}</h4>
+                      <h4 className="truncate font-semibold">{review.title}</h4>
                     )}
                     <div className="mt-1 flex flex-wrap items-center gap-2">
                       <div className="flex space-x-0.5">
@@ -429,20 +464,25 @@ export default function ReviewsDashboard() {
                         ))}
                       </div>
                       <Badge
-                        variant={review.status === 'APPROVED' ? 'default' : 'secondary'}
+                        variant={
+                          review.status === 'APPROVED' ? 'default' : 'secondary'
+                        }
                         className="flex items-center gap-1"
                       >
                         {getStatusIcon(review.status)}
                         {getReviewStatusLabel(review.status)}
                       </Badge>
                       {review.isFeatured && (
-                        <Badge variant="outline" className="border-warning text-warning">
+                        <Badge
+                          variant="outline"
+                          className="border-warning text-warning"
+                        >
                           Featured
                         </Badge>
                       )}
                     </div>
                   </div>
-                  <div className="flex flex-col items-end gap-2 shrink-0">
+                  <div className="flex shrink-0 flex-col items-end gap-2">
                     <span className="text-muted-foreground text-sm">
                       {formatDate(review.createdAt)}
                     </span>
@@ -459,7 +499,7 @@ export default function ReviewsDashboard() {
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="h-7 w-7 text-primary hover:text-primary"
+                        className="text-primary hover:text-primary h-7 w-7"
                         onClick={() => openEdit(review)}
                         title="Edit"
                       >
@@ -468,7 +508,7 @@ export default function ReviewsDashboard() {
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="h-7 w-7 text-destructive hover:text-destructive"
+                        className="text-destructive hover:text-destructive h-7 w-7"
                         onClick={() => openDelete(review)}
                         title="Delete"
                       >
@@ -477,7 +517,9 @@ export default function ReviewsDashboard() {
                     </div>
                   </div>
                 </div>
-                <p className="text-muted-foreground text-sm line-clamp-2">{review.text}</p>
+                <p className="text-muted-foreground line-clamp-2 text-sm">
+                  {review.text}
+                </p>
                 {review.isAnonymous && (
                   <p className="text-muted-foreground mt-2 text-xs italic">
                     Submitted anonymously
@@ -485,7 +527,8 @@ export default function ReviewsDashboard() {
                 )}
                 {review.adminNote && (
                   <div className="mt-2 rounded bg-yellow-500/10 p-2 text-xs">
-                    <span className="font-medium">Admin note:</span> {review.adminNote}
+                    <span className="font-medium">Admin note:</span>{' '}
+                    {review.adminNote}
                   </div>
                 )}
               </div>
@@ -501,13 +544,14 @@ export default function ReviewsDashboard() {
       </Card>
 
       {/* Preview Dialog */}
-      <Dialog open={dialogMode === 'preview'} onOpenChange={(open) => !open && closeDialog()}>
+      <Dialog
+        open={dialogMode === 'preview'}
+        onOpenChange={(open) => !open && closeDialog()}
+      >
         <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle>Review Preview</DialogTitle>
-            <DialogDescription>
-              Your review as submitted
-            </DialogDescription>
+            <DialogDescription>Your review as submitted</DialogDescription>
           </DialogHeader>
           {selectedReview && (
             <div className="space-y-4">
@@ -525,7 +569,11 @@ export default function ReviewsDashboard() {
                   ))}
                 </div>
                 <Badge
-                  variant={selectedReview.status === 'APPROVED' ? 'default' : 'secondary'}
+                  variant={
+                    selectedReview.status === 'APPROVED'
+                      ? 'default'
+                      : 'secondary'
+                  }
                   className="flex items-center gap-1"
                 >
                   {getStatusIcon(selectedReview.status)}
@@ -534,21 +582,30 @@ export default function ReviewsDashboard() {
               </div>
               {selectedReview.title && (
                 <div>
-                  <p className="text-muted-foreground mb-1 text-xs uppercase">Title</p>
+                  <p className="text-muted-foreground mb-1 text-xs uppercase">
+                    Title
+                  </p>
                   <h3 className="font-semibold">{selectedReview.title}</h3>
                 </div>
               )}
               <div>
-                <p className="text-muted-foreground mb-1 text-xs uppercase">Review</p>
-                <p className="text-sm whitespace-pre-wrap">{selectedReview.text}</p>
+                <p className="text-muted-foreground mb-1 text-xs uppercase">
+                  Review
+                </p>
+                <p className="text-sm whitespace-pre-wrap">
+                  {selectedReview.text}
+                </p>
               </div>
-              <div className="flex items-center justify-between text-xs text-muted-foreground">
+              <div className="text-muted-foreground flex items-center justify-between text-xs">
                 <span>Submitted {formatDate(selectedReview.createdAt)}</span>
-                {selectedReview.isAnonymous && <span className="italic">Anonymous</span>}
+                {selectedReview.isAnonymous && (
+                  <span className="italic">Anonymous</span>
+                )}
               </div>
               {selectedReview.adminNote && (
                 <div className="rounded bg-yellow-500/10 p-3 text-xs">
-                  <span className="font-medium">Admin note:</span> {selectedReview.adminNote}
+                  <span className="font-medium">Admin note:</span>{' '}
+                  {selectedReview.adminNote}
                 </div>
               )}
             </div>
@@ -569,7 +626,10 @@ export default function ReviewsDashboard() {
       </Dialog>
 
       {/* Edit Dialog */}
-      <Dialog open={dialogMode === 'edit'} onOpenChange={(open) => !open && closeDialog()}>
+      <Dialog
+        open={dialogMode === 'edit'}
+        onOpenChange={(open) => !open && closeDialog()}
+      >
         <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle>Edit Review</DialogTitle>
@@ -640,7 +700,11 @@ export default function ReviewsDashboard() {
             </div>
           </div>
           <DialogFooter className="gap-2">
-            <Button variant="outline" onClick={closeDialog} disabled={isUpdating}>
+            <Button
+              variant="outline"
+              onClick={closeDialog}
+              disabled={isUpdating}
+            >
               Cancel
             </Button>
             <Button onClick={handleUpdateReview} disabled={isUpdating}>
@@ -658,17 +722,21 @@ export default function ReviewsDashboard() {
       </Dialog>
 
       {/* Delete Confirm Dialog */}
-      <Dialog open={dialogMode === 'delete'} onOpenChange={(open) => !open && closeDialog()}>
+      <Dialog
+        open={dialogMode === 'delete'}
+        onOpenChange={(open) => !open && closeDialog()}
+      >
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>Delete Review?</DialogTitle>
             <DialogDescription>
-              This action cannot be undone. The review will be permanently removed.
+              This action cannot be undone. The review will be permanently
+              removed.
             </DialogDescription>
           </DialogHeader>
           {selectedReview && (
-            <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-sm">
-              <div className="flex space-x-0.5 mb-1">
+            <div className="border-destructive/30 bg-destructive/5 rounded-lg border p-3 text-sm">
+              <div className="mb-1 flex space-x-0.5">
                 {Array.from({ length: 5 }).map((_, i) => (
                   <Star
                     key={i}
@@ -680,12 +748,20 @@ export default function ReviewsDashboard() {
                   />
                 ))}
               </div>
-              {selectedReview.title && <p className="font-semibold">{selectedReview.title}</p>}
-              <p className="text-muted-foreground line-clamp-2">{selectedReview.text}</p>
+              {selectedReview.title && (
+                <p className="font-semibold">{selectedReview.title}</p>
+              )}
+              <p className="text-muted-foreground line-clamp-2">
+                {selectedReview.text}
+              </p>
             </div>
           )}
           <DialogFooter className="gap-2">
-            <Button variant="outline" onClick={closeDialog} disabled={isDeleting}>
+            <Button
+              variant="outline"
+              onClick={closeDialog}
+              disabled={isDeleting}
+            >
               Cancel
             </Button>
             <Button

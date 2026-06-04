@@ -77,7 +77,9 @@ export default function Settings() {
       const response = await getUserProfile();
       setProfile(response);
       // Combine firstName and lastName into fullName for display
-      const displayName = [response.firstName, response.lastName].filter(Boolean).join(' ');
+      const displayName = [response.firstName, response.lastName]
+        .filter(Boolean)
+        .join(' ');
       setFullName(displayName || '');
       setEmail(response.email);
       setPhone(response.phone || '');
@@ -113,7 +115,8 @@ export default function Settings() {
       // Split fullName into firstName and lastName
       const nameParts = fullName.trim().split(/\s+/);
       const firstName = nameParts[0] || undefined;
-      const lastName = nameParts.length > 1 ? nameParts.slice(1).join(' ') : undefined;
+      const lastName =
+        nameParts.length > 1 ? nameParts.slice(1).join(' ') : undefined;
 
       const updateData: UpdateProfileRequest = {
         firstName,
@@ -174,7 +177,8 @@ export default function Settings() {
     } catch (err: any) {
       console.error('Change password error:', err);
       toast.error('Failed to change password', {
-        description: err.response?.data?.message || 'Please check your current password.',
+        description:
+          err.response?.data?.message || 'Please check your current password.',
       });
     } finally {
       setIsChangingPassword(false);
@@ -245,12 +249,7 @@ export default function Settings() {
             </div>
             <div className="space-y-2">
               <Label>Email</Label>
-              <Input
-                type="email"
-                value={email}
-                disabled
-                className="bg-muted"
-              />
+              <Input type="email" value={email} disabled className="bg-muted" />
               <p className="text-muted-foreground text-xs">
                 Email cannot be changed
               </p>
@@ -374,7 +373,7 @@ export default function Settings() {
                 type="button"
                 variant="ghost"
                 size="icon"
-                className="absolute top-1/2 right-1 h-8 w-8 -translate-y-1/2"
+                className="size-icon absolute top-1/2 right-1 h-8 !min-h-0 w-8 -translate-y-1/2 !p-0"
                 onClick={() => setShowCurrentPassword(!showCurrentPassword)}
               >
                 {showCurrentPassword ? (
@@ -400,7 +399,7 @@ export default function Settings() {
                 type="button"
                 variant="ghost"
                 size="icon"
-                className="absolute top-1/2 right-1 h-8 w-8 -translate-y-1/2"
+                className="size-icon absolute top-1/2 right-1 h-8 !min-h-0 w-8 -translate-y-1/2 !p-0"
                 onClick={() => setShowNewPassword(!showNewPassword)}
               >
                 {showNewPassword ? (
@@ -426,7 +425,12 @@ export default function Settings() {
           </div>
           <Button
             onClick={handleChangePassword}
-            disabled={isChangingPassword || !currentPassword || !newPassword || !confirmPassword}
+            disabled={
+              isChangingPassword ||
+              !currentPassword ||
+              !newPassword ||
+              !confirmPassword
+            }
           >
             {isChangingPassword ? (
               <>
@@ -440,14 +444,14 @@ export default function Settings() {
 
           <Separator className="my-6" />
 
-          <div className="flex items-center justify-between">
-            <div>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="min-w-0">
               <Label>Two-Factor Authentication</Label>
               <p className="text-muted-foreground text-sm">
                 Add an extra layer of security
               </p>
             </div>
-            <Button variant="outline" disabled>
+            <Button variant="outline" disabled className="shrink-0">
               Coming Soon
             </Button>
           </div>
@@ -482,7 +486,9 @@ export default function Settings() {
       <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle className="text-destructive">Delete Account</DialogTitle>
+            <DialogTitle className="text-destructive">
+              Delete Account
+            </DialogTitle>
             <DialogDescription>
               This action cannot be undone. This will permanently delete your
               account and remove all your data from our servers.

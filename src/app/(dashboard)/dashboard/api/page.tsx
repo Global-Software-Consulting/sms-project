@@ -401,7 +401,7 @@ export default function APIAccess() {
 
       {/* Provider Tabs */}
       <Card>
-        <CardContent className="pt-6">
+        <CardContent className="px-3 pt-6 sm:px-6">
           <Tabs
             value={activeTab}
             onValueChange={(v) => setActiveTab(v as ProviderType)}
@@ -477,13 +477,13 @@ export default function APIAccess() {
 
                   {/* Endpoint */}
                   <Card>
-                    <CardHeader>
+                    <CardHeader className="px-3 sm:px-6">
                       <CardTitle>API Endpoint</CardTitle>
                       <CardDescription>
                         Base URL for {providerInfo[provider].name} API requests
                       </CardDescription>
                     </CardHeader>
-                    <CardContent>
+                    <CardContent className="px-3 sm:px-6">
                       <div className="flex items-center gap-2">
                         <Input
                           value={providerInfo[provider].endpoint}
@@ -493,6 +493,7 @@ export default function APIAccess() {
                         <Button
                           variant="outline"
                           size="icon"
+                          className="size-icon !min-h-0 shrink-0 !p-0"
                           onClick={() =>
                             handleCopy(
                               providerInfo[provider].endpoint,
@@ -517,26 +518,26 @@ export default function APIAccess() {
 
                   {/* Quick Start */}
                   <Card>
-                    <CardHeader>
+                    <CardHeader className="px-3 sm:px-6">
                       <CardTitle>Quick Start Guide</CardTitle>
                       <CardDescription>
                         Get started with the {providerInfo[provider].name} API
                       </CardDescription>
                     </CardHeader>
-                    <CardContent className="space-y-4">
+                    <CardContent className="space-y-4 px-3 sm:px-6">
                       <div>
                         <h4 className="mb-2 font-semibold">
                           1. Get Available Services
                         </h4>
                         <div className="relative">
-                          <pre className="bg-muted overflow-x-auto rounded-lg p-4 text-sm">
+                          <pre className="bg-muted rounded-lg p-4 pr-12 text-xs break-all whitespace-pre-wrap sm:overflow-x-auto sm:text-sm sm:break-normal sm:whitespace-pre">
                             <code>{`curl -X GET "${providerInfo[provider].endpoint}/services" \\
   -H "Authorization: Bearer YOUR_API_KEY"`}</code>
                           </pre>
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="absolute top-2 right-2 h-8 w-8"
+                            className="size-icon absolute top-2 right-2 h-8 !min-h-0 w-8 !p-0"
                             onClick={() =>
                               handleCopy(
                                 `curl -X GET "${providerInfo[provider].endpoint}/services" -H "Authorization: Bearer YOUR_API_KEY"`,
@@ -554,7 +555,7 @@ export default function APIAccess() {
                           2. Order SMS Activation
                         </h4>
                         <div className="relative">
-                          <pre className="bg-muted overflow-x-auto rounded-lg p-4 text-sm">
+                          <pre className="bg-muted rounded-lg p-4 pr-12 text-xs break-all whitespace-pre-wrap sm:overflow-x-auto sm:text-sm sm:break-normal sm:whitespace-pre">
                             <code>{`curl -X POST "${providerInfo[provider].endpoint}/activations" \\
   -H "Authorization: Bearer YOUR_API_KEY" \\
   -H "Content-Type: application/json" \\
@@ -563,7 +564,7 @@ export default function APIAccess() {
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="absolute top-2 right-2 h-8 w-8"
+                            className="size-icon absolute top-2 right-2 h-8 !min-h-0 w-8 !p-0"
                             onClick={() =>
                               handleCopy(
                                 `curl -X POST "${providerInfo[provider].endpoint}/activations" -H "Authorization: Bearer YOUR_API_KEY" -H "Content-Type: application/json" -d '{"service": "whatsapp", "country": "us", "provider": "${provider}"}'`,
@@ -581,14 +582,14 @@ export default function APIAccess() {
                           3. Check SMS Status
                         </h4>
                         <div className="relative">
-                          <pre className="bg-muted overflow-x-auto rounded-lg p-4 text-sm">
+                          <pre className="bg-muted rounded-lg p-4 pr-12 text-xs break-all whitespace-pre-wrap sm:overflow-x-auto sm:text-sm sm:break-normal sm:whitespace-pre">
                             <code>{`curl -X GET "${providerInfo[provider].endpoint}/activations/{id}" \\
   -H "Authorization: Bearer YOUR_API_KEY"`}</code>
                           </pre>
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="absolute top-2 right-2 h-8 w-8"
+                            className="size-icon absolute top-2 right-2 h-8 !min-h-0 w-8 !p-0"
                             onClick={() =>
                               handleCopy(
                                 `curl -X GET "${providerInfo[provider].endpoint}/activations/{id}" -H "Authorization: Bearer YOUR_API_KEY"`,
@@ -606,14 +607,14 @@ export default function APIAccess() {
                           4. Cancel Activation
                         </h4>
                         <div className="relative">
-                          <pre className="bg-muted overflow-x-auto rounded-lg p-4 text-sm">
+                          <pre className="bg-muted rounded-lg p-4 pr-12 text-xs break-all whitespace-pre-wrap sm:overflow-x-auto sm:text-sm sm:break-normal sm:whitespace-pre">
                             <code>{`curl -X DELETE "${providerInfo[provider].endpoint}/activations/{id}" \\
   -H "Authorization: Bearer YOUR_API_KEY"`}</code>
                           </pre>
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="absolute top-2 right-2 h-8 w-8"
+                            className="size-icon absolute top-2 right-2 h-8 !min-h-0 w-8 !p-0"
                             onClick={() =>
                               handleCopy(
                                 `curl -X DELETE "${providerInfo[provider].endpoint}/activations/{id}" -H "Authorization: Bearer YOUR_API_KEY"`,

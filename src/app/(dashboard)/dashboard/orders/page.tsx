@@ -42,6 +42,19 @@ import {
   formatPrice,
 } from '@/lib/api/smsApi';
 
+// Title-case the country name (backend sometimes returns "HONDURAS" or
+// "honduras"). Preserves intra-word punctuation but normalises case.
+const formatCountryName = (name?: string | null): string => {
+  if (!name) return 'Unknown';
+  return name
+    .toLowerCase()
+    .split(/(\s|-)/)
+    .map((part) =>
+      /\s|-/.test(part) ? part : part.charAt(0).toUpperCase() + part.slice(1),
+    )
+    .join('');
+};
+
 // Map provider tier to a customer-friendly label. Prefer the explicit
 // `version` enum from the backend (V1_STANDARD / V2 / V3); fall back to
 // name keyword matching for older orders that don't yet carry version.
@@ -310,7 +323,7 @@ export default function Orders() {
                               {order.country?.code
                                 ? getCountryFlag(order.country.code)
                                 : '🌍'}{' '}
-                              {order.country?.name || 'Unknown'}
+                              {formatCountryName(order.country?.name)}
                             </span>
                             <span>•</span>
                             <span className="truncate font-mono text-xs">
@@ -400,7 +413,7 @@ export default function Orders() {
 
       {/* Order Details Dialog */}
       <Dialog open={showDetailsDialog} onOpenChange={setShowDetailsDialog}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="w-[calc(100vw-1rem)] max-w-lg sm:w-full">
           <DialogHeader>
             <DialogTitle>Order Details</DialogTitle>
             <DialogDescription>Order ID: {selectedOrder?.id}</DialogDescription>
@@ -443,7 +456,7 @@ export default function Orders() {
                   {selectedOrder.country?.code
                     ? getCountryFlag(selectedOrder.country.code)
                     : '🌍'}{' '}
-                  {selectedOrder.country?.name || 'Unknown'}
+                  {formatCountryName(selectedOrder.country?.name)}
                 </span>
               </div>
 
