@@ -679,7 +679,7 @@ export default function AdminSeoPage() {
       </div>
 
       {/* Tabs */}
-      <div className="mb-6 flex items-center gap-2 overflow-x-auto pb-2">
+      <div className="mb-6 flex items-center gap-2 overflow-x-auto pb-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         <button
           onClick={() => handleTabChange('general')}
           className={`flex items-center gap-2 rounded-lg px-5 py-2.5 text-sm font-medium whitespace-nowrap transition-colors ${
@@ -761,7 +761,7 @@ export default function AdminSeoPage() {
       {/* General SEO Tab */}
       {activeTab === 'general' && (
         <div className="space-y-6">
-          <div className="rounded-xl border border-[rgba(255,255,255,0.1)] bg-[rgba(15,23,42,0.6)] p-6 backdrop-blur-xl">
+          <div className="rounded-xl border border-[rgba(255,255,255,0.1)] bg-[rgba(15,23,42,0.6)] p-4 backdrop-blur-xl sm:p-6">
             <h2 className="mb-6 text-xl font-semibold text-white">
               General SEO Settings
             </h2>
@@ -780,7 +780,7 @@ export default function AdminSeoPage() {
                       defaultMetaTitle: e.target.value,
                     })
                   }
-                  className="w-full rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.4)] px-4 py-3 text-sm text-white focus:ring-2 focus:ring-[#3B82F6] focus:outline-none"
+                  className="w-full rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.4)] px-4 py-3 text-base text-white focus:ring-2 focus:ring-[#3B82F6] focus:outline-none lg:text-sm"
                   placeholder="Enter default meta title"
                 />
                 <p className="mt-1 text-xs text-[#64748B]">
@@ -801,7 +801,7 @@ export default function AdminSeoPage() {
                       defaultMetaDescription: e.target.value,
                     })
                   }
-                  className="min-h-[100px] w-full resize-none rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.4)] px-4 py-3 text-sm text-white focus:ring-2 focus:ring-[#3B82F6] focus:outline-none"
+                  className="min-h-[100px] w-full resize-none rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.4)] px-4 py-3 text-base text-white focus:ring-2 focus:ring-[#3B82F6] focus:outline-none lg:text-sm"
                   placeholder="Enter default meta description"
                 />
                 <p className="mt-1 text-xs text-[#64748B]">
@@ -823,7 +823,7 @@ export default function AdminSeoPage() {
                       defaultKeywords: e.target.value,
                     })
                   }
-                  className="w-full rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.4)] px-4 py-3 text-sm text-white focus:ring-2 focus:ring-[#3B82F6] focus:outline-none"
+                  className="w-full rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.4)] px-4 py-3 text-base text-white focus:ring-2 focus:ring-[#3B82F6] focus:outline-none lg:text-sm"
                   placeholder="keyword1, keyword2, keyword3"
                 />
                 <p className="mt-1 text-xs text-[#64748B]">
@@ -844,7 +844,7 @@ export default function AdminSeoPage() {
                       canonicalUrl: e.target.value,
                     })
                   }
-                  className="w-full rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.4)] px-4 py-3 text-sm text-white focus:ring-2 focus:ring-[#3B82F6] focus:outline-none"
+                  className="w-full rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.4)] px-4 py-3 text-base text-white focus:ring-2 focus:ring-[#3B82F6] focus:outline-none lg:text-sm"
                   placeholder="https://example.com"
                 />
               </div>
@@ -858,7 +858,7 @@ export default function AdminSeoPage() {
                   onChange={(e) =>
                     setGeneralSEO({ ...generalSEO, robotsTxt: e.target.value })
                   }
-                  className="min-h-[150px] w-full resize-none rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.4)] px-4 py-3 font-mono text-sm text-white focus:ring-2 focus:ring-[#3B82F6] focus:outline-none"
+                  className="min-h-[150px] w-full resize-none rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.4)] px-4 py-3 font-mono text-base text-white focus:ring-2 focus:ring-[#3B82F6] focus:outline-none lg:text-sm"
                   placeholder="User-agent: *&#10;Allow: /"
                 />
               </div>
@@ -913,8 +913,8 @@ export default function AdminSeoPage() {
       {activeTab === 'pages' && (
         <div className="space-y-6">
           {/* Search and Actions */}
-          <div className="rounded-xl border border-[rgba(255,255,255,0.1)] bg-[rgba(15,23,42,0.6)] p-6 backdrop-blur-xl">
-            <div className="flex items-center gap-4">
+          <div className="rounded-xl border border-[rgba(255,255,255,0.1)] bg-[rgba(15,23,42,0.6)] p-4 backdrop-blur-xl sm:p-6">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
               <div className="relative flex-1">
                 <Search className="absolute top-1/2 left-4 h-5 w-5 -translate-y-1/2 transform text-[#64748B]" />
                 <input
@@ -922,30 +922,32 @@ export default function AdminSeoPage() {
                   value={pageSearchQuery}
                   onChange={(e) => setPageSearchQuery(e.target.value)}
                   placeholder="Search pages..."
-                  className="w-full rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.4)] py-3 pr-4 pl-12 text-sm text-white focus:ring-2 focus:ring-[#3B82F6] focus:outline-none"
+                  className="w-full rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.4)] py-3 pr-4 pl-12 text-base text-white focus:ring-2 focus:ring-[#3B82F6] focus:outline-none lg:text-sm"
                 />
               </div>
-              <button
-                onClick={() => setShowAddPageModal(true)}
-                className="flex items-center gap-2 rounded-lg bg-[#22C55E] px-4 py-3 text-sm font-medium text-white transition-colors hover:bg-[#16A34A]"
-              >
-                <Plus className="h-4 w-4" />
-                Add Page
-              </button>
-              <button
-                onClick={handleSeedDefaults}
-                disabled={isLoading}
-                className="flex items-center gap-2 rounded-lg bg-[rgba(255,255,255,0.08)] px-4 py-3 text-sm font-medium text-white transition-colors hover:bg-[rgba(255,255,255,0.12)] disabled:opacity-50"
-              >
-                <Wand2 className="h-4 w-4" />
-                Seed Defaults
-              </button>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => setShowAddPageModal(true)}
+                  className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-[#22C55E] px-4 py-3 text-sm font-medium text-white transition-colors hover:bg-[#16A34A] sm:flex-none sm:justify-start"
+                >
+                  <Plus className="h-4 w-4" />
+                  Add Page
+                </button>
+                <button
+                  onClick={handleSeedDefaults}
+                  disabled={isLoading}
+                  className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-[rgba(255,255,255,0.08)] px-4 py-3 text-sm font-medium text-white transition-colors hover:bg-[rgba(255,255,255,0.12)] disabled:opacity-50 sm:flex-none sm:justify-start"
+                >
+                  <Wand2 className="h-4 w-4" />
+                  Seed Defaults
+                </button>
+              </div>
             </div>
           </div>
 
           {/* Pages Table */}
           <div className="overflow-hidden rounded-xl border border-[rgba(255,255,255,0.1)] bg-[rgba(15,23,42,0.6)] backdrop-blur-xl">
-            <div className="border-b border-[rgba(255,255,255,0.1)] p-6">
+            <div className="border-b border-[rgba(255,255,255,0.1)] p-4 sm:p-6">
               <h2 className="text-xl font-semibold text-white">
                 Page-Level SEO
               </h2>
@@ -1062,24 +1064,22 @@ export default function AdminSeoPage() {
 
       {/* Sitemap Tab */}
       {activeTab === 'sitemap' && (
-        <div className="rounded-xl border border-[rgba(255,255,255,0.1)] bg-[rgba(15,23,42,0.6)] p-6 backdrop-blur-xl">
+        <div className="rounded-xl border border-[rgba(255,255,255,0.1)] bg-[rgba(15,23,42,0.6)] p-4 backdrop-blur-xl sm:p-6">
           <h2 className="mb-6 text-xl font-semibold text-white">
             Sitemap Management
           </h2>
 
           <div className="space-y-6">
-            <div className="rounded-lg border border-[rgba(255,255,255,0.1)] bg-[rgba(0,0,0,0.3)] p-6">
-              <div className="mb-4 flex items-center justify-between">
-                <div>
-                  <h3 className="mb-1 text-base font-semibold text-white">
-                    Sitemap URL
-                  </h3>
-                  <p className="text-sm text-[#64748B]">
-                    Your sitemap is accessible at this URL
-                  </p>
-                </div>
+            <div className="rounded-lg border border-[rgba(255,255,255,0.1)] bg-[rgba(0,0,0,0.3)] p-4 sm:p-6">
+              <div className="mb-4">
+                <h3 className="mb-1 text-base font-semibold text-white">
+                  Sitemap URL
+                </h3>
+                <p className="text-sm text-[#64748B]">
+                  Your sitemap is accessible at this URL
+                </p>
               </div>
-              <div className="flex items-center gap-3">
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
                 <input
                   type="text"
                   value={sitemapSettings.sitemapUrl}
@@ -1089,7 +1089,7 @@ export default function AdminSeoPage() {
                       sitemapUrl: e.target.value,
                     })
                   }
-                  className="flex-1 rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.4)] px-4 py-3 text-sm text-white focus:ring-2 focus:ring-[#3B82F6] focus:outline-none"
+                  className="w-full flex-1 rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.4)] px-4 py-3 text-base text-white focus:ring-2 focus:ring-[#3B82F6] focus:outline-none lg:text-sm"
                   placeholder="https://example.com/sitemap.xml"
                 />
                 <button
@@ -1097,7 +1097,7 @@ export default function AdminSeoPage() {
                     navigator.clipboard.writeText(sitemapSettings.sitemapUrl);
                     toast.success('Sitemap URL copied to clipboard!');
                   }}
-                  className="rounded-lg bg-[rgba(255,255,255,0.08)] px-4 py-3 text-sm font-medium text-white transition-colors hover:bg-[rgba(255,255,255,0.12)]"
+                  className="w-full rounded-lg bg-[rgba(255,255,255,0.08)] px-4 py-3 text-sm font-medium text-white transition-colors hover:bg-[rgba(255,255,255,0.12)] sm:w-auto"
                 >
                   Copy
                 </button>
@@ -1129,8 +1129,8 @@ export default function AdminSeoPage() {
               </label>
             </div>
 
-            <div className="rounded-lg border border-[rgba(255,255,255,0.1)] bg-[rgba(0,0,0,0.3)] p-6">
-              <div className="mb-4 flex items-center justify-between">
+            <div className="rounded-lg border border-[rgba(255,255,255,0.1)] bg-[rgba(0,0,0,0.3)] p-4 sm:p-6">
+              <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                   <h3 className="mb-1 text-base font-semibold text-white">
                     Generate Sitemap
@@ -1142,7 +1142,7 @@ export default function AdminSeoPage() {
                 <button
                   onClick={handleGenerateSitemap}
                   disabled={isLoading}
-                  className="flex items-center gap-2 rounded-lg bg-[#22C55E] px-6 py-3 text-sm font-medium text-white transition-colors hover:bg-[#16A34A] disabled:cursor-not-allowed disabled:opacity-50"
+                  className="flex w-full items-center justify-center gap-2 rounded-lg bg-[#22C55E] px-6 py-3 text-sm font-medium text-white transition-colors hover:bg-[#16A34A] disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto sm:justify-start"
                 >
                   {isLoading ? (
                     'Generating...'
@@ -1163,11 +1163,11 @@ export default function AdminSeoPage() {
             </div>
           </div>
 
-          <div className="mt-6 flex items-center justify-end gap-3 border-t border-[rgba(255,255,255,0.1)] pt-6">
+          <div className="mt-6 flex flex-col gap-3 border-t border-[rgba(255,255,255,0.1)] pt-6 sm:flex-row sm:items-center sm:justify-end sm:gap-4">
             <button
               onClick={handleSaveSitemapSettings}
               disabled={isLoading}
-              className="flex items-center gap-2 rounded-lg bg-[#3B82F6] px-6 py-3 text-sm font-medium text-white transition-colors hover:bg-[#2563EB] disabled:cursor-not-allowed disabled:opacity-50"
+              className="flex w-full items-center justify-center gap-2 rounded-lg bg-[#3B82F6] px-6 py-3 text-sm font-medium text-white transition-colors hover:bg-[#2563EB] disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto sm:justify-start"
             >
               {isLoading ? (
                 'Saving...'
@@ -1185,7 +1185,7 @@ export default function AdminSeoPage() {
       {/* Open Graph Tab */}
       {activeTab === 'opengraph' && (
         <div className="space-y-6">
-          <div className="rounded-xl border border-[rgba(255,255,255,0.1)] bg-[rgba(15,23,42,0.6)] p-6 backdrop-blur-xl">
+          <div className="rounded-xl border border-[rgba(255,255,255,0.1)] bg-[rgba(15,23,42,0.6)] p-4 backdrop-blur-xl sm:p-6">
             <h2 className="mb-6 text-xl font-semibold text-white">
               Open Graph & Social Media
             </h2>
@@ -1201,7 +1201,7 @@ export default function AdminSeoPage() {
                   onChange={(e) =>
                     setOpenGraph({ ...openGraph, title: e.target.value })
                   }
-                  className="w-full rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.4)] px-4 py-3 text-sm text-white focus:ring-2 focus:ring-[#3B82F6] focus:outline-none"
+                  className="w-full rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.4)] px-4 py-3 text-base text-white focus:ring-2 focus:ring-[#3B82F6] focus:outline-none lg:text-sm"
                   placeholder="Enter Open Graph title"
                 />
               </div>
@@ -1215,7 +1215,7 @@ export default function AdminSeoPage() {
                   onChange={(e) =>
                     setOpenGraph({ ...openGraph, description: e.target.value })
                   }
-                  className="min-h-[100px] w-full resize-none rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.4)] px-4 py-3 text-sm text-white focus:ring-2 focus:ring-[#3B82F6] focus:outline-none"
+                  className="min-h-[100px] w-full resize-none rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.4)] px-4 py-3 text-base text-white focus:ring-2 focus:ring-[#3B82F6] focus:outline-none lg:text-sm"
                   placeholder="Enter Open Graph description"
                 />
               </div>
@@ -1224,17 +1224,17 @@ export default function AdminSeoPage() {
                 <label className="mb-2 block text-sm font-medium text-white">
                   OG Image URL
                 </label>
-                <div className="flex gap-3">
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
                   <input
                     type="url"
                     value={openGraph.image}
                     onChange={(e) =>
                       setOpenGraph({ ...openGraph, image: e.target.value })
                     }
-                    className="flex-1 rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.4)] px-4 py-3 text-sm text-white focus:ring-2 focus:ring-[#3B82F6] focus:outline-none"
+                    className="w-full flex-1 rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.4)] px-4 py-3 text-base text-white focus:ring-2 focus:ring-[#3B82F6] focus:outline-none lg:text-sm"
                     placeholder="https://example.com/image.jpg"
                   />
-                  <button className="flex items-center gap-2 rounded-lg bg-[rgba(255,255,255,0.08)] px-4 py-3 text-sm font-medium text-white transition-colors hover:bg-[rgba(255,255,255,0.12)]">
+                  <button className="flex w-full items-center justify-center gap-2 rounded-lg bg-[rgba(255,255,255,0.08)] px-4 py-3 text-sm font-medium text-white transition-colors hover:bg-[rgba(255,255,255,0.12)] sm:w-auto sm:justify-start">
                     <Upload className="h-4 w-4" />
                     Upload
                   </button>
@@ -1288,7 +1288,7 @@ export default function AdminSeoPage() {
             </div>
 
             {/* Preview */}
-            <div className="mt-8 rounded-lg border border-[rgba(255,255,255,0.1)] bg-[rgba(0,0,0,0.3)] p-6">
+            <div className="mt-8 rounded-lg border border-[rgba(255,255,255,0.1)] bg-[rgba(0,0,0,0.3)] p-4 sm:p-6">
               <h3 className="mb-4 flex items-center gap-2 text-sm font-semibold text-white">
                 <Eye className="h-4 w-4" />
                 Social Media Preview
@@ -1333,7 +1333,7 @@ export default function AdminSeoPage() {
 
       {/* Performance Tab */}
       {activeTab === 'performance' && (
-        <div className="rounded-xl border border-[rgba(255,255,255,0.1)] bg-[rgba(15,23,42,0.6)] p-6 backdrop-blur-xl">
+        <div className="rounded-xl border border-[rgba(255,255,255,0.1)] bg-[rgba(15,23,42,0.6)] p-4 backdrop-blur-xl sm:p-6">
           <h2 className="mb-6 text-xl font-semibold text-white">
             Performance & Speed Optimization
           </h2>
@@ -1466,11 +1466,11 @@ export default function AdminSeoPage() {
             </div>
           </div>
 
-          <div className="mt-6 flex items-center justify-end gap-3 border-t border-[rgba(255,255,255,0.1)] pt-6">
+          <div className="mt-6 flex flex-col gap-3 border-t border-[rgba(255,255,255,0.1)] pt-6 sm:flex-row sm:items-center sm:justify-end sm:gap-4">
             <button
               onClick={handleSavePerformance}
               disabled={isLoading}
-              className="flex items-center gap-2 rounded-lg bg-[#3B82F6] px-6 py-3 text-sm font-medium text-white transition-colors hover:bg-[#2563EB] disabled:cursor-not-allowed disabled:opacity-50"
+              className="flex w-full items-center justify-center gap-2 rounded-lg bg-[#3B82F6] px-6 py-3 text-sm font-medium text-white transition-colors hover:bg-[#2563EB] disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto sm:justify-start"
             >
               {isLoading ? (
                 'Saving...'
@@ -1487,13 +1487,13 @@ export default function AdminSeoPage() {
 
       {/* Schema Tab */}
       {activeTab === 'schema' && (
-        <div className="rounded-xl border border-[rgba(255,255,255,0.1)] bg-[rgba(15,23,42,0.6)] p-6 backdrop-blur-xl">
+        <div className="rounded-xl border border-[rgba(255,255,255,0.1)] bg-[rgba(15,23,42,0.6)] p-4 backdrop-blur-xl sm:p-6">
           <h2 className="mb-6 text-xl font-semibold text-white">
             Structured Data (Schema Markup)
           </h2>
 
           <div className="space-y-6">
-            <div className="flex items-center gap-4">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:gap-4">
               <div className="flex-1">
                 <label className="mb-2 block text-sm font-medium text-white">
                   Schema Type
@@ -1502,7 +1502,7 @@ export default function AdminSeoPage() {
                   value={schema.type}
                   onValueChange={(v) => setSchema({ ...schema, type: v })}
                 >
-                  <SelectTrigger className="w-full rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.4)] px-4 py-3 text-sm text-white focus-visible:ring-2 focus-visible:ring-[#3B82F6] focus-visible:outline-none data-[size=default]:h-auto data-[size=default]:min-h-12">
+                  <SelectTrigger className="w-full rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.4)] px-4 py-3 text-base text-white focus-visible:ring-2 focus-visible:ring-[#3B82F6] focus-visible:outline-none data-[size=default]:h-auto data-[size=default]:min-h-12 lg:text-sm">
                     <SelectValue placeholder="Select schema type" />
                   </SelectTrigger>
                   <SelectContent className="max-h-72 border-[rgba(255,255,255,0.18)] bg-[#1E293B] text-white">
@@ -1535,7 +1535,7 @@ export default function AdminSeoPage() {
               </div>
               <button
                 onClick={handleGenerateSchema}
-                className="mt-7 flex items-center gap-2 rounded-lg bg-[#F59E0B] px-6 py-3 text-sm font-medium text-white transition-colors hover:bg-[#D97706]"
+                className="flex w-full items-center justify-center gap-2 rounded-lg bg-[#F59E0B] px-6 py-3 text-sm font-medium text-white transition-colors hover:bg-[#D97706] sm:w-auto sm:justify-start"
               >
                 <Wand2 className="h-4 w-4" />
                 Auto-Generate
@@ -1551,7 +1551,7 @@ export default function AdminSeoPage() {
                 onChange={(e) =>
                   setSchema({ ...schema, jsonLd: e.target.value })
                 }
-                className="min-h-[400px] w-full resize-none rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.4)] px-4 py-3 font-mono text-sm text-white focus:ring-2 focus:ring-[#3B82F6] focus:outline-none"
+                className="min-h-[400px] w-full resize-none rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.4)] px-4 py-3 font-mono text-base text-white focus:ring-2 focus:ring-[#3B82F6] focus:outline-none lg:text-sm"
                 placeholder="Enter JSON-LD schema..."
               />
               <p className="mt-2 text-xs text-[#64748B]">
@@ -1560,11 +1560,11 @@ export default function AdminSeoPage() {
             </div>
           </div>
 
-          <div className="mt-6 flex items-center justify-end gap-3 border-t border-[rgba(255,255,255,0.1)] pt-6">
+          <div className="mt-6 flex flex-col gap-3 border-t border-[rgba(255,255,255,0.1)] pt-6 sm:flex-row sm:items-center sm:justify-end sm:gap-4">
             <button
               onClick={handleSaveSchema}
               disabled={isLoading}
-              className="flex items-center gap-2 rounded-lg bg-[#3B82F6] px-6 py-3 text-sm font-medium text-white transition-colors hover:bg-[#2563EB] disabled:cursor-not-allowed disabled:opacity-50"
+              className="flex w-full items-center justify-center gap-2 rounded-lg bg-[#3B82F6] px-6 py-3 text-sm font-medium text-white transition-colors hover:bg-[#2563EB] disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto sm:justify-start"
             >
               {isLoading ? (
                 'Saving...'
@@ -1582,8 +1582,8 @@ export default function AdminSeoPage() {
       {/* SMS Services SEO Tab */}
       {activeTab === 'sms' && (
         <div className="space-y-6">
-          <div className="rounded-xl border border-[rgba(255,255,255,0.1)] bg-[rgba(15,23,42,0.6)] p-6 backdrop-blur-xl">
-            <div className="mb-6 flex items-center justify-between">
+          <div className="rounded-xl border border-[rgba(255,255,255,0.1)] bg-[rgba(15,23,42,0.6)] p-4 backdrop-blur-xl sm:p-6">
+            <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <h2 className="mb-2 text-xl font-semibold text-white">
                   SMS Services SEO Templates
@@ -1595,7 +1595,7 @@ export default function AdminSeoPage() {
               <button
                 onClick={handleGenerateAISEO}
                 disabled={isLoading}
-                className="flex items-center gap-2 rounded-lg bg-gradient-to-r from-[#8B5CF6] to-[#EC4899] px-6 py-3 text-sm font-medium text-white transition-all hover:from-[#7C3AED] hover:to-[#DB2777] disabled:cursor-not-allowed disabled:opacity-50"
+                className="flex w-full items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-[#8B5CF6] to-[#EC4899] px-6 py-3 text-sm font-medium text-white transition-all hover:from-[#7C3AED] hover:to-[#DB2777] disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto sm:justify-start"
               >
                 {isLoading ? (
                   'Generating...'
@@ -1643,7 +1643,7 @@ export default function AdminSeoPage() {
                       titleTemplate: e.target.value,
                     })
                   }
-                  className="w-full rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.4)] px-4 py-3 text-sm text-white focus:ring-2 focus:ring-[#3B82F6] focus:outline-none"
+                  className="w-full rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.4)] px-4 py-3 text-base text-white focus:ring-2 focus:ring-[#3B82F6] focus:outline-none lg:text-sm"
                   placeholder="{service} SMS Verification - {country} Virtual Number"
                 />
                 <div className="mt-2 rounded-lg border border-[rgba(255,255,255,0.1)] bg-[rgba(0,0,0,0.3)] p-3">
@@ -1666,7 +1666,7 @@ export default function AdminSeoPage() {
                       descriptionTemplate: e.target.value,
                     })
                   }
-                  className="min-h-[100px] w-full resize-none rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.4)] px-4 py-3 text-sm text-white focus:ring-2 focus:ring-[#3B82F6] focus:outline-none"
+                  className="min-h-[100px] w-full resize-none rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.4)] px-4 py-3 text-base text-white focus:ring-2 focus:ring-[#3B82F6] focus:outline-none lg:text-sm"
                   placeholder="Get instant {service} SMS verification with virtual numbers from {country}..."
                 />
                 <div className="mt-2 rounded-lg border border-[rgba(255,255,255,0.1)] bg-[rgba(0,0,0,0.3)] p-3">
@@ -1692,7 +1692,7 @@ export default function AdminSeoPage() {
                       keywordsTemplate: e.target.value,
                     })
                   }
-                  className="w-full rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.4)] px-4 py-3 text-sm text-white focus:ring-2 focus:ring-[#3B82F6] focus:outline-none"
+                  className="w-full rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.4)] px-4 py-3 text-base text-white focus:ring-2 focus:ring-[#3B82F6] focus:outline-none lg:text-sm"
                   placeholder="{service} sms, {country} virtual number, {service} verification..."
                 />
                 <div className="mt-2 rounded-lg border border-[rgba(255,255,255,0.1)] bg-[rgba(0,0,0,0.3)] p-3">
@@ -1705,11 +1705,11 @@ export default function AdminSeoPage() {
               </div>
             </div>
 
-            <div className="mt-6 flex items-center justify-end gap-3 border-t border-[rgba(255,255,255,0.1)] pt-6">
+            <div className="mt-6 flex flex-col gap-3 border-t border-[rgba(255,255,255,0.1)] pt-6 sm:flex-row sm:items-center sm:justify-end sm:gap-4">
               <button
                 onClick={handleSaveSMSSEO}
                 disabled={isLoading}
-                className="flex items-center gap-2 rounded-lg bg-[#3B82F6] px-6 py-3 text-sm font-medium text-white transition-colors hover:bg-[#2563EB] disabled:cursor-not-allowed disabled:opacity-50"
+                className="flex w-full items-center justify-center gap-2 rounded-lg bg-[#3B82F6] px-6 py-3 text-sm font-medium text-white transition-colors hover:bg-[#2563EB] disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto sm:justify-start"
               >
                 {isLoading ? (
                   'Saving...'
@@ -1747,7 +1747,7 @@ export default function AdminSeoPage() {
                       metaTitle: e.target.value,
                     })
                   }
-                  className="w-full rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.4)] px-4 py-3 text-sm text-white focus:ring-2 focus:ring-[#3B82F6] focus:outline-none"
+                  className="w-full rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.4)] px-4 py-3 text-base text-white focus:ring-2 focus:ring-[#3B82F6] focus:outline-none lg:text-sm"
                   placeholder="Enter meta title"
                 />
                 <p className="mt-1 text-xs text-[#64748B]">
@@ -1767,7 +1767,7 @@ export default function AdminSeoPage() {
                       metaDescription: e.target.value,
                     })
                   }
-                  className="min-h-[100px] w-full resize-none rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.4)] px-4 py-3 text-sm text-white focus:ring-2 focus:ring-[#3B82F6] focus:outline-none"
+                  className="min-h-[100px] w-full resize-none rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.4)] px-4 py-3 text-base text-white focus:ring-2 focus:ring-[#3B82F6] focus:outline-none lg:text-sm"
                   placeholder="Enter meta description"
                 />
                 <p className="mt-1 text-xs text-[#64748B]">
@@ -1788,7 +1788,7 @@ export default function AdminSeoPage() {
                       keywords: e.target.value,
                     })
                   }
-                  className="w-full rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.4)] px-4 py-3 text-sm text-white focus:ring-2 focus:ring-[#3B82F6] focus:outline-none"
+                  className="w-full rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.4)] px-4 py-3 text-base text-white focus:ring-2 focus:ring-[#3B82F6] focus:outline-none lg:text-sm"
                   placeholder="keyword1, keyword2, keyword3"
                 />
               </div>
@@ -1806,7 +1806,7 @@ export default function AdminSeoPage() {
                       canonicalUrl: e.target.value,
                     })
                   }
-                  className="w-full rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.4)] px-4 py-3 text-sm text-white focus:ring-2 focus:ring-[#3B82F6] focus:outline-none"
+                  className="w-full rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.4)] px-4 py-3 text-base text-white focus:ring-2 focus:ring-[#3B82F6] focus:outline-none lg:text-sm"
                   placeholder="https://example.com/page"
                 />
               </div>
@@ -1885,7 +1885,7 @@ export default function AdminSeoPage() {
                   onChange={(e) =>
                     setNewPage({ ...newPage, url: e.target.value })
                   }
-                  className="w-full rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.4)] px-4 py-3 text-sm text-white focus:ring-2 focus:ring-[#3B82F6] focus:outline-none"
+                  className="w-full rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.4)] px-4 py-3 text-base text-white focus:ring-2 focus:ring-[#3B82F6] focus:outline-none lg:text-sm"
                   placeholder="e.g., /about or /services/*"
                 />
                 <p className="mt-1 text-xs text-[#64748B]">
@@ -1903,7 +1903,7 @@ export default function AdminSeoPage() {
                   onChange={(e) =>
                     setNewPage({ ...newPage, metaTitle: e.target.value })
                   }
-                  className="w-full rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.4)] px-4 py-3 text-sm text-white focus:ring-2 focus:ring-[#3B82F6] focus:outline-none"
+                  className="w-full rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.4)] px-4 py-3 text-base text-white focus:ring-2 focus:ring-[#3B82F6] focus:outline-none lg:text-sm"
                   placeholder="Enter meta title"
                 />
                 <p className="mt-1 text-xs text-[#64748B]">
@@ -1920,7 +1920,7 @@ export default function AdminSeoPage() {
                   onChange={(e) =>
                     setNewPage({ ...newPage, metaDescription: e.target.value })
                   }
-                  className="min-h-[100px] w-full resize-none rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.4)] px-4 py-3 text-sm text-white focus:ring-2 focus:ring-[#3B82F6] focus:outline-none"
+                  className="min-h-[100px] w-full resize-none rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.4)] px-4 py-3 text-base text-white focus:ring-2 focus:ring-[#3B82F6] focus:outline-none lg:text-sm"
                   placeholder="Enter meta description"
                 />
                 <p className="mt-1 text-xs text-[#64748B]">
@@ -1939,7 +1939,7 @@ export default function AdminSeoPage() {
                   onChange={(e) =>
                     setNewPage({ ...newPage, keywords: e.target.value })
                   }
-                  className="w-full rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.4)] px-4 py-3 text-sm text-white focus:ring-2 focus:ring-[#3B82F6] focus:outline-none"
+                  className="w-full rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.4)] px-4 py-3 text-base text-white focus:ring-2 focus:ring-[#3B82F6] focus:outline-none lg:text-sm"
                   placeholder="keyword1, keyword2, keyword3"
                 />
               </div>
@@ -1954,7 +1954,7 @@ export default function AdminSeoPage() {
                   onChange={(e) =>
                     setNewPage({ ...newPage, canonicalUrl: e.target.value })
                   }
-                  className="w-full rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.4)] px-4 py-3 text-sm text-white focus:ring-2 focus:ring-[#3B82F6] focus:outline-none"
+                  className="w-full rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.4)] px-4 py-3 text-base text-white focus:ring-2 focus:ring-[#3B82F6] focus:outline-none lg:text-sm"
                   placeholder="https://example.com/page"
                 />
               </div>
