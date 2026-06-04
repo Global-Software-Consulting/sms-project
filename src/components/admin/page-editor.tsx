@@ -94,7 +94,7 @@ export function PageEditor() {
     const fullKey = buildKey(activePage.slug, sectionKey, field.key);
     const value = values[fullKey] ?? field.defaultValue ?? '';
     const common =
-      'w-full bg-[rgba(0,0,0,0.4)] border border-[rgba(255,255,255,0.18)] rounded-lg px-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#3B82F6]';
+      'w-full bg-[rgba(0,0,0,0.4)] border border-[rgba(255,255,255,0.18)] rounded-lg px-4 py-3 text-white text-base lg:text-sm focus:outline-none focus:ring-2 focus:ring-[#3B82F6]';
 
     return (
       <div key={fullKey}>
@@ -130,7 +130,7 @@ export function PageEditor() {
   return (
     <div className="max-w-5xl">
       {/* Page header */}
-      <div className="mb-6 rounded-xl border border-[rgba(255,255,255,0.1)] bg-[rgba(15,23,42,0.6)] p-8 backdrop-blur-xl">
+      <div className="mb-6 rounded-xl border border-[rgba(255,255,255,0.1)] bg-[rgba(15,23,42,0.6)] p-4 backdrop-blur-xl sm:p-8">
         <h2 className="mb-2 text-2xl font-semibold text-white">Page Edit</h2>
         <p className="text-sm text-[#94A3B8]">
           Edit every section of every public-facing page from one place. Saves
@@ -139,7 +139,7 @@ export function PageEditor() {
       </div>
 
       {/* Page picker */}
-      <div className="mb-6 rounded-xl border border-[rgba(255,255,255,0.1)] bg-[rgba(15,23,42,0.6)] p-6 backdrop-blur-xl">
+      <div className="mb-6 rounded-xl border border-[rgba(255,255,255,0.1)] bg-[rgba(15,23,42,0.6)] p-4 backdrop-blur-xl sm:p-6">
         <h3 className="mb-3 text-sm font-medium text-[#94A3B8]">
           Choose a page
         </h3>
@@ -172,7 +172,7 @@ export function PageEditor() {
           {activePage.sections.map((section) => (
             <div
               key={`${activePage.slug}-${section.key}`}
-              className="mb-6 rounded-xl border border-[rgba(255,255,255,0.1)] bg-[rgba(15,23,42,0.6)] p-8 backdrop-blur-xl"
+              className="mb-6 rounded-xl border border-[rgba(255,255,255,0.1)] bg-[rgba(15,23,42,0.6)] p-4 backdrop-blur-xl sm:p-8"
             >
               <h3 className="mb-1 text-lg font-semibold text-white">
                 {section.title}
@@ -188,18 +188,18 @@ export function PageEditor() {
             </div>
           ))}
 
-          <div className="flex items-center justify-end gap-3">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-end sm:gap-4">
             <button
               onClick={fetchAll}
               disabled={isSaving}
-              className="rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(255,255,255,0.08)] px-6 py-3 text-sm font-medium text-white transition-colors hover:bg-[rgba(255,255,255,0.12)] disabled:opacity-50"
+              className="flex w-full items-center justify-center rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(255,255,255,0.08)] px-6 py-3 text-sm font-medium text-white transition-colors hover:bg-[rgba(255,255,255,0.12)] disabled:opacity-50 sm:w-auto sm:justify-start"
             >
               Reset
             </button>
             <button
               onClick={handleSave}
               disabled={isSaving}
-              className="inline-flex items-center gap-2 rounded-lg bg-[#3B82F6] px-6 py-3 text-sm font-medium text-white transition-colors hover:bg-[#2563EB] disabled:cursor-not-allowed disabled:opacity-50"
+              className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-[#3B82F6] px-6 py-3 text-sm font-medium text-white transition-colors hover:bg-[#2563EB] disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto sm:justify-start"
             >
               {isSaving && <Loader2 className="h-4 w-4 animate-spin" />}
               {isSaving ? 'Saving...' : `Save ${activePage.label}`}

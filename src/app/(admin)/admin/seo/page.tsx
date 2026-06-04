@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useEffect, useCallback } from "react";
-import { useSearchParams } from "next/navigation";
-import { toast } from "sonner";
+import { useState, useEffect, useCallback } from 'react';
+import { useSearchParams } from 'next/navigation';
+import { toast } from 'sonner';
 import {
   Save,
   Search,
@@ -22,7 +22,7 @@ import {
   Plus,
   Trash2,
   Loader2,
-} from "lucide-react";
+} from 'lucide-react';
 import {
   getAllSeoSettings,
   upsertSeoSettings,
@@ -31,11 +31,15 @@ import {
   transformToPageSEO,
   transformToApiFormat,
   type SeoSettings,
-} from "@/lib/api/seoApi";
+} from '@/lib/api/seoApi';
+import { bulkUpdateSettings, getGroupedSettings } from '@/lib/api/settingsApi';
 import {
-  bulkUpdateSettings,
-  getGroupedSettings,
-} from "@/lib/api/settingsApi";
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 interface PageSEO {
   id: string;
@@ -64,17 +68,33 @@ interface StructuredData {
   jsonLd: string;
 }
 
-type SeoTabType = "general" | "pages" | "sitemap" | "opengraph" | "performance" | "schema" | "sms";
+type SeoTabType =
+  | 'general'
+  | 'pages'
+  | 'sitemap'
+  | 'opengraph'
+  | 'performance'
+  | 'schema'
+  | 'sms';
 
-const validSeoTabs: SeoTabType[] = ["general", "pages", "sitemap", "opengraph", "performance", "schema", "sms"];
+const validSeoTabs: SeoTabType[] = [
+  'general',
+  'pages',
+  'sitemap',
+  'opengraph',
+  'performance',
+  'schema',
+  'sms',
+];
 
 export default function AdminSeoPage() {
   const searchParams = useSearchParams();
-  
+
   // Get initial tab from URL or default to "general"
   const tabFromUrl = searchParams.get('tab') as SeoTabType | null;
-  const initialTab: SeoTabType = tabFromUrl && validSeoTabs.includes(tabFromUrl) ? tabFromUrl : "general";
-  
+  const initialTab: SeoTabType =
+    tabFromUrl && validSeoTabs.includes(tabFromUrl) ? tabFromUrl : 'general';
+
   const [activeTab, setActiveTab] = useState<SeoTabType>(initialTab);
   const [isLoading, setIsLoading] = useState(false);
   const [isPageLoading, setIsPageLoading] = useState(true);
@@ -88,11 +108,12 @@ export default function AdminSeoPage() {
 
   // General SEO State
   const [generalSEO, setGeneralSEO] = useState({
-    defaultMetaTitle: "SMS Activation Service - Get Virtual Phone Numbers",
+    defaultMetaTitle: 'SMS Activation Service - Get Virtual Phone Numbers',
     defaultMetaDescription:
-      "Get instant SMS verification numbers from 150+ countries. Secure, reliable, and affordable SMS activation service for all major platforms.",
-    defaultKeywords: "sms activation, virtual phone number, sms verification, temporary phone number",
-    canonicalUrl: "https://smsportal.com",
+      'Get instant SMS verification numbers from 150+ countries. Secure, reliable, and affordable SMS activation service for all major platforms.',
+    defaultKeywords:
+      'sms activation, virtual phone number, sms verification, temporary phone number',
+    canonicalUrl: 'https://smsportal.com',
     robotsTxt: `User-agent: *\nAllow: /\nDisallow: /admin/\nDisallow: /api/\n\nSitemap: https://smsportal.com/sitemap.xml`,
     indexingEnabled: true,
   });
@@ -119,19 +140,19 @@ export default function AdminSeoPage() {
   const fetchAllSeoSettings = useCallback(async () => {
     try {
       const grouped = await getGroupedSettings();
-      
+
       // Check both 'seo' category and 'general' category for seo_ prefixed keys
       // (for backward compatibility with existing data)
       const seoSettings = grouped['seo'] || [];
       const generalSettings = grouped['general'] || [];
-      
+
       const settingsMap: Record<string, string> = {};
-      
+
       // First add from seo category
       seoSettings.forEach((s) => {
         settingsMap[s.key] = s.value;
       });
-      
+
       // Then add seo_ prefixed keys from general category (if not already present)
       generalSettings.forEach((s) => {
         if (s.key.startsWith('seo_') && !settingsMap[s.key]) {
@@ -142,10 +163,15 @@ export default function AdminSeoPage() {
       if (Object.keys(settingsMap).length > 0) {
         // General SEO
         setGeneralSEO({
-          defaultMetaTitle: settingsMap['seo_default_title'] || generalSEO.defaultMetaTitle,
-          defaultMetaDescription: settingsMap['seo_default_description'] || generalSEO.defaultMetaDescription,
-          defaultKeywords: settingsMap['seo_default_keywords'] || generalSEO.defaultKeywords,
-          canonicalUrl: settingsMap['seo_canonical_url'] || generalSEO.canonicalUrl,
+          defaultMetaTitle:
+            settingsMap['seo_default_title'] || generalSEO.defaultMetaTitle,
+          defaultMetaDescription:
+            settingsMap['seo_default_description'] ||
+            generalSEO.defaultMetaDescription,
+          defaultKeywords:
+            settingsMap['seo_default_keywords'] || generalSEO.defaultKeywords,
+          canonicalUrl:
+            settingsMap['seo_canonical_url'] || generalSEO.canonicalUrl,
           robotsTxt: settingsMap['seo_robots_txt'] || generalSEO.robotsTxt,
           indexingEnabled: settingsMap['seo_indexing_enabled'] !== 'false',
         });
@@ -153,14 +179,18 @@ export default function AdminSeoPage() {
         // Sitemap Settings
         setSitemapSettings({
           autoUpdate: settingsMap['seo_sitemap_auto_update'] !== 'false',
-          lastGenerated: settingsMap['seo_sitemap_last_generated'] || sitemapSettings.lastGenerated,
-          sitemapUrl: settingsMap['seo_sitemap_url'] || sitemapSettings.sitemapUrl,
+          lastGenerated:
+            settingsMap['seo_sitemap_last_generated'] ||
+            sitemapSettings.lastGenerated,
+          sitemapUrl:
+            settingsMap['seo_sitemap_url'] || sitemapSettings.sitemapUrl,
         });
 
         // Open Graph Settings
         setOpenGraph({
           title: settingsMap['seo_og_title'] || openGraph.title,
-          description: settingsMap['seo_og_description'] || openGraph.description,
+          description:
+            settingsMap['seo_og_description'] || openGraph.description,
           image: settingsMap['seo_og_image'] || openGraph.image,
           twitterCard: settingsMap['seo_twitter_card'] || openGraph.twitterCard,
         });
@@ -171,11 +201,15 @@ export default function AdminSeoPage() {
           minifyCss: settingsMap['seo_perf_minify_css'] !== 'false',
           minifyJs: settingsMap['seo_perf_minify_js'] !== 'false',
           lazyLoad: settingsMap['seo_perf_lazy_load'] !== 'false',
-          imageOptimization: settingsMap['seo_perf_image_optimization'] !== 'false',
+          imageOptimization:
+            settingsMap['seo_perf_image_optimization'] !== 'false',
         });
 
         // Schema Settings
-        if (settingsMap['seo_schema_type'] || settingsMap['seo_schema_jsonld']) {
+        if (
+          settingsMap['seo_schema_type'] ||
+          settingsMap['seo_schema_jsonld']
+        ) {
           setSchema({
             type: settingsMap['seo_schema_type'] || schema.type,
             jsonLd: settingsMap['seo_schema_jsonld'] || schema.jsonLd,
@@ -183,11 +217,20 @@ export default function AdminSeoPage() {
         }
 
         // SMS SEO Templates
-        if (settingsMap['seo_sms_title_template'] || settingsMap['seo_sms_description_template']) {
+        if (
+          settingsMap['seo_sms_title_template'] ||
+          settingsMap['seo_sms_description_template']
+        ) {
           setSmsSeoTemplate({
-            titleTemplate: settingsMap['seo_sms_title_template'] || smsSeoTemplate.titleTemplate,
-            descriptionTemplate: settingsMap['seo_sms_description_template'] || smsSeoTemplate.descriptionTemplate,
-            keywordsTemplate: settingsMap['seo_sms_keywords_template'] || smsSeoTemplate.keywordsTemplate,
+            titleTemplate:
+              settingsMap['seo_sms_title_template'] ||
+              smsSeoTemplate.titleTemplate,
+            descriptionTemplate:
+              settingsMap['seo_sms_description_template'] ||
+              smsSeoTemplate.descriptionTemplate,
+            keywordsTemplate:
+              settingsMap['seo_sms_keywords_template'] ||
+              smsSeoTemplate.keywordsTemplate,
           });
         }
       }
@@ -203,21 +246,22 @@ export default function AdminSeoPage() {
 
   const [showEditPageModal, setShowEditPageModal] = useState(false);
   const [selectedPage, setSelectedPage] = useState<PageSEO | null>(null);
-  const [pageSearchQuery, setPageSearchQuery] = useState("");
+  const [pageSearchQuery, setPageSearchQuery] = useState('');
 
   // Sitemap State
   const [sitemapSettings, setSitemapSettings] = useState({
     autoUpdate: true,
-    lastGenerated: "2025-03-28",
-    sitemapUrl: "https://smsportal.com/sitemap.xml",
+    lastGenerated: '2025-03-28',
+    sitemapUrl: 'https://smsportal.com/sitemap.xml',
   });
 
   // Open Graph State
   const [openGraph, setOpenGraph] = useState<OpenGraphData>({
-    title: "SMS Activation Service - Get Virtual Phone Numbers",
-    description: "Get instant SMS verification numbers from 150+ countries. Secure and affordable.",
-    image: "https://smsportal.com/og-image.jpg",
-    twitterCard: "summary_large_image",
+    title: 'SMS Activation Service - Get Virtual Phone Numbers',
+    description:
+      'Get instant SMS verification numbers from 150+ countries. Secure and affordable.',
+    image: 'https://smsportal.com/og-image.jpg',
+    twitterCard: 'summary_large_image',
   });
 
   // Performance State
@@ -231,7 +275,7 @@ export default function AdminSeoPage() {
 
   // Schema State
   const [schema, setSchema] = useState<StructuredData>({
-    type: "Organization",
+    type: 'Organization',
     jsonLd: `{
   "@context": "https://schema.org",
   "@type": "Organization",
@@ -249,10 +293,11 @@ export default function AdminSeoPage() {
 
   // SMS Services SEO State
   const [smsSeoTemplate, setSmsSeoTemplate] = useState({
-    titleTemplate: "{service} SMS Verification - {country} Virtual Number",
+    titleTemplate: '{service} SMS Verification - {country} Virtual Number',
     descriptionTemplate:
-      "Get instant {service} SMS verification with virtual numbers from {country}. Fast, reliable, and secure activation service starting at $0.50.",
-    keywordsTemplate: "{service} sms, {country} virtual number, {service} verification, {country} phone number",
+      'Get instant {service} SMS verification with virtual numbers from {country}. Fast, reliable, and secure activation service starting at $0.50.',
+    keywordsTemplate:
+      '{service} sms, {country} virtual number, {service} verification, {country} phone number',
   });
 
   // State for adding new page
@@ -265,7 +310,9 @@ export default function AdminSeoPage() {
     canonicalUrl: '',
     indexed: true,
   });
-  const [deleteConfirmPage, setDeleteConfirmPage] = useState<PageSEO | null>(null);
+  const [deleteConfirmPage, setDeleteConfirmPage] = useState<PageSEO | null>(
+    null,
+  );
 
   // Handlers
   const handleSaveGeneralSEO = async () => {
@@ -274,19 +321,25 @@ export default function AdminSeoPage() {
       await bulkUpdateSettings({
         settings: [
           { key: 'seo_default_title', value: generalSEO.defaultMetaTitle },
-          { key: 'seo_default_description', value: generalSEO.defaultMetaDescription },
+          {
+            key: 'seo_default_description',
+            value: generalSEO.defaultMetaDescription,
+          },
           { key: 'seo_default_keywords', value: generalSEO.defaultKeywords },
           { key: 'seo_canonical_url', value: generalSEO.canonicalUrl },
           { key: 'seo_robots_txt', value: generalSEO.robotsTxt },
-          { key: 'seo_indexing_enabled', value: String(generalSEO.indexingEnabled) },
+          {
+            key: 'seo_indexing_enabled',
+            value: String(generalSEO.indexingEnabled),
+          },
         ],
       });
       // Re-fetch to confirm save
       await fetchAllSeoSettings();
-      toast.success("General SEO settings saved successfully!");
+      toast.success('General SEO settings saved successfully!');
     } catch (error) {
       console.error('Failed to save general SEO settings:', error);
-      toast.error("Failed to save settings. Please try again.");
+      toast.error('Failed to save settings. Please try again.');
     } finally {
       setIsLoading(false);
     }
@@ -304,14 +357,14 @@ export default function AdminSeoPage() {
     try {
       const apiData = transformToApiFormat(selectedPage);
       await upsertSeoSettings(apiData);
-      
+
       setPages(pages.map((p) => (p.id === selectedPage.id ? selectedPage : p)));
-      toast.success("Page SEO updated successfully!");
+      toast.success('Page SEO updated successfully!');
       setShowEditPageModal(false);
       setSelectedPage(null);
     } catch (error) {
       console.error('Failed to save page SEO:', error);
-      toast.error("Failed to save page SEO. Please try again.");
+      toast.error('Failed to save page SEO. Please try again.');
     } finally {
       setIsLoading(false);
     }
@@ -319,7 +372,7 @@ export default function AdminSeoPage() {
 
   const handleAddPage = async () => {
     if (!newPage.url) {
-      toast.error("Page URL is required");
+      toast.error('Page URL is required');
       return;
     }
 
@@ -328,9 +381,9 @@ export default function AdminSeoPage() {
       const apiData = transformToApiFormat(newPage as PageSEO);
       const created = await upsertSeoSettings(apiData);
       const transformedPage = transformToPageSEO(created);
-      
+
       setPages([...pages, transformedPage]);
-      toast.success("Page SEO created successfully!");
+      toast.success('Page SEO created successfully!');
       setShowAddPageModal(false);
       setNewPage({
         url: '',
@@ -342,7 +395,7 @@ export default function AdminSeoPage() {
       });
     } catch (error) {
       console.error('Failed to create page SEO:', error);
-      toast.error("Failed to create page SEO. Please try again.");
+      toast.error('Failed to create page SEO. Please try again.');
     } finally {
       setIsLoading(false);
     }
@@ -353,11 +406,11 @@ export default function AdminSeoPage() {
     try {
       await deleteSeoSettings(page.url);
       setPages(pages.filter((p) => p.id !== page.id));
-      toast.success("Page SEO deleted successfully!");
+      toast.success('Page SEO deleted successfully!');
       setDeleteConfirmPage(null);
     } catch (error) {
       console.error('Failed to delete page SEO:', error);
-      toast.error("Failed to delete page SEO. Please try again.");
+      toast.error('Failed to delete page SEO. Please try again.');
     } finally {
       setIsLoading(false);
     }
@@ -371,11 +424,11 @@ export default function AdminSeoPage() {
         toast.success(`Created ${result.created.length} default SEO settings`);
         await fetchSeoSettings();
       } else {
-        toast.info("All default settings already exist");
+        toast.info('All default settings already exist');
       }
     } catch (error) {
       console.error('Failed to seed defaults:', error);
-      toast.error("Failed to seed default settings");
+      toast.error('Failed to seed default settings');
     } finally {
       setIsLoading(false);
     }
@@ -386,15 +439,18 @@ export default function AdminSeoPage() {
     try {
       await bulkUpdateSettings({
         settings: [
-          { key: 'seo_sitemap_auto_update', value: String(sitemapSettings.autoUpdate) },
+          {
+            key: 'seo_sitemap_auto_update',
+            value: String(sitemapSettings.autoUpdate),
+          },
           { key: 'seo_sitemap_url', value: sitemapSettings.sitemapUrl },
         ],
       });
       await fetchAllSeoSettings();
-      toast.success("Sitemap settings saved successfully!");
+      toast.success('Sitemap settings saved successfully!');
     } catch (error) {
       console.error('Failed to save sitemap settings:', error);
-      toast.error("Failed to save sitemap settings. Please try again.");
+      toast.error('Failed to save sitemap settings. Please try again.');
     } finally {
       setIsLoading(false);
     }
@@ -403,20 +459,18 @@ export default function AdminSeoPage() {
   const handleGenerateSitemap = async () => {
     setIsLoading(true);
     try {
-      const newDate = new Date().toISOString().split("T")[0];
+      const newDate = new Date().toISOString().split('T')[0];
       await bulkUpdateSettings({
-        settings: [
-          { key: 'seo_sitemap_last_generated', value: newDate },
-        ],
+        settings: [{ key: 'seo_sitemap_last_generated', value: newDate }],
       });
       setSitemapSettings({
         ...sitemapSettings,
         lastGenerated: newDate,
       });
-      toast.success("Sitemap generated successfully!");
+      toast.success('Sitemap generated successfully!');
     } catch (error) {
       console.error('Failed to generate sitemap:', error);
-      toast.error("Failed to generate sitemap. Please try again.");
+      toast.error('Failed to generate sitemap. Please try again.');
     } finally {
       setIsLoading(false);
     }
@@ -434,10 +488,10 @@ export default function AdminSeoPage() {
         ],
       });
       await fetchAllSeoSettings();
-      toast.success("Open Graph settings saved successfully!");
+      toast.success('Open Graph settings saved successfully!');
     } catch (error) {
       console.error('Failed to save Open Graph settings:', error);
-      toast.error("Failed to save Open Graph settings. Please try again.");
+      toast.error('Failed to save Open Graph settings. Please try again.');
     } finally {
       setIsLoading(false);
     }
@@ -452,14 +506,17 @@ export default function AdminSeoPage() {
           { key: 'seo_perf_minify_css', value: String(performance.minifyCss) },
           { key: 'seo_perf_minify_js', value: String(performance.minifyJs) },
           { key: 'seo_perf_lazy_load', value: String(performance.lazyLoad) },
-          { key: 'seo_perf_image_optimization', value: String(performance.imageOptimization) },
+          {
+            key: 'seo_perf_image_optimization',
+            value: String(performance.imageOptimization),
+          },
         ],
       });
       await fetchAllSeoSettings();
-      toast.success("Performance settings saved successfully!");
+      toast.success('Performance settings saved successfully!');
     } catch (error) {
       console.error('Failed to save performance settings:', error);
-      toast.error("Failed to save performance settings. Please try again.");
+      toast.error('Failed to save performance settings. Please try again.');
     } finally {
       setIsLoading(false);
     }
@@ -475,10 +532,10 @@ export default function AdminSeoPage() {
         ],
       });
       await fetchAllSeoSettings();
-      toast.success("Structured data saved successfully!");
+      toast.success('Structured data saved successfully!');
     } catch (error) {
       console.error('Failed to save schema:', error);
-      toast.error("Failed to save structured data. Please try again.");
+      toast.error('Failed to save structured data. Please try again.');
     } finally {
       setIsLoading(false);
     }
@@ -542,15 +599,24 @@ export default function AdminSeoPage() {
     try {
       await bulkUpdateSettings({
         settings: [
-          { key: 'seo_sms_title_template', value: smsSeoTemplate.titleTemplate },
-          { key: 'seo_sms_description_template', value: smsSeoTemplate.descriptionTemplate },
-          { key: 'seo_sms_keywords_template', value: smsSeoTemplate.keywordsTemplate },
+          {
+            key: 'seo_sms_title_template',
+            value: smsSeoTemplate.titleTemplate,
+          },
+          {
+            key: 'seo_sms_description_template',
+            value: smsSeoTemplate.descriptionTemplate,
+          },
+          {
+            key: 'seo_sms_keywords_template',
+            value: smsSeoTemplate.keywordsTemplate,
+          },
         ],
       });
-      toast.success("SMS Services SEO templates saved successfully!");
+      toast.success('SMS Services SEO templates saved successfully!');
     } catch (error) {
       console.error('Failed to save SMS SEO templates:', error);
-      toast.error("Failed to save SMS SEO templates. Please try again.");
+      toast.error('Failed to save SMS SEO templates. Please try again.');
     } finally {
       setIsLoading(false);
     }
@@ -561,27 +627,34 @@ export default function AdminSeoPage() {
     try {
       // Generate AI-optimized templates
       const newTemplates = {
-        titleTemplate: "{service} SMS Activation - Buy {country} Virtual Number | SMS Portal",
+        titleTemplate:
+          '{service} SMS Activation - Buy {country} Virtual Number | SMS Portal',
         descriptionTemplate:
-          "Instant {service} verification with premium {country} virtual numbers. 99.9% success rate, 24/7 support, instant delivery. Get your {service} SMS number from {country} starting at $0.50.",
+          'Instant {service} verification with premium {country} virtual numbers. 99.9% success rate, 24/7 support, instant delivery. Get your {service} SMS number from {country} starting at $0.50.',
         keywordsTemplate:
-          "{service} sms activation, {country} virtual number, buy {service} number, {country} phone verification, {service} sms receive, temporary {country} number",
+          '{service} sms activation, {country} virtual number, buy {service} number, {country} phone verification, {service} sms receive, temporary {country} number',
       };
 
       // Save the generated templates
       await bulkUpdateSettings({
         settings: [
           { key: 'seo_sms_title_template', value: newTemplates.titleTemplate },
-          { key: 'seo_sms_description_template', value: newTemplates.descriptionTemplate },
-          { key: 'seo_sms_keywords_template', value: newTemplates.keywordsTemplate },
+          {
+            key: 'seo_sms_description_template',
+            value: newTemplates.descriptionTemplate,
+          },
+          {
+            key: 'seo_sms_keywords_template',
+            value: newTemplates.keywordsTemplate,
+          },
         ],
       });
 
       setSmsSeoTemplate(newTemplates);
-      toast.success("AI-optimized SEO content generated and saved!");
+      toast.success('AI-optimized SEO content generated and saved!');
     } catch (error) {
       console.error('Failed to generate AI SEO:', error);
-      toast.error("Failed to generate AI SEO content. Please try again.");
+      toast.error('Failed to generate AI SEO content. Please try again.');
     } finally {
       setIsLoading(false);
     }
@@ -590,196 +663,243 @@ export default function AdminSeoPage() {
   const filteredPages = pages.filter(
     (page) =>
       page.pageName.toLowerCase().includes(pageSearchQuery.toLowerCase()) ||
-      page.url.toLowerCase().includes(pageSearchQuery.toLowerCase())
+      page.url.toLowerCase().includes(pageSearchQuery.toLowerCase()),
   );
 
   return (
     <div className="p-4 lg:p-8">
       {/* Header */}
       <div className="mb-8">
-        <div className="flex items-center gap-3 mb-2">
-          <h1 className="text-white text-3xl font-semibold">SEO Management</h1>
+        <div className="mb-2 flex items-center gap-3">
+          <h1 className="text-3xl font-semibold text-white">SEO Management</h1>
         </div>
-        <p className="text-[#94A3B8] text-sm">
+        <p className="text-sm text-[#94A3B8]">
           Complete SEO control system for all pages, services, and content
         </p>
       </div>
 
       {/* Tabs */}
-      <div className="flex items-center gap-2 mb-6 overflow-x-auto pb-2">
+      <div className="mb-6 flex items-center gap-2 overflow-x-auto pb-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         <button
-          onClick={() => handleTabChange("general")}
-          className={`px-5 py-2.5 rounded-lg text-sm font-medium whitespace-nowrap transition-colors flex items-center gap-2 ${
-            activeTab === "general"
-              ? "bg-[#3B82F6] text-white"
-              : "bg-[rgba(255,255,255,0.05)] text-[#94A3B8] hover:bg-[rgba(255,255,255,0.08)]"
+          onClick={() => handleTabChange('general')}
+          className={`flex items-center gap-2 rounded-lg px-5 py-2.5 text-sm font-medium whitespace-nowrap transition-colors ${
+            activeTab === 'general'
+              ? 'bg-[#3B82F6] text-white'
+              : 'bg-[rgba(255,255,255,0.05)] text-[#94A3B8] hover:bg-[rgba(255,255,255,0.08)]'
           }`}
         >
-          <Globe className="w-4 h-4" />
+          <Globe className="h-4 w-4" />
           General SEO
         </button>
         <button
-          onClick={() => handleTabChange("pages")}
-          className={`px-5 py-2.5 rounded-lg text-sm font-medium whitespace-nowrap transition-colors flex items-center gap-2 ${
-            activeTab === "pages"
-              ? "bg-[#3B82F6] text-white"
-              : "bg-[rgba(255,255,255,0.05)] text-[#94A3B8] hover:bg-[rgba(255,255,255,0.08)]"
+          onClick={() => handleTabChange('pages')}
+          className={`flex items-center gap-2 rounded-lg px-5 py-2.5 text-sm font-medium whitespace-nowrap transition-colors ${
+            activeTab === 'pages'
+              ? 'bg-[#3B82F6] text-white'
+              : 'bg-[rgba(255,255,255,0.05)] text-[#94A3B8] hover:bg-[rgba(255,255,255,0.08)]'
           }`}
         >
-          <FileCode className="w-4 h-4" />
+          <FileCode className="h-4 w-4" />
           Page-Level SEO
         </button>
         <button
-          onClick={() => handleTabChange("sitemap")}
-          className={`px-5 py-2.5 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${
-            activeTab === "sitemap"
-              ? "bg-[#3B82F6] text-white"
-              : "bg-[rgba(255,255,255,0.05)] text-[#94A3B8] hover:bg-[rgba(255,255,255,0.08)]"
+          onClick={() => handleTabChange('sitemap')}
+          className={`rounded-lg px-5 py-2.5 text-sm font-medium whitespace-nowrap transition-colors ${
+            activeTab === 'sitemap'
+              ? 'bg-[#3B82F6] text-white'
+              : 'bg-[rgba(255,255,255,0.05)] text-[#94A3B8] hover:bg-[rgba(255,255,255,0.08)]'
           }`}
         >
           Sitemap
         </button>
         <button
-          onClick={() => handleTabChange("opengraph")}
-          className={`px-5 py-2.5 rounded-lg text-sm font-medium whitespace-nowrap transition-colors flex items-center gap-2 ${
-            activeTab === "opengraph"
-              ? "bg-[#3B82F6] text-white"
-              : "bg-[rgba(255,255,255,0.05)] text-[#94A3B8] hover:bg-[rgba(255,255,255,0.08)]"
+          onClick={() => handleTabChange('opengraph')}
+          className={`flex items-center gap-2 rounded-lg px-5 py-2.5 text-sm font-medium whitespace-nowrap transition-colors ${
+            activeTab === 'opengraph'
+              ? 'bg-[#3B82F6] text-white'
+              : 'bg-[rgba(255,255,255,0.05)] text-[#94A3B8] hover:bg-[rgba(255,255,255,0.08)]'
           }`}
         >
-          <Image className="w-4 h-4" />
+          <Image className="h-4 w-4" />
           Open Graph
         </button>
         <button
-          onClick={() => handleTabChange("performance")}
-          className={`px-5 py-2.5 rounded-lg text-sm font-medium whitespace-nowrap transition-colors flex items-center gap-2 ${
-            activeTab === "performance"
-              ? "bg-[#3B82F6] text-white"
-              : "bg-[rgba(255,255,255,0.05)] text-[#94A3B8] hover:bg-[rgba(255,255,255,0.08)]"
+          onClick={() => handleTabChange('performance')}
+          className={`flex items-center gap-2 rounded-lg px-5 py-2.5 text-sm font-medium whitespace-nowrap transition-colors ${
+            activeTab === 'performance'
+              ? 'bg-[#3B82F6] text-white'
+              : 'bg-[rgba(255,255,255,0.05)] text-[#94A3B8] hover:bg-[rgba(255,255,255,0.08)]'
           }`}
         >
-          <Zap className="w-4 h-4" />
+          <Zap className="h-4 w-4" />
           Performance
         </button>
         <button
-          onClick={() => handleTabChange("schema")}
-          className={`px-5 py-2.5 rounded-lg text-sm font-medium whitespace-nowrap transition-colors flex items-center gap-2 ${
-            activeTab === "schema"
-              ? "bg-[#3B82F6] text-white"
-              : "bg-[rgba(255,255,255,0.05)] text-[#94A3B8] hover:bg-[rgba(255,255,255,0.08)]"
+          onClick={() => handleTabChange('schema')}
+          className={`flex items-center gap-2 rounded-lg px-5 py-2.5 text-sm font-medium whitespace-nowrap transition-colors ${
+            activeTab === 'schema'
+              ? 'bg-[#3B82F6] text-white'
+              : 'bg-[rgba(255,255,255,0.05)] text-[#94A3B8] hover:bg-[rgba(255,255,255,0.08)]'
           }`}
         >
-          <Code className="w-4 h-4" />
+          <Code className="h-4 w-4" />
           Schema
         </button>
         <button
-          onClick={() => handleTabChange("sms")}
-          className={`px-5 py-2.5 rounded-lg text-sm font-medium whitespace-nowrap transition-colors flex items-center gap-2 ${
-            activeTab === "sms"
-              ? "bg-[#3B82F6] text-white"
-              : "bg-[rgba(255,255,255,0.05)] text-[#94A3B8] hover:bg-[rgba(255,255,255,0.08)]"
+          onClick={() => handleTabChange('sms')}
+          className={`flex items-center gap-2 rounded-lg px-5 py-2.5 text-sm font-medium whitespace-nowrap transition-colors ${
+            activeTab === 'sms'
+              ? 'bg-[#3B82F6] text-white'
+              : 'bg-[rgba(255,255,255,0.05)] text-[#94A3B8] hover:bg-[rgba(255,255,255,0.08)]'
           }`}
         >
-          <Wand2 className="w-4 h-4" />
+          <Wand2 className="h-4 w-4" />
           SMS Services SEO
         </button>
       </div>
 
       {/* General SEO Tab */}
-      {activeTab === "general" && (
+      {activeTab === 'general' && (
         <div className="space-y-6">
-          <div className="p-6 rounded-xl bg-[rgba(15,23,42,0.6)] border border-[rgba(255,255,255,0.1)] backdrop-blur-xl">
-            <h2 className="text-white text-xl font-semibold mb-6">General SEO Settings</h2>
+          <div className="rounded-xl border border-[rgba(255,255,255,0.1)] bg-[rgba(15,23,42,0.6)] p-4 backdrop-blur-xl sm:p-6">
+            <h2 className="mb-6 text-xl font-semibold text-white">
+              General SEO Settings
+            </h2>
 
             <div className="space-y-4">
               <div>
-                <label className="text-white text-sm font-medium mb-2 block">Default Meta Title</label>
+                <label className="mb-2 block text-sm font-medium text-white">
+                  Default Meta Title
+                </label>
                 <input
                   type="text"
                   value={generalSEO.defaultMetaTitle}
-                  onChange={(e) => setGeneralSEO({ ...generalSEO, defaultMetaTitle: e.target.value })}
-                  className="w-full bg-[rgba(0,0,0,0.4)] border border-[rgba(255,255,255,0.18)] rounded-lg px-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#3B82F6]"
+                  onChange={(e) =>
+                    setGeneralSEO({
+                      ...generalSEO,
+                      defaultMetaTitle: e.target.value,
+                    })
+                  }
+                  className="w-full rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.4)] px-4 py-3 text-base text-white focus:ring-2 focus:ring-[#3B82F6] focus:outline-none lg:text-sm"
                   placeholder="Enter default meta title"
                 />
-                <p className="text-[#64748B] text-xs mt-1">
-                  {generalSEO.defaultMetaTitle.length}/60 characters (optimal: 50-60)
+                <p className="mt-1 text-xs text-[#64748B]">
+                  {generalSEO.defaultMetaTitle.length}/60 characters (optimal:
+                  50-60)
                 </p>
               </div>
 
               <div>
-                <label className="text-white text-sm font-medium mb-2 block">Default Meta Description</label>
+                <label className="mb-2 block text-sm font-medium text-white">
+                  Default Meta Description
+                </label>
                 <textarea
                   value={generalSEO.defaultMetaDescription}
-                  onChange={(e) => setGeneralSEO({ ...generalSEO, defaultMetaDescription: e.target.value })}
-                  className="w-full bg-[rgba(0,0,0,0.4)] border border-[rgba(255,255,255,0.18)] rounded-lg px-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#3B82F6] min-h-[100px] resize-none"
+                  onChange={(e) =>
+                    setGeneralSEO({
+                      ...generalSEO,
+                      defaultMetaDescription: e.target.value,
+                    })
+                  }
+                  className="min-h-[100px] w-full resize-none rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.4)] px-4 py-3 text-base text-white focus:ring-2 focus:ring-[#3B82F6] focus:outline-none lg:text-sm"
                   placeholder="Enter default meta description"
                 />
-                <p className="text-[#64748B] text-xs mt-1">
-                  {generalSEO.defaultMetaDescription.length}/160 characters (optimal: 150-160)
+                <p className="mt-1 text-xs text-[#64748B]">
+                  {generalSEO.defaultMetaDescription.length}/160 characters
+                  (optimal: 150-160)
                 </p>
               </div>
 
               <div>
-                <label className="text-white text-sm font-medium mb-2 block">Default Keywords</label>
+                <label className="mb-2 block text-sm font-medium text-white">
+                  Default Keywords
+                </label>
                 <input
                   type="text"
                   value={generalSEO.defaultKeywords}
-                  onChange={(e) => setGeneralSEO({ ...generalSEO, defaultKeywords: e.target.value })}
-                  className="w-full bg-[rgba(0,0,0,0.4)] border border-[rgba(255,255,255,0.18)] rounded-lg px-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#3B82F6]"
+                  onChange={(e) =>
+                    setGeneralSEO({
+                      ...generalSEO,
+                      defaultKeywords: e.target.value,
+                    })
+                  }
+                  className="w-full rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.4)] px-4 py-3 text-base text-white focus:ring-2 focus:ring-[#3B82F6] focus:outline-none lg:text-sm"
                   placeholder="keyword1, keyword2, keyword3"
                 />
-                <p className="text-[#64748B] text-xs mt-1">Separate keywords with commas</p>
+                <p className="mt-1 text-xs text-[#64748B]">
+                  Separate keywords with commas
+                </p>
               </div>
 
               <div>
-                <label className="text-white text-sm font-medium mb-2 block">Canonical URL</label>
+                <label className="mb-2 block text-sm font-medium text-white">
+                  Canonical URL
+                </label>
                 <input
                   type="url"
                   value={generalSEO.canonicalUrl}
-                  onChange={(e) => setGeneralSEO({ ...generalSEO, canonicalUrl: e.target.value })}
-                  className="w-full bg-[rgba(0,0,0,0.4)] border border-[rgba(255,255,255,0.18)] rounded-lg px-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#3B82F6]"
+                  onChange={(e) =>
+                    setGeneralSEO({
+                      ...generalSEO,
+                      canonicalUrl: e.target.value,
+                    })
+                  }
+                  className="w-full rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.4)] px-4 py-3 text-base text-white focus:ring-2 focus:ring-[#3B82F6] focus:outline-none lg:text-sm"
                   placeholder="https://example.com"
                 />
               </div>
 
               <div>
-                <label className="text-white text-sm font-medium mb-2 block">Robots.txt</label>
+                <label className="mb-2 block text-sm font-medium text-white">
+                  Robots.txt
+                </label>
                 <textarea
                   value={generalSEO.robotsTxt}
-                  onChange={(e) => setGeneralSEO({ ...generalSEO, robotsTxt: e.target.value })}
-                  className="w-full bg-[rgba(0,0,0,0.4)] border border-[rgba(255,255,255,0.18)] rounded-lg px-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#3B82F6] font-mono min-h-[150px] resize-none"
+                  onChange={(e) =>
+                    setGeneralSEO({ ...generalSEO, robotsTxt: e.target.value })
+                  }
+                  className="min-h-[150px] w-full resize-none rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.4)] px-4 py-3 font-mono text-base text-white focus:ring-2 focus:ring-[#3B82F6] focus:outline-none lg:text-sm"
                   placeholder="User-agent: *&#10;Allow: /"
                 />
               </div>
 
-              <div className="flex items-center justify-between p-4 rounded-lg bg-[rgba(0,0,0,0.3)] border border-[rgba(255,255,255,0.1)]">
+              <div className="flex items-center justify-between rounded-lg border border-[rgba(255,255,255,0.1)] bg-[rgba(0,0,0,0.3)] p-4">
                 <div>
-                  <h3 className="text-white text-sm font-semibold mb-1">Search Engine Indexing</h3>
-                  <p className="text-[#64748B] text-xs">Allow search engines to index your site</p>
+                  <h3 className="mb-1 text-sm font-semibold text-white">
+                    Search Engine Indexing
+                  </h3>
+                  <p className="text-xs text-[#64748B]">
+                    Allow search engines to index your site
+                  </p>
                 </div>
-                <label className="relative inline-flex items-center cursor-pointer">
+                <label className="relative inline-flex cursor-pointer items-center">
                   <input
                     type="checkbox"
                     checked={generalSEO.indexingEnabled}
-                    onChange={(e) => setGeneralSEO({ ...generalSEO, indexingEnabled: e.target.checked })}
-                    className="sr-only peer"
+                    onChange={(e) =>
+                      setGeneralSEO({
+                        ...generalSEO,
+                        indexingEnabled: e.target.checked,
+                      })
+                    }
+                    className="peer sr-only"
                   />
-                  <div className="w-11 h-6 bg-[#64748B] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#22C55E]"></div>
+                  <div className="peer h-6 w-11 rounded-full bg-[#64748B] peer-checked:bg-[#22C55E] peer-focus:outline-none after:absolute after:top-[2px] after:left-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:after:translate-x-full peer-checked:after:border-white"></div>
                 </label>
               </div>
             </div>
 
-            <div className="flex items-center justify-end gap-3 mt-6 pt-6 border-t border-[rgba(255,255,255,0.1)]">
+            <div className="mt-6 flex items-center justify-end gap-3 border-t border-[rgba(255,255,255,0.1)] pt-6">
               <button
                 onClick={handleSaveGeneralSEO}
                 disabled={isLoading}
-                className="px-6 py-3 rounded-lg bg-[#3B82F6] hover:bg-[#2563EB] text-white text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                className="flex items-center gap-2 rounded-lg bg-[#3B82F6] px-6 py-3 text-sm font-medium text-white transition-colors hover:bg-[#2563EB] disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {isLoading ? (
-                  "Saving..."
+                  'Saving...'
                 ) : (
                   <>
-                    <Save className="w-4 h-4" />
+                    <Save className="h-4 w-4" />
                     Save Settings
                   </>
                 )}
@@ -790,59 +910,69 @@ export default function AdminSeoPage() {
       )}
 
       {/* Page-Level SEO Tab */}
-      {activeTab === "pages" && (
+      {activeTab === 'pages' && (
         <div className="space-y-6">
           {/* Search and Actions */}
-          <div className="p-6 rounded-xl bg-[rgba(15,23,42,0.6)] border border-[rgba(255,255,255,0.1)] backdrop-blur-xl">
-            <div className="flex items-center gap-4">
+          <div className="rounded-xl border border-[rgba(255,255,255,0.1)] bg-[rgba(15,23,42,0.6)] p-4 backdrop-blur-xl sm:p-6">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
               <div className="relative flex-1">
-                <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-[#64748B]" />
+                <Search className="absolute top-1/2 left-4 h-5 w-5 -translate-y-1/2 transform text-[#64748B]" />
                 <input
                   type="text"
                   value={pageSearchQuery}
                   onChange={(e) => setPageSearchQuery(e.target.value)}
                   placeholder="Search pages..."
-                  className="w-full bg-[rgba(0,0,0,0.4)] border border-[rgba(255,255,255,0.18)] rounded-lg pl-12 pr-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#3B82F6]"
+                  className="w-full rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.4)] py-3 pr-4 pl-12 text-base text-white focus:ring-2 focus:ring-[#3B82F6] focus:outline-none lg:text-sm"
                 />
               </div>
-              <button
-                onClick={() => setShowAddPageModal(true)}
-                className="px-4 py-3 rounded-lg bg-[#22C55E] hover:bg-[#16A34A] text-white text-sm font-medium transition-colors flex items-center gap-2"
-              >
-                <Plus className="w-4 h-4" />
-                Add Page
-              </button>
-              <button
-                onClick={handleSeedDefaults}
-                disabled={isLoading}
-                className="px-4 py-3 rounded-lg bg-[rgba(255,255,255,0.08)] hover:bg-[rgba(255,255,255,0.12)] text-white text-sm font-medium transition-colors flex items-center gap-2 disabled:opacity-50"
-              >
-                <Wand2 className="w-4 h-4" />
-                Seed Defaults
-              </button>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => setShowAddPageModal(true)}
+                  className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-[#22C55E] px-4 py-3 text-sm font-medium text-white transition-colors hover:bg-[#16A34A] sm:flex-none sm:justify-start"
+                >
+                  <Plus className="h-4 w-4" />
+                  Add Page
+                </button>
+                <button
+                  onClick={handleSeedDefaults}
+                  disabled={isLoading}
+                  className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-[rgba(255,255,255,0.08)] px-4 py-3 text-sm font-medium text-white transition-colors hover:bg-[rgba(255,255,255,0.12)] disabled:opacity-50 sm:flex-none sm:justify-start"
+                >
+                  <Wand2 className="h-4 w-4" />
+                  Seed Defaults
+                </button>
+              </div>
             </div>
           </div>
 
           {/* Pages Table */}
-          <div className="rounded-xl bg-[rgba(15,23,42,0.6)] border border-[rgba(255,255,255,0.1)] backdrop-blur-xl overflow-hidden">
-            <div className="p-6 border-b border-[rgba(255,255,255,0.1)]">
-              <h2 className="text-white text-xl font-semibold">Page-Level SEO</h2>
-              <p className="text-[#94A3B8] text-sm mt-1">{filteredPages.length} pages</p>
+          <div className="overflow-hidden rounded-xl border border-[rgba(255,255,255,0.1)] bg-[rgba(15,23,42,0.6)] backdrop-blur-xl">
+            <div className="border-b border-[rgba(255,255,255,0.1)] p-4 sm:p-6">
+              <h2 className="text-xl font-semibold text-white">
+                Page-Level SEO
+              </h2>
+              <p className="mt-1 text-sm text-[#94A3B8]">
+                {filteredPages.length} pages
+              </p>
             </div>
 
             {isPageLoading ? (
               <div className="flex items-center justify-center py-12">
-                <Loader2 className="w-8 h-8 text-[#3B82F6] animate-spin" />
+                <Loader2 className="h-8 w-8 animate-spin text-[#3B82F6]" />
               </div>
             ) : filteredPages.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-12 text-center">
-                <FileCode className="w-12 h-12 text-[#64748B] mb-4" />
-                <p className="text-white text-lg font-medium mb-2">No SEO settings found</p>
-                <p className="text-[#94A3B8] text-sm mb-4">Add your first page SEO settings or seed defaults</p>
+                <FileCode className="mb-4 h-12 w-12 text-[#64748B]" />
+                <p className="mb-2 text-lg font-medium text-white">
+                  No SEO settings found
+                </p>
+                <p className="mb-4 text-sm text-[#94A3B8]">
+                  Add your first page SEO settings or seed defaults
+                </p>
                 <button
                   onClick={handleSeedDefaults}
                   disabled={isLoading}
-                  className="px-4 py-2 rounded-lg bg-[#3B82F6] hover:bg-[#2563EB] text-white text-sm font-medium transition-colors"
+                  className="rounded-lg bg-[#3B82F6] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[#2563EB]"
                 >
                   Seed Default Settings
                 </button>
@@ -852,35 +982,54 @@ export default function AdminSeoPage() {
                 <table className="w-full">
                   <thead>
                     <tr className="border-b border-[rgba(255,255,255,0.1)] bg-[rgba(0,0,0,0.2)]">
-                      <th className="px-6 py-4 text-left text-xs font-medium text-[#94A3B8] uppercase">Page Name</th>
-                      <th className="px-6 py-4 text-left text-xs font-medium text-[#94A3B8] uppercase">URL</th>
-                      <th className="px-6 py-4 text-left text-xs font-medium text-[#94A3B8] uppercase">Meta Title</th>
-                      <th className="px-6 py-4 text-left text-xs font-medium text-[#94A3B8] uppercase">Index Status</th>
-                      <th className="px-6 py-4 text-left text-xs font-medium text-[#94A3B8] uppercase">Actions</th>
+                      <th className="px-6 py-4 text-left text-xs font-medium text-[#94A3B8] uppercase">
+                        Page Name
+                      </th>
+                      <th className="px-6 py-4 text-left text-xs font-medium text-[#94A3B8] uppercase">
+                        URL
+                      </th>
+                      <th className="px-6 py-4 text-left text-xs font-medium text-[#94A3B8] uppercase">
+                        Meta Title
+                      </th>
+                      <th className="px-6 py-4 text-left text-xs font-medium text-[#94A3B8] uppercase">
+                        Index Status
+                      </th>
+                      <th className="px-6 py-4 text-left text-xs font-medium text-[#94A3B8] uppercase">
+                        Actions
+                      </th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-[rgba(255,255,255,0.05)]">
                     {filteredPages.map((page) => (
-                      <tr key={page.id} className="hover:bg-[rgba(255,255,255,0.02)] transition-colors">
-                        <td className="px-6 py-4 text-white text-sm font-medium">{page.pageName}</td>
-                        <td className="px-6 py-4 text-[#3B82F6] text-sm">{page.url}</td>
-                        <td className="px-6 py-4 text-[#94A3B8] text-sm max-w-xs truncate">{page.metaTitle}</td>
+                      <tr
+                        key={page.id}
+                        className="transition-colors hover:bg-[rgba(255,255,255,0.02)]"
+                      >
+                        <td className="px-6 py-4 text-sm font-medium text-white">
+                          {page.pageName}
+                        </td>
+                        <td className="px-6 py-4 text-sm text-[#3B82F6]">
+                          {page.url}
+                        </td>
+                        <td className="max-w-xs truncate px-6 py-4 text-sm text-[#94A3B8]">
+                          {page.metaTitle}
+                        </td>
                         <td className="px-6 py-4">
                           <span
-                            className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium ${
+                            className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium ${
                               page.indexed
-                                ? "bg-[#22C55E]/20 text-[#22C55E]"
-                                : "bg-[#EF4444]/20 text-[#EF4444]"
+                                ? 'bg-[#22C55E]/20 text-[#22C55E]'
+                                : 'bg-[#EF4444]/20 text-[#EF4444]'
                             }`}
                           >
                             {page.indexed ? (
                               <>
-                                <Eye className="w-3 h-3" />
+                                <Eye className="h-3 w-3" />
                                 Indexed
                               </>
                             ) : (
                               <>
-                                <EyeOff className="w-3 h-3" />
+                                <EyeOff className="h-3 w-3" />
                                 Not Indexed
                               </>
                             )}
@@ -890,16 +1039,16 @@ export default function AdminSeoPage() {
                           <div className="flex items-center gap-2">
                             <button
                               onClick={() => handleEditPage(page)}
-                              className="px-3 py-2 rounded-lg bg-[#3B82F6] hover:bg-[#2563EB] text-white text-xs font-medium transition-colors flex items-center gap-1"
+                              className="flex items-center gap-1 rounded-lg bg-[#3B82F6] px-3 py-2 text-xs font-medium text-white transition-colors hover:bg-[#2563EB]"
                             >
-                              <Edit2 className="w-3.5 h-3.5" />
+                              <Edit2 className="h-3.5 w-3.5" />
                               Edit
                             </button>
                             <button
                               onClick={() => setDeleteConfirmPage(page)}
-                              className="px-3 py-2 rounded-lg bg-[#EF4444]/20 hover:bg-[#EF4444]/30 text-[#EF4444] text-xs font-medium transition-colors flex items-center gap-1"
+                              className="flex items-center gap-1 rounded-lg bg-[#EF4444]/20 px-3 py-2 text-xs font-medium text-[#EF4444] transition-colors hover:bg-[#EF4444]/30"
                             >
-                              <Trash2 className="w-3.5 h-3.5" />
+                              <Trash2 className="h-3.5 w-3.5" />
                             </button>
                           </div>
                         </td>
@@ -914,99 +1063,117 @@ export default function AdminSeoPage() {
       )}
 
       {/* Sitemap Tab */}
-      {activeTab === "sitemap" && (
-        <div className="p-6 rounded-xl bg-[rgba(15,23,42,0.6)] border border-[rgba(255,255,255,0.1)] backdrop-blur-xl">
-          <h2 className="text-white text-xl font-semibold mb-6">Sitemap Management</h2>
+      {activeTab === 'sitemap' && (
+        <div className="rounded-xl border border-[rgba(255,255,255,0.1)] bg-[rgba(15,23,42,0.6)] p-4 backdrop-blur-xl sm:p-6">
+          <h2 className="mb-6 text-xl font-semibold text-white">
+            Sitemap Management
+          </h2>
 
           <div className="space-y-6">
-            <div className="p-6 rounded-lg bg-[rgba(0,0,0,0.3)] border border-[rgba(255,255,255,0.1)]">
-              <div className="flex items-center justify-between mb-4">
-                <div>
-                  <h3 className="text-white text-base font-semibold mb-1">Sitemap URL</h3>
-                  <p className="text-[#64748B] text-sm">Your sitemap is accessible at this URL</p>
-                </div>
+            <div className="rounded-lg border border-[rgba(255,255,255,0.1)] bg-[rgba(0,0,0,0.3)] p-4 sm:p-6">
+              <div className="mb-4">
+                <h3 className="mb-1 text-base font-semibold text-white">
+                  Sitemap URL
+                </h3>
+                <p className="text-sm text-[#64748B]">
+                  Your sitemap is accessible at this URL
+                </p>
               </div>
-              <div className="flex items-center gap-3">
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
                 <input
                   type="text"
                   value={sitemapSettings.sitemapUrl}
                   onChange={(e) =>
-                    setSitemapSettings({ ...sitemapSettings, sitemapUrl: e.target.value })
+                    setSitemapSettings({
+                      ...sitemapSettings,
+                      sitemapUrl: e.target.value,
+                    })
                   }
-                  className="flex-1 bg-[rgba(0,0,0,0.4)] border border-[rgba(255,255,255,0.18)] rounded-lg px-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#3B82F6]"
+                  className="w-full flex-1 rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.4)] px-4 py-3 text-base text-white focus:ring-2 focus:ring-[#3B82F6] focus:outline-none lg:text-sm"
                   placeholder="https://example.com/sitemap.xml"
                 />
                 <button
                   onClick={() => {
                     navigator.clipboard.writeText(sitemapSettings.sitemapUrl);
-                    toast.success("Sitemap URL copied to clipboard!");
+                    toast.success('Sitemap URL copied to clipboard!');
                   }}
-                  className="px-4 py-3 rounded-lg bg-[rgba(255,255,255,0.08)] hover:bg-[rgba(255,255,255,0.12)] text-white text-sm font-medium transition-colors"
+                  className="w-full rounded-lg bg-[rgba(255,255,255,0.08)] px-4 py-3 text-sm font-medium text-white transition-colors hover:bg-[rgba(255,255,255,0.12)] sm:w-auto"
                 >
                   Copy
                 </button>
               </div>
             </div>
 
-            <div className="flex items-center justify-between p-4 rounded-lg bg-[rgba(0,0,0,0.3)] border border-[rgba(255,255,255,0.1)]">
+            <div className="flex items-center justify-between rounded-lg border border-[rgba(255,255,255,0.1)] bg-[rgba(0,0,0,0.3)] p-4">
               <div>
-                <h3 className="text-white text-sm font-semibold mb-1">Auto-Update Sitemap</h3>
-                <p className="text-[#64748B] text-xs">Automatically update sitemap when content changes</p>
+                <h3 className="mb-1 text-sm font-semibold text-white">
+                  Auto-Update Sitemap
+                </h3>
+                <p className="text-xs text-[#64748B]">
+                  Automatically update sitemap when content changes
+                </p>
               </div>
-              <label className="relative inline-flex items-center cursor-pointer">
+              <label className="relative inline-flex cursor-pointer items-center">
                 <input
                   type="checkbox"
                   checked={sitemapSettings.autoUpdate}
                   onChange={(e) =>
-                    setSitemapSettings({ ...sitemapSettings, autoUpdate: e.target.checked })
+                    setSitemapSettings({
+                      ...sitemapSettings,
+                      autoUpdate: e.target.checked,
+                    })
                   }
-                  className="sr-only peer"
+                  className="peer sr-only"
                 />
-                <div className="w-11 h-6 bg-[#64748B] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#22C55E]"></div>
+                <div className="peer h-6 w-11 rounded-full bg-[#64748B] peer-checked:bg-[#22C55E] peer-focus:outline-none after:absolute after:top-[2px] after:left-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:after:translate-x-full peer-checked:after:border-white"></div>
               </label>
             </div>
 
-            <div className="p-6 rounded-lg bg-[rgba(0,0,0,0.3)] border border-[rgba(255,255,255,0.1)]">
-              <div className="flex items-center justify-between mb-4">
+            <div className="rounded-lg border border-[rgba(255,255,255,0.1)] bg-[rgba(0,0,0,0.3)] p-4 sm:p-6">
+              <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div>
-                  <h3 className="text-white text-base font-semibold mb-1">Generate Sitemap</h3>
-                  <p className="text-[#64748B] text-sm">
+                  <h3 className="mb-1 text-base font-semibold text-white">
+                    Generate Sitemap
+                  </h3>
+                  <p className="text-sm text-[#64748B]">
                     Last generated: {sitemapSettings.lastGenerated}
                   </p>
                 </div>
                 <button
                   onClick={handleGenerateSitemap}
                   disabled={isLoading}
-                  className="px-6 py-3 rounded-lg bg-[#22C55E] hover:bg-[#16A34A] text-white text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                  className="flex w-full items-center justify-center gap-2 rounded-lg bg-[#22C55E] px-6 py-3 text-sm font-medium text-white transition-colors hover:bg-[#16A34A] disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto sm:justify-start"
                 >
                   {isLoading ? (
-                    "Generating..."
+                    'Generating...'
                   ) : (
                     <>
-                      <RefreshCw className="w-4 h-4" />
+                      <RefreshCw className="h-4 w-4" />
                       Generate Now
                     </>
                   )}
                 </button>
               </div>
-              <div className="flex items-center gap-2 text-[#22C55E] text-sm">
-                <CheckCircle className="w-4 h-4" />
-                <span>Sitemap is up to date and submitted to search engines</span>
+              <div className="flex items-center gap-2 text-sm text-[#22C55E]">
+                <CheckCircle className="h-4 w-4" />
+                <span>
+                  Sitemap is up to date and submitted to search engines
+                </span>
               </div>
             </div>
           </div>
 
-          <div className="flex items-center justify-end gap-3 mt-6 pt-6 border-t border-[rgba(255,255,255,0.1)]">
+          <div className="mt-6 flex flex-col gap-3 border-t border-[rgba(255,255,255,0.1)] pt-6 sm:flex-row sm:items-center sm:justify-end sm:gap-4">
             <button
               onClick={handleSaveSitemapSettings}
               disabled={isLoading}
-              className="px-6 py-3 rounded-lg bg-[#3B82F6] hover:bg-[#2563EB] text-white text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              className="flex w-full items-center justify-center gap-2 rounded-lg bg-[#3B82F6] px-6 py-3 text-sm font-medium text-white transition-colors hover:bg-[#2563EB] disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto sm:justify-start"
             >
               {isLoading ? (
-                "Saving..."
+                'Saving...'
               ) : (
                 <>
-                  <Save className="w-4 h-4" />
+                  <Save className="h-4 w-4" />
                   Save Settings
                 </>
               )}
@@ -1016,95 +1183,145 @@ export default function AdminSeoPage() {
       )}
 
       {/* Open Graph Tab */}
-      {activeTab === "opengraph" && (
+      {activeTab === 'opengraph' && (
         <div className="space-y-6">
-          <div className="p-6 rounded-xl bg-[rgba(15,23,42,0.6)] border border-[rgba(255,255,255,0.1)] backdrop-blur-xl">
-            <h2 className="text-white text-xl font-semibold mb-6">Open Graph & Social Media</h2>
+          <div className="rounded-xl border border-[rgba(255,255,255,0.1)] bg-[rgba(15,23,42,0.6)] p-4 backdrop-blur-xl sm:p-6">
+            <h2 className="mb-6 text-xl font-semibold text-white">
+              Open Graph & Social Media
+            </h2>
 
             <div className="space-y-4">
               <div>
-                <label className="text-white text-sm font-medium mb-2 block">OG Title</label>
+                <label className="mb-2 block text-sm font-medium text-white">
+                  OG Title
+                </label>
                 <input
                   type="text"
                   value={openGraph.title}
-                  onChange={(e) => setOpenGraph({ ...openGraph, title: e.target.value })}
-                  className="w-full bg-[rgba(0,0,0,0.4)] border border-[rgba(255,255,255,0.18)] rounded-lg px-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#3B82F6]"
+                  onChange={(e) =>
+                    setOpenGraph({ ...openGraph, title: e.target.value })
+                  }
+                  className="w-full rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.4)] px-4 py-3 text-base text-white focus:ring-2 focus:ring-[#3B82F6] focus:outline-none lg:text-sm"
                   placeholder="Enter Open Graph title"
                 />
               </div>
 
               <div>
-                <label className="text-white text-sm font-medium mb-2 block">OG Description</label>
+                <label className="mb-2 block text-sm font-medium text-white">
+                  OG Description
+                </label>
                 <textarea
                   value={openGraph.description}
-                  onChange={(e) => setOpenGraph({ ...openGraph, description: e.target.value })}
-                  className="w-full bg-[rgba(0,0,0,0.4)] border border-[rgba(255,255,255,0.18)] rounded-lg px-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#3B82F6] min-h-[100px] resize-none"
+                  onChange={(e) =>
+                    setOpenGraph({ ...openGraph, description: e.target.value })
+                  }
+                  className="min-h-[100px] w-full resize-none rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.4)] px-4 py-3 text-base text-white focus:ring-2 focus:ring-[#3B82F6] focus:outline-none lg:text-sm"
                   placeholder="Enter Open Graph description"
                 />
               </div>
 
               <div>
-                <label className="text-white text-sm font-medium mb-2 block">OG Image URL</label>
-                <div className="flex gap-3">
+                <label className="mb-2 block text-sm font-medium text-white">
+                  OG Image URL
+                </label>
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
                   <input
                     type="url"
                     value={openGraph.image}
-                    onChange={(e) => setOpenGraph({ ...openGraph, image: e.target.value })}
-                    className="flex-1 bg-[rgba(0,0,0,0.4)] border border-[rgba(255,255,255,0.18)] rounded-lg px-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#3B82F6]"
+                    onChange={(e) =>
+                      setOpenGraph({ ...openGraph, image: e.target.value })
+                    }
+                    className="w-full flex-1 rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.4)] px-4 py-3 text-base text-white focus:ring-2 focus:ring-[#3B82F6] focus:outline-none lg:text-sm"
                     placeholder="https://example.com/image.jpg"
                   />
-                  <button className="px-4 py-3 rounded-lg bg-[rgba(255,255,255,0.08)] hover:bg-[rgba(255,255,255,0.12)] text-white text-sm font-medium transition-colors flex items-center gap-2">
-                    <Upload className="w-4 h-4" />
+                  <button className="flex w-full items-center justify-center gap-2 rounded-lg bg-[rgba(255,255,255,0.08)] px-4 py-3 text-sm font-medium text-white transition-colors hover:bg-[rgba(255,255,255,0.12)] sm:w-auto sm:justify-start">
+                    <Upload className="h-4 w-4" />
                     Upload
                   </button>
                 </div>
-                <p className="text-[#64748B] text-xs mt-1">Recommended size: 1200x630px</p>
+                <p className="mt-1 text-xs text-[#64748B]">
+                  Recommended size: 1200x630px
+                </p>
               </div>
 
               <div>
-                <label className="text-white text-sm font-medium mb-2 block">Twitter Card Type</label>
-                <select
+                <label className="mb-2 block text-sm font-medium text-white">
+                  Twitter Card Type
+                </label>
+                <Select
                   value={openGraph.twitterCard}
-                  onChange={(e) => setOpenGraph({ ...openGraph, twitterCard: e.target.value })}
-                  className="w-full bg-[rgba(0,0,0,0.4)] border border-[rgba(255,255,255,0.18)] rounded-lg px-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#3B82F6]"
+                  onValueChange={(v) =>
+                    setOpenGraph({ ...openGraph, twitterCard: v })
+                  }
                 >
-                  <option value="summary">Summary</option>
-                  <option value="summary_large_image">Summary Large Image</option>
-                  <option value="app">App</option>
-                  <option value="player">Player</option>
-                </select>
+                  <SelectTrigger className="w-full rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.4)] px-4 py-3 text-sm text-white focus-visible:ring-2 focus-visible:ring-[#3B82F6] focus-visible:outline-none data-[size=default]:h-auto data-[size=default]:min-h-12">
+                    <SelectValue placeholder="Select card type" />
+                  </SelectTrigger>
+                  <SelectContent className="max-h-72 border-[rgba(255,255,255,0.18)] bg-[#1E293B] text-white">
+                    <SelectItem
+                      value="summary"
+                      className="text-white focus:bg-[rgba(59,130,246,0.15)] focus:text-white"
+                    >
+                      Summary
+                    </SelectItem>
+                    <SelectItem
+                      value="summary_large_image"
+                      className="text-white focus:bg-[rgba(59,130,246,0.15)] focus:text-white"
+                    >
+                      Summary Large Image
+                    </SelectItem>
+                    <SelectItem
+                      value="app"
+                      className="text-white focus:bg-[rgba(59,130,246,0.15)] focus:text-white"
+                    >
+                      App
+                    </SelectItem>
+                    <SelectItem
+                      value="player"
+                      className="text-white focus:bg-[rgba(59,130,246,0.15)] focus:text-white"
+                    >
+                      Player
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </div>
 
             {/* Preview */}
-            <div className="mt-8 p-6 rounded-lg bg-[rgba(0,0,0,0.3)] border border-[rgba(255,255,255,0.1)]">
-              <h3 className="text-white text-sm font-semibold mb-4 flex items-center gap-2">
-                <Eye className="w-4 h-4" />
+            <div className="mt-8 rounded-lg border border-[rgba(255,255,255,0.1)] bg-[rgba(0,0,0,0.3)] p-4 sm:p-6">
+              <h3 className="mb-4 flex items-center gap-2 text-sm font-semibold text-white">
+                <Eye className="h-4 w-4" />
                 Social Media Preview
               </h3>
-              <div className="border border-[rgba(255,255,255,0.1)] rounded-lg overflow-hidden">
-                <div className="aspect-[1.91/1] bg-[rgba(59,130,246,0.1)] flex items-center justify-center">
-                  <Image className="w-12 h-12 text-[#3B82F6]" />
+              <div className="overflow-hidden rounded-lg border border-[rgba(255,255,255,0.1)]">
+                <div className="flex aspect-[1.91/1] items-center justify-center bg-[rgba(59,130,246,0.1)]">
+                  <Image className="h-12 w-12 text-[#3B82F6]" />
                 </div>
-                <div className="p-4 bg-[rgba(0,0,0,0.4)]">
-                  <div className="text-white text-sm font-semibold mb-1">{openGraph.title}</div>
-                  <div className="text-[#94A3B8] text-xs line-clamp-2">{openGraph.description}</div>
-                  <div className="text-[#64748B] text-xs mt-2">smsportal.com</div>
+                <div className="bg-[rgba(0,0,0,0.4)] p-4">
+                  <div className="mb-1 text-sm font-semibold text-white">
+                    {openGraph.title}
+                  </div>
+                  <div className="line-clamp-2 text-xs text-[#94A3B8]">
+                    {openGraph.description}
+                  </div>
+                  <div className="mt-2 text-xs text-[#64748B]">
+                    smsportal.com
+                  </div>
                 </div>
               </div>
             </div>
 
-            <div className="flex items-center justify-end gap-3 mt-6 pt-6 border-t border-[rgba(255,255,255,0.1)]">
+            <div className="mt-6 flex items-center justify-end gap-3 border-t border-[rgba(255,255,255,0.1)] pt-6">
               <button
                 onClick={handleSaveOpenGraph}
                 disabled={isLoading}
-                className="px-6 py-3 rounded-lg bg-[#3B82F6] hover:bg-[#2563EB] text-white text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                className="flex items-center gap-2 rounded-lg bg-[#3B82F6] px-6 py-3 text-sm font-medium text-white transition-colors hover:bg-[#2563EB] disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {isLoading ? (
-                  "Saving..."
+                  'Saving...'
                 ) : (
                   <>
-                    <Save className="w-4 h-4" />
+                    <Save className="h-4 w-4" />
                     Save Settings
                   </>
                 )}
@@ -1115,108 +1332,151 @@ export default function AdminSeoPage() {
       )}
 
       {/* Performance Tab */}
-      {activeTab === "performance" && (
-        <div className="p-6 rounded-xl bg-[rgba(15,23,42,0.6)] border border-[rgba(255,255,255,0.1)] backdrop-blur-xl">
-          <h2 className="text-white text-xl font-semibold mb-6">Performance & Speed Optimization</h2>
+      {activeTab === 'performance' && (
+        <div className="rounded-xl border border-[rgba(255,255,255,0.1)] bg-[rgba(15,23,42,0.6)] p-4 backdrop-blur-xl sm:p-6">
+          <h2 className="mb-6 text-xl font-semibold text-white">
+            Performance & Speed Optimization
+          </h2>
 
           <div className="space-y-4">
-            <div className="flex items-center justify-between p-4 rounded-lg bg-[rgba(0,0,0,0.3)] border border-[rgba(255,255,255,0.1)]">
+            <div className="flex items-center justify-between rounded-lg border border-[rgba(255,255,255,0.1)] bg-[rgba(0,0,0,0.3)] p-4">
               <div>
-                <h3 className="text-white text-sm font-semibold mb-1 flex items-center gap-2">
-                  <Zap className="w-4 h-4 text-[#F59E0B]" />
+                <h3 className="mb-1 flex items-center gap-2 text-sm font-semibold text-white">
+                  <Zap className="h-4 w-4 text-[#F59E0B]" />
                   Enable Caching
                 </h3>
-                <p className="text-[#64748B] text-xs">Cache static assets for faster page loads</p>
+                <p className="text-xs text-[#64748B]">
+                  Cache static assets for faster page loads
+                </p>
               </div>
-              <label className="relative inline-flex items-center cursor-pointer">
+              <label className="relative inline-flex cursor-pointer items-center">
                 <input
                   type="checkbox"
                   checked={performance.caching}
-                  onChange={(e) => setPerformance({ ...performance, caching: e.target.checked })}
-                  className="sr-only peer"
+                  onChange={(e) =>
+                    setPerformance({
+                      ...performance,
+                      caching: e.target.checked,
+                    })
+                  }
+                  className="peer sr-only"
                 />
-                <div className="w-11 h-6 bg-[#64748B] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#22C55E]"></div>
+                <div className="peer h-6 w-11 rounded-full bg-[#64748B] peer-checked:bg-[#22C55E] peer-focus:outline-none after:absolute after:top-[2px] after:left-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:after:translate-x-full peer-checked:after:border-white"></div>
               </label>
             </div>
 
-            <div className="flex items-center justify-between p-4 rounded-lg bg-[rgba(0,0,0,0.3)] border border-[rgba(255,255,255,0.1)]">
+            <div className="flex items-center justify-between rounded-lg border border-[rgba(255,255,255,0.1)] bg-[rgba(0,0,0,0.3)] p-4">
               <div>
-                <h3 className="text-white text-sm font-semibold mb-1">Minify CSS</h3>
-                <p className="text-[#64748B] text-xs">Compress CSS files for smaller file size</p>
+                <h3 className="mb-1 text-sm font-semibold text-white">
+                  Minify CSS
+                </h3>
+                <p className="text-xs text-[#64748B]">
+                  Compress CSS files for smaller file size
+                </p>
               </div>
-              <label className="relative inline-flex items-center cursor-pointer">
+              <label className="relative inline-flex cursor-pointer items-center">
                 <input
                   type="checkbox"
                   checked={performance.minifyCss}
-                  onChange={(e) => setPerformance({ ...performance, minifyCss: e.target.checked })}
-                  className="sr-only peer"
+                  onChange={(e) =>
+                    setPerformance({
+                      ...performance,
+                      minifyCss: e.target.checked,
+                    })
+                  }
+                  className="peer sr-only"
                 />
-                <div className="w-11 h-6 bg-[#64748B] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#22C55E]"></div>
+                <div className="peer h-6 w-11 rounded-full bg-[#64748B] peer-checked:bg-[#22C55E] peer-focus:outline-none after:absolute after:top-[2px] after:left-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:after:translate-x-full peer-checked:after:border-white"></div>
               </label>
             </div>
 
-            <div className="flex items-center justify-between p-4 rounded-lg bg-[rgba(0,0,0,0.3)] border border-[rgba(255,255,255,0.1)]">
+            <div className="flex items-center justify-between rounded-lg border border-[rgba(255,255,255,0.1)] bg-[rgba(0,0,0,0.3)] p-4">
               <div>
-                <h3 className="text-white text-sm font-semibold mb-1">Minify JavaScript</h3>
-                <p className="text-[#64748B] text-xs">Compress JS files for smaller file size</p>
+                <h3 className="mb-1 text-sm font-semibold text-white">
+                  Minify JavaScript
+                </h3>
+                <p className="text-xs text-[#64748B]">
+                  Compress JS files for smaller file size
+                </p>
               </div>
-              <label className="relative inline-flex items-center cursor-pointer">
+              <label className="relative inline-flex cursor-pointer items-center">
                 <input
                   type="checkbox"
                   checked={performance.minifyJs}
-                  onChange={(e) => setPerformance({ ...performance, minifyJs: e.target.checked })}
-                  className="sr-only peer"
+                  onChange={(e) =>
+                    setPerformance({
+                      ...performance,
+                      minifyJs: e.target.checked,
+                    })
+                  }
+                  className="peer sr-only"
                 />
-                <div className="w-11 h-6 bg-[#64748B] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#22C55E]"></div>
+                <div className="peer h-6 w-11 rounded-full bg-[#64748B] peer-checked:bg-[#22C55E] peer-focus:outline-none after:absolute after:top-[2px] after:left-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:after:translate-x-full peer-checked:after:border-white"></div>
               </label>
             </div>
 
-            <div className="flex items-center justify-between p-4 rounded-lg bg-[rgba(0,0,0,0.3)] border border-[rgba(255,255,255,0.1)]">
+            <div className="flex items-center justify-between rounded-lg border border-[rgba(255,255,255,0.1)] bg-[rgba(0,0,0,0.3)] p-4">
               <div>
-                <h3 className="text-white text-sm font-semibold mb-1">Lazy Load Images</h3>
-                <p className="text-[#64748B] text-xs">Load images only when they appear in viewport</p>
+                <h3 className="mb-1 text-sm font-semibold text-white">
+                  Lazy Load Images
+                </h3>
+                <p className="text-xs text-[#64748B]">
+                  Load images only when they appear in viewport
+                </p>
               </div>
-              <label className="relative inline-flex items-center cursor-pointer">
+              <label className="relative inline-flex cursor-pointer items-center">
                 <input
                   type="checkbox"
                   checked={performance.lazyLoad}
-                  onChange={(e) => setPerformance({ ...performance, lazyLoad: e.target.checked })}
-                  className="sr-only peer"
+                  onChange={(e) =>
+                    setPerformance({
+                      ...performance,
+                      lazyLoad: e.target.checked,
+                    })
+                  }
+                  className="peer sr-only"
                 />
-                <div className="w-11 h-6 bg-[#64748B] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#22C55E]"></div>
+                <div className="peer h-6 w-11 rounded-full bg-[#64748B] peer-checked:bg-[#22C55E] peer-focus:outline-none after:absolute after:top-[2px] after:left-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:after:translate-x-full peer-checked:after:border-white"></div>
               </label>
             </div>
 
-            <div className="flex items-center justify-between p-4 rounded-lg bg-[rgba(0,0,0,0.3)] border border-[rgba(255,255,255,0.1)]">
+            <div className="flex items-center justify-between rounded-lg border border-[rgba(255,255,255,0.1)] bg-[rgba(0,0,0,0.3)] p-4">
               <div>
-                <h3 className="text-white text-sm font-semibold mb-1">Image Optimization</h3>
-                <p className="text-[#64748B] text-xs">Automatically optimize and compress images</p>
+                <h3 className="mb-1 text-sm font-semibold text-white">
+                  Image Optimization
+                </h3>
+                <p className="text-xs text-[#64748B]">
+                  Automatically optimize and compress images
+                </p>
               </div>
-              <label className="relative inline-flex items-center cursor-pointer">
+              <label className="relative inline-flex cursor-pointer items-center">
                 <input
                   type="checkbox"
                   checked={performance.imageOptimization}
                   onChange={(e) =>
-                    setPerformance({ ...performance, imageOptimization: e.target.checked })
+                    setPerformance({
+                      ...performance,
+                      imageOptimization: e.target.checked,
+                    })
                   }
-                  className="sr-only peer"
+                  className="peer sr-only"
                 />
-                <div className="w-11 h-6 bg-[#64748B] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#22C55E]"></div>
+                <div className="peer h-6 w-11 rounded-full bg-[#64748B] peer-checked:bg-[#22C55E] peer-focus:outline-none after:absolute after:top-[2px] after:left-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:after:translate-x-full peer-checked:after:border-white"></div>
               </label>
             </div>
           </div>
 
-          <div className="flex items-center justify-end gap-3 mt-6 pt-6 border-t border-[rgba(255,255,255,0.1)]">
+          <div className="mt-6 flex flex-col gap-3 border-t border-[rgba(255,255,255,0.1)] pt-6 sm:flex-row sm:items-center sm:justify-end sm:gap-4">
             <button
               onClick={handleSavePerformance}
               disabled={isLoading}
-              className="px-6 py-3 rounded-lg bg-[#3B82F6] hover:bg-[#2563EB] text-white text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              className="flex w-full items-center justify-center gap-2 rounded-lg bg-[#3B82F6] px-6 py-3 text-sm font-medium text-white transition-colors hover:bg-[#2563EB] disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto sm:justify-start"
             >
               {isLoading ? (
-                "Saving..."
+                'Saving...'
               ) : (
                 <>
-                  <Save className="w-4 h-4" />
+                  <Save className="h-4 w-4" />
                   Save Settings
                 </>
               )}
@@ -1226,59 +1486,91 @@ export default function AdminSeoPage() {
       )}
 
       {/* Schema Tab */}
-      {activeTab === "schema" && (
-        <div className="p-6 rounded-xl bg-[rgba(15,23,42,0.6)] border border-[rgba(255,255,255,0.1)] backdrop-blur-xl">
-          <h2 className="text-white text-xl font-semibold mb-6">Structured Data (Schema Markup)</h2>
+      {activeTab === 'schema' && (
+        <div className="rounded-xl border border-[rgba(255,255,255,0.1)] bg-[rgba(15,23,42,0.6)] p-4 backdrop-blur-xl sm:p-6">
+          <h2 className="mb-6 text-xl font-semibold text-white">
+            Structured Data (Schema Markup)
+          </h2>
 
           <div className="space-y-6">
-            <div className="flex items-center gap-4">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:gap-4">
               <div className="flex-1">
-                <label className="text-white text-sm font-medium mb-2 block">Schema Type</label>
-                <select
+                <label className="mb-2 block text-sm font-medium text-white">
+                  Schema Type
+                </label>
+                <Select
                   value={schema.type}
-                  onChange={(e) => setSchema({ ...schema, type: e.target.value })}
-                  className="w-full bg-[rgba(0,0,0,0.4)] border border-[rgba(255,255,255,0.18)] rounded-lg px-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#3B82F6]"
+                  onValueChange={(v) => setSchema({ ...schema, type: v })}
                 >
-                  <option value="Organization">Organization</option>
-                  <option value="Product">Product</option>
-                  <option value="Article">Article</option>
-                  <option value="FAQ">FAQ</option>
-                </select>
+                  <SelectTrigger className="w-full rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.4)] px-4 py-3 text-base text-white focus-visible:ring-2 focus-visible:ring-[#3B82F6] focus-visible:outline-none data-[size=default]:h-auto data-[size=default]:min-h-12 lg:text-sm">
+                    <SelectValue placeholder="Select schema type" />
+                  </SelectTrigger>
+                  <SelectContent className="max-h-72 border-[rgba(255,255,255,0.18)] bg-[#1E293B] text-white">
+                    <SelectItem
+                      value="Organization"
+                      className="text-white focus:bg-[rgba(59,130,246,0.15)] focus:text-white"
+                    >
+                      Organization
+                    </SelectItem>
+                    <SelectItem
+                      value="Product"
+                      className="text-white focus:bg-[rgba(59,130,246,0.15)] focus:text-white"
+                    >
+                      Product
+                    </SelectItem>
+                    <SelectItem
+                      value="Article"
+                      className="text-white focus:bg-[rgba(59,130,246,0.15)] focus:text-white"
+                    >
+                      Article
+                    </SelectItem>
+                    <SelectItem
+                      value="FAQ"
+                      className="text-white focus:bg-[rgba(59,130,246,0.15)] focus:text-white"
+                    >
+                      FAQ
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
               <button
                 onClick={handleGenerateSchema}
-                className="mt-7 px-6 py-3 rounded-lg bg-[#F59E0B] hover:bg-[#D97706] text-white text-sm font-medium transition-colors flex items-center gap-2"
+                className="flex w-full items-center justify-center gap-2 rounded-lg bg-[#F59E0B] px-6 py-3 text-sm font-medium text-white transition-colors hover:bg-[#D97706] sm:w-auto sm:justify-start"
               >
-                <Wand2 className="w-4 h-4" />
+                <Wand2 className="h-4 w-4" />
                 Auto-Generate
               </button>
             </div>
 
             <div>
-              <label className="text-white text-sm font-medium mb-2 block">JSON-LD Schema</label>
+              <label className="mb-2 block text-sm font-medium text-white">
+                JSON-LD Schema
+              </label>
               <textarea
                 value={schema.jsonLd}
-                onChange={(e) => setSchema({ ...schema, jsonLd: e.target.value })}
-                className="w-full bg-[rgba(0,0,0,0.4)] border border-[rgba(255,255,255,0.18)] rounded-lg px-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#3B82F6] font-mono min-h-[400px] resize-none"
+                onChange={(e) =>
+                  setSchema({ ...schema, jsonLd: e.target.value })
+                }
+                className="min-h-[400px] w-full resize-none rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.4)] px-4 py-3 font-mono text-base text-white focus:ring-2 focus:ring-[#3B82F6] focus:outline-none lg:text-sm"
                 placeholder="Enter JSON-LD schema..."
               />
-              <p className="text-[#64748B] text-xs mt-2">
+              <p className="mt-2 text-xs text-[#64748B]">
                 Make sure your JSON-LD is valid before saving
               </p>
             </div>
           </div>
 
-          <div className="flex items-center justify-end gap-3 mt-6 pt-6 border-t border-[rgba(255,255,255,0.1)]">
+          <div className="mt-6 flex flex-col gap-3 border-t border-[rgba(255,255,255,0.1)] pt-6 sm:flex-row sm:items-center sm:justify-end sm:gap-4">
             <button
               onClick={handleSaveSchema}
               disabled={isLoading}
-              className="px-6 py-3 rounded-lg bg-[#3B82F6] hover:bg-[#2563EB] text-white text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              className="flex w-full items-center justify-center gap-2 rounded-lg bg-[#3B82F6] px-6 py-3 text-sm font-medium text-white transition-colors hover:bg-[#2563EB] disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto sm:justify-start"
             >
               {isLoading ? (
-                "Saving..."
+                'Saving...'
               ) : (
                 <>
-                  <Save className="w-4 h-4" />
+                  <Save className="h-4 w-4" />
                   Save Schema
                 </>
               )}
@@ -1288,119 +1580,142 @@ export default function AdminSeoPage() {
       )}
 
       {/* SMS Services SEO Tab */}
-      {activeTab === "sms" && (
+      {activeTab === 'sms' && (
         <div className="space-y-6">
-          <div className="p-6 rounded-xl bg-[rgba(15,23,42,0.6)] border border-[rgba(255,255,255,0.1)] backdrop-blur-xl">
-            <div className="flex items-center justify-between mb-6">
+          <div className="rounded-xl border border-[rgba(255,255,255,0.1)] bg-[rgba(15,23,42,0.6)] p-4 backdrop-blur-xl sm:p-6">
+            <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <h2 className="text-white text-xl font-semibold mb-2">SMS Services SEO Templates</h2>
-                <p className="text-[#94A3B8] text-sm">
+                <h2 className="mb-2 text-xl font-semibold text-white">
+                  SMS Services SEO Templates
+                </h2>
+                <p className="text-sm text-[#94A3B8]">
                   Create SEO templates for all SMS services using placeholders
                 </p>
               </div>
               <button
                 onClick={handleGenerateAISEO}
                 disabled={isLoading}
-                className="px-6 py-3 rounded-lg bg-gradient-to-r from-[#8B5CF6] to-[#EC4899] hover:from-[#7C3AED] hover:to-[#DB2777] text-white text-sm font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                className="flex w-full items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-[#8B5CF6] to-[#EC4899] px-6 py-3 text-sm font-medium text-white transition-all hover:from-[#7C3AED] hover:to-[#DB2777] disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto sm:justify-start"
               >
                 {isLoading ? (
-                  "Generating..."
+                  'Generating...'
                 ) : (
                   <>
-                    <Wand2 className="w-4 h-4" />
+                    <Wand2 className="h-4 w-4" />
                     Generate SEO (AI)
                   </>
                 )}
               </button>
             </div>
 
-            <div className="p-4 rounded-lg bg-[rgba(139,92,246,0.1)] border border-[rgba(139,92,246,0.3)] mb-6">
-              <h3 className="text-[#8B5CF6] text-sm font-semibold mb-2 flex items-center gap-2">
-                <AlertCircle className="w-4 h-4" />
+            <div className="mb-6 rounded-lg border border-[rgba(139,92,246,0.3)] bg-[rgba(139,92,246,0.1)] p-4">
+              <h3 className="mb-2 flex items-center gap-2 text-sm font-semibold text-[#8B5CF6]">
+                <AlertCircle className="h-4 w-4" />
                 Available Placeholders
               </h3>
               <div className="grid grid-cols-2 gap-2 text-sm">
                 <div className="text-[#94A3B8]">
-                  <span className="text-[#8B5CF6] font-mono">{"{service}"}</span> - Service name
-                  (e.g., WhatsApp)
+                  <span className="font-mono text-[#8B5CF6]">
+                    {'{service}'}
+                  </span>{' '}
+                  - Service name (e.g., WhatsApp)
                 </div>
                 <div className="text-[#94A3B8]">
-                  <span className="text-[#8B5CF6] font-mono">{"{country}"}</span> - Country name
-                  (e.g., United States)
+                  <span className="font-mono text-[#8B5CF6]">
+                    {'{country}'}
+                  </span>{' '}
+                  - Country name (e.g., United States)
                 </div>
               </div>
             </div>
 
             <div className="space-y-4">
               <div>
-                <label className="text-white text-sm font-medium mb-2 block">Title Template</label>
+                <label className="mb-2 block text-sm font-medium text-white">
+                  Title Template
+                </label>
                 <input
                   type="text"
                   value={smsSeoTemplate.titleTemplate}
                   onChange={(e) =>
-                    setSmsSeoTemplate({ ...smsSeoTemplate, titleTemplate: e.target.value })
+                    setSmsSeoTemplate({
+                      ...smsSeoTemplate,
+                      titleTemplate: e.target.value,
+                    })
                   }
-                  className="w-full bg-[rgba(0,0,0,0.4)] border border-[rgba(255,255,255,0.18)] rounded-lg px-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#3B82F6]"
+                  className="w-full rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.4)] px-4 py-3 text-base text-white focus:ring-2 focus:ring-[#3B82F6] focus:outline-none lg:text-sm"
                   placeholder="{service} SMS Verification - {country} Virtual Number"
                 />
-                <div className="mt-2 p-3 rounded-lg bg-[rgba(0,0,0,0.3)] border border-[rgba(255,255,255,0.1)]">
-                  <p className="text-[#64748B] text-xs mb-1">Example output:</p>
-                  <p className="text-[#22C55E] text-sm">
+                <div className="mt-2 rounded-lg border border-[rgba(255,255,255,0.1)] bg-[rgba(0,0,0,0.3)] p-3">
+                  <p className="mb-1 text-xs text-[#64748B]">Example output:</p>
+                  <p className="text-sm text-[#22C55E]">
                     WhatsApp SMS Verification - United States Virtual Number
                   </p>
                 </div>
               </div>
 
               <div>
-                <label className="text-white text-sm font-medium mb-2 block">Description Template</label>
+                <label className="mb-2 block text-sm font-medium text-white">
+                  Description Template
+                </label>
                 <textarea
                   value={smsSeoTemplate.descriptionTemplate}
                   onChange={(e) =>
-                    setSmsSeoTemplate({ ...smsSeoTemplate, descriptionTemplate: e.target.value })
+                    setSmsSeoTemplate({
+                      ...smsSeoTemplate,
+                      descriptionTemplate: e.target.value,
+                    })
                   }
-                  className="w-full bg-[rgba(0,0,0,0.4)] border border-[rgba(255,255,255,0.18)] rounded-lg px-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#3B82F6] min-h-[100px] resize-none"
+                  className="min-h-[100px] w-full resize-none rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.4)] px-4 py-3 text-base text-white focus:ring-2 focus:ring-[#3B82F6] focus:outline-none lg:text-sm"
                   placeholder="Get instant {service} SMS verification with virtual numbers from {country}..."
                 />
-                <div className="mt-2 p-3 rounded-lg bg-[rgba(0,0,0,0.3)] border border-[rgba(255,255,255,0.1)]">
-                  <p className="text-[#64748B] text-xs mb-1">Example output:</p>
-                  <p className="text-[#22C55E] text-sm">
-                    Get instant WhatsApp SMS verification with virtual numbers from United States. Fast,
-                    reliable, and secure activation service starting at $0.50.
+                <div className="mt-2 rounded-lg border border-[rgba(255,255,255,0.1)] bg-[rgba(0,0,0,0.3)] p-3">
+                  <p className="mb-1 text-xs text-[#64748B]">Example output:</p>
+                  <p className="text-sm text-[#22C55E]">
+                    Get instant WhatsApp SMS verification with virtual numbers
+                    from United States. Fast, reliable, and secure activation
+                    service starting at $0.50.
                   </p>
                 </div>
               </div>
 
               <div>
-                <label className="text-white text-sm font-medium mb-2 block">Keywords Template</label>
+                <label className="mb-2 block text-sm font-medium text-white">
+                  Keywords Template
+                </label>
                 <input
                   type="text"
                   value={smsSeoTemplate.keywordsTemplate}
                   onChange={(e) =>
-                    setSmsSeoTemplate({ ...smsSeoTemplate, keywordsTemplate: e.target.value })
+                    setSmsSeoTemplate({
+                      ...smsSeoTemplate,
+                      keywordsTemplate: e.target.value,
+                    })
                   }
-                  className="w-full bg-[rgba(0,0,0,0.4)] border border-[rgba(255,255,255,0.18)] rounded-lg px-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#3B82F6]"
+                  className="w-full rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.4)] px-4 py-3 text-base text-white focus:ring-2 focus:ring-[#3B82F6] focus:outline-none lg:text-sm"
                   placeholder="{service} sms, {country} virtual number, {service} verification..."
                 />
-                <div className="mt-2 p-3 rounded-lg bg-[rgba(0,0,0,0.3)] border border-[rgba(255,255,255,0.1)]">
-                  <p className="text-[#64748B] text-xs mb-1">Example output:</p>
-                  <p className="text-[#22C55E] text-sm">
-                    whatsapp sms, united states virtual number, whatsapp verification, usa phone number
+                <div className="mt-2 rounded-lg border border-[rgba(255,255,255,0.1)] bg-[rgba(0,0,0,0.3)] p-3">
+                  <p className="mb-1 text-xs text-[#64748B]">Example output:</p>
+                  <p className="text-sm text-[#22C55E]">
+                    whatsapp sms, united states virtual number, whatsapp
+                    verification, usa phone number
                   </p>
                 </div>
               </div>
             </div>
 
-            <div className="flex items-center justify-end gap-3 mt-6 pt-6 border-t border-[rgba(255,255,255,0.1)]">
+            <div className="mt-6 flex flex-col gap-3 border-t border-[rgba(255,255,255,0.1)] pt-6 sm:flex-row sm:items-center sm:justify-end sm:gap-4">
               <button
                 onClick={handleSaveSMSSEO}
                 disabled={isLoading}
-                className="px-6 py-3 rounded-lg bg-[#3B82F6] hover:bg-[#2563EB] text-white text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                className="flex w-full items-center justify-center gap-2 rounded-lg bg-[#3B82F6] px-6 py-3 text-sm font-medium text-white transition-colors hover:bg-[#2563EB] disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto sm:justify-start"
               >
                 {isLoading ? (
-                  "Saving..."
+                  'Saving...'
                 ) : (
                   <>
-                    <Save className="w-4 h-4" />
+                    <Save className="h-4 w-4" />
                     Save Templates
                   </>
                 )}
@@ -1412,99 +1727,138 @@ export default function AdminSeoPage() {
 
       {/* Edit Page Modal */}
       {showEditPageModal && selectedPage && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-[#0F172A] border border-[rgba(255,255,255,0.1)] rounded-xl p-6 w-full max-w-3xl max-h-[90vh] overflow-y-auto">
-            <h2 className="text-white text-xl font-semibold mb-6">Edit Page SEO - {selectedPage.pageName}</h2>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
+          <div className="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-xl border border-[rgba(255,255,255,0.1)] bg-[#0F172A] p-6">
+            <h2 className="mb-6 text-xl font-semibold text-white">
+              Edit Page SEO - {selectedPage.pageName}
+            </h2>
 
             <div className="space-y-4">
               <div>
-                <label className="text-white text-sm font-medium mb-2 block">Meta Title</label>
+                <label className="mb-2 block text-sm font-medium text-white">
+                  Meta Title
+                </label>
                 <input
                   type="text"
                   value={selectedPage.metaTitle}
-                  onChange={(e) => setSelectedPage({ ...selectedPage, metaTitle: e.target.value })}
-                  className="w-full bg-[rgba(0,0,0,0.4)] border border-[rgba(255,255,255,0.18)] rounded-lg px-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#3B82F6]"
+                  onChange={(e) =>
+                    setSelectedPage({
+                      ...selectedPage,
+                      metaTitle: e.target.value,
+                    })
+                  }
+                  className="w-full rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.4)] px-4 py-3 text-base text-white focus:ring-2 focus:ring-[#3B82F6] focus:outline-none lg:text-sm"
                   placeholder="Enter meta title"
                 />
-                <p className="text-[#64748B] text-xs mt-1">
+                <p className="mt-1 text-xs text-[#64748B]">
                   {selectedPage.metaTitle.length}/60 characters
                 </p>
               </div>
 
               <div>
-                <label className="text-white text-sm font-medium mb-2 block">Meta Description</label>
+                <label className="mb-2 block text-sm font-medium text-white">
+                  Meta Description
+                </label>
                 <textarea
                   value={selectedPage.metaDescription}
-                  onChange={(e) => setSelectedPage({ ...selectedPage, metaDescription: e.target.value })}
-                  className="w-full bg-[rgba(0,0,0,0.4)] border border-[rgba(255,255,255,0.18)] rounded-lg px-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#3B82F6] min-h-[100px] resize-none"
+                  onChange={(e) =>
+                    setSelectedPage({
+                      ...selectedPage,
+                      metaDescription: e.target.value,
+                    })
+                  }
+                  className="min-h-[100px] w-full resize-none rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.4)] px-4 py-3 text-base text-white focus:ring-2 focus:ring-[#3B82F6] focus:outline-none lg:text-sm"
                   placeholder="Enter meta description"
                 />
-                <p className="text-[#64748B] text-xs mt-1">
+                <p className="mt-1 text-xs text-[#64748B]">
                   {selectedPage.metaDescription.length}/160 characters
                 </p>
               </div>
 
               <div>
-                <label className="text-white text-sm font-medium mb-2 block">Keywords</label>
+                <label className="mb-2 block text-sm font-medium text-white">
+                  Keywords
+                </label>
                 <input
                   type="text"
                   value={selectedPage.keywords}
-                  onChange={(e) => setSelectedPage({ ...selectedPage, keywords: e.target.value })}
-                  className="w-full bg-[rgba(0,0,0,0.4)] border border-[rgba(255,255,255,0.18)] rounded-lg px-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#3B82F6]"
+                  onChange={(e) =>
+                    setSelectedPage({
+                      ...selectedPage,
+                      keywords: e.target.value,
+                    })
+                  }
+                  className="w-full rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.4)] px-4 py-3 text-base text-white focus:ring-2 focus:ring-[#3B82F6] focus:outline-none lg:text-sm"
                   placeholder="keyword1, keyword2, keyword3"
                 />
               </div>
 
               <div>
-                <label className="text-white text-sm font-medium mb-2 block">Canonical URL</label>
+                <label className="mb-2 block text-sm font-medium text-white">
+                  Canonical URL
+                </label>
                 <input
                   type="url"
                   value={selectedPage.canonicalUrl}
-                  onChange={(e) => setSelectedPage({ ...selectedPage, canonicalUrl: e.target.value })}
-                  className="w-full bg-[rgba(0,0,0,0.4)] border border-[rgba(255,255,255,0.18)] rounded-lg px-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#3B82F6]"
+                  onChange={(e) =>
+                    setSelectedPage({
+                      ...selectedPage,
+                      canonicalUrl: e.target.value,
+                    })
+                  }
+                  className="w-full rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.4)] px-4 py-3 text-base text-white focus:ring-2 focus:ring-[#3B82F6] focus:outline-none lg:text-sm"
                   placeholder="https://example.com/page"
                 />
               </div>
 
-              <div className="flex items-center justify-between p-4 rounded-lg bg-[rgba(0,0,0,0.3)] border border-[rgba(255,255,255,0.1)]">
+              <div className="flex items-center justify-between rounded-lg border border-[rgba(255,255,255,0.1)] bg-[rgba(0,0,0,0.3)] p-4">
                 <div>
-                  <h3 className="text-white text-sm font-semibold mb-1">Index This Page</h3>
-                  <p className="text-[#64748B] text-xs">Allow search engines to index this page</p>
+                  <h3 className="mb-1 text-sm font-semibold text-white">
+                    Index This Page
+                  </h3>
+                  <p className="text-xs text-[#64748B]">
+                    Allow search engines to index this page
+                  </p>
                 </div>
-                <label className="relative inline-flex items-center cursor-pointer">
+                <label className="relative inline-flex cursor-pointer items-center">
                   <input
                     type="checkbox"
                     checked={selectedPage.indexed}
-                    onChange={(e) => setSelectedPage({ ...selectedPage, indexed: e.target.checked })}
-                    className="sr-only peer"
+                    onChange={(e) =>
+                      setSelectedPage({
+                        ...selectedPage,
+                        indexed: e.target.checked,
+                      })
+                    }
+                    className="peer sr-only"
                   />
-                  <div className="w-11 h-6 bg-[#64748B] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#22C55E]"></div>
+                  <div className="peer h-6 w-11 rounded-full bg-[#64748B] peer-checked:bg-[#22C55E] peer-focus:outline-none after:absolute after:top-[2px] after:left-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:after:translate-x-full peer-checked:after:border-white"></div>
                 </label>
               </div>
             </div>
 
-            <div className="flex items-center justify-end gap-3 mt-6">
+            <div className="mt-6 flex items-center justify-end gap-3">
               <button
                 onClick={() => {
                   setShowEditPageModal(false);
                   setSelectedPage(null);
                 }}
-                className="px-5 py-2.5 rounded-lg bg-[rgba(255,255,255,0.08)] hover:bg-[rgba(255,255,255,0.12)] text-white text-sm font-medium transition-colors"
+                className="rounded-lg bg-[rgba(255,255,255,0.08)] px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-[rgba(255,255,255,0.12)]"
               >
                 Cancel
               </button>
               <button
                 onClick={handleSavePage}
                 disabled={isLoading}
-                className="px-5 py-2.5 rounded-lg bg-[#3B82F6] hover:bg-[#2563EB] text-white text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                className="flex items-center gap-2 rounded-lg bg-[#3B82F6] px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-[#2563EB] disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {isLoading ? (
                   <>
-                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <Loader2 className="h-4 w-4 animate-spin" />
                     Saving...
                   </>
                 ) : (
-                  "Save Changes"
+                  'Save Changes'
                 )}
               </button>
             </div>
@@ -1514,90 +1868,121 @@ export default function AdminSeoPage() {
 
       {/* Add Page Modal */}
       {showAddPageModal && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-[#0F172A] border border-[rgba(255,255,255,0.1)] rounded-xl p-6 w-full max-w-3xl max-h-[90vh] overflow-y-auto">
-            <h2 className="text-white text-xl font-semibold mb-6">Add New Page SEO</h2>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
+          <div className="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-xl border border-[rgba(255,255,255,0.1)] bg-[#0F172A] p-6">
+            <h2 className="mb-6 text-xl font-semibold text-white">
+              Add New Page SEO
+            </h2>
 
             <div className="space-y-4">
               <div>
-                <label className="text-white text-sm font-medium mb-2 block">Page URL / Path *</label>
+                <label className="mb-2 block text-sm font-medium text-white">
+                  Page URL / Path *
+                </label>
                 <input
                   type="text"
                   value={newPage.url}
-                  onChange={(e) => setNewPage({ ...newPage, url: e.target.value })}
-                  className="w-full bg-[rgba(0,0,0,0.4)] border border-[rgba(255,255,255,0.18)] rounded-lg px-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#3B82F6]"
+                  onChange={(e) =>
+                    setNewPage({ ...newPage, url: e.target.value })
+                  }
+                  className="w-full rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.4)] px-4 py-3 text-base text-white focus:ring-2 focus:ring-[#3B82F6] focus:outline-none lg:text-sm"
                   placeholder="e.g., /about or /services/*"
                 />
-                <p className="text-[#64748B] text-xs mt-1">Use * for wildcard paths (e.g., /blog/*)</p>
+                <p className="mt-1 text-xs text-[#64748B]">
+                  Use * for wildcard paths (e.g., /blog/*)
+                </p>
               </div>
 
               <div>
-                <label className="text-white text-sm font-medium mb-2 block">Meta Title</label>
+                <label className="mb-2 block text-sm font-medium text-white">
+                  Meta Title
+                </label>
                 <input
                   type="text"
                   value={newPage.metaTitle}
-                  onChange={(e) => setNewPage({ ...newPage, metaTitle: e.target.value })}
-                  className="w-full bg-[rgba(0,0,0,0.4)] border border-[rgba(255,255,255,0.18)] rounded-lg px-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#3B82F6]"
+                  onChange={(e) =>
+                    setNewPage({ ...newPage, metaTitle: e.target.value })
+                  }
+                  className="w-full rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.4)] px-4 py-3 text-base text-white focus:ring-2 focus:ring-[#3B82F6] focus:outline-none lg:text-sm"
                   placeholder="Enter meta title"
                 />
-                <p className="text-[#64748B] text-xs mt-1">
+                <p className="mt-1 text-xs text-[#64748B]">
                   {newPage.metaTitle.length}/60 characters (optimal: 50-60)
                 </p>
               </div>
 
               <div>
-                <label className="text-white text-sm font-medium mb-2 block">Meta Description</label>
+                <label className="mb-2 block text-sm font-medium text-white">
+                  Meta Description
+                </label>
                 <textarea
                   value={newPage.metaDescription}
-                  onChange={(e) => setNewPage({ ...newPage, metaDescription: e.target.value })}
-                  className="w-full bg-[rgba(0,0,0,0.4)] border border-[rgba(255,255,255,0.18)] rounded-lg px-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#3B82F6] min-h-[100px] resize-none"
+                  onChange={(e) =>
+                    setNewPage({ ...newPage, metaDescription: e.target.value })
+                  }
+                  className="min-h-[100px] w-full resize-none rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.4)] px-4 py-3 text-base text-white focus:ring-2 focus:ring-[#3B82F6] focus:outline-none lg:text-sm"
                   placeholder="Enter meta description"
                 />
-                <p className="text-[#64748B] text-xs mt-1">
-                  {newPage.metaDescription.length}/160 characters (optimal: 150-160)
+                <p className="mt-1 text-xs text-[#64748B]">
+                  {newPage.metaDescription.length}/160 characters (optimal:
+                  150-160)
                 </p>
               </div>
 
               <div>
-                <label className="text-white text-sm font-medium mb-2 block">Keywords</label>
+                <label className="mb-2 block text-sm font-medium text-white">
+                  Keywords
+                </label>
                 <input
                   type="text"
                   value={newPage.keywords}
-                  onChange={(e) => setNewPage({ ...newPage, keywords: e.target.value })}
-                  className="w-full bg-[rgba(0,0,0,0.4)] border border-[rgba(255,255,255,0.18)] rounded-lg px-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#3B82F6]"
+                  onChange={(e) =>
+                    setNewPage({ ...newPage, keywords: e.target.value })
+                  }
+                  className="w-full rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.4)] px-4 py-3 text-base text-white focus:ring-2 focus:ring-[#3B82F6] focus:outline-none lg:text-sm"
                   placeholder="keyword1, keyword2, keyword3"
                 />
               </div>
 
               <div>
-                <label className="text-white text-sm font-medium mb-2 block">Canonical URL</label>
+                <label className="mb-2 block text-sm font-medium text-white">
+                  Canonical URL
+                </label>
                 <input
                   type="url"
                   value={newPage.canonicalUrl}
-                  onChange={(e) => setNewPage({ ...newPage, canonicalUrl: e.target.value })}
-                  className="w-full bg-[rgba(0,0,0,0.4)] border border-[rgba(255,255,255,0.18)] rounded-lg px-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#3B82F6]"
+                  onChange={(e) =>
+                    setNewPage({ ...newPage, canonicalUrl: e.target.value })
+                  }
+                  className="w-full rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.4)] px-4 py-3 text-base text-white focus:ring-2 focus:ring-[#3B82F6] focus:outline-none lg:text-sm"
                   placeholder="https://example.com/page"
                 />
               </div>
 
-              <div className="flex items-center justify-between p-4 rounded-lg bg-[rgba(0,0,0,0.3)] border border-[rgba(255,255,255,0.1)]">
+              <div className="flex items-center justify-between rounded-lg border border-[rgba(255,255,255,0.1)] bg-[rgba(0,0,0,0.3)] p-4">
                 <div>
-                  <h3 className="text-white text-sm font-semibold mb-1">Index This Page</h3>
-                  <p className="text-[#64748B] text-xs">Allow search engines to index this page</p>
+                  <h3 className="mb-1 text-sm font-semibold text-white">
+                    Index This Page
+                  </h3>
+                  <p className="text-xs text-[#64748B]">
+                    Allow search engines to index this page
+                  </p>
                 </div>
-                <label className="relative inline-flex items-center cursor-pointer">
+                <label className="relative inline-flex cursor-pointer items-center">
                   <input
                     type="checkbox"
                     checked={newPage.indexed}
-                    onChange={(e) => setNewPage({ ...newPage, indexed: e.target.checked })}
-                    className="sr-only peer"
+                    onChange={(e) =>
+                      setNewPage({ ...newPage, indexed: e.target.checked })
+                    }
+                    className="peer sr-only"
                   />
-                  <div className="w-11 h-6 bg-[#64748B] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#22C55E]"></div>
+                  <div className="peer h-6 w-11 rounded-full bg-[#64748B] peer-checked:bg-[#22C55E] peer-focus:outline-none after:absolute after:top-[2px] after:left-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:after:translate-x-full peer-checked:after:border-white"></div>
                 </label>
               </div>
             </div>
 
-            <div className="flex items-center justify-end gap-3 mt-6">
+            <div className="mt-6 flex items-center justify-end gap-3">
               <button
                 onClick={() => {
                   setShowAddPageModal(false);
@@ -1610,23 +1995,23 @@ export default function AdminSeoPage() {
                     indexed: true,
                   });
                 }}
-                className="px-5 py-2.5 rounded-lg bg-[rgba(255,255,255,0.08)] hover:bg-[rgba(255,255,255,0.12)] text-white text-sm font-medium transition-colors"
+                className="rounded-lg bg-[rgba(255,255,255,0.08)] px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-[rgba(255,255,255,0.12)]"
               >
                 Cancel
               </button>
               <button
                 onClick={handleAddPage}
                 disabled={isLoading || !newPage.url}
-                className="px-5 py-2.5 rounded-lg bg-[#22C55E] hover:bg-[#16A34A] text-white text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                className="flex items-center gap-2 rounded-lg bg-[#22C55E] px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-[#16A34A] disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {isLoading ? (
                   <>
-                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <Loader2 className="h-4 w-4 animate-spin" />
                     Creating...
                   </>
                 ) : (
                   <>
-                    <Plus className="w-4 h-4" />
+                    <Plus className="h-4 w-4" />
                     Create Page SEO
                   </>
                 )}
@@ -1638,33 +2023,39 @@ export default function AdminSeoPage() {
 
       {/* Delete Confirmation Modal */}
       {deleteConfirmPage && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-[#0F172A] border border-[rgba(255,255,255,0.1)] rounded-xl p-6 w-full max-w-md">
-            <h2 className="text-white text-xl font-semibold mb-4">Delete Page SEO</h2>
-            <p className="text-[#94A3B8] text-sm mb-6">
-              Are you sure you want to delete SEO settings for <span className="text-white font-medium">{deleteConfirmPage.pageName}</span> ({deleteConfirmPage.url})? This action cannot be undone.
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-md rounded-xl border border-[rgba(255,255,255,0.1)] bg-[#0F172A] p-6">
+            <h2 className="mb-4 text-xl font-semibold text-white">
+              Delete Page SEO
+            </h2>
+            <p className="mb-6 text-sm text-[#94A3B8]">
+              Are you sure you want to delete SEO settings for{' '}
+              <span className="font-medium text-white">
+                {deleteConfirmPage.pageName}
+              </span>{' '}
+              ({deleteConfirmPage.url})? This action cannot be undone.
             </p>
 
             <div className="flex items-center justify-end gap-3">
               <button
                 onClick={() => setDeleteConfirmPage(null)}
-                className="px-5 py-2.5 rounded-lg bg-[rgba(255,255,255,0.08)] hover:bg-[rgba(255,255,255,0.12)] text-white text-sm font-medium transition-colors"
+                className="rounded-lg bg-[rgba(255,255,255,0.08)] px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-[rgba(255,255,255,0.12)]"
               >
                 Cancel
               </button>
               <button
                 onClick={() => handleDeletePage(deleteConfirmPage)}
                 disabled={isLoading}
-                className="px-5 py-2.5 rounded-lg bg-[#EF4444] hover:bg-[#DC2626] text-white text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                className="flex items-center gap-2 rounded-lg bg-[#EF4444] px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-[#DC2626] disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {isLoading ? (
                   <>
-                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <Loader2 className="h-4 w-4 animate-spin" />
                     Deleting...
                   </>
                 ) : (
                   <>
-                    <Trash2 className="w-4 h-4" />
+                    <Trash2 className="h-4 w-4" />
                     Delete
                   </>
                 )}

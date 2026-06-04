@@ -57,7 +57,6 @@ import {
 import {
   getAllLanguages,
   toggleLanguage,
-  updateLanguage,
   type Language,
 } from '@/lib/api/languagesApi';
 import {
@@ -1039,7 +1038,9 @@ www.cheapstreamtv.com`,
     const prev = languages;
     setLanguages((list) => list.map((l) => ({ ...l, isDefault: l.id === id })));
     try {
-      await updateLanguage(id, { isDefault: true });
+      await bulkUpdateSettings({
+        settings: [{ key: 'default_language', value: target.langCode }],
+      });
       toast.success('Default language updated');
     } catch {
       setLanguages(prev);
@@ -1313,7 +1314,7 @@ www.cheapstreamtv.com`,
       </div>
 
       {/* Navigation Tabs */}
-      <div className="mb-8 flex items-center gap-6 overflow-x-auto border-b border-[rgba(255,255,255,0.18)]">
+      <div className="mb-8 flex items-center gap-6 overflow-x-auto border-b border-[rgba(255,255,255,0.18)] pb-0 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {tabs.map((tab) => (
           <button
             key={tab.id}
@@ -1335,7 +1336,7 @@ www.cheapstreamtv.com`,
       {/* Social Media Tab */}
       {activeTab === 'social' && (
         <div className="max-w-5xl">
-          <div className="mb-6 rounded-xl border border-[rgba(255,255,255,0.1)] bg-[rgba(15,23,42,0.6)] p-8 backdrop-blur-xl">
+          <div className="mb-6 rounded-xl border border-[rgba(255,255,255,0.1)] bg-[rgba(15,23,42,0.6)] p-4 backdrop-blur-xl sm:p-8">
             <h2 className="mb-2 text-2xl font-semibold text-white">
               Social Media Management
             </h2>
@@ -1345,7 +1346,7 @@ www.cheapstreamtv.com`,
             </p>
           </div>
 
-          <div className="rounded-xl border border-[rgba(255,255,255,0.1)] bg-[rgba(15,23,42,0.6)] p-8 backdrop-blur-xl">
+          <div className="rounded-xl border border-[rgba(255,255,255,0.1)] bg-[rgba(15,23,42,0.6)] p-4 backdrop-blur-xl sm:p-8">
             <h3 className="mb-6 text-lg font-semibold text-white">
               Social Media Links
             </h3>
@@ -1398,7 +1399,7 @@ www.cheapstreamtv.com`,
                               [key]: { ...value, visible: !value.visible },
                             })
                           }
-                          className={`relative h-6 w-12 rounded-full transition-colors ${
+                          className={`size-icon relative h-6 !min-h-0 w-12 shrink-0 rounded-full !p-0 transition-colors ${
                             value.visible
                               ? 'bg-[#22C55E]'
                               : 'bg-[rgba(255,255,255,0.18)]'
@@ -1427,24 +1428,24 @@ www.cheapstreamtv.com`,
                         })
                       }
                       placeholder={`Enter ${names[key as keyof typeof names]} URL`}
-                      className="w-full rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.4)] px-4 py-3 text-sm text-white placeholder:text-[#64748B] focus:ring-2 focus:ring-[#3B82F6] focus:outline-none"
+                      className="w-full rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.4)] px-4 py-3 text-base text-white placeholder:text-[#64748B] focus:ring-2 focus:ring-[#3B82F6] focus:outline-none lg:text-sm"
                     />
                   </div>
                 );
               })}
             </div>
 
-            <div className="flex items-center justify-start gap-4">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-start sm:gap-4">
               <button
                 onClick={handleRefresh}
-                className="rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(255,255,255,0.08)] px-6 py-3 text-sm font-medium text-white transition-colors hover:bg-[rgba(255,255,255,0.12)]"
+                className="flex w-full items-center justify-center rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(255,255,255,0.08)] px-6 py-3 text-sm font-medium text-white transition-colors hover:bg-[rgba(255,255,255,0.12)] sm:w-auto sm:justify-start"
               >
                 Refresh
               </button>
               <button
                 onClick={() => handleSave('Social media links')}
                 disabled={isLoading}
-                className="rounded-lg bg-[#3B82F6] px-6 py-3 text-sm font-medium text-white transition-colors hover:bg-[#2563EB] disabled:cursor-not-allowed disabled:opacity-50"
+                className="flex w-full items-center justify-center rounded-lg bg-[#3B82F6] px-6 py-3 text-sm font-medium text-white transition-colors hover:bg-[#2563EB] disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto sm:justify-start"
               >
                 {isLoading ? 'Saving...' : 'Save'}
               </button>
@@ -1456,7 +1457,7 @@ www.cheapstreamtv.com`,
       {/* Contact & Support Ticket Tab */}
       {activeTab === 'contact' && (
         <div className="max-w-5xl">
-          <div className="mb-6 rounded-xl border border-[rgba(255,255,255,0.1)] bg-[rgba(15,23,42,0.6)] p-8 backdrop-blur-xl">
+          <div className="mb-6 rounded-xl border border-[rgba(255,255,255,0.1)] bg-[rgba(15,23,42,0.6)] p-4 backdrop-blur-xl sm:p-8">
             <h2 className="mb-2 text-2xl font-semibold text-white">
               Contact Information Management
             </h2>
@@ -1483,7 +1484,7 @@ www.cheapstreamtv.com`,
                     onChange={(e) =>
                       setContactInfo({ ...contactInfo, phone: e.target.value })
                     }
-                    className="w-full rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.4)] px-4 py-3 text-sm text-white focus:ring-2 focus:ring-[#3B82F6] focus:outline-none"
+                    className="w-full rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.4)] px-4 py-3 text-base text-white focus:ring-2 focus:ring-[#3B82F6] focus:outline-none lg:text-sm"
                   />
                 </div>
                 <div>
@@ -1496,7 +1497,7 @@ www.cheapstreamtv.com`,
                     onChange={(e) =>
                       setContactInfo({ ...contactInfo, email: e.target.value })
                     }
-                    className="w-full rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.4)] px-4 py-3 text-sm text-white focus:ring-2 focus:ring-[#3B82F6] focus:outline-none"
+                    className="w-full rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.4)] px-4 py-3 text-base text-white focus:ring-2 focus:ring-[#3B82F6] focus:outline-none lg:text-sm"
                   />
                 </div>
               </div>
@@ -1519,7 +1520,7 @@ www.cheapstreamtv.com`,
                     businessHours: e.target.value,
                   })
                 }
-                className="w-full rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.4)] px-4 py-3 text-sm text-white focus:ring-2 focus:ring-[#3B82F6] focus:outline-none"
+                className="w-full rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.4)] px-4 py-3 text-base text-white focus:ring-2 focus:ring-[#3B82F6] focus:outline-none lg:text-sm"
               />
               <p className="mt-2 text-xs text-[#64748B]">
                 This will be displayed in the footer
@@ -1543,7 +1544,7 @@ www.cheapstreamtv.com`,
                   })
                 }
                 rows={3}
-                className="w-full resize-none rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.4)] px-4 py-3 text-sm text-white focus:ring-2 focus:ring-[#3B82F6] focus:outline-none"
+                className="w-full resize-none rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.4)] px-4 py-3 text-base text-white focus:ring-2 focus:ring-[#3B82F6] focus:outline-none lg:text-sm"
               />
               <p className="mt-2 text-xs text-[#64748B]">
                 This message will be shown above the contact form
@@ -1569,7 +1570,7 @@ www.cheapstreamtv.com`,
                         buttonText: e.target.value,
                       })
                     }
-                    className="w-full rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.4)] px-4 py-3 text-sm text-white focus:ring-2 focus:ring-[#3B82F6] focus:outline-none"
+                    className="w-full rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.4)] px-4 py-3 text-base text-white focus:ring-2 focus:ring-[#3B82F6] focus:outline-none lg:text-sm"
                   />
                   <p className="mt-2 text-xs text-[#64748B]">
                     Text for the submit button on contact form
@@ -1589,7 +1590,7 @@ www.cheapstreamtv.com`,
                       })
                     }
                     rows={2}
-                    className="w-full resize-none rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.4)] px-4 py-3 text-sm text-white focus:ring-2 focus:ring-[#3B82F6] focus:outline-none"
+                    className="w-full resize-none rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.4)] px-4 py-3 text-base text-white focus:ring-2 focus:ring-[#3B82F6] focus:outline-none lg:text-sm"
                   />
                   <p className="mt-2 text-xs text-[#64748B]">
                     Message shown after successful form submission
@@ -1599,17 +1600,17 @@ www.cheapstreamtv.com`,
             </div>
 
             {/* Action Buttons */}
-            <div className="flex items-center justify-start gap-4">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-start sm:gap-4">
               <button
                 onClick={handleRefresh}
-                className="rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(255,255,255,0.08)] px-6 py-3 text-sm font-medium text-white transition-colors hover:bg-[rgba(255,255,255,0.12)]"
+                className="flex w-full items-center justify-center rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(255,255,255,0.08)] px-6 py-3 text-sm font-medium text-white transition-colors hover:bg-[rgba(255,255,255,0.12)] sm:w-auto sm:justify-start"
               >
                 Refresh
               </button>
               <button
                 onClick={() => handleSave('Contact information')}
                 disabled={isLoading}
-                className="rounded-lg bg-[#3B82F6] px-6 py-3 text-sm font-medium text-white transition-colors hover:bg-[#2563EB] disabled:cursor-not-allowed disabled:opacity-50"
+                className="flex w-full items-center justify-center rounded-lg bg-[#3B82F6] px-6 py-3 text-sm font-medium text-white transition-colors hover:bg-[#2563EB] disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto sm:justify-start"
               >
                 {isLoading ? 'Saving...' : 'Save Changes'}
               </button>
@@ -1714,7 +1715,7 @@ www.cheapstreamtv.com`,
                             onClick={() =>
                               setIsTemplateActive(!isTemplateActive)
                             }
-                            className={`relative h-5 w-10 rounded-full transition-colors ${
+                            className={`size-icon relative h-5 !min-h-0 w-10 shrink-0 rounded-full !p-0 transition-colors ${
                               isTemplateActive
                                 ? 'bg-[#22C55E]'
                                 : 'bg-[rgba(255,255,255,0.18)]'
@@ -1747,7 +1748,7 @@ www.cheapstreamtv.com`,
                         value={editedSubject}
                         onChange={(e) => setEditedSubject(e.target.value)}
                         placeholder="Enter email subject..."
-                        className="w-full rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.4)] px-4 py-3 text-sm text-white placeholder:text-[#64748B] focus:ring-2 focus:ring-[#3B82F6] focus:outline-none"
+                        className="w-full rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.4)] px-4 py-3 text-base text-white placeholder:text-[#64748B] focus:ring-2 focus:ring-[#3B82F6] focus:outline-none lg:text-sm"
                       />
                       <p className="mt-2 text-xs text-[#64748B]">
                         Use {'{{variableName}}'} syntax for dynamic content
@@ -1764,27 +1765,25 @@ www.cheapstreamtv.com`,
                         value={editedBody}
                         onChange={(e) => setEditedBody(e.target.value)}
                         rows={18}
-                        className="w-full resize-none rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.4)] px-4 py-3 font-mono text-sm text-white focus:ring-2 focus:ring-[#3B82F6] focus:outline-none"
+                        className="w-full resize-none rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.4)] px-4 py-3 font-mono text-base text-white focus:ring-2 focus:ring-[#3B82F6] focus:outline-none lg:text-sm"
                       />
                     </div>
 
                     {/* Action Buttons */}
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <button
-                          onClick={() => setShowResetTemplateConfirm(true)}
-                          className="flex items-center gap-2 rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(255,255,255,0.08)] px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-[rgba(255,255,255,0.12)]"
-                        >
-                          <RotateCcw className="h-4 w-4" />
-                          Reset to Default
-                        </button>
-                      </div>
+                    <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:gap-3">
+                      <button
+                        onClick={() => setShowResetTemplateConfirm(true)}
+                        className="flex w-full items-center justify-center gap-2 rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(255,255,255,0.08)] px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-[rgba(255,255,255,0.12)] sm:w-auto"
+                      >
+                        <RotateCcw className="h-4 w-4" />
+                        Reset to Default
+                      </button>
 
-                      <div className="flex items-center gap-3">
+                      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
                         <button
                           onClick={handlePreviewTemplate}
                           disabled={isPreviewLoading}
-                          className="flex items-center gap-2 rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(255,255,255,0.08)] px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-[rgba(255,255,255,0.12)] disabled:opacity-50"
+                          className="flex w-full items-center justify-center gap-2 rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(255,255,255,0.08)] px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-[rgba(255,255,255,0.12)] disabled:opacity-50 sm:w-auto"
                         >
                           {isPreviewLoading ? (
                             <Loader2 className="h-4 w-4 animate-spin" />
@@ -1798,7 +1797,7 @@ www.cheapstreamtv.com`,
 
                         <button
                           onClick={() => setShowTestEmailDialog(true)}
-                          className="flex items-center gap-2 rounded-lg bg-[#8B5CF6] px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-[#7C3AED]"
+                          className="flex w-full items-center justify-center gap-2 rounded-lg bg-[#8B5CF6] px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-[#7C3AED] sm:w-auto"
                         >
                           <Send className="h-4 w-4" />
                           Send Test
@@ -1807,7 +1806,7 @@ www.cheapstreamtv.com`,
                         <button
                           onClick={handleSaveTemplate}
                           disabled={isSavingTemplate || !hasTemplateChanges}
-                          className="flex items-center gap-2 rounded-lg bg-[#3B82F6] px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-[#2563EB] disabled:cursor-not-allowed disabled:opacity-50"
+                          className="flex w-full items-center justify-center gap-2 rounded-lg bg-[#3B82F6] px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-[#2563EB] disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
                         >
                           {isSavingTemplate ? (
                             <Loader2 className="h-4 w-4 animate-spin" />
@@ -2053,7 +2052,7 @@ www.cheapstreamtv.com`,
                           [tier.id]: e.target.value,
                         })
                       }
-                      className="w-full rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.4)] px-4 py-3 text-sm text-white focus:ring-2 focus:ring-[#3B82F6] focus:outline-none"
+                      className="w-full rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.4)] px-4 py-3 text-base text-white focus:ring-2 focus:ring-[#3B82F6] focus:outline-none lg:text-sm"
                     />
                     <span className="text-xs text-[#64748B]">req/min</span>
                   </div>
@@ -2061,17 +2060,17 @@ www.cheapstreamtv.com`,
               ))}
             </div>
 
-            <div className="mt-6 flex items-center justify-start gap-4">
+            <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-start sm:gap-4">
               <button
                 onClick={handleRefresh}
-                className="rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(255,255,255,0.08)] px-6 py-3 text-sm font-medium text-white transition-colors hover:bg-[rgba(255,255,255,0.12)]"
+                className="flex w-full items-center justify-center rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(255,255,255,0.08)] px-6 py-3 text-sm font-medium text-white transition-colors hover:bg-[rgba(255,255,255,0.12)] sm:w-auto sm:justify-start"
               >
                 Refresh
               </button>
               <button
                 onClick={() => handleSave('Rate limits')}
                 disabled={isLoading}
-                className="rounded-lg bg-[#3B82F6] px-6 py-3 text-sm font-medium text-white transition-colors hover:bg-[#2563EB] disabled:cursor-not-allowed disabled:opacity-50"
+                className="flex w-full items-center justify-center rounded-lg bg-[#3B82F6] px-6 py-3 text-sm font-medium text-white transition-colors hover:bg-[#2563EB] disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto sm:justify-start"
               >
                 {isLoading ? 'Saving...' : 'Save'}
               </button>
@@ -2083,7 +2082,7 @@ www.cheapstreamtv.com`,
       {/* Logo Management Tab */}
       {activeTab === 'logo' && (
         <div className="max-w-5xl">
-          <div className="mb-6 rounded-xl border border-[rgba(255,255,255,0.1)] bg-[rgba(15,23,42,0.6)] p-8 backdrop-blur-xl">
+          <div className="mb-6 rounded-xl border border-[rgba(255,255,255,0.1)] bg-[rgba(15,23,42,0.6)] p-4 backdrop-blur-xl sm:p-8">
             <h2 className="mb-2 text-2xl font-semibold text-white">
               Logo Management
             </h2>
@@ -2244,7 +2243,7 @@ www.cheapstreamtv.com`,
       {/* Site Status Tab */}
       {activeTab === 'status' && (
         <div className="max-w-5xl">
-          <div className="mb-6 rounded-xl border border-[rgba(255,255,255,0.1)] bg-[rgba(15,23,42,0.6)] p-8 backdrop-blur-xl">
+          <div className="mb-6 rounded-xl border border-[rgba(255,255,255,0.1)] bg-[rgba(15,23,42,0.6)] p-4 backdrop-blur-xl sm:p-8">
             <h2 className="mb-2 text-2xl font-semibold text-white">
               Site Status Management
             </h2>
@@ -2293,7 +2292,7 @@ www.cheapstreamtv.com`,
                 <button
                   onClick={handleToggleMaintenance}
                   disabled={isLoading}
-                  className={`relative ml-4 h-7 w-14 flex-shrink-0 rounded-full transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
+                  className={`size-icon relative ml-4 h-7 !min-h-0 w-14 shrink-0 rounded-full !p-0 transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
                     !siteStatus.isActive
                       ? 'bg-[#EF4444]'
                       : 'bg-[rgba(255,255,255,0.18)]'
@@ -2325,13 +2324,13 @@ www.cheapstreamtv.com`,
                   })
                 }
                 rows={3}
-                className="w-full resize-none rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.4)] px-4 py-3 text-sm text-white focus:ring-2 focus:ring-[#3B82F6] focus:outline-none"
+                className="w-full resize-none rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.4)] px-4 py-3 text-base text-white focus:ring-2 focus:ring-[#3B82F6] focus:outline-none lg:text-sm"
               />
 
               <button
                 onClick={handleUpdateMaintenanceMessage}
                 disabled={isLoading}
-                className="mt-4 rounded-lg bg-[#3B82F6] px-6 py-3 text-sm font-medium text-white transition-colors hover:bg-[#2563EB] disabled:cursor-not-allowed disabled:opacity-50"
+                className="mt-4 flex w-full items-center justify-center rounded-lg bg-[#3B82F6] px-6 py-3 text-sm font-medium text-white transition-colors hover:bg-[#2563EB] disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto sm:justify-start"
               >
                 {isLoading ? 'Updating...' : 'Update Message'}
               </button>
@@ -2379,7 +2378,7 @@ www.cheapstreamtv.com`,
       {/* Language Management Tab */}
       {activeTab === 'language' && (
         <div className="max-w-5xl">
-          <div className="mb-6 rounded-xl border border-[rgba(255,255,255,0.1)] bg-[rgba(15,23,42,0.6)] p-8 backdrop-blur-xl">
+          <div className="mb-6 rounded-xl border border-[rgba(255,255,255,0.1)] bg-[rgba(15,23,42,0.6)] p-4 backdrop-blur-xl sm:p-8">
             <h2 className="mb-2 text-2xl font-semibold text-white">
               Language Management
             </h2>
@@ -2396,7 +2395,7 @@ www.cheapstreamtv.com`,
           ) : (
             <>
               {/* Active Languages */}
-              <div className="mb-6 rounded-xl border border-[rgba(255,255,255,0.1)] bg-[rgba(15,23,42,0.6)] p-8 backdrop-blur-xl">
+              <div className="mb-6 rounded-xl border border-[rgba(255,255,255,0.1)] bg-[rgba(15,23,42,0.6)] p-4 backdrop-blur-xl sm:p-8">
                 <h3 className="mb-6 text-lg font-semibold text-white">
                   Active Languages ({languages.filter((l) => l.isActive).length}
                   )
@@ -2467,7 +2466,7 @@ www.cheapstreamtv.com`,
               </div>
 
               {/* Inactive Languages */}
-              <div className="mb-6 rounded-xl border border-[rgba(255,255,255,0.1)] bg-[rgba(15,23,42,0.6)] p-8 backdrop-blur-xl">
+              <div className="mb-6 rounded-xl border border-[rgba(255,255,255,0.1)] bg-[rgba(15,23,42,0.6)] p-4 backdrop-blur-xl sm:p-8">
                 <h3 className="mb-6 text-lg font-semibold text-white">
                   Inactive Languages (
                   {languages.filter((l) => !l.isActive).length})
@@ -2537,7 +2536,7 @@ www.cheapstreamtv.com`,
       {/* Addons Management Tab */}
       {activeTab === 'addons' && (
         <div className="max-w-5xl">
-          <div className="mb-6 rounded-xl border border-[rgba(255,255,255,0.1)] bg-[rgba(15,23,42,0.6)] p-8 backdrop-blur-xl">
+          <div className="mb-6 rounded-xl border border-[rgba(255,255,255,0.1)] bg-[rgba(15,23,42,0.6)] p-4 backdrop-blur-xl sm:p-8">
             <h2 className="mb-2 text-2xl font-semibold text-white">
               Addons Management
             </h2>
@@ -2566,7 +2565,7 @@ www.cheapstreamtv.com`,
                 </div>
                 <button
                   onClick={() => toggleAddon('recaptcha')}
-                  className={`relative h-6 w-12 flex-shrink-0 rounded-full transition-colors ${
+                  className={`size-icon relative h-6 !min-h-0 w-12 shrink-0 rounded-full !p-0 transition-colors ${
                     addons.recaptcha.enabled
                       ? 'bg-[#3B82F6]'
                       : 'bg-[rgba(255,255,255,0.18)]'
@@ -2600,7 +2599,7 @@ www.cheapstreamtv.com`,
                           },
                         })
                       }
-                      className="w-full rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.4)] px-3 py-2 text-xs text-white focus:ring-2 focus:ring-[#3B82F6] focus:outline-none"
+                      className="w-full rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.4)] px-3 py-2 text-base text-white focus:ring-2 focus:ring-[#3B82F6] focus:outline-none lg:text-sm"
                     />
                   </div>
                   <div>
@@ -2619,7 +2618,7 @@ www.cheapstreamtv.com`,
                           },
                         })
                       }
-                      className="w-full rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.4)] px-3 py-2 text-xs text-white focus:ring-2 focus:ring-[#3B82F6] focus:outline-none"
+                      className="w-full rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.4)] px-3 py-2 text-base text-white focus:ring-2 focus:ring-[#3B82F6] focus:outline-none lg:text-sm"
                     />
                   </div>
                 </div>
@@ -2644,7 +2643,7 @@ www.cheapstreamtv.com`,
                 </div>
                 <button
                   onClick={() => toggleAddon('trustpilot')}
-                  className={`relative h-6 w-12 flex-shrink-0 rounded-full transition-colors ${
+                  className={`size-icon relative h-6 !min-h-0 w-12 shrink-0 rounded-full !p-0 transition-colors ${
                     addons.trustpilot.enabled
                       ? 'bg-[#3B82F6]'
                       : 'bg-[rgba(255,255,255,0.18)]'
@@ -2680,7 +2679,7 @@ www.cheapstreamtv.com`,
                             },
                           })
                         }
-                        className="w-full rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.4)] px-3 py-2 text-xs text-white focus:ring-2 focus:ring-[#3B82F6] focus:outline-none"
+                        className="w-full rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.4)] px-3 py-2 text-base text-white focus:ring-2 focus:ring-[#3B82F6] focus:outline-none lg:text-sm"
                       />
                     </div>
                     <div>
@@ -2700,7 +2699,7 @@ www.cheapstreamtv.com`,
                             },
                           })
                         }
-                        className="w-full rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.4)] px-3 py-2 text-xs text-white focus:ring-2 focus:ring-[#3B82F6] focus:outline-none"
+                        className="w-full rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.4)] px-3 py-2 text-base text-white focus:ring-2 focus:ring-[#3B82F6] focus:outline-none lg:text-sm"
                       />
                     </div>
                   </div>
@@ -2726,7 +2725,7 @@ www.cheapstreamtv.com`,
                 </div>
                 <button
                   onClick={() => toggleAddon('googleAnalytics')}
-                  className={`relative h-6 w-12 flex-shrink-0 rounded-full transition-colors ${
+                  className={`size-icon relative h-6 !min-h-0 w-12 shrink-0 rounded-full !p-0 transition-colors ${
                     addons.googleAnalytics.enabled
                       ? 'bg-[#3B82F6]'
                       : 'bg-[rgba(255,255,255,0.18)]'
@@ -2759,7 +2758,7 @@ www.cheapstreamtv.com`,
                         },
                       })
                     }
-                    className="w-full rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.4)] px-3 py-2 text-xs text-white focus:ring-2 focus:ring-[#3B82F6] focus:outline-none"
+                    className="w-full rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.4)] px-3 py-2 text-base text-white focus:ring-2 focus:ring-[#3B82F6] focus:outline-none lg:text-sm"
                   />
                 </div>
               )}
@@ -2783,7 +2782,7 @@ www.cheapstreamtv.com`,
                 </div>
                 <button
                   onClick={() => toggleAddon('microsoftClarity')}
-                  className={`relative h-6 w-12 flex-shrink-0 rounded-full transition-colors ${
+                  className={`size-icon relative h-6 !min-h-0 w-12 shrink-0 rounded-full !p-0 transition-colors ${
                     addons.microsoftClarity.enabled
                       ? 'bg-[#3B82F6]'
                       : 'bg-[rgba(255,255,255,0.18)]'
@@ -2817,7 +2816,7 @@ www.cheapstreamtv.com`,
                         },
                       })
                     }
-                    className="w-full rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.4)] px-3 py-2 text-xs text-white focus:ring-2 focus:ring-[#3B82F6] focus:outline-none"
+                    className="w-full rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.4)] px-3 py-2 text-base text-white focus:ring-2 focus:ring-[#3B82F6] focus:outline-none lg:text-sm"
                   />
                 </div>
               )}
@@ -2841,7 +2840,7 @@ www.cheapstreamtv.com`,
                 </div>
                 <button
                   onClick={() => toggleAddon('cloudflare')}
-                  className={`relative h-6 w-12 flex-shrink-0 rounded-full transition-colors ${
+                  className={`size-icon relative h-6 !min-h-0 w-12 shrink-0 rounded-full !p-0 transition-colors ${
                     addons.cloudflare.enabled
                       ? 'bg-[#3B82F6]'
                       : 'bg-[rgba(255,255,255,0.18)]'
@@ -2875,7 +2874,7 @@ www.cheapstreamtv.com`,
                         },
                       })
                     }
-                    className="w-full rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.4)] px-3 py-2 text-xs text-white focus:ring-2 focus:ring-[#3B82F6] focus:outline-none"
+                    className="w-full rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.4)] px-3 py-2 text-base text-white focus:ring-2 focus:ring-[#3B82F6] focus:outline-none lg:text-sm"
                   />
                 </div>
               )}
@@ -2899,7 +2898,7 @@ www.cheapstreamtv.com`,
                 </div>
                 <button
                   onClick={() => toggleAddon('getbutton')}
-                  className={`relative h-6 w-12 flex-shrink-0 rounded-full transition-colors ${
+                  className={`size-icon relative h-6 !min-h-0 w-12 shrink-0 rounded-full !p-0 transition-colors ${
                     addons.getbutton.enabled
                       ? 'bg-[#3B82F6]'
                       : 'bg-[rgba(255,255,255,0.18)]'
@@ -2933,7 +2932,7 @@ www.cheapstreamtv.com`,
                         },
                       })
                     }
-                    className="w-full rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.4)] px-3 py-2 text-xs text-white focus:ring-2 focus:ring-[#3B82F6] focus:outline-none"
+                    className="w-full rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.4)] px-3 py-2 text-base text-white focus:ring-2 focus:ring-[#3B82F6] focus:outline-none lg:text-sm"
                   />
                 </div>
               )}
@@ -2957,7 +2956,7 @@ www.cheapstreamtv.com`,
                 </div>
                 <button
                   onClick={() => toggleAddon('tawkto')}
-                  className={`relative h-6 w-12 flex-shrink-0 rounded-full transition-colors ${
+                  className={`size-icon relative h-6 !min-h-0 w-12 shrink-0 rounded-full !p-0 transition-colors ${
                     addons.tawkto.enabled
                       ? 'bg-[#3B82F6]'
                       : 'bg-[rgba(255,255,255,0.18)]'
@@ -2993,7 +2992,7 @@ www.cheapstreamtv.com`,
                             },
                           })
                         }
-                        className="w-full rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.4)] px-3 py-2 text-xs text-white focus:ring-2 focus:ring-[#3B82F6] focus:outline-none"
+                        className="w-full rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.4)] px-3 py-2 text-base text-white focus:ring-2 focus:ring-[#3B82F6] focus:outline-none lg:text-sm"
                       />
                     </div>
                     <div>
@@ -3013,7 +3012,7 @@ www.cheapstreamtv.com`,
                             },
                           })
                         }
-                        className="w-full rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.4)] px-3 py-2 text-xs text-white focus:ring-2 focus:ring-[#3B82F6] focus:outline-none"
+                        className="w-full rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.4)] px-3 py-2 text-base text-white focus:ring-2 focus:ring-[#3B82F6] focus:outline-none lg:text-sm"
                       />
                     </div>
                   </div>
@@ -3022,17 +3021,17 @@ www.cheapstreamtv.com`,
             </div>
           </div>
 
-          <div className="flex items-center justify-start gap-4">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-start sm:gap-4">
             <button
               onClick={handleRefresh}
-              className="rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(255,255,255,0.08)] px-6 py-3 text-sm font-medium text-white transition-colors hover:bg-[rgba(255,255,255,0.12)]"
+              className="flex w-full items-center justify-center rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(255,255,255,0.08)] px-6 py-3 text-sm font-medium text-white transition-colors hover:bg-[rgba(255,255,255,0.12)] sm:w-auto sm:justify-start"
             >
               Refresh
             </button>
             <button
               onClick={() => handleSave('Addons')}
               disabled={isLoading}
-              className="rounded-lg bg-[#3B82F6] px-6 py-3 text-sm font-medium text-white transition-colors hover:bg-[#2563EB] disabled:cursor-not-allowed disabled:opacity-50"
+              className="flex w-full items-center justify-center rounded-lg bg-[#3B82F6] px-6 py-3 text-sm font-medium text-white transition-colors hover:bg-[#2563EB] disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto sm:justify-start"
             >
               {isLoading ? 'Updating...' : 'Update Addons'}
             </button>

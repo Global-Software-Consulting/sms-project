@@ -30,6 +30,13 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
   getPaymentGateways,
   updatePaymentGateway,
   togglePaymentGateway,
@@ -767,17 +774,17 @@ export default function AdminPaymentsPage() {
     <div className="p-4 lg:p-8">
       {/* Header */}
       <div className="mb-8">
-        <div className="mb-2 flex items-center justify-between">
+        <div className="mb-2 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-3">
-            <span className="text-4xl">💳</span>
-            <h1 className="text-3xl font-semibold text-white">
+            <span className="shrink-0 text-4xl">💳</span>
+            <h1 className="text-2xl font-semibold text-white sm:text-3xl">
               Payment Management
             </h1>
           </div>
           <button
             onClick={handleSeedDefaults}
             disabled={isLoading}
-            className="flex items-center gap-2 rounded-lg bg-[rgba(255,255,255,0.08)] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[rgba(255,255,255,0.12)]"
+            className="flex w-full items-center justify-center gap-2 rounded-lg bg-[rgba(255,255,255,0.08)] px-4 py-2 text-base font-medium whitespace-nowrap text-white transition-colors hover:bg-[rgba(255,255,255,0.12)] sm:w-auto sm:text-sm"
           >
             {isLoading ? (
               <Loader2 className="h-4 w-4 animate-spin" />
@@ -793,7 +800,7 @@ export default function AdminPaymentsPage() {
       </div>
 
       {/* Tabs */}
-      <div className="mb-6 flex items-center gap-1 overflow-x-auto pb-2">
+      <div className="mb-6 flex items-center gap-1 overflow-x-auto pb-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {[
           { id: 'methods', label: 'Payment Methods' },
           { id: 'paygate', label: 'PayGate Providers' },
@@ -1969,12 +1976,12 @@ export default function AdminPaymentsPage() {
       {/* Users Balances Tab */}
       {activeTab === 'balances' && (
         <div>
-          <div className="mb-6 rounded-xl border border-[rgba(255,255,255,0.1)] bg-[rgba(15,23,42,0.6)] p-6 backdrop-blur-xl">
+          <div className="mb-6 rounded-xl border border-[rgba(255,255,255,0.1)] bg-[rgba(15,23,42,0.6)] p-4 backdrop-blur-xl sm:p-6">
             <h2 className="mb-4 text-xl font-semibold text-white">
               User Balances
             </h2>
-            <div className="flex items-center gap-3">
-              <div className="relative max-w-md flex-1">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+              <div className="relative w-full sm:max-w-md sm:flex-1">
                 <Search className="absolute top-1/2 left-4 h-5 w-5 -translate-y-1/2 transform text-[#64748B]" />
                 <input
                   type="text"
@@ -1982,12 +1989,12 @@ export default function AdminPaymentsPage() {
                   onChange={(e) => setBalanceSearchQuery(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && handleBalanceSearch()}
                   placeholder="Search users by name or email..."
-                  className="w-full rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(30,41,59,0.8)] py-3 pr-4 pl-12 text-sm text-white focus:ring-2 focus:ring-[#3B82F6] focus:outline-none"
+                  className="w-full rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(30,41,59,0.8)] py-3 pr-4 pl-12 text-base text-white focus:ring-2 focus:ring-[#3B82F6] focus:outline-none sm:text-sm"
                 />
               </div>
               <button
                 onClick={handleBalanceSearch}
-                className="rounded-lg bg-[#3B82F6] px-5 py-3 text-sm font-medium text-white transition-colors hover:bg-[#2563EB]"
+                className="w-full rounded-lg bg-[#3B82F6] px-5 py-3 text-base font-medium whitespace-nowrap text-white transition-colors hover:bg-[#2563EB] sm:w-auto sm:text-sm"
               >
                 Search
               </button>
@@ -2789,21 +2796,33 @@ export default function AdminPaymentsPage() {
                       <label className="mb-2 block text-sm font-medium text-white">
                         Fee Type
                       </label>
-                      <select
+                      <Select
                         value={methodFormData.serviceFeeType}
-                        onChange={(e) =>
+                        onValueChange={(v) =>
                           setMethodFormData({
                             ...methodFormData,
-                            serviceFeeType: e.target.value as
-                              | 'percentage'
-                              | 'fixed',
+                            serviceFeeType: v as 'percentage' | 'fixed',
                           })
                         }
-                        className="w-full rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.4)] px-4 py-3 text-sm text-white focus:ring-2 focus:ring-[#3B82F6] focus:outline-none"
                       >
-                        <option value="percentage">Percentage (%)</option>
-                        <option value="fixed">Fixed ($)</option>
-                      </select>
+                        <SelectTrigger className="w-full rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.4)] px-4 py-3 text-sm text-white focus-visible:ring-2 focus-visible:ring-[#3B82F6] focus-visible:outline-none data-[size=default]:h-auto data-[size=default]:min-h-12">
+                          <SelectValue placeholder="Select fee type" />
+                        </SelectTrigger>
+                        <SelectContent className="max-h-72 border-[rgba(255,255,255,0.18)] bg-[#1E293B] text-white">
+                          <SelectItem
+                            value="percentage"
+                            className="text-white focus:bg-[rgba(59,130,246,0.15)] focus:text-white"
+                          >
+                            Percentage (%)
+                          </SelectItem>
+                          <SelectItem
+                            value="fixed"
+                            className="text-white focus:bg-[rgba(59,130,246,0.15)] focus:text-white"
+                          >
+                            Fixed ($)
+                          </SelectItem>
+                        </SelectContent>
+                      </Select>
                     </div>
                     <div>
                       <label className="mb-2 block text-sm font-medium text-white">
@@ -2948,19 +2967,33 @@ export default function AdminPaymentsPage() {
                 <label className="mb-2 block text-sm font-medium text-white">
                   Transaction Type
                 </label>
-                <select
+                <Select
                   value={balanceFormData.transactionType}
-                  onChange={(e) =>
+                  onValueChange={(v) =>
                     setBalanceFormData({
                       ...balanceFormData,
-                      transactionType: e.target.value as 'add' | 'deduct',
+                      transactionType: v as 'add' | 'deduct',
                     })
                   }
-                  className="w-full rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.4)] px-4 py-3 text-sm text-white focus:ring-2 focus:ring-[#3B82F6] focus:outline-none"
                 >
-                  <option value="add">Add Balance</option>
-                  <option value="deduct">Deduct Balance</option>
-                </select>
+                  <SelectTrigger className="w-full rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.4)] px-4 py-3 text-sm text-white focus-visible:ring-2 focus-visible:ring-[#3B82F6] focus-visible:outline-none data-[size=default]:h-auto data-[size=default]:min-h-12">
+                    <SelectValue placeholder="Select transaction type" />
+                  </SelectTrigger>
+                  <SelectContent className="max-h-72 border-[rgba(255,255,255,0.18)] bg-[#1E293B] text-white">
+                    <SelectItem
+                      value="add"
+                      className="text-white focus:bg-[rgba(59,130,246,0.15)] focus:text-white"
+                    >
+                      Add Balance
+                    </SelectItem>
+                    <SelectItem
+                      value="deduct"
+                      className="text-white focus:bg-[rgba(59,130,246,0.15)] focus:text-white"
+                    >
+                      Deduct Balance
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
 
               <div>

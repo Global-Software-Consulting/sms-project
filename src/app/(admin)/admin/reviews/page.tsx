@@ -35,6 +35,13 @@ import {
   type AdminReview,
   type UniqueName,
 } from '@/lib/api/adminModulesApi';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 type TabKey = 'reviews' | 'bulk' | 'names';
 
@@ -546,7 +553,7 @@ export default function AdminReviewsPage() {
       />
 
       {/* Tabs */}
-      <div className="mb-6 flex items-center gap-2 border-b border-[rgba(255,255,255,0.1)]">
+      <div className="mb-6 flex items-center gap-2 overflow-x-auto border-b border-[rgba(255,255,255,0.1)] [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {(
           [
             { id: 'reviews', label: 'Review Management', icon: ListChecks },
@@ -560,13 +567,13 @@ export default function AdminReviewsPage() {
             <button
               key={t.id}
               onClick={() => setTab(t.id)}
-              className={`flex items-center gap-2 border-b-2 px-4 py-2.5 text-sm font-medium transition-colors ${
+              className={`flex shrink-0 items-center gap-2 border-b-2 px-4 py-2.5 text-sm font-medium whitespace-nowrap transition-colors ${
                 active
                   ? 'border-[#3B82F6] text-white'
                   : 'border-transparent text-[#94A3B8] hover:text-white'
               }`}
             >
-              <Icon className="h-4 w-4" />
+              <Icon className="h-4 w-4 shrink-0" />
               {t.label}
             </button>
           );
@@ -615,35 +622,35 @@ export default function AdminReviewsPage() {
 
           {/* Bulk action bar */}
           {selectedIds.size > 0 && (
-            <div className="mb-4 flex items-center justify-between rounded-xl border border-[rgba(255,255,255,0.18)] bg-[rgba(59,130,246,0.08)] p-3">
-              <span className="text-sm text-white">
+            <div className="mb-4 flex flex-col gap-3 rounded-xl border border-[rgba(255,255,255,0.18)] bg-[rgba(59,130,246,0.08)] p-3 sm:flex-row sm:items-center sm:justify-between">
+              <span className="text-sm whitespace-nowrap text-white">
                 {selectedIds.size} selected
               </span>
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 <button
                   onClick={() => setBulkAction('approve')}
-                  className="flex items-center gap-1.5 rounded-lg bg-[#22C55E]/10 px-3 py-1.5 text-xs font-medium text-[#22C55E] hover:bg-[#22C55E]/20"
+                  className="flex items-center gap-1.5 rounded-lg bg-[#22C55E]/10 px-3 py-1.5 text-xs font-medium whitespace-nowrap text-[#22C55E] hover:bg-[#22C55E]/20"
                 >
                   <Check className="h-3.5 w-3.5" />
                   Approve
                 </button>
                 <button
                   onClick={() => setBulkAction('reject')}
-                  className="flex items-center gap-1.5 rounded-lg bg-[#F59E0B]/10 px-3 py-1.5 text-xs font-medium text-[#F59E0B] hover:bg-[#F59E0B]/20"
+                  className="flex items-center gap-1.5 rounded-lg bg-[#F59E0B]/10 px-3 py-1.5 text-xs font-medium whitespace-nowrap text-[#F59E0B] hover:bg-[#F59E0B]/20"
                 >
                   <X className="h-3.5 w-3.5" />
                   Reject
                 </button>
                 <button
                   onClick={() => setBulkAction('delete')}
-                  className="flex items-center gap-1.5 rounded-lg bg-[#EF4444]/10 px-3 py-1.5 text-xs font-medium text-[#EF4444] hover:bg-[#EF4444]/20"
+                  className="flex items-center gap-1.5 rounded-lg bg-[#EF4444]/10 px-3 py-1.5 text-xs font-medium whitespace-nowrap text-[#EF4444] hover:bg-[#EF4444]/20"
                 >
                   <Trash2 className="h-3.5 w-3.5" />
                   Delete
                 </button>
                 <button
                   onClick={() => setSelectedIds(new Set())}
-                  className="text-xs text-[#94A3B8] hover:text-white"
+                  className="text-xs whitespace-nowrap text-[#94A3B8] hover:text-white"
                 >
                   Clear
                 </button>
@@ -998,17 +1005,38 @@ export default function AdminReviewsPage() {
                 placeholder="Search names..."
                 className="rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.4)] px-3 py-2 text-sm text-white md:w-72"
               />
-              <select
-                value={nameUsedFilter}
-                onChange={(e) =>
-                  setNameUsedFilter(e.target.value as '' | 'true' | 'false')
+              <Select
+                value={nameUsedFilter === '' ? '__all__' : nameUsedFilter}
+                onValueChange={(v) =>
+                  setNameUsedFilter(
+                    v === '__all__' ? '' : (v as 'true' | 'false'),
+                  )
                 }
-                className="rounded-lg border border-[rgba(255,255,255,0.18)] bg-[#1E293B] px-3 py-2 text-sm text-white"
               >
-                <option value="">All names</option>
-                <option value="false">Available</option>
-                <option value="true">In use</option>
-              </select>
+                <SelectTrigger className="rounded-lg border border-[rgba(255,255,255,0.18)] bg-[#1E293B] px-3 py-2 text-base text-white focus-visible:ring-2 focus-visible:ring-[#3B82F6] focus-visible:outline-none data-[size=default]:h-auto data-[size=default]:min-h-11 lg:text-sm">
+                  <SelectValue placeholder="All names" />
+                </SelectTrigger>
+                <SelectContent className="max-h-72 border-[rgba(255,255,255,0.18)] bg-[#1E293B] text-white">
+                  <SelectItem
+                    value="__all__"
+                    className="text-white focus:bg-[rgba(59,130,246,0.15)] focus:text-white"
+                  >
+                    All names
+                  </SelectItem>
+                  <SelectItem
+                    value="false"
+                    className="text-white focus:bg-[rgba(59,130,246,0.15)] focus:text-white"
+                  >
+                    Available
+                  </SelectItem>
+                  <SelectItem
+                    value="true"
+                    className="text-white focus:bg-[rgba(59,130,246,0.15)] focus:text-white"
+                  >
+                    In use
+                  </SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
             {namesLoading ? (

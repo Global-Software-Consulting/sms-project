@@ -1,12 +1,19 @@
 'use client';
 
-import { useState } from "react";
-import { AlertCircle } from "lucide-react";
+import { useState } from 'react';
+import { AlertCircle } from 'lucide-react';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 interface FormInputProps {
   label: string;
   name: string;
-  type?: "text" | "email" | "password" | "number" | "tel" | "date";
+  type?: 'text' | 'email' | 'password' | 'number' | 'tel' | 'date';
   value: string;
   onChange: (value: string) => void;
   placeholder?: string;
@@ -19,7 +26,7 @@ interface FormInputProps {
 export function AdminFormInput({
   label,
   name,
-  type = "text",
+  type = 'text',
   value,
   onChange,
   placeholder,
@@ -34,13 +41,13 @@ export function AdminFormInput({
 
   return (
     <div className="space-y-2">
-      <label className="block text-white text-sm font-medium">
+      <label className="block text-sm font-medium text-white">
         {label}
-        {required && <span className="text-[#EF4444] ml-1">*</span>}
+        {required && <span className="ml-1 text-[#EF4444]">*</span>}
       </label>
       <div className="relative">
         {icon && (
-          <div className="absolute left-4 top-1/2 -translate-y-1/2 text-[#64748B]">
+          <div className="absolute top-1/2 left-4 -translate-y-1/2 text-[#64748B]">
             {icon}
           </div>
         )}
@@ -53,21 +60,21 @@ export function AdminFormInput({
           placeholder={placeholder}
           disabled={disabled}
           className={`w-full ${
-            icon ? "pl-12" : "pl-4"
-          } pr-4 py-3 rounded-xl bg-[rgba(255,255,255,0.08)] border ${
+            icon ? 'pl-12' : 'pl-4'
+          } rounded-xl border bg-[rgba(255,255,255,0.08)] py-3 pr-4 ${
             showError
-              ? "border-[#EF4444] focus:ring-[#EF4444]"
-              : "border-[rgba(255,255,255,0.18)] focus:ring-[#3B82F6]"
-          } text-white placeholder:text-[#64748B] text-sm focus:outline-none focus:ring-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed`}
+              ? 'border-[#EF4444] focus:ring-[#EF4444]'
+              : 'border-[rgba(255,255,255,0.18)] focus:ring-[#3B82F6]'
+          } text-sm text-white transition-all placeholder:text-[#64748B] focus:ring-2 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50`}
         />
         {showError && (
-          <div className="absolute right-4 top-1/2 -translate-y-1/2 text-[#EF4444]">
-            <AlertCircle className="w-5 h-5" />
+          <div className="absolute top-1/2 right-4 -translate-y-1/2 text-[#EF4444]">
+            <AlertCircle className="h-5 w-5" />
           </div>
         )}
       </div>
       {showError && (
-        <p className="text-[#EF4444] text-xs flex items-center gap-1">
+        <p className="flex items-center gap-1 text-xs text-[#EF4444]">
           {error}
         </p>
       )}
@@ -103,9 +110,9 @@ export function AdminFormTextarea({
 
   return (
     <div className="space-y-2">
-      <label className="block text-white text-sm font-medium">
+      <label className="block text-sm font-medium text-white">
         {label}
-        {required && <span className="text-[#EF4444] ml-1">*</span>}
+        {required && <span className="ml-1 text-[#EF4444]">*</span>}
       </label>
       <textarea
         name={name}
@@ -115,15 +122,15 @@ export function AdminFormTextarea({
         placeholder={placeholder}
         disabled={disabled}
         rows={rows}
-        className={`w-full px-4 py-3 rounded-xl bg-[rgba(255,255,255,0.08)] border ${
+        className={`w-full rounded-xl border bg-[rgba(255,255,255,0.08)] px-4 py-3 ${
           showError
-            ? "border-[#EF4444] focus:ring-[#EF4444]"
-            : "border-[rgba(255,255,255,0.18)] focus:ring-[#3B82F6]"
-        } text-white placeholder:text-[#64748B] text-sm focus:outline-none focus:ring-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed resize-none`}
+            ? 'border-[#EF4444] focus:ring-[#EF4444]'
+            : 'border-[rgba(255,255,255,0.18)] focus:ring-[#3B82F6]'
+        } resize-none text-sm text-white transition-all placeholder:text-[#64748B] focus:ring-2 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50`}
       />
       {showError && (
-        <p className="text-[#EF4444] text-xs flex items-center gap-1">
-          <AlertCircle className="w-3 h-3" />
+        <p className="flex items-center gap-1 text-xs text-[#EF4444]">
+          <AlertCircle className="h-3 w-3" />
           {error}
         </p>
       )}
@@ -157,32 +164,48 @@ export function AdminFormSelect({
 
   return (
     <div className="space-y-2">
-      <label className="block text-white text-sm font-medium">
+      <label className="block text-sm font-medium text-white">
         {label}
-        {required && <span className="text-[#EF4444] ml-1">*</span>}
+        {required && <span className="ml-1 text-[#EF4444]">*</span>}
       </label>
-      <select
-        name={name}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        onBlur={() => setTouched(true)}
+      <Select
+        value={value || '__placeholder__'}
+        onValueChange={(v) => {
+          onChange(v === '__placeholder__' ? '' : v);
+          setTouched(true);
+        }}
         disabled={disabled}
-        className={`w-full px-4 py-3 rounded-xl bg-[rgba(255,255,255,0.08)] border ${
-          showError
-            ? "border-[#EF4444] focus:ring-[#EF4444]"
-            : "border-[rgba(255,255,255,0.18)] focus:ring-[#3B82F6]"
-        } text-white text-sm focus:outline-none focus:ring-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed [&>option]:bg-[#1E293B] [&>option]:text-white`}
       >
-        <option value="" className="bg-[#1E293B] text-white">Select {label}</option>
-        {options.map((option) => (
-          <option key={option.value} value={option.value} className="bg-[#1E293B] text-white">
-            {option.label}
-          </option>
-        ))}
-      </select>
+        <SelectTrigger
+          className={`w-full rounded-xl border bg-[rgba(255,255,255,0.08)] px-4 py-3 ${
+            showError
+              ? 'border-[#EF4444] focus-visible:ring-[#EF4444]'
+              : 'border-[rgba(255,255,255,0.18)] focus-visible:ring-[#3B82F6]'
+          } text-base text-white transition-all focus-visible:ring-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50 data-[size=default]:h-auto data-[size=default]:min-h-12 lg:text-sm`}
+        >
+          <SelectValue placeholder={`Select ${label}`} />
+        </SelectTrigger>
+        <SelectContent className="max-h-72 border-[rgba(255,255,255,0.18)] bg-[#1E293B] text-white">
+          <SelectItem
+            value="__placeholder__"
+            className="text-white focus:bg-[rgba(59,130,246,0.15)] focus:text-white"
+          >
+            Select {label}
+          </SelectItem>
+          {options.map((option) => (
+            <SelectItem
+              key={option.value}
+              value={option.value}
+              className="text-white focus:bg-[rgba(59,130,246,0.15)] focus:text-white"
+            >
+              {option.label}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
       {showError && (
-        <p className="text-[#EF4444] text-xs flex items-center gap-1">
-          <AlertCircle className="w-3 h-3" />
+        <p className="flex items-center gap-1 text-xs text-[#EF4444]">
+          <AlertCircle className="h-3 w-3" />
           {error}
         </p>
       )}

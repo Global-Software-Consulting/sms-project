@@ -195,28 +195,30 @@ export default function AdminNotificationsPage() {
       />
 
       {/* Notification Type Tabs */}
-      <div className="mb-6 flex items-center gap-2">
+      <div className="mb-6 flex items-stretch gap-2">
         <button
           onClick={() => setNotificationType('email')}
-          className={`flex items-center gap-2 rounded-xl px-6 py-3 text-sm font-medium transition-all ${
+          className={`flex flex-1 items-center justify-center gap-2 rounded-xl px-3 py-3 text-sm font-medium whitespace-nowrap transition-all sm:flex-none sm:px-6 ${
             notificationType === 'email'
               ? 'bg-[#3B82F6] text-white'
               : 'border border-[rgba(255,255,255,0.18)] bg-[rgba(255,255,255,0.05)] text-[#94A3B8] hover:bg-[rgba(255,255,255,0.08)]'
           }`}
         >
-          <Mail className="h-4 w-4" />
-          Email Notification
+          <Mail className="h-4 w-4 shrink-0" />
+          <span>Email</span>
+          <span className="hidden sm:inline">Notification</span>
         </button>
         <button
           onClick={() => setNotificationType('website')}
-          className={`flex items-center gap-2 rounded-xl px-6 py-3 text-sm font-medium transition-all ${
+          className={`flex flex-1 items-center justify-center gap-2 rounded-xl px-3 py-3 text-sm font-medium whitespace-nowrap transition-all sm:flex-none sm:px-6 ${
             notificationType === 'website'
               ? 'bg-[#3B82F6] text-white'
               : 'border border-[rgba(255,255,255,0.18)] bg-[rgba(255,255,255,0.05)] text-[#94A3B8] hover:bg-[rgba(255,255,255,0.08)]'
           }`}
         >
-          <Bell className="h-4 w-4" />
-          Website Notification
+          <Bell className="h-4 w-4 shrink-0" />
+          <span>Website</span>
+          <span className="hidden sm:inline">Notification</span>
         </button>
       </div>
 
@@ -672,28 +674,29 @@ export default function AdminNotificationsPage() {
           )}
 
           {/* Action Buttons */}
-          <div className="flex items-center gap-4 pt-4">
+          <div className="flex items-stretch gap-3 pt-4 sm:gap-4">
             <button
               onClick={handlePreview}
-              className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-[rgba(255,255,255,0.18)] bg-[rgba(255,255,255,0.08)] px-6 py-3 font-medium text-white transition-colors hover:bg-[rgba(255,255,255,0.12)]"
+              className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-[rgba(255,255,255,0.18)] bg-[rgba(255,255,255,0.08)] px-3 py-3 font-medium whitespace-nowrap text-white transition-colors hover:bg-[rgba(255,255,255,0.12)] sm:px-6"
             >
-              <Eye className="h-5 w-5" />
+              <Eye className="h-5 w-5 shrink-0" />
               Preview
             </button>
             <button
               onClick={handleSend}
               disabled={isLoading}
-              className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-[#3B82F6] px-6 py-3 font-medium text-white transition-colors hover:bg-[#2563EB] disabled:cursor-not-allowed disabled:opacity-50"
+              className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-[#3B82F6] px-3 py-3 font-medium whitespace-nowrap text-white transition-colors hover:bg-[#2563EB] disabled:cursor-not-allowed disabled:opacity-50 sm:px-6"
             >
               {isLoading ? (
                 <>
-                  <span className="h-5 w-5 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+                  <span className="h-5 w-5 shrink-0 animate-spin rounded-full border-2 border-white/30 border-t-white" />
                   Sending...
                 </>
               ) : (
                 <>
-                  <Send className="h-5 w-5" />
-                  Send Notification
+                  <Send className="h-5 w-5 shrink-0" />
+                  <span>Send</span>
+                  <span className="hidden sm:inline">Notification</span>
                 </>
               )}
             </button>

@@ -8,10 +8,38 @@ import { AdminModal } from '@/components/admin/modal';
 import { AdminStatusBadge } from '@/components/admin/status-badge';
 import { AdminFormInput } from '@/components/admin/form-input';
 import {
-  Eye, Download, Loader2, ChevronLeft, ChevronRight,
-  RotateCcw, Phone, Clock, User, X,
-  Calendar, Shield, MessageSquare, Copy, Hash, Search, Filter
+  Eye,
+  Download,
+  Loader2,
+  ChevronLeft,
+  ChevronRight,
+  RotateCcw,
+  Phone,
+  Clock,
+  User,
+  X,
+  Calendar,
+  Shield,
+  MessageSquare,
+  Copy,
+  Hash,
+  Search,
+  Filter,
+  MoreVertical,
 } from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import {
   adminGetOrders,
   adminGetOrder,
@@ -29,40 +57,57 @@ import {
 } from '@/lib/api/smsApi';
 
 const columns = [
-  { key: "id", label: "Activation ID", width: "10%" },
-  { key: "user", label: "User", width: "10%" },
-  { key: "country", label: "Country", width: "14%" },
-  { key: "service", label: "Service", width: "10%" },
-  { key: "phoneNumber", label: "Phone Number", width: "14%" },
-  { key: "status", label: "Status", width: "12%" },
-  { key: "createdAt", label: "Created", width: "12%" },
-  { key: "expiresAt", label: "Expires", width: "10%" },
-  { key: "actions", label: "Actions", width: "8%" },
+  { key: 'id', label: 'Activation ID', width: '10%' },
+  { key: 'user', label: 'User', width: '10%' },
+  { key: 'country', label: 'Country', width: '14%' },
+  { key: 'service', label: 'Service', width: '10%' },
+  { key: 'phoneNumber', label: 'Phone Number', width: '14%' },
+  { key: 'status', label: 'Status', width: '12%' },
+  { key: 'createdAt', label: 'Created', width: '12%' },
+  { key: 'expiresAt', label: 'Expires', width: '10%' },
+  { key: 'actions', label: 'Actions', width: '8%' },
 ];
 
-const statusVariantMap: Record<string, "success" | "warning" | "error" | "info" | "default"> = {
-  PENDING: "warning",
-  WAITING_SMS: "info",
-  COMPLETED: "success",
-  CANCELLED: "default",
-  EXPIRED: "error",
-  REFUNDED: "info",
+const statusVariantMap: Record<
+  string,
+  'success' | 'warning' | 'error' | 'info' | 'default'
+> = {
+  PENDING: 'warning',
+  WAITING_SMS: 'info',
+  COMPLETED: 'success',
+  CANCELLED: 'default',
+  EXPIRED: 'error',
+  REFUNDED: 'info',
 };
 
-const statusFilterOptions = ["PENDING", "WAITING_SMS", "COMPLETED", "CANCELLED", "EXPIRED", "REFUNDED"];
+const statusFilterOptions = [
+  'PENDING',
+  'WAITING_SMS',
+  'COMPLETED',
+  'CANCELLED',
+  'EXPIRED',
+  'REFUNDED',
+];
 
 export default function AdminActivationsPage() {
   // Data state
   const [orders, setOrders] = useState<SmsOrder[]>([]);
-  const [meta, setMeta] = useState({ total: 0, page: 1, limit: 20, totalPages: 0, hasNextPage: false, hasPrevPage: false });
+  const [meta, setMeta] = useState({
+    total: 0,
+    page: 1,
+    limit: 20,
+    totalPages: 0,
+    hasNextPage: false,
+    hasPrevPage: false,
+  });
   const [isPageLoading, setIsPageLoading] = useState(true);
   const [isActionLoading, setIsActionLoading] = useState(false);
   // Filters
-  const [searchValue, setSearchValue] = useState("");
-  const [statusFilter, setStatusFilter] = useState("");
-  const [fromDate, setFromDate] = useState("");
-  const [toDate, setToDate] = useState("");
-  const [userIdFilter, setUserIdFilter] = useState("");
+  const [searchValue, setSearchValue] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
+  const [fromDate, setFromDate] = useState('');
+  const [toDate, setToDate] = useState('');
+  const [userIdFilter, setUserIdFilter] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [showFilters, setShowFilters] = useState(false);
 
@@ -72,7 +117,7 @@ export default function AdminActivationsPage() {
   const [isSlideOverOpen, setIsSlideOverOpen] = useState(false);
   const [isDetailLoading, setIsDetailLoading] = useState(false);
   const [isRefundModalOpen, setIsRefundModalOpen] = useState(false);
-  const [refundReason, setRefundReason] = useState("");
+  const [refundReason, setRefundReason] = useState('');
 
   // Search debounce
   const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -91,11 +136,12 @@ export default function AdminActivationsPage() {
       if (toDate) params.toDate = toDate;
       if (userIdFilter) params.userId = userIdFilter;
 
-      const response: PaginatedResponse<SmsOrder> = await adminGetOrders(params);
+      const response: PaginatedResponse<SmsOrder> =
+        await adminGetOrders(params);
       setOrders(response.data);
       setMeta(response.meta);
     } catch (error: any) {
-      toast.error(error?.response?.data?.message || "Failed to fetch orders");
+      toast.error(error?.response?.data?.message || 'Failed to fetch orders');
     } finally {
       setIsPageLoading(false);
     }
@@ -123,7 +169,7 @@ export default function AdminActivationsPage() {
       const response = await adminGetOrder(order.id);
       setOrderDetail(response.order);
     } catch {
-      toast.error("Failed to fetch order details");
+      toast.error('Failed to fetch order details');
       setOrderDetail(order);
     } finally {
       setIsDetailLoading(false);
@@ -135,13 +181,16 @@ export default function AdminActivationsPage() {
     if (!selectedOrder) return;
     setIsActionLoading(true);
     try {
-      const result = await adminRefundOrder(selectedOrder.id, refundReason || undefined);
+      const result = await adminRefundOrder(
+        selectedOrder.id,
+        refundReason || undefined,
+      );
       toast.success(`Order refunded! Amount: ${result.refundAmount}`);
       setIsRefundModalOpen(false);
-      setRefundReason("");
+      setRefundReason('');
       fetchOrders();
     } catch (error: any) {
-      toast.error(error?.response?.data?.message || "Failed to refund order");
+      toast.error(error?.response?.data?.message || 'Failed to refund order');
     } finally {
       setIsActionLoading(false);
     }
@@ -151,10 +200,12 @@ export default function AdminActivationsPage() {
   const handleCancelOrder = async (order: SmsOrder) => {
     try {
       const result = await adminCancelOrder(order.id);
-      toast.success(`Order cancelled & refunded! Amount: ${result.refundAmount}`);
+      toast.success(
+        `Order cancelled & refunded! Amount: ${result.refundAmount}`,
+      );
       fetchOrders();
     } catch (error: any) {
-      toast.error(error?.response?.data?.message || "Failed to cancel order");
+      toast.error(error?.response?.data?.message || 'Failed to cancel order');
     }
   };
 
@@ -162,116 +213,150 @@ export default function AdminActivationsPage() {
   const handleExtendTime = async (order: SmsOrder) => {
     try {
       await adminExtendOrder(order.id);
-      toast.success("Order expiry extended by 10 minutes!");
+      toast.success('Order expiry extended by 10 minutes!');
       fetchOrders();
     } catch (error: any) {
-      toast.error(error?.response?.data?.message || "Order cannot be extended");
+      toast.error(error?.response?.data?.message || 'Order cannot be extended');
     }
   };
 
   // Copy to clipboard
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
-    toast.success("Copied to clipboard");
+    toast.success('Copied to clipboard');
   };
 
   // Format dates
   const formatDateTime = (dateStr: string | null | undefined) => {
-    if (!dateStr) return "-";
-    return new Date(dateStr).toLocaleString("en-US", {
-      year: "numeric", month: "2-digit", day: "2-digit",
-      hour: "2-digit", minute: "2-digit", hour12: false,
-    }).replace(",", "");
+    if (!dateStr) return '-';
+    return new Date(dateStr)
+      .toLocaleString('en-US', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false,
+      })
+      .replace(',', '');
   };
 
   const formatDateShort = (dateStr: string | null | undefined) => {
-    if (!dateStr) return "-";
-    return new Date(dateStr).toLocaleString("en-US", {
-      month: "short", day: "numeric",
-      hour: "2-digit", minute: "2-digit",
+    if (!dateStr) return '-';
+    return new Date(dateStr).toLocaleString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
     });
   };
 
   // Render cell
   const renderCell = (item: SmsOrder, column: any) => {
     switch (column.key) {
-      case "id":
-        return <span className="text-white text-sm font-medium">{item.id}</span>;
-
-      case "user":
+      case 'id':
         return (
-          <span className="text-white text-sm">
+          <span className="text-sm font-medium text-white">{item.id}</span>
+        );
+
+      case 'user':
+        return (
+          <span className="text-sm text-white">
             {item.user?.username || item.user?.email?.split('@')[0] || '-'}
           </span>
         );
 
-      case "country":
+      case 'country':
         return item.country ? (
           <div className="flex items-center gap-2">
             <span className="text-sm">{getCountryFlag(item.country.code)}</span>
-            <span className="text-white text-sm">{item.country.name}</span>
+            <span className="text-sm text-white">{item.country.name}</span>
           </div>
         ) : (
-          <span className="text-[#64748B] text-sm">-</span>
+          <span className="text-sm text-[#64748B]">-</span>
         );
 
-      case "service":
+      case 'service':
         return (
-          <span className="text-white text-sm">{item.service?.name || '-'}</span>
+          <span className="text-sm text-white">
+            {item.service?.name || '-'}
+          </span>
         );
 
-      case "phoneNumber":
+      case 'phoneNumber':
         return (
-          <span className="text-white text-sm font-mono">
+          <span className="font-mono text-sm text-white">
             {item.phoneNumber || '-'}
           </span>
         );
 
-      case "status":
+      case 'status':
         return (
           <AdminStatusBadge
             status={getOrderStatusLabel(item.status)}
-            variant={statusVariantMap[item.status] || "default"}
+            variant={statusVariantMap[item.status] || 'default'}
           />
         );
 
-      case "createdAt":
-        return <span className="text-[#94A3B8] text-sm">{formatDateTime(item.createdAt)}</span>;
-
-      case "expiresAt":
-        return <span className="text-[#94A3B8] text-sm">{formatDateTime(item.expiresAt)}</span>;
-
-      case "actions":
+      case 'createdAt':
         return (
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => handleViewOrder(item)}
-              className="p-2 rounded-lg hover:bg-[rgba(255,255,255,0.08)] transition-colors"
-              title="View Details"
+          <span className="text-sm text-[#94A3B8]">
+            {formatDateTime(item.createdAt)}
+          </span>
+        );
+
+      case 'expiresAt':
+        return (
+          <span className="text-sm text-[#94A3B8]">
+            {formatDateTime(item.expiresAt)}
+          </span>
+        );
+
+      case 'actions':
+        return (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button
+                type="button"
+                aria-label="Open order actions"
+                className="size-icon inline-flex h-8 w-8 items-center justify-center rounded-[8px] border border-[rgba(255,255,255,0.18)] bg-[rgba(255,255,255,0.05)] !p-0 text-white transition-colors hover:bg-[rgba(255,255,255,0.12)]"
+              >
+                <MoreVertical className="h-4 w-4" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent
+              align="end"
+              className="min-w-[160px] border-[rgba(255,255,255,0.1)] bg-[#1E293B] p-1 text-white"
             >
-              <Eye className="w-4 h-4 text-[#3B82F6]" />
-            </button>
-            <button
-              onClick={() => handleExtendTime(item)}
-              className="p-2 rounded-lg hover:bg-[rgba(255,255,255,0.08)] transition-colors"
-              title="Extend Time"
-            >
-              <Clock className="w-4 h-4 text-[#F59E0B]" />
-            </button>
-            <button
-              onClick={() => {
-                if (canCancelOrder(item.status)) {
-                  handleCancelOrder(item);
-                } else {
-                  toast.error("This order cannot be cancelled");
-                }
-              }}
-              className="p-2 rounded-lg hover:bg-[rgba(255,255,255,0.08)] transition-colors"
-              title="Cancel"
-            >
-              <X className="w-4 h-4 text-[#EF4444]" />
-            </button>
-          </div>
+              <DropdownMenuItem
+                onSelect={() => handleViewOrder(item)}
+                className="cursor-pointer text-white focus:bg-[rgba(59,130,246,0.15)] focus:text-white"
+              >
+                <Eye className="mr-2 h-4 w-4 text-[#3B82F6]" />
+                View Details
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onSelect={() => handleExtendTime(item)}
+                className="cursor-pointer text-white focus:bg-[rgba(245,158,11,0.15)] focus:text-white"
+              >
+                <Clock className="mr-2 h-4 w-4 text-[#F59E0B]" />
+                Extend Time
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onSelect={() => {
+                  if (canCancelOrder(item.status)) {
+                    handleCancelOrder(item);
+                  } else {
+                    toast.error('This order cannot be cancelled');
+                  }
+                }}
+                className="cursor-pointer text-[#EF4444] focus:bg-[rgba(239,68,68,0.15)] focus:text-[#EF4444]"
+              >
+                <X className="mr-2 h-4 w-4" />
+                Cancel Order
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         );
 
       default:
@@ -289,7 +374,11 @@ export default function AdminActivationsPage() {
     } else {
       pages.push(1);
       if (current > 3) pages.push(-1);
-      for (let i = Math.max(2, current - 1); i <= Math.min(total - 1, current + 1); i++) {
+      for (
+        let i = Math.max(2, current - 1);
+        i <= Math.min(total - 1, current + 1);
+        i++
+      ) {
         pages.push(i);
       }
       if (current < total - 2) pages.push(-1);
@@ -306,108 +395,146 @@ export default function AdminActivationsPage() {
       <div className="mb-8">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-white text-3xl font-semibold mb-2">Order Management</h1>
-            <p className="text-[#94A3B8]">Monitor and manage all SMS activations in real-time.</p>
+            <h1 className="mb-2 text-3xl font-semibold text-white">
+              Order Management
+            </h1>
+            <p className="text-[#94A3B8]">
+              Monitor and manage all SMS activations in real-time.
+            </p>
           </div>
           <button
-            onClick={() => toast.info("Exporting orders data...")}
-            className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[rgba(255,255,255,0.08)] border border-[rgba(255,255,255,0.18)] text-white hover:bg-[rgba(255,255,255,0.12)] transition-colors text-sm font-medium"
+            onClick={() => toast.info('Exporting orders data...')}
+            className="flex items-center gap-2 rounded-xl border border-[rgba(255,255,255,0.18)] bg-[rgba(255,255,255,0.08)] px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-[rgba(255,255,255,0.12)]"
           >
-            <Download className="w-5 h-5" />
+            <Download className="h-5 w-5" />
             Export
           </button>
         </div>
       </div>
 
       {/* Search + Filters + Status dropdown (matching Figma layout) */}
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-4">
-          <div className="relative">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[#64748B]" />
+      <div className="mb-6 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between lg:gap-4">
+        <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:gap-4">
+          <div className="relative w-full lg:w-80">
+            <Search className="absolute top-1/2 left-4 h-5 w-5 -translate-y-1/2 text-[#64748B]" />
             <input
               type="text"
               placeholder="Search activations..."
               onChange={(e) => handleSearch(e.target.value)}
-              className="bg-[rgba(255,255,255,0.08)] border border-[rgba(255,255,255,0.18)] rounded-xl pl-12 pr-4 py-3 text-white placeholder:text-[#64748B] text-sm focus:outline-none focus:ring-2 focus:ring-[#3B82F6] w-80"
+              className="w-full rounded-xl border border-[rgba(255,255,255,0.18)] bg-[rgba(255,255,255,0.08)] py-3 pr-4 pl-12 text-base text-white placeholder:text-[#64748B] focus:ring-2 focus:ring-[#3B82F6] focus:outline-none lg:text-sm"
             />
           </div>
           <button
             onClick={() => setShowFilters(!showFilters)}
-            className={`flex items-center gap-2 px-4 py-3 rounded-xl border text-sm font-medium transition-colors ${
+            className={`flex w-full items-center justify-center gap-2 rounded-xl border px-4 py-3 text-base font-medium transition-colors lg:w-auto lg:justify-start lg:text-sm ${
               showFilters
-                ? 'bg-[#3B82F6] border-[#3B82F6] text-white'
-                : 'bg-[rgba(255,255,255,0.08)] border-[rgba(255,255,255,0.18)] text-white hover:bg-[rgba(255,255,255,0.12)]'
+                ? 'border-[#3B82F6] bg-[#3B82F6] text-white'
+                : 'border-[rgba(255,255,255,0.18)] bg-[rgba(255,255,255,0.08)] text-white hover:bg-[rgba(255,255,255,0.12)]'
             }`}
           >
-            <Filter className="w-5 h-5" />
+            <Filter className="h-5 w-5" />
             <span>Filters</span>
           </button>
         </div>
         <div className="flex items-center gap-3">
-          <select
-            value={statusFilter}
-            onChange={(e) => { setStatusFilter(e.target.value); setCurrentPage(1); }}
-            className="bg-[rgba(255,255,255,0.08)] border border-[rgba(255,255,255,0.18)] rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#3B82F6] [&>option]:bg-[#1E293B] [&>option]:text-white"
+          <Select
+            value={statusFilter || '__all__'}
+            onValueChange={(v) => {
+              setStatusFilter(v === '__all__' ? '' : v);
+              setCurrentPage(1);
+            }}
           >
-            <option value="" className="bg-[#1E293B] text-white">All Status</option>
-            {statusFilterOptions.map((status) => (
-              <option key={status} value={status} className="bg-[#1E293B] text-white">
-                {getOrderStatusLabel(status as SmsOrderStatus)}
-              </option>
-            ))}
-          </select>
+            <SelectTrigger className="w-full rounded-xl border border-[rgba(255,255,255,0.18)] bg-[rgba(255,255,255,0.08)] px-4 py-3 text-base text-white focus-visible:ring-2 focus-visible:ring-[#3B82F6] focus-visible:outline-none data-[size=default]:h-auto lg:w-auto lg:text-sm">
+              <SelectValue placeholder="All Status" />
+            </SelectTrigger>
+            <SelectContent className="max-h-72 border-[rgba(255,255,255,0.18)] bg-[#1E293B] text-white">
+              <SelectItem
+                value="__all__"
+                className="text-white focus:bg-[rgba(59,130,246,0.15)] focus:text-white"
+              >
+                All Status
+              </SelectItem>
+              {statusFilterOptions.map((status) => (
+                <SelectItem
+                  key={status}
+                  value={status}
+                  className="text-white focus:bg-[rgba(59,130,246,0.15)] focus:text-white"
+                >
+                  {getOrderStatusLabel(status as SmsOrderStatus)}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
       </div>
 
       {/* Expandable Filters */}
       {showFilters && (
-        <div className="mb-6 p-4 rounded-xl bg-[rgba(255,255,255,0.05)] border border-[rgba(255,255,255,0.18)] backdrop-blur-xl">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="mb-6 rounded-xl border border-[rgba(255,255,255,0.18)] bg-[rgba(255,255,255,0.05)] p-4 backdrop-blur-xl">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
             <div>
-              <label className="block text-white text-sm font-medium mb-2">From Date</label>
+              <label className="mb-2 block text-sm font-medium text-white">
+                From Date
+              </label>
               <input
                 type="date"
                 value={fromDate}
-                onChange={(e) => { setFromDate(e.target.value); setCurrentPage(1); }}
-                className="w-full bg-[rgba(255,255,255,0.08)] border border-[rgba(255,255,255,0.18)] rounded-lg px-4 py-2.5 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#3B82F6] [color-scheme:dark]"
+                onChange={(e) => {
+                  setFromDate(e.target.value);
+                  setCurrentPage(1);
+                }}
+                className="w-full rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(255,255,255,0.08)] px-4 py-2.5 text-sm text-white [color-scheme:dark] focus:ring-2 focus:ring-[#3B82F6] focus:outline-none"
               />
             </div>
             <div>
-              <label className="block text-white text-sm font-medium mb-2">To Date</label>
+              <label className="mb-2 block text-sm font-medium text-white">
+                To Date
+              </label>
               <input
                 type="date"
                 value={toDate}
-                onChange={(e) => { setToDate(e.target.value); setCurrentPage(1); }}
-                className="w-full bg-[rgba(255,255,255,0.08)] border border-[rgba(255,255,255,0.18)] rounded-lg px-4 py-2.5 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#3B82F6] [color-scheme:dark]"
+                onChange={(e) => {
+                  setToDate(e.target.value);
+                  setCurrentPage(1);
+                }}
+                className="w-full rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(255,255,255,0.08)] px-4 py-2.5 text-sm text-white [color-scheme:dark] focus:ring-2 focus:ring-[#3B82F6] focus:outline-none"
               />
             </div>
             <div>
-              <label className="block text-white text-sm font-medium mb-2">User ID</label>
+              <label className="mb-2 block text-sm font-medium text-white">
+                User ID
+              </label>
               <input
                 type="text"
                 value={userIdFilter}
-                onChange={(e) => { setUserIdFilter(e.target.value); setCurrentPage(1); }}
+                onChange={(e) => {
+                  setUserIdFilter(e.target.value);
+                  setCurrentPage(1);
+                }}
                 placeholder="Filter by user ID..."
-                className="w-full bg-[rgba(255,255,255,0.08)] border border-[rgba(255,255,255,0.18)] rounded-lg px-4 py-2.5 text-white placeholder:text-[#64748B] text-sm focus:outline-none focus:ring-2 focus:ring-[#3B82F6]"
+                className="w-full rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(255,255,255,0.08)] px-4 py-2.5 text-sm text-white placeholder:text-[#64748B] focus:ring-2 focus:ring-[#3B82F6] focus:outline-none"
               />
             </div>
           </div>
-          <div className="flex items-center gap-3 mt-4 pt-4 border-t border-[rgba(255,255,255,0.18)]">
+          <div className="mt-4 flex items-center gap-3 border-t border-[rgba(255,255,255,0.18)] pt-4">
             <button
-              onClick={() => { setCurrentPage(1); fetchOrders(); }}
-              className="px-4 py-2 rounded-lg bg-[#3B82F6] hover:bg-[#2563EB] text-white text-sm font-medium transition-colors"
+              onClick={() => {
+                setCurrentPage(1);
+                fetchOrders();
+              }}
+              className="rounded-lg bg-[#3B82F6] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[#2563EB]"
             >
               Apply Filters
             </button>
             <button
               onClick={() => {
-                setStatusFilter("");
-                setFromDate("");
-                setToDate("");
-                setUserIdFilter("");
+                setStatusFilter('');
+                setFromDate('');
+                setToDate('');
+                setUserIdFilter('');
                 setCurrentPage(1);
               }}
-              className="px-4 py-2 rounded-lg bg-[rgba(255,255,255,0.08)] hover:bg-[rgba(255,255,255,0.12)] text-white text-sm font-medium transition-colors"
+              className="rounded-lg bg-[rgba(255,255,255,0.08)] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[rgba(255,255,255,0.12)]"
             >
               Reset
             </button>
@@ -415,62 +542,74 @@ export default function AdminActivationsPage() {
         </div>
       )}
 
-
       {/* Loading / Empty / Table */}
       {isPageLoading ? (
         <div className="flex items-center justify-center py-20">
-          <Loader2 className="w-8 h-8 text-[#3B82F6] animate-spin" />
+          <Loader2 className="h-8 w-8 animate-spin text-[#3B82F6]" />
           <span className="ml-3 text-[#94A3B8]">Loading orders...</span>
         </div>
       ) : filteredOrders.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-20 text-center">
-          <div className="w-16 h-16 rounded-full bg-[rgba(255,255,255,0.05)] flex items-center justify-center mb-4">
-            <Phone className="w-8 h-8 text-[#64748B]" />
+          <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-[rgba(255,255,255,0.05)]">
+            <Phone className="h-8 w-8 text-[#64748B]" />
           </div>
-          <p className="text-white text-lg font-medium">No orders found</p>
-          <p className="text-[#94A3B8] text-sm mt-1">Try adjusting your search or filters</p>
+          <p className="text-lg font-medium text-white">No orders found</p>
+          <p className="mt-1 text-sm text-[#94A3B8]">
+            Try adjusting your search or filters
+          </p>
         </div>
       ) : (
         <>
-          <AdminDataTable columns={columns} data={filteredOrders} renderCell={renderCell} />
+          <AdminDataTable
+            columns={columns}
+            data={filteredOrders}
+            renderCell={renderCell}
+          />
 
           {/* Pagination */}
-          <div className="flex flex-col lg:flex-row items-center justify-between mt-6 gap-4">
-            <p className="text-[#94A3B8] text-sm">
-              Showing {((meta.page - 1) * meta.limit) + 1} to {Math.min(meta.page * meta.limit, meta.total)} of {meta.total} orders
+          <div className="mt-6 flex flex-col items-center justify-between gap-4 lg:flex-row">
+            <p className="text-sm text-[#94A3B8]">
+              Showing {(meta.page - 1) * meta.limit + 1} to{' '}
+              {Math.min(meta.page * meta.limit, meta.total)} of {meta.total}{' '}
+              orders
             </p>
             {meta.totalPages > 1 && (
               <div className="flex items-center gap-2">
                 <button
-                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
                   disabled={!meta.hasPrevPage}
-                  className="px-3 py-2 rounded-xl bg-[rgba(255,255,255,0.08)] border border-[rgba(255,255,255,0.18)] text-white text-sm hover:bg-[rgba(255,255,255,0.12)] transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1"
+                  className="flex items-center gap-1 rounded-xl border border-[rgba(255,255,255,0.18)] bg-[rgba(255,255,255,0.08)] px-3 py-2 text-sm text-white transition-colors hover:bg-[rgba(255,255,255,0.12)] disabled:cursor-not-allowed disabled:opacity-40"
                 >
-                  <ChevronLeft className="w-4 h-4" /> Previous
+                  <ChevronLeft className="h-4 w-4" /> Previous
                 </button>
                 {getPageNumbers().map((page, index) =>
                   page === -1 ? (
-                    <span key={`ellipsis-${index}`} className="px-2 text-[#94A3B8]">...</span>
+                    <span
+                      key={`ellipsis-${index}`}
+                      className="px-2 text-[#94A3B8]"
+                    >
+                      ...
+                    </span>
                   ) : (
                     <button
                       key={page}
                       onClick={() => setCurrentPage(page)}
-                      className={`px-4 py-2 rounded-xl text-sm transition-all ${
+                      className={`rounded-xl px-4 py-2 text-sm transition-all ${
                         page === meta.page
                           ? 'bg-[#3B82F6] text-white hover:brightness-110'
-                          : 'bg-[rgba(255,255,255,0.08)] border border-[rgba(255,255,255,0.18)] text-white hover:bg-[rgba(255,255,255,0.12)]'
+                          : 'border border-[rgba(255,255,255,0.18)] bg-[rgba(255,255,255,0.08)] text-white hover:bg-[rgba(255,255,255,0.12)]'
                       }`}
                     >
                       {page}
                     </button>
-                  )
+                  ),
                 )}
                 <button
-                  onClick={() => setCurrentPage(p => p + 1)}
+                  onClick={() => setCurrentPage((p) => p + 1)}
                   disabled={!meta.hasNextPage}
-                  className="px-3 py-2 rounded-xl bg-[rgba(255,255,255,0.08)] border border-[rgba(255,255,255,0.18)] text-white text-sm hover:bg-[rgba(255,255,255,0.12)] transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1"
+                  className="flex items-center gap-1 rounded-xl border border-[rgba(255,255,255,0.18)] bg-[rgba(255,255,255,0.08)] px-3 py-2 text-sm text-white transition-colors hover:bg-[rgba(255,255,255,0.12)] disabled:cursor-not-allowed disabled:opacity-40"
                 >
-                  Next <ChevronRight className="w-4 h-4" />
+                  Next <ChevronRight className="h-4 w-4" />
                 </button>
               </div>
             )}
@@ -481,13 +620,16 @@ export default function AdminActivationsPage() {
       {/* ========== Order Details Slide-Over ========== */}
       <AdminSlideOver
         isOpen={isSlideOverOpen}
-        onClose={() => { setIsSlideOverOpen(false); setOrderDetail(null); }}
+        onClose={() => {
+          setIsSlideOverOpen(false);
+          setOrderDetail(null);
+        }}
         title="Order Details"
         footer={
           <div className="flex items-center gap-3">
             <button
               onClick={() => setIsSlideOverOpen(false)}
-              className="flex-1 px-4 py-2.5 rounded-xl bg-[rgba(255,255,255,0.08)] border border-[rgba(255,255,255,0.18)] text-white hover:bg-[rgba(255,255,255,0.12)] transition-colors text-sm font-medium"
+              className="flex-1 rounded-xl border border-[rgba(255,255,255,0.18)] bg-[rgba(255,255,255,0.08)] px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-[rgba(255,255,255,0.12)]"
             >
               Close
             </button>
@@ -495,10 +637,10 @@ export default function AdminActivationsPage() {
               <button
                 onClick={() => {
                   setIsSlideOverOpen(false);
-                  setRefundReason("");
+                  setRefundReason('');
                   setIsRefundModalOpen(true);
                 }}
-                className="flex-1 px-4 py-2.5 rounded-xl bg-[#F59E0B] hover:bg-[#D97706] text-white text-sm font-medium transition-colors"
+                className="flex-1 rounded-xl bg-[#F59E0B] px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-[#D97706]"
               >
                 Refund Order
               </button>
@@ -508,210 +650,285 @@ export default function AdminActivationsPage() {
       >
         {isDetailLoading ? (
           <div className="flex items-center justify-center py-16">
-            <Loader2 className="w-6 h-6 text-[#3B82F6] animate-spin" />
-            <span className="ml-2 text-[#94A3B8] text-sm">Loading details...</span>
+            <Loader2 className="h-6 w-6 animate-spin text-[#3B82F6]" />
+            <span className="ml-2 text-sm text-[#94A3B8]">
+              Loading details...
+            </span>
           </div>
-        ) : (orderDetail || selectedOrder) && (() => {
-          const order = orderDetail || selectedOrder!;
-          return (
-            <div className="space-y-6">
-              {/* Order Status Header */}
-              <div className="flex items-center justify-between">
-                <AdminStatusBadge
-                  status={getOrderStatusLabel(order.status)}
-                  variant={statusVariantMap[order.status] || "default"}
-                />
-                <button
-                  onClick={() => copyToClipboard(order.id)}
-                  className="text-[#94A3B8] text-xs font-mono hover:text-white transition-colors flex items-center gap-1"
-                >
-                  {order.id} <Copy className="w-3 h-3" />
-                </button>
-              </div>
-
-              {/* User Info */}
-              {order.user && (
-                <div className="p-4 rounded-xl bg-[rgba(255,255,255,0.05)] border border-[rgba(255,255,255,0.18)]">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-[rgba(59,130,246,0.2)] flex items-center justify-center">
-                      <User className="w-5 h-5 text-[#3B82F6]" />
-                    </div>
-                    <div>
-                      <p className="text-white font-medium">{order.user.username || order.user.email.split('@')[0]}</p>
-                      <p className="text-[#94A3B8] text-sm">{order.user.email}</p>
-                    </div>
-                  </div>
+        ) : (
+          (orderDetail || selectedOrder) &&
+          (() => {
+            const order = orderDetail || selectedOrder!;
+            return (
+              <div className="space-y-6">
+                {/* Order Status Header */}
+                <div className="flex items-center justify-between">
+                  <AdminStatusBadge
+                    status={getOrderStatusLabel(order.status)}
+                    variant={statusVariantMap[order.status] || 'default'}
+                  />
                   <button
-                    onClick={() => copyToClipboard(order.user!.id)}
-                    className="text-[#64748B] text-xs font-mono mt-2 hover:text-white transition-colors flex items-center gap-1"
+                    onClick={() => copyToClipboard(order.id)}
+                    className="flex items-center gap-1 font-mono text-xs text-[#94A3B8] transition-colors hover:text-white"
                   >
-                    ID: {order.user.id} <Copy className="w-3 h-3" />
+                    {order.id} <Copy className="h-3 w-3" />
                   </button>
                 </div>
-              )}
 
-              {/* Service & Country */}
-              <div>
-                <h3 className="text-white text-sm font-semibold mb-3 uppercase tracking-wider">Service Details</h3>
-                <div className="grid grid-cols-2 gap-3">
-                  {order.service && (
-                    <div className="p-3 rounded-lg bg-[rgba(255,255,255,0.05)]">
-                      <p className="text-[#94A3B8] text-xs">Service</p>
-                      <div className="flex items-center gap-2 mt-1">
-                        {order.service.iconUrl && <img src={order.service.iconUrl} alt="" className="w-5 h-5 rounded" />}
-                        <p className="text-white text-sm font-medium">{order.service.name}</p>
+                {/* User Info */}
+                {order.user && (
+                  <div className="rounded-xl border border-[rgba(255,255,255,0.18)] bg-[rgba(255,255,255,0.05)] p-4">
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[rgba(59,130,246,0.2)]">
+                        <User className="h-5 w-5 text-[#3B82F6]" />
+                      </div>
+                      <div>
+                        <p className="font-medium text-white">
+                          {order.user.username ||
+                            order.user.email.split('@')[0]}
+                        </p>
+                        <p className="text-sm text-[#94A3B8]">
+                          {order.user.email}
+                        </p>
                       </div>
                     </div>
-                  )}
-                  {order.country && (
-                    <div className="p-3 rounded-lg bg-[rgba(255,255,255,0.05)]">
-                      <p className="text-[#94A3B8] text-xs">Country</p>
-                      <div className="flex items-center gap-2 mt-1">
-                        <span>{getCountryFlag(order.country.code)}</span>
-                        <p className="text-white text-sm font-medium">{order.country.name}</p>
-                      </div>
-                    </div>
-                  )}
-                  {order.provider && (
-                    <div className="p-3 rounded-lg bg-[rgba(255,255,255,0.05)]">
-                      <p className="text-[#94A3B8] text-xs">Provider</p>
-                      <p className="text-white text-sm font-medium mt-1">{order.provider.displayName || order.provider.name || order.provider.slug}</p>
-                    </div>
-                  )}
-                  <div className="p-3 rounded-lg bg-[rgba(255,255,255,0.05)]">
-                    <p className="text-[#94A3B8] text-xs">Phone Number</p>
-                    {order.phoneNumber ? (
-                      <button
-                        onClick={() => copyToClipboard(order.phoneNumber!)}
-                        className="text-white text-sm font-mono font-medium mt-1 hover:text-[#3B82F6] transition-colors flex items-center gap-1"
-                      >
-                        {order.phoneNumber} <Copy className="w-3 h-3 opacity-50" />
-                      </button>
-                    ) : (
-                      <p className="text-[#64748B] text-sm italic mt-1">Awaiting assignment...</p>
-                    )}
+                    <button
+                      onClick={() => copyToClipboard(order.user!.id)}
+                      className="mt-2 flex items-center gap-1 font-mono text-xs text-[#64748B] transition-colors hover:text-white"
+                    >
+                      ID: {order.user.id} <Copy className="h-3 w-3" />
+                    </button>
                   </div>
-                </div>
-              </div>
+                )}
 
-              {/* SMS Code */}
-              {(order.smsCode || order.smsFullText) && (
-                <div className="pt-4 border-t border-[rgba(255,255,255,0.18)]">
-                  <h3 className="text-white text-sm font-semibold mb-3 uppercase tracking-wider">SMS Received</h3>
-                  {order.smsCode && (
-                    <div className="p-4 rounded-xl bg-[rgba(34,197,94,0.1)] border border-[rgba(34,197,94,0.2)] mb-3">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <Hash className="w-4 h-4 text-[#22C55E]" />
-                          <span className="text-[#94A3B8] text-sm">Code</span>
+                {/* Service & Country */}
+                <div>
+                  <h3 className="mb-3 text-sm font-semibold tracking-wider text-white uppercase">
+                    Service Details
+                  </h3>
+                  <div className="grid grid-cols-2 gap-3">
+                    {order.service && (
+                      <div className="rounded-lg bg-[rgba(255,255,255,0.05)] p-3">
+                        <p className="text-xs text-[#94A3B8]">Service</p>
+                        <div className="mt-1 flex items-center gap-2">
+                          {order.service.iconUrl && (
+                            <img
+                              src={order.service.iconUrl}
+                              alt=""
+                              className="h-5 w-5 rounded"
+                            />
+                          )}
+                          <p className="text-sm font-medium text-white">
+                            {order.service.name}
+                          </p>
                         </div>
-                        <button onClick={() => copyToClipboard(order.smsCode!)} className="text-[#22C55E] hover:brightness-110">
-                          <Copy className="w-4 h-4" />
-                        </button>
                       </div>
-                      <p className="text-white text-2xl font-bold font-mono mt-2">{order.smsCode}</p>
-                    </div>
-                  )}
-                  {order.smsFullText && (
-                    <div className="p-3 rounded-lg bg-[rgba(255,255,255,0.05)]">
-                      <div className="flex items-center gap-2 mb-2">
-                        <MessageSquare className="w-4 h-4 text-[#64748B]" />
-                        <span className="text-[#94A3B8] text-xs">Full Message</span>
+                    )}
+                    {order.country && (
+                      <div className="rounded-lg bg-[rgba(255,255,255,0.05)] p-3">
+                        <p className="text-xs text-[#94A3B8]">Country</p>
+                        <div className="mt-1 flex items-center gap-2">
+                          <span>{getCountryFlag(order.country.code)}</span>
+                          <p className="text-sm font-medium text-white">
+                            {order.country.name}
+                          </p>
+                        </div>
                       </div>
-                      <p className="text-white text-sm">{order.smsFullText}</p>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* Pricing */}
-              <div className="pt-4 border-t border-[rgba(255,255,255,0.18)]">
-                <h3 className="text-white text-sm font-semibold mb-3 uppercase tracking-wider">Pricing</h3>
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[#94A3B8] text-sm">Cost</span>
-                    <span className="text-white text-sm">{formatPrice(order.cost)}</span>
-                  </div>
-                  {parseFloat(order.discount) > 0 && (
-                    <div className="flex items-center justify-between">
-                      <span className="text-[#94A3B8] text-sm">Discount</span>
-                      <span className="text-[#22C55E] text-sm">-{formatPrice(order.discount)}</span>
-                    </div>
-                  )}
-                  {order.membershipDiscount > 0 && (
-                    <div className="flex items-center justify-between">
-                      <span className="text-[#94A3B8] text-sm">Membership Discount</span>
-                      <span className="text-[#8B5CF6] text-sm">{order.membershipDiscount}%</span>
-                    </div>
-                  )}
-                  <div className="flex items-center justify-between pt-2 border-t border-[rgba(255,255,255,0.1)]">
-                    <span className="text-white text-sm font-semibold">Final Cost</span>
-                    <span className="text-white text-lg font-bold">{formatPrice(order.finalCost)}</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Timestamps */}
-              <div className="pt-4 border-t border-[rgba(255,255,255,0.18)]">
-                <h3 className="text-white text-sm font-semibold mb-3 uppercase tracking-wider">Timeline</h3>
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2 text-sm">
-                    <Calendar className="w-4 h-4 text-[#64748B]" />
-                    <span className="text-[#94A3B8]">Created:</span>
-                    <span className="text-white">{formatDateShort(order.createdAt)}</span>
-                  </div>
-                  {order.expiresAt && (
-                    <div className="flex items-center gap-2 text-sm">
-                      <Clock className="w-4 h-4 text-[#64748B]" />
-                      <span className="text-[#94A3B8]">Expires:</span>
-                      <span className="text-white">{formatDateShort(order.expiresAt)}</span>
-                    </div>
-                  )}
-                  {order.completedAt && (
-                    <div className="flex items-center gap-2 text-sm">
-                      <Shield className="w-4 h-4 text-[#22C55E]" />
-                      <span className="text-[#94A3B8]">Completed:</span>
-                      <span className="text-white">{formatDateShort(order.completedAt)}</span>
-                    </div>
-                  )}
-                  {order.cancelledAt && (
-                    <div className="flex items-center gap-2 text-sm">
-                      <Shield className="w-4 h-4 text-[#EF4444]" />
-                      <span className="text-[#94A3B8]">Cancelled:</span>
-                      <span className="text-white">{formatDateShort(order.cancelledAt)}</span>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Admin Info */}
-              {(orderDetail?.providerOrderId || orderDetail?.ipAddress) && (
-                <div className="pt-4 border-t border-[rgba(255,255,255,0.18)]">
-                  <h3 className="text-white text-sm font-semibold mb-3 uppercase tracking-wider">Admin Info</h3>
-                  <div className="space-y-2">
-                    {orderDetail.providerOrderId && (
-                      <div className="flex items-center justify-between">
-                        <span className="text-[#94A3B8] text-sm">Provider Order ID</span>
+                    )}
+                    {order.provider && (
+                      <div className="rounded-lg bg-[rgba(255,255,255,0.05)] p-3">
+                        <p className="text-xs text-[#94A3B8]">Provider</p>
+                        <p className="mt-1 text-sm font-medium text-white">
+                          {order.provider.displayName ||
+                            order.provider.name ||
+                            order.provider.slug}
+                        </p>
+                      </div>
+                    )}
+                    <div className="rounded-lg bg-[rgba(255,255,255,0.05)] p-3">
+                      <p className="text-xs text-[#94A3B8]">Phone Number</p>
+                      {order.phoneNumber ? (
                         <button
-                          onClick={() => copyToClipboard(orderDetail.providerOrderId!)}
-                          className="text-white text-xs font-mono hover:text-[#3B82F6] transition-colors flex items-center gap-1"
+                          onClick={() => copyToClipboard(order.phoneNumber!)}
+                          className="mt-1 flex items-center gap-1 font-mono text-sm font-medium text-white transition-colors hover:text-[#3B82F6]"
                         >
-                          {orderDetail.providerOrderId} <Copy className="w-3 h-3 opacity-50" />
+                          {order.phoneNumber}{' '}
+                          <Copy className="h-3 w-3 opacity-50" />
                         </button>
+                      ) : (
+                        <p className="mt-1 text-sm text-[#64748B] italic">
+                          Awaiting assignment...
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* SMS Code */}
+                {(order.smsCode || order.smsFullText) && (
+                  <div className="border-t border-[rgba(255,255,255,0.18)] pt-4">
+                    <h3 className="mb-3 text-sm font-semibold tracking-wider text-white uppercase">
+                      SMS Received
+                    </h3>
+                    {order.smsCode && (
+                      <div className="mb-3 rounded-xl border border-[rgba(34,197,94,0.2)] bg-[rgba(34,197,94,0.1)] p-4">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <Hash className="h-4 w-4 text-[#22C55E]" />
+                            <span className="text-sm text-[#94A3B8]">Code</span>
+                          </div>
+                          <button
+                            onClick={() => copyToClipboard(order.smsCode!)}
+                            className="text-[#22C55E] hover:brightness-110"
+                          >
+                            <Copy className="h-4 w-4" />
+                          </button>
+                        </div>
+                        <p className="mt-2 font-mono text-2xl font-bold text-white">
+                          {order.smsCode}
+                        </p>
                       </div>
                     )}
-                    {orderDetail.ipAddress && (
+                    {order.smsFullText && (
+                      <div className="rounded-lg bg-[rgba(255,255,255,0.05)] p-3">
+                        <div className="mb-2 flex items-center gap-2">
+                          <MessageSquare className="h-4 w-4 text-[#64748B]" />
+                          <span className="text-xs text-[#94A3B8]">
+                            Full Message
+                          </span>
+                        </div>
+                        <p className="text-sm text-white">
+                          {order.smsFullText}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Pricing */}
+                <div className="border-t border-[rgba(255,255,255,0.18)] pt-4">
+                  <h3 className="mb-3 text-sm font-semibold tracking-wider text-white uppercase">
+                    Pricing
+                  </h3>
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-[#94A3B8]">Cost</span>
+                      <span className="text-sm text-white">
+                        {formatPrice(order.cost)}
+                      </span>
+                    </div>
+                    {parseFloat(order.discount) > 0 && (
                       <div className="flex items-center justify-between">
-                        <span className="text-[#94A3B8] text-sm">IP Address</span>
-                        <span className="text-white text-xs font-mono">{orderDetail.ipAddress}</span>
+                        <span className="text-sm text-[#94A3B8]">Discount</span>
+                        <span className="text-sm text-[#22C55E]">
+                          -{formatPrice(order.discount)}
+                        </span>
+                      </div>
+                    )}
+                    {order.membershipDiscount > 0 && (
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-[#94A3B8]">
+                          Membership Discount
+                        </span>
+                        <span className="text-sm text-[#8B5CF6]">
+                          {order.membershipDiscount}%
+                        </span>
+                      </div>
+                    )}
+                    <div className="flex items-center justify-between border-t border-[rgba(255,255,255,0.1)] pt-2">
+                      <span className="text-sm font-semibold text-white">
+                        Final Cost
+                      </span>
+                      <span className="text-lg font-bold text-white">
+                        {formatPrice(order.finalCost)}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Timestamps */}
+                <div className="border-t border-[rgba(255,255,255,0.18)] pt-4">
+                  <h3 className="mb-3 text-sm font-semibold tracking-wider text-white uppercase">
+                    Timeline
+                  </h3>
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2 text-sm">
+                      <Calendar className="h-4 w-4 text-[#64748B]" />
+                      <span className="text-[#94A3B8]">Created:</span>
+                      <span className="text-white">
+                        {formatDateShort(order.createdAt)}
+                      </span>
+                    </div>
+                    {order.expiresAt && (
+                      <div className="flex items-center gap-2 text-sm">
+                        <Clock className="h-4 w-4 text-[#64748B]" />
+                        <span className="text-[#94A3B8]">Expires:</span>
+                        <span className="text-white">
+                          {formatDateShort(order.expiresAt)}
+                        </span>
+                      </div>
+                    )}
+                    {order.completedAt && (
+                      <div className="flex items-center gap-2 text-sm">
+                        <Shield className="h-4 w-4 text-[#22C55E]" />
+                        <span className="text-[#94A3B8]">Completed:</span>
+                        <span className="text-white">
+                          {formatDateShort(order.completedAt)}
+                        </span>
+                      </div>
+                    )}
+                    {order.cancelledAt && (
+                      <div className="flex items-center gap-2 text-sm">
+                        <Shield className="h-4 w-4 text-[#EF4444]" />
+                        <span className="text-[#94A3B8]">Cancelled:</span>
+                        <span className="text-white">
+                          {formatDateShort(order.cancelledAt)}
+                        </span>
                       </div>
                     )}
                   </div>
                 </div>
-              )}
-            </div>
-          );
-        })()}
+
+                {/* Admin Info */}
+                {(orderDetail?.providerOrderId || orderDetail?.ipAddress) && (
+                  <div className="border-t border-[rgba(255,255,255,0.18)] pt-4">
+                    <h3 className="mb-3 text-sm font-semibold tracking-wider text-white uppercase">
+                      Admin Info
+                    </h3>
+                    <div className="space-y-2">
+                      {orderDetail.providerOrderId && (
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm text-[#94A3B8]">
+                            Provider Order ID
+                          </span>
+                          <button
+                            onClick={() =>
+                              copyToClipboard(orderDetail.providerOrderId!)
+                            }
+                            className="flex items-center gap-1 font-mono text-xs text-white transition-colors hover:text-[#3B82F6]"
+                          >
+                            {orderDetail.providerOrderId}{' '}
+                            <Copy className="h-3 w-3 opacity-50" />
+                          </button>
+                        </div>
+                      )}
+                      {orderDetail.ipAddress && (
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm text-[#94A3B8]">
+                            IP Address
+                          </span>
+                          <span className="font-mono text-xs text-white">
+                            {orderDetail.ipAddress}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })()
+        )}
       </AdminSlideOver>
 
       {/* ========== Refund Modal ========== */}
@@ -720,30 +937,36 @@ export default function AdminActivationsPage() {
         onClose={() => setIsRefundModalOpen(false)}
         title="Refund Order"
         primaryAction={{
-          label: "Confirm Refund",
+          label: 'Confirm Refund',
           onClick: handleRefundOrder,
           loading: isActionLoading,
-          variant: "danger",
+          variant: 'danger',
         }}
         secondaryAction={{
-          label: "Cancel",
+          label: 'Cancel',
           onClick: () => setIsRefundModalOpen(false),
         }}
       >
         <div className="space-y-4">
-          <div className="p-4 rounded-xl bg-[rgba(255,255,255,0.05)] border border-[rgba(255,255,255,0.18)]">
+          <div className="rounded-xl border border-[rgba(255,255,255,0.18)] bg-[rgba(255,255,255,0.05)] p-4">
             <div className="flex items-center justify-between">
-              <span className="text-[#94A3B8] text-sm">Order ID</span>
-              <span className="text-white text-sm font-mono">{selectedOrder?.id}</span>
+              <span className="text-sm text-[#94A3B8]">Order ID</span>
+              <span className="font-mono text-sm text-white">
+                {selectedOrder?.id}
+              </span>
             </div>
-            <div className="flex items-center justify-between mt-2">
-              <span className="text-[#94A3B8] text-sm">Amount</span>
-              <span className="text-white text-sm font-semibold">{selectedOrder ? formatPrice(selectedOrder.finalCost) : '-'}</span>
+            <div className="mt-2 flex items-center justify-between">
+              <span className="text-sm text-[#94A3B8]">Amount</span>
+              <span className="text-sm font-semibold text-white">
+                {selectedOrder ? formatPrice(selectedOrder.finalCost) : '-'}
+              </span>
             </div>
             {selectedOrder?.user && (
-              <div className="flex items-center justify-between mt-2">
-                <span className="text-[#94A3B8] text-sm">User</span>
-                <span className="text-white text-sm">{selectedOrder.user.username || selectedOrder.user.email}</span>
+              <div className="mt-2 flex items-center justify-between">
+                <span className="text-sm text-[#94A3B8]">User</span>
+                <span className="text-sm text-white">
+                  {selectedOrder.user.username || selectedOrder.user.email}
+                </span>
               </div>
             )}
           </div>
@@ -754,7 +977,7 @@ export default function AdminActivationsPage() {
             onChange={(value) => setRefundReason(value)}
             placeholder="Reason for refund..."
           />
-          <p className="text-[#F59E0B] text-sm">
+          <p className="text-sm text-[#F59E0B]">
             This will refund the order amount to the user&apos;s wallet balance.
           </p>
         </div>

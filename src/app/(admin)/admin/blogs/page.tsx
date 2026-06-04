@@ -1,12 +1,28 @@
 'use client';
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback } from 'react';
 import { AdminPageHeader } from '@/components/admin/page-header';
 import { AdminGlassCard } from '@/components/admin/glass-card';
 import { AdminFormInput } from '@/components/admin/form-input';
 import { AdminModal } from '@/components/admin/modal';
 import { toast } from 'sonner';
-import { Plus, Edit, Trash2, Upload, Copy, Loader2, Eye, X } from "lucide-react";
+import {
+  Plus,
+  Edit,
+  Trash2,
+  Upload,
+  Copy,
+  Loader2,
+  Eye,
+  X,
+} from 'lucide-react';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import {
   getBlogPosts,
   createBlogPost,
@@ -29,8 +45,12 @@ import {
 } from '@/lib/api/adminModulesApi';
 
 export default function AdminBlogsPage() {
-  const [activeTab, setActiveTab] = useState<"manual" | "auto" | "category" | "author" | "image">("manual");
-  const [categorySubTab, setCategorySubTab] = useState<"category" | "subcategory">("category");
+  const [activeTab, setActiveTab] = useState<
+    'manual' | 'auto' | 'category' | 'author' | 'image'
+  >('manual');
+  const [categorySubTab, setCategorySubTab] = useState<
+    'category' | 'subcategory'
+  >('category');
 
   // Data states
   const [blogs, setBlogs] = useState<BlogPost[]>([]);
@@ -44,16 +64,21 @@ export default function AdminBlogsPage() {
   // Modal states
   const [isCreateBlogModalOpen, setIsCreateBlogModalOpen] = useState(false);
   const [isEditBlogModalOpen, setIsEditBlogModalOpen] = useState(false);
-  const [isCreateCategoryModalOpen, setIsCreateCategoryModalOpen] = useState(false);
+  const [isCreateCategoryModalOpen, setIsCreateCategoryModalOpen] =
+    useState(false);
   const [isEditCategoryModalOpen, setIsEditCategoryModalOpen] = useState(false);
   const [isCreateAuthorModalOpen, setIsCreateAuthorModalOpen] = useState(false);
   const [isEditAuthorModalOpen, setIsEditAuthorModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-  const [deleteType, setDeleteType] = useState<'blog' | 'category' | 'author'>('blog');
+  const [deleteType, setDeleteType] = useState<'blog' | 'category' | 'author'>(
+    'blog',
+  );
 
   // Selected items
   const [selectedBlog, setSelectedBlog] = useState<BlogPost | null>(null);
-  const [selectedCategory, setSelectedCategory] = useState<BlogCategory | null>(null);
+  const [selectedCategory, setSelectedCategory] = useState<BlogCategory | null>(
+    null,
+  );
   const [selectedAuthor, setSelectedAuthor] = useState<BlogAuthor | null>(null);
 
   // Filter
@@ -90,31 +115,39 @@ export default function AdminBlogsPage() {
 
   // Auto Blog Upload State
   const [autoBlogConfig, setAutoBlogConfig] = useState({
-    category: "",
-    author: "",
+    category: '',
+    author: '',
   });
 
   const [blogPostDraft, setBlogPostDraft] = useState({
-    title: "",
-    content: "",
-    tags: "",
+    title: '',
+    content: '',
+    tags: '',
   });
 
   const [scheduling, setScheduling] = useState({
-    minHours: "8",
-    maxHours: "11",
+    minHours: '8',
+    maxHours: '11',
     authorRotation: true,
   });
 
   // Image Editor State
   const [imageConfig, setImageConfig] = useState({
-    searchName: "",
-    crop1: "2", crop2: "4", crop3: "10", crop4: "15",
-    saturation1: "1", saturation2: "15",
-    brightness1: "5", brightness2: "10",
-    contrast1: "5", contrast2: "10",
-    rotation1: "-1", rotation2: "1",
-    noise1: "1", noise2: "2",
+    searchName: '',
+    crop1: '2',
+    crop2: '4',
+    crop3: '10',
+    crop4: '15',
+    saturation1: '1',
+    saturation2: '15',
+    brightness1: '5',
+    brightness2: '10',
+    contrast1: '5',
+    contrast2: '10',
+    rotation1: '-1',
+    rotation2: '1',
+    noise1: '1',
+    noise2: '2',
     convertWebP: true,
     stripEXIF: true,
     bypassMode: false,
@@ -178,7 +211,9 @@ export default function AdminBlogsPage() {
         featuredImage: blogForm.featuredImage || undefined,
         categoryId: blogForm.categoryId || undefined,
         authorId: blogForm.authorId || undefined,
-        tags: blogForm.tags ? blogForm.tags.split(',').map(t => t.trim()) : [],
+        tags: blogForm.tags
+          ? blogForm.tags.split(',').map((t) => t.trim())
+          : [],
         status: blogForm.status,
       });
       toast.success('Blog post created successfully!');
@@ -186,7 +221,9 @@ export default function AdminBlogsPage() {
       resetBlogForm();
       await fetchBlogPosts();
     } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Failed to create blog post');
+      toast.error(
+        error.response?.data?.message || 'Failed to create blog post',
+      );
     } finally {
       setIsLoading(false);
     }
@@ -207,7 +244,9 @@ export default function AdminBlogsPage() {
         featuredImage: blogForm.featuredImage || undefined,
         categoryId: blogForm.categoryId || undefined,
         authorId: blogForm.authorId || undefined,
-        tags: blogForm.tags ? blogForm.tags.split(',').map(t => t.trim()) : [],
+        tags: blogForm.tags
+          ? blogForm.tags.split(',').map((t) => t.trim())
+          : [],
         status: blogForm.status,
       });
       toast.success('Blog post updated successfully!');
@@ -216,7 +255,9 @@ export default function AdminBlogsPage() {
       resetBlogForm();
       await fetchBlogPosts();
     } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Failed to update blog post');
+      toast.error(
+        error.response?.data?.message || 'Failed to update blog post',
+      );
     } finally {
       setIsLoading(false);
     }
@@ -233,7 +274,9 @@ export default function AdminBlogsPage() {
       }
       await fetchBlogPosts();
     } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Failed to update blog status');
+      toast.error(
+        error.response?.data?.message || 'Failed to update blog status',
+      );
     }
   };
 
@@ -275,7 +318,12 @@ export default function AdminBlogsPage() {
         authorId: autoBlogConfig.author || undefined,
         title: blogPostDraft.title,
         content: blogPostDraft.content,
-        tags: blogPostDraft.tags ? blogPostDraft.tags.split(',').map(t => t.trim()).filter(Boolean) : [],
+        tags: blogPostDraft.tags
+          ? blogPostDraft.tags
+              .split(',')
+              .map((t) => t.trim())
+              .filter(Boolean)
+          : [],
         minHoursBetweenPosts: parseInt(scheduling.minHours) || 8,
         maxHoursBetweenPosts: parseInt(scheduling.maxHours) || 12,
         authorRotation: scheduling.authorRotation,
@@ -286,7 +334,9 @@ export default function AdminBlogsPage() {
       setBlogPostDraft({ title: '', content: '', tags: '' });
       await fetchBlogPosts();
     } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Failed to create bulk blogs');
+      toast.error(
+        error.response?.data?.message || 'Failed to create bulk blogs',
+      );
     } finally {
       setIsLoading(false);
     }
@@ -431,8 +481,15 @@ export default function AdminBlogsPage() {
   // Reset form functions
   const resetBlogForm = () => {
     setBlogForm({
-      title: '', slug: '', excerpt: '', content: '', featuredImage: '',
-      categoryId: '', authorId: '', tags: '', status: 'DRAFT',
+      title: '',
+      slug: '',
+      excerpt: '',
+      content: '',
+      featuredImage: '',
+      categoryId: '',
+      authorId: '',
+      tags: '',
+      status: 'DRAFT',
     });
   };
 
@@ -441,7 +498,14 @@ export default function AdminBlogsPage() {
   };
 
   const resetAuthorForm = () => {
-    setAuthorForm({ name: '', slug: '', bio: '', avatar: '', email: '', website: '' });
+    setAuthorForm({
+      name: '',
+      slug: '',
+      bio: '',
+      avatar: '',
+      email: '',
+      website: '',
+    });
   };
 
   // Open edit modals
@@ -520,128 +584,179 @@ export default function AdminBlogsPage() {
   const formatDate = (dateString?: string) => {
     if (!dateString) return 'Not published';
     return new Date(dateString).toLocaleString('en-US', {
-      year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit',
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
     });
   };
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'PUBLISHED': return 'bg-[#22C55E]/20 text-[#22C55E]';
-      case 'DRAFT': return 'bg-[#F59E0B]/20 text-[#F59E0B]';
-      case 'ARCHIVED': return 'bg-[#64748B]/20 text-[#64748B]';
-      default: return 'bg-[#64748B]/20 text-[#64748B]';
+      case 'PUBLISHED':
+        return 'bg-[#22C55E]/20 text-[#22C55E]';
+      case 'DRAFT':
+        return 'bg-[#F59E0B]/20 text-[#F59E0B]';
+      case 'ARCHIVED':
+        return 'bg-[#64748B]/20 text-[#64748B]';
+      default:
+        return 'bg-[#64748B]/20 text-[#64748B]';
     }
   };
 
   const tabs = [
-    { id: "manual", label: "Add Blog Manually" },
-    { id: "auto", label: "Auto Blog Upload" },
-    { id: "category", label: "Category Management" },
-    { id: "author", label: "Author Pool" },
-    { id: "image", label: "Image Auto Editor" },
+    { id: 'manual', label: 'Add Blog Manually' },
+    { id: 'auto', label: 'Auto Blog Upload' },
+    { id: 'category', label: 'Category Management' },
+    { id: 'author', label: 'Author Pool' },
+    { id: 'image', label: 'Image Auto Editor' },
   ];
 
   // Get parent categories for dropdown
-  const parentCategories = categories.filter(c => !c.parentId);
-  const subCategories = categories.filter(c => c.parentId);
+  const parentCategories = categories.filter((c) => !c.parentId);
+  const subCategories = categories.filter((c) => c.parentId);
 
   if (isPageLoading) {
     return (
-      <div className="p-8 flex items-center justify-center min-h-[400px]">
-        <Loader2 className="w-8 h-8 text-[#3B82F6] animate-spin" />
+      <div className="flex min-h-[400px] items-center justify-center p-8">
+        <Loader2 className="h-8 w-8 animate-spin text-[#3B82F6]" />
       </div>
     );
   }
 
   return (
     <div className="p-4 lg:p-8">
-      <AdminPageHeader title="Blog Management" description="Manage blogs, categories, authors, and auto-upload" />
+      <AdminPageHeader
+        title="Blog Management"
+        description="Manage blogs, categories, authors, and auto-upload"
+      />
 
       {/* Navigation Tabs */}
-      <div className="flex items-center gap-6 mb-8 border-b border-[rgba(255,255,255,0.18)] overflow-x-auto">
+      <div className="mb-8 flex items-center gap-6 overflow-x-auto border-b border-[rgba(255,255,255,0.18)] [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {tabs.map((tab) => (
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id as any)}
-            className={`pb-4 px-2 text-sm font-medium transition-colors whitespace-nowrap relative ${
-              activeTab === tab.id ? "text-[#3B82F6]" : "text-[#64748B] hover:text-white"
+            className={`relative px-2 pb-4 text-sm font-medium whitespace-nowrap transition-colors ${
+              activeTab === tab.id
+                ? 'text-[#3B82F6]'
+                : 'text-[#64748B] hover:text-white'
             }`}
           >
             {tab.label}
-            {activeTab === tab.id && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#3B82F6]" />}
+            {activeTab === tab.id && (
+              <div className="absolute right-0 bottom-0 left-0 h-0.5 bg-[#3B82F6]" />
+            )}
           </button>
         ))}
       </div>
 
       {/* Add Blog Manually Tab */}
-      {activeTab === "manual" && (
+      {activeTab === 'manual' && (
         <AdminGlassCard>
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-white text-xl font-semibold">Manage Blogs</h2>
-            <div className="flex items-center gap-3">
-              <select
+          <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <h2 className="text-xl font-semibold text-white">Manage Blogs</h2>
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
+              <Select
                 value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
-                className="bg-[rgba(255,255,255,0.08)] border border-[rgba(255,255,255,0.18)] rounded-lg px-4 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#3B82F6] [&>option]:bg-[#1E293B] [&>option]:text-white"
+                onValueChange={(v) => setStatusFilter(v)}
               >
-                <option value="all">All Blogs</option>
-                <option value="PUBLISHED">Published</option>
-                <option value="DRAFT">Draft</option>
-                <option value="ARCHIVED">Archived</option>
-              </select>
+                <SelectTrigger className="w-full rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(255,255,255,0.08)] px-4 py-2 text-base text-white focus-visible:ring-2 focus-visible:ring-[#3B82F6] focus-visible:outline-none data-[size=default]:h-auto data-[size=default]:min-h-11 sm:w-auto lg:text-sm">
+                  <SelectValue placeholder="All Blogs" />
+                </SelectTrigger>
+                <SelectContent className="max-h-72 border-[rgba(255,255,255,0.18)] bg-[#1E293B] text-white">
+                  <SelectItem
+                    value="all"
+                    className="text-white focus:bg-[rgba(59,130,246,0.15)] focus:text-white"
+                  >
+                    All Blogs
+                  </SelectItem>
+                  <SelectItem
+                    value="PUBLISHED"
+                    className="text-white focus:bg-[rgba(59,130,246,0.15)] focus:text-white"
+                  >
+                    Published
+                  </SelectItem>
+                  <SelectItem
+                    value="DRAFT"
+                    className="text-white focus:bg-[rgba(59,130,246,0.15)] focus:text-white"
+                  >
+                    Draft
+                  </SelectItem>
+                  <SelectItem
+                    value="ARCHIVED"
+                    className="text-white focus:bg-[rgba(59,130,246,0.15)] focus:text-white"
+                  >
+                    Archived
+                  </SelectItem>
+                </SelectContent>
+              </Select>
               <button
-                onClick={() => { resetBlogForm(); setIsCreateBlogModalOpen(true); }}
-                className="px-4 py-2 rounded-lg bg-[#06B6D4] hover:bg-[#0891B2] text-white text-sm font-medium transition-colors flex items-center gap-2"
+                onClick={() => {
+                  resetBlogForm();
+                  setIsCreateBlogModalOpen(true);
+                }}
+                className="flex w-full items-center justify-center gap-2 rounded-lg bg-[#06B6D4] px-4 py-2 text-base font-medium whitespace-nowrap text-white transition-colors hover:bg-[#0891B2] sm:w-auto sm:justify-start sm:text-sm"
               >
-                <Plus className="w-4 h-4" />
+                <Plus className="h-4 w-4" />
                 Create Blog
               </button>
             </div>
           </div>
 
           {blogs.length === 0 ? (
-            <div className="text-center py-12">
-              <p className="text-[#64748B]">No blog posts found. Create your first blog post!</p>
+            <div className="py-12 text-center">
+              <p className="text-[#64748B]">
+                No blog posts found. Create your first blog post!
+              </p>
             </div>
           ) : (
             <div className="space-y-4">
               {blogs.map((blog) => (
                 <div
                   key={blog.id}
-                  className="p-6 rounded-xl bg-[rgba(0,0,0,0.3)] border border-[rgba(255,255,255,0.18)]"
+                  className="rounded-xl border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.3)] p-6"
                 >
                   <div className="flex items-start gap-4">
                     {blog.featuredImage && (
                       <img
                         src={blog.featuredImage}
                         alt={blog.title}
-                        className="w-20 h-20 rounded-lg object-cover flex-shrink-0"
+                        className="h-20 w-20 flex-shrink-0 rounded-lg object-cover"
                       />
                     )}
 
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-start justify-between mb-2">
+                    <div className="min-w-0 flex-1">
+                      <div className="mb-2 flex items-start justify-between">
                         <div>
-                          <h3 className="text-white text-lg font-semibold mb-1">{blog.title}</h3>
-                          <p className="text-[#94A3B8] text-sm">
-                            By {blog.author?.name || 'Unknown'} • {formatDate(blog.publishedAt)}
+                          <h3 className="mb-1 text-lg font-semibold text-white">
+                            {blog.title}
+                          </h3>
+                          <p className="text-sm text-[#94A3B8]">
+                            By {blog.author?.name || 'Unknown'} •{' '}
+                            {formatDate(blog.publishedAt)}
                           </p>
                         </div>
-                        <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(blog.status)}`}>
+                        <span
+                          className={`rounded-full px-3 py-1 text-xs font-medium ${getStatusColor(blog.status)}`}
+                        >
                           {blog.status}
                         </span>
                       </div>
 
                       {blog.category && (
-                        <p className="text-[#3B82F6] text-sm mb-3">📁 {blog.category.name}</p>
+                        <p className="mb-3 text-sm text-[#3B82F6]">
+                          📁 {blog.category.name}
+                        </p>
                       )}
 
                       {blog.tags.length > 0 && (
-                        <div className="flex items-center gap-2 mb-4 flex-wrap">
+                        <div className="mb-4 flex flex-wrap items-center gap-2">
                           {blog.tags.map((tag, index) => (
                             <span
                               key={index}
-                              className="px-3 py-1 rounded-full bg-[#06B6D4]/20 text-[#06B6D4] text-xs"
+                              className="rounded-full bg-[#06B6D4]/20 px-3 py-1 text-xs text-[#06B6D4]"
                             >
                               {tag}
                             </span>
@@ -652,26 +767,28 @@ export default function AdminBlogsPage() {
                       <div className="flex items-center gap-2">
                         <button
                           onClick={() => handlePublishToggle(blog)}
-                          className={`px-4 py-2 rounded-lg text-white text-sm font-medium transition-colors ${
+                          className={`rounded-lg px-4 py-2 text-sm font-medium text-white transition-colors ${
                             blog.status === 'PUBLISHED'
                               ? 'bg-[#F59E0B] hover:bg-[#D97706]'
                               : 'bg-[#22C55E] hover:bg-[#16A34A]'
                           }`}
                         >
-                          {blog.status === 'PUBLISHED' ? 'Unpublish' : 'Publish'}
+                          {blog.status === 'PUBLISHED'
+                            ? 'Unpublish'
+                            : 'Publish'}
                         </button>
                         <button
                           onClick={() => openEditBlog(blog)}
-                          className="px-4 py-2 rounded-lg bg-[#3B82F6] hover:bg-[#2563EB] text-white text-sm font-medium transition-colors flex items-center gap-2"
+                          className="flex items-center gap-2 rounded-lg bg-[#3B82F6] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[#2563EB]"
                         >
-                          <Edit className="w-4 h-4" />
+                          <Edit className="h-4 w-4" />
                           Edit
                         </button>
                         <button
                           onClick={() => openDeleteBlog(blog)}
-                          className="px-4 py-2 rounded-lg bg-[#EF4444] hover:bg-[#DC2626] text-white text-sm font-medium transition-colors flex items-center gap-2"
+                          className="flex items-center gap-2 rounded-lg bg-[#EF4444] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[#DC2626]"
                         >
-                          <Trash2 className="w-4 h-4" />
+                          <Trash2 className="h-4 w-4" />
                           Delete
                         </button>
                       </div>
@@ -691,95 +808,171 @@ export default function AdminBlogsPage() {
       )}
 
       {/* Auto Blog Upload Tab */}
-      {activeTab === "auto" && (
+      {activeTab === 'auto' && (
         <div className="space-y-6">
-          <div className="p-6 rounded-xl bg-[rgba(0,0,0,0.3)] border border-[rgba(255,255,255,0.18)]">
-            <h3 className="text-white text-base font-semibold mb-4">📋 Blog Configuration</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="rounded-xl border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.3)] p-6">
+            <h3 className="mb-4 text-base font-semibold text-white">
+              📋 Blog Configuration
+            </h3>
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
               <div>
-                <label className="text-white text-sm font-medium mb-2 block">Category</label>
-                <select
-                  value={autoBlogConfig.category}
-                  onChange={(e) => setAutoBlogConfig({ ...autoBlogConfig, category: e.target.value })}
-                  className="w-full bg-[rgba(255,255,255,0.08)] border border-[rgba(255,255,255,0.18)] rounded-lg px-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#3B82F6] [&>option]:bg-[#1E293B] [&>option]:text-white"
+                <label className="mb-2 block text-sm font-medium text-white">
+                  Category
+                </label>
+                <Select
+                  value={autoBlogConfig.category || '__placeholder__'}
+                  onValueChange={(v) =>
+                    setAutoBlogConfig({
+                      ...autoBlogConfig,
+                      category: v === '__placeholder__' ? '' : v,
+                    })
+                  }
                 >
-                  <option value="">Select category</option>
-                  {categories.map((cat) => (
-                    <option key={cat.id} value={cat.id}>{cat.name}</option>
-                  ))}
-                </select>
+                  <SelectTrigger className="w-full rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(255,255,255,0.08)] px-4 py-3 text-base text-white focus-visible:ring-2 focus-visible:ring-[#3B82F6] focus-visible:outline-none data-[size=default]:h-auto data-[size=default]:min-h-12 lg:text-sm">
+                    <SelectValue placeholder="Select category" />
+                  </SelectTrigger>
+                  <SelectContent className="max-h-72 border-[rgba(255,255,255,0.18)] bg-[#1E293B] text-white">
+                    <SelectItem
+                      value="__placeholder__"
+                      className="text-white focus:bg-[rgba(59,130,246,0.15)] focus:text-white"
+                    >
+                      Select category
+                    </SelectItem>
+                    {categories.map((cat) => (
+                      <SelectItem
+                        key={cat.id}
+                        value={cat.id}
+                        className="text-white focus:bg-[rgba(59,130,246,0.15)] focus:text-white"
+                      >
+                        {cat.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               <div>
-                <label className="text-white text-sm font-medium mb-2 block">Author</label>
-                <select
-                  value={autoBlogConfig.author}
-                  onChange={(e) => setAutoBlogConfig({ ...autoBlogConfig, author: e.target.value })}
-                  className="w-full bg-[rgba(255,255,255,0.08)] border border-[rgba(255,255,255,0.18)] rounded-lg px-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#3B82F6] [&>option]:bg-[#1E293B] [&>option]:text-white"
+                <label className="mb-2 block text-sm font-medium text-white">
+                  Author
+                </label>
+                <Select
+                  value={autoBlogConfig.author || '__rotation__'}
+                  onValueChange={(v) =>
+                    setAutoBlogConfig({
+                      ...autoBlogConfig,
+                      author: v === '__rotation__' ? '' : v,
+                    })
+                  }
                 >
-                  <option value="">Random rotation</option>
-                  {authors.map((author) => (
-                    <option key={author.id} value={author.id}>{author.name}</option>
-                  ))}
-                </select>
+                  <SelectTrigger className="w-full rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(255,255,255,0.08)] px-4 py-3 text-base text-white focus-visible:ring-2 focus-visible:ring-[#3B82F6] focus-visible:outline-none data-[size=default]:h-auto data-[size=default]:min-h-12 lg:text-sm">
+                    <SelectValue placeholder="Random rotation" />
+                  </SelectTrigger>
+                  <SelectContent className="max-h-72 border-[rgba(255,255,255,0.18)] bg-[#1E293B] text-white">
+                    <SelectItem
+                      value="__rotation__"
+                      className="text-white focus:bg-[rgba(59,130,246,0.15)] focus:text-white"
+                    >
+                      Random rotation
+                    </SelectItem>
+                    {authors.map((author) => (
+                      <SelectItem
+                        key={author.id}
+                        value={author.id}
+                        className="text-white focus:bg-[rgba(59,130,246,0.15)] focus:text-white"
+                      >
+                        {author.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
           </div>
 
-          <div className="p-6 rounded-xl bg-[rgba(0,0,0,0.3)] border border-[rgba(255,255,255,0.18)]">
-            <h3 className="text-white text-base font-semibold mb-4">✏️ Blog Post Draft</h3>
+          <div className="rounded-xl border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.3)] p-6">
+            <h3 className="mb-4 text-base font-semibold text-white">
+              ✏️ Blog Post Draft
+            </h3>
             <div className="space-y-4">
               <div>
-                <label className="text-white text-sm font-medium mb-2 block">Title *</label>
+                <label className="mb-2 block text-sm font-medium text-white">
+                  Title *
+                </label>
                 <input
                   type="text"
                   value={blogPostDraft.title}
-                  onChange={(e) => setBlogPostDraft({ ...blogPostDraft, title: e.target.value })}
+                  onChange={(e) =>
+                    setBlogPostDraft({
+                      ...blogPostDraft,
+                      title: e.target.value,
+                    })
+                  }
                   placeholder="Enter blog title"
-                  className="w-full bg-[rgba(255,255,255,0.08)] border border-[rgba(255,255,255,0.18)] rounded-lg px-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#3B82F6] placeholder:text-[#64748B]"
+                  className="w-full rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(255,255,255,0.08)] px-4 py-3 text-sm text-white placeholder:text-[#64748B] focus:ring-2 focus:ring-[#3B82F6] focus:outline-none"
                 />
               </div>
               <div>
-                <label className="text-white text-sm font-medium mb-2 block">Content</label>
+                <label className="mb-2 block text-sm font-medium text-white">
+                  Content
+                </label>
                 <textarea
                   value={blogPostDraft.content}
-                  onChange={(e) => setBlogPostDraft({ ...blogPostDraft, content: e.target.value })}
+                  onChange={(e) =>
+                    setBlogPostDraft({
+                      ...blogPostDraft,
+                      content: e.target.value,
+                    })
+                  }
                   rows={6}
                   placeholder="Write your blog content here..."
-                  className="w-full bg-[rgba(255,255,255,0.08)] border border-[rgba(255,255,255,0.18)] rounded-lg px-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#3B82F6] resize-none placeholder:text-[#64748B]"
+                  className="w-full resize-none rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(255,255,255,0.08)] px-4 py-3 text-sm text-white placeholder:text-[#64748B] focus:ring-2 focus:ring-[#3B82F6] focus:outline-none"
                 />
               </div>
               <div>
-                <label className="text-white text-sm font-medium mb-2 block">Tags</label>
+                <label className="mb-2 block text-sm font-medium text-white">
+                  Tags
+                </label>
                 <input
                   type="text"
                   value={blogPostDraft.tags}
-                  onChange={(e) => setBlogPostDraft({ ...blogPostDraft, tags: e.target.value })}
+                  onChange={(e) =>
+                    setBlogPostDraft({ ...blogPostDraft, tags: e.target.value })
+                  }
                   placeholder="tag1, tag2, tag3"
-                  className="w-full bg-[rgba(255,255,255,0.08)] border border-[rgba(255,255,255,0.18)] rounded-lg px-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#3B82F6] placeholder:text-[#64748B]"
+                  className="w-full rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(255,255,255,0.08)] px-4 py-3 text-sm text-white placeholder:text-[#64748B] focus:ring-2 focus:ring-[#3B82F6] focus:outline-none"
                 />
               </div>
             </div>
           </div>
 
-          <div className="p-6 rounded-xl bg-[rgba(0,0,0,0.3)] border border-[rgba(255,255,255,0.18)]">
-            <h3 className="text-white text-base font-semibold mb-4">⏰ Scheduling Options</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+          <div className="rounded-xl border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.3)] p-6">
+            <h3 className="mb-4 text-base font-semibold text-white">
+              ⏰ Scheduling Options
+            </h3>
+            <div className="mb-4 grid grid-cols-1 gap-4 md:grid-cols-2">
               <div>
-                <label className="text-white text-sm font-medium mb-2 block">Min Hours Between Posts</label>
+                <label className="mb-2 block text-sm font-medium text-white">
+                  Min Hours Between Posts
+                </label>
                 <input
                   type="number"
                   value={scheduling.minHours}
-                  onChange={(e) => setScheduling({ ...scheduling, minHours: e.target.value })}
-                  className="w-full bg-[rgba(255,255,255,0.08)] border border-[rgba(255,255,255,0.18)] rounded-lg px-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#3B82F6]"
+                  onChange={(e) =>
+                    setScheduling({ ...scheduling, minHours: e.target.value })
+                  }
+                  className="w-full rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(255,255,255,0.08)] px-4 py-3 text-sm text-white focus:ring-2 focus:ring-[#3B82F6] focus:outline-none"
                 />
               </div>
               <div>
-                <label className="text-white text-sm font-medium mb-2 block">Max Hours Between Posts</label>
+                <label className="mb-2 block text-sm font-medium text-white">
+                  Max Hours Between Posts
+                </label>
                 <input
                   type="number"
                   value={scheduling.maxHours}
-                  onChange={(e) => setScheduling({ ...scheduling, maxHours: e.target.value })}
-                  className="w-full bg-[rgba(255,255,255,0.08)] border border-[rgba(255,255,255,0.18)] rounded-lg px-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#3B82F6]"
+                  onChange={(e) =>
+                    setScheduling({ ...scheduling, maxHours: e.target.value })
+                  }
+                  className="w-full rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(255,255,255,0.08)] px-4 py-3 text-sm text-white focus:ring-2 focus:ring-[#3B82F6] focus:outline-none"
                 />
               </div>
             </div>
@@ -788,11 +981,19 @@ export default function AdminBlogsPage() {
                 type="checkbox"
                 id="authorRotation"
                 checked={scheduling.authorRotation}
-                onChange={(e) => setScheduling({ ...scheduling, authorRotation: e.target.checked })}
-                className="w-4 h-4 rounded border-[rgba(255,255,255,0.18)] bg-[rgba(255,255,255,0.08)] text-[#3B82F6] focus:ring-[#3B82F6]"
+                onChange={(e) =>
+                  setScheduling({
+                    ...scheduling,
+                    authorRotation: e.target.checked,
+                  })
+                }
+                className="h-4 w-4 rounded border-[rgba(255,255,255,0.18)] bg-[rgba(255,255,255,0.08)] text-[#3B82F6] focus:ring-[#3B82F6]"
               />
-              <label htmlFor="authorRotation" className="text-white text-sm">
-                Author Rotation <span className="text-[#22C55E]">{scheduling.authorRotation ? 'ON' : 'OFF'}</span>
+              <label htmlFor="authorRotation" className="text-sm text-white">
+                Author Rotation{' '}
+                <span className="text-[#22C55E]">
+                  {scheduling.authorRotation ? 'ON' : 'OFF'}
+                </span>
               </label>
             </div>
           </div>
@@ -800,82 +1001,110 @@ export default function AdminBlogsPage() {
           <button
             onClick={handleBulkCreate}
             disabled={isLoading}
-            className="px-8 py-3 rounded-lg bg-[#06B6D4] hover:bg-[#0891B2] text-white text-sm font-medium transition-colors disabled:opacity-50"
+            className="rounded-lg bg-[#06B6D4] px-8 py-3 text-sm font-medium text-white transition-colors hover:bg-[#0891B2] disabled:opacity-50"
           >
-            {isLoading ? "Creating..." : "Create Bulk Blogs"}
+            {isLoading ? 'Creating...' : 'Create Bulk Blogs'}
           </button>
         </div>
       )}
 
       {/* Category Management Tab */}
-      {activeTab === "category" && (
+      {activeTab === 'category' && (
         <AdminGlassCard>
-          <div className="flex items-center gap-6 mb-6 border-b border-[rgba(255,255,255,0.18)]">
+          <div className="mb-6 flex items-center gap-6 overflow-x-auto border-b border-[rgba(255,255,255,0.18)] [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             <button
-              onClick={() => setCategorySubTab("category")}
-              className={`pb-3 px-2 text-sm font-medium transition-colors relative ${
-                categorySubTab === "category" ? "text-[#3B82F6]" : "text-[#64748B] hover:text-white"
+              onClick={() => setCategorySubTab('category')}
+              className={`relative shrink-0 px-2 pb-3 text-sm font-medium whitespace-nowrap transition-colors ${
+                categorySubTab === 'category'
+                  ? 'text-[#3B82F6]'
+                  : 'text-[#64748B] hover:text-white'
               }`}
             >
               Category Management
-              {categorySubTab === "category" && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#3B82F6]" />}
+              {categorySubTab === 'category' && (
+                <div className="absolute right-0 bottom-0 left-0 h-0.5 bg-[#3B82F6]" />
+              )}
             </button>
             <button
-              onClick={() => setCategorySubTab("subcategory")}
-              className={`pb-3 px-2 text-sm font-medium transition-colors relative ${
-                categorySubTab === "subcategory" ? "text-[#3B82F6]" : "text-[#64748B] hover:text-white"
+              onClick={() => setCategorySubTab('subcategory')}
+              className={`relative shrink-0 px-2 pb-3 text-sm font-medium whitespace-nowrap transition-colors ${
+                categorySubTab === 'subcategory'
+                  ? 'text-[#3B82F6]'
+                  : 'text-[#64748B] hover:text-white'
               }`}
             >
               Sub-Category Management
-              {categorySubTab === "subcategory" && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#3B82F6]" />}
+              {categorySubTab === 'subcategory' && (
+                <div className="absolute right-0 bottom-0 left-0 h-0.5 bg-[#3B82F6]" />
+              )}
             </button>
           </div>
 
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-white text-xl font-semibold">
-              {categorySubTab === "category" ? "Manage Categories" : "Manage Sub-Categories"}
+          <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <h2 className="text-xl font-semibold text-white">
+              {categorySubTab === 'category'
+                ? 'Manage Categories'
+                : 'Manage Sub-Categories'}
             </h2>
             <button
-              onClick={() => { resetCategoryForm(); setIsCreateCategoryModalOpen(true); }}
-              className="px-4 py-2 rounded-lg bg-[#06B6D4] hover:bg-[#0891B2] text-white text-sm font-medium transition-colors"
+              onClick={() => {
+                resetCategoryForm();
+                setIsCreateCategoryModalOpen(true);
+              }}
+              className="w-full rounded-lg bg-[#06B6D4] px-4 py-2 text-base font-medium whitespace-nowrap text-white transition-colors hover:bg-[#0891B2] sm:w-auto sm:text-sm"
             >
-              + Create {categorySubTab === "category" ? "Category" : "Sub-Category"}
+              + Create{' '}
+              {categorySubTab === 'category' ? 'Category' : 'Sub-Category'}
             </button>
           </div>
 
           <div className="space-y-3">
-            {(categorySubTab === "category" ? parentCategories : subCategories).map((category) => (
+            {(categorySubTab === 'category'
+              ? parentCategories
+              : subCategories
+            ).map((category) => (
               <div
                 key={category.id}
-                className="p-4 rounded-xl bg-[rgba(0,0,0,0.3)] border border-[rgba(255,255,255,0.18)] flex items-center justify-between"
+                className="flex flex-col gap-3 rounded-xl border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.3)] p-4 sm:flex-row sm:items-center sm:justify-between"
               >
-                <div>
-                  <h3 className="text-white text-base font-semibold mb-1">{category.name}</h3>
-                  <p className="text-[#64748B] text-sm">
+                <div className="min-w-0">
+                  <h3 className="mb-1 text-base font-semibold break-words text-white">
+                    {category.name}
+                  </h3>
+                  <p className="text-sm break-words text-[#64748B]">
                     Slug: {category.slug}
-                    {category.parent && <span> • Parent: {category.parent.name}</span>}
-                    {category._count && <span> • Posts: {category._count.posts}</span>}
+                    {category.parent && (
+                      <span> • Parent: {category.parent.name}</span>
+                    )}
+                    {category._count && (
+                      <span> • Posts: {category._count.posts}</span>
+                    )}
                   </p>
                 </div>
                 <div className="flex items-center gap-2">
                   <button
                     onClick={() => openEditCategory(category)}
-                    className="px-3 py-1.5 rounded-lg bg-[#3B82F6] hover:bg-[#2563EB] text-white text-sm font-medium transition-colors"
+                    className="flex-1 rounded-lg bg-[#3B82F6] px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-[#2563EB] sm:flex-none"
                   >
                     Edit
                   </button>
                   <button
                     onClick={() => openDeleteCategory(category)}
-                    className="px-3 py-1.5 rounded-lg bg-[#EF4444] hover:bg-[#DC2626] text-white text-sm font-medium transition-colors"
+                    className="flex-1 rounded-lg bg-[#EF4444] px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-[#DC2626] sm:flex-none"
                   >
                     Delete
                   </button>
                 </div>
               </div>
             ))}
-            {(categorySubTab === "category" ? parentCategories : subCategories).length === 0 && (
-              <p className="text-[#64748B] text-center py-8">
-                No {categorySubTab === "category" ? "categories" : "sub-categories"} found. Create one to get started!
+            {(categorySubTab === 'category' ? parentCategories : subCategories)
+              .length === 0 && (
+              <p className="py-8 text-center text-[#64748B]">
+                No{' '}
+                {categorySubTab === 'category'
+                  ? 'categories'
+                  : 'sub-categories'}{' '}
+                found. Create one to get started!
               </p>
             )}
           </div>
@@ -883,13 +1112,16 @@ export default function AdminBlogsPage() {
       )}
 
       {/* Author Pool Tab */}
-      {activeTab === "author" && (
+      {activeTab === 'author' && (
         <AdminGlassCard>
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-white text-xl font-semibold">Manage Authors</h2>
+          <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <h2 className="text-xl font-semibold text-white">Manage Authors</h2>
             <button
-              onClick={() => { resetAuthorForm(); setIsCreateAuthorModalOpen(true); }}
-              className="px-4 py-2 rounded-lg bg-[#06B6D4] hover:bg-[#0891B2] text-white text-sm font-medium transition-colors"
+              onClick={() => {
+                resetAuthorForm();
+                setIsCreateAuthorModalOpen(true);
+              }}
+              className="w-full rounded-lg bg-[#06B6D4] px-4 py-2 text-base font-medium whitespace-nowrap text-white transition-colors hover:bg-[#0891B2] sm:w-auto sm:text-sm"
             >
               + Create Author
             </button>
@@ -899,28 +1131,40 @@ export default function AdminBlogsPage() {
             {authors.map((author) => (
               <div
                 key={author.id}
-                className="p-4 rounded-xl bg-[rgba(0,0,0,0.3)] border border-[rgba(255,255,255,0.18)] flex items-center justify-between"
+                className="flex flex-col gap-3 rounded-xl border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.3)] p-4 sm:flex-row sm:items-center sm:justify-between"
               >
-                <div className="flex items-center gap-4">
+                <div className="flex min-w-0 items-center gap-4">
                   {author.avatar && (
-                    <img src={author.avatar} alt={author.name} className="w-12 h-12 rounded-full object-cover" />
+                    <img
+                      src={author.avatar}
+                      alt={author.name}
+                      className="h-12 w-12 shrink-0 rounded-full object-cover"
+                    />
                   )}
-                  <div>
-                    <h3 className="text-white text-base font-semibold mb-1">{author.name}</h3>
-                    <p className="text-[#3B82F6] text-sm">{author.bio || 'No bio'}</p>
-                    {author._count && <p className="text-[#64748B] text-xs">Posts: {author._count.posts}</p>}
+                  <div className="min-w-0">
+                    <h3 className="mb-1 text-base font-semibold break-words text-white">
+                      {author.name}
+                    </h3>
+                    <p className="text-sm break-words text-[#3B82F6]">
+                      {author.bio || 'No bio'}
+                    </p>
+                    {author._count && (
+                      <p className="text-xs text-[#64748B]">
+                        Posts: {author._count.posts}
+                      </p>
+                    )}
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
                   <button
                     onClick={() => openEditAuthor(author)}
-                    className="px-3 py-1.5 rounded-lg bg-[#3B82F6] hover:bg-[#2563EB] text-white text-sm font-medium transition-colors"
+                    className="flex-1 rounded-lg bg-[#3B82F6] px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-[#2563EB] sm:flex-none"
                   >
                     Edit
                   </button>
                   <button
                     onClick={() => openDeleteAuthor(author)}
-                    className="px-3 py-1.5 rounded-lg bg-[#EF4444] hover:bg-[#DC2626] text-white text-sm font-medium transition-colors"
+                    className="flex-1 rounded-lg bg-[#EF4444] px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-[#DC2626] sm:flex-none"
                   >
                     Delete
                   </button>
@@ -928,117 +1172,173 @@ export default function AdminBlogsPage() {
               </div>
             ))}
             {authors.length === 0 && (
-              <p className="text-[#64748B] text-center py-8">No authors found. Create one to get started!</p>
+              <p className="py-8 text-center text-[#64748B]">
+                No authors found. Create one to get started!
+              </p>
             )}
           </div>
         </AdminGlassCard>
       )}
 
       {/* Image Auto Editor Tab */}
-      {activeTab === "image" && (
+      {activeTab === 'image' && (
         <div className="space-y-6">
-          <div className="p-6 rounded-xl bg-[rgba(0,0,0,0.3)] border border-[rgba(255,255,255,0.18)]">
-            <h3 className="text-white text-base font-semibold mb-4">Upload Images</h3>
-            <button className="px-6 py-3 rounded-lg bg-[#06B6D4] hover:bg-[#0891B2] text-white text-sm font-medium transition-colors flex items-center gap-2">
-              <Upload className="w-5 h-5" />
+          <div className="rounded-xl border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.3)] p-4 sm:p-6">
+            <h3 className="mb-4 text-base font-semibold text-white">
+              Upload Images
+            </h3>
+            <button className="flex w-full items-center justify-center gap-2 rounded-lg bg-[#06B6D4] px-6 py-3 text-base font-medium text-white transition-colors hover:bg-[#0891B2] sm:w-auto sm:text-sm">
+              <Upload className="h-5 w-5" />
               Choose Images
             </button>
           </div>
 
-          <div className="p-6 rounded-xl bg-[rgba(0,0,0,0.3)] border border-[rgba(255,255,255,0.18)]">
-            <h3 className="text-white text-base font-semibold mb-4">Search Name for Images</h3>
+          <div className="rounded-xl border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.3)] p-4 sm:p-6">
+            <h3 className="mb-4 text-base font-semibold text-white">
+              Search Name for Images
+            </h3>
             <input
               type="text"
               value={imageConfig.searchName}
-              onChange={(e) => setImageConfig({ ...imageConfig, searchName: e.target.value })}
+              onChange={(e) =>
+                setImageConfig({ ...imageConfig, searchName: e.target.value })
+              }
               placeholder="e.g., How to use IPTV in Bangladesh"
-              className="w-full bg-[rgba(255,255,255,0.08)] border border-[rgba(255,255,255,0.18)] rounded-lg px-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#3B82F6] placeholder:text-[#64748B]"
+              className="w-full rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(255,255,255,0.08)] px-4 py-3 text-base text-white placeholder:text-[#64748B] focus:ring-2 focus:ring-[#3B82F6] focus:outline-none sm:text-sm"
             />
           </div>
 
-          <div className="p-6 rounded-xl bg-[rgba(0,0,0,0.3)] border border-[rgba(255,255,255,0.18)]">
-            <h3 className="text-white text-base font-semibold mb-4">Processing Settings</h3>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+          <div className="rounded-xl border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.3)] p-4 sm:p-6">
+            <h3 className="mb-4 text-base font-semibold text-white">
+              Processing Settings
+            </h3>
+            <div className="mb-4 grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-4">
               <div>
-                <label className="text-white text-sm font-medium mb-2 block">Crop (%)</label>
+                <label className="mb-2 block text-sm font-medium text-white">
+                  Crop (%)
+                </label>
                 <div className="grid grid-cols-4 gap-1">
                   {['crop1', 'crop2', 'crop3', 'crop4'].map((key) => (
                     <input
                       key={key}
                       type="number"
-                      value={imageConfig[key as keyof typeof imageConfig] as string}
-                      onChange={(e) => setImageConfig({ ...imageConfig, [key]: e.target.value })}
-                      className="w-full bg-[rgba(255,255,255,0.08)] border border-[rgba(255,255,255,0.18)] rounded px-2 py-1 text-white text-xs"
+                      value={
+                        imageConfig[key as keyof typeof imageConfig] as string
+                      }
+                      onChange={(e) =>
+                        setImageConfig({
+                          ...imageConfig,
+                          [key]: e.target.value,
+                        })
+                      }
+                      className="w-full rounded border border-[rgba(255,255,255,0.18)] bg-[rgba(255,255,255,0.08)] px-2 py-2 text-center text-sm text-white"
                     />
                   ))}
                 </div>
               </div>
               <div>
-                <label className="text-white text-sm font-medium mb-2 block">Saturation (%)</label>
+                <label className="mb-2 block text-sm font-medium text-white">
+                  Saturation (%)
+                </label>
                 <div className="grid grid-cols-2 gap-1">
                   {['saturation1', 'saturation2'].map((key) => (
                     <input
                       key={key}
                       type="number"
-                      value={imageConfig[key as keyof typeof imageConfig] as string}
-                      onChange={(e) => setImageConfig({ ...imageConfig, [key]: e.target.value })}
-                      className="w-full bg-[rgba(255,255,255,0.08)] border border-[rgba(255,255,255,0.18)] rounded px-2 py-1 text-white text-xs"
+                      value={
+                        imageConfig[key as keyof typeof imageConfig] as string
+                      }
+                      onChange={(e) =>
+                        setImageConfig({
+                          ...imageConfig,
+                          [key]: e.target.value,
+                        })
+                      }
+                      className="w-full rounded border border-[rgba(255,255,255,0.18)] bg-[rgba(255,255,255,0.08)] px-2 py-2 text-center text-sm text-white"
                     />
                   ))}
                 </div>
               </div>
               <div>
-                <label className="text-white text-sm font-medium mb-2 block">Brightness (%)</label>
+                <label className="mb-2 block text-sm font-medium text-white">
+                  Brightness (%)
+                </label>
                 <div className="grid grid-cols-2 gap-1">
                   {['brightness1', 'brightness2'].map((key) => (
                     <input
                       key={key}
                       type="number"
-                      value={imageConfig[key as keyof typeof imageConfig] as string}
-                      onChange={(e) => setImageConfig({ ...imageConfig, [key]: e.target.value })}
-                      className="w-full bg-[rgba(255,255,255,0.08)] border border-[rgba(255,255,255,0.18)] rounded px-2 py-1 text-white text-xs"
+                      value={
+                        imageConfig[key as keyof typeof imageConfig] as string
+                      }
+                      onChange={(e) =>
+                        setImageConfig({
+                          ...imageConfig,
+                          [key]: e.target.value,
+                        })
+                      }
+                      className="w-full rounded border border-[rgba(255,255,255,0.18)] bg-[rgba(255,255,255,0.08)] px-2 py-2 text-center text-sm text-white"
                     />
                   ))}
                 </div>
               </div>
               <div>
-                <label className="text-white text-sm font-medium mb-2 block">Contrast (%)</label>
+                <label className="mb-2 block text-sm font-medium text-white">
+                  Contrast (%)
+                </label>
                 <div className="grid grid-cols-2 gap-1">
                   {['contrast1', 'contrast2'].map((key) => (
                     <input
                       key={key}
                       type="number"
-                      value={imageConfig[key as keyof typeof imageConfig] as string}
-                      onChange={(e) => setImageConfig({ ...imageConfig, [key]: e.target.value })}
-                      className="w-full bg-[rgba(255,255,255,0.08)] border border-[rgba(255,255,255,0.18)] rounded px-2 py-1 text-white text-xs"
+                      value={
+                        imageConfig[key as keyof typeof imageConfig] as string
+                      }
+                      onChange={(e) =>
+                        setImageConfig({
+                          ...imageConfig,
+                          [key]: e.target.value,
+                        })
+                      }
+                      className="w-full rounded border border-[rgba(255,255,255,0.18)] bg-[rgba(255,255,255,0.08)] px-2 py-2 text-center text-sm text-white"
                     />
                   ))}
                 </div>
               </div>
             </div>
-            <div className="flex items-center gap-6">
-              <label className="flex items-center gap-2 text-white text-sm">
+            <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
+              <label className="flex items-center gap-2 text-sm whitespace-nowrap text-white">
                 <input
                   type="checkbox"
                   checked={imageConfig.convertWebP}
-                  onChange={(e) => setImageConfig({ ...imageConfig, convertWebP: e.target.checked })}
-                  className="w-4 h-4 rounded"
+                  onChange={(e) =>
+                    setImageConfig({
+                      ...imageConfig,
+                      convertWebP: e.target.checked,
+                    })
+                  }
+                  className="h-4 w-4 rounded"
                 />
                 Convert to WebP
               </label>
-              <label className="flex items-center gap-2 text-white text-sm">
+              <label className="flex items-center gap-2 text-sm whitespace-nowrap text-white">
                 <input
                   type="checkbox"
                   checked={imageConfig.stripEXIF}
-                  onChange={(e) => setImageConfig({ ...imageConfig, stripEXIF: e.target.checked })}
-                  className="w-4 h-4 rounded"
+                  onChange={(e) =>
+                    setImageConfig({
+                      ...imageConfig,
+                      stripEXIF: e.target.checked,
+                    })
+                  }
+                  className="h-4 w-4 rounded"
                 />
                 Strip EXIF metadata
               </label>
             </div>
           </div>
 
-          <button className="px-8 py-3 rounded-lg bg-[#06B6D4] hover:bg-[#0891B2] text-white text-sm font-medium transition-colors">
+          <button className="rounded-lg bg-[#06B6D4] px-8 py-3 text-sm font-medium text-white transition-colors hover:bg-[#0891B2]">
             Process Images
           </button>
         </div>
@@ -1047,68 +1347,184 @@ export default function AdminBlogsPage() {
       {/* Create/Edit Blog Modal */}
       <AdminModal
         isOpen={isCreateBlogModalOpen || isEditBlogModalOpen}
-        onClose={() => { setIsCreateBlogModalOpen(false); setIsEditBlogModalOpen(false); setSelectedBlog(null); }}
-        title={isEditBlogModalOpen ? "Edit Blog Post" : "Create Blog Post"}
+        onClose={() => {
+          setIsCreateBlogModalOpen(false);
+          setIsEditBlogModalOpen(false);
+          setSelectedBlog(null);
+        }}
+        title={isEditBlogModalOpen ? 'Edit Blog Post' : 'Create Blog Post'}
         primaryAction={{
-          label: isEditBlogModalOpen ? "Update" : "Create",
+          label: isEditBlogModalOpen ? 'Update' : 'Create',
           onClick: isEditBlogModalOpen ? handleEditBlog : handleCreateBlog,
           loading: isLoading,
-          variant: "primary",
+          variant: 'primary',
         }}
         secondaryAction={{
-          label: "Cancel",
-          onClick: () => { setIsCreateBlogModalOpen(false); setIsEditBlogModalOpen(false); setSelectedBlog(null); },
+          label: 'Cancel',
+          onClick: () => {
+            setIsCreateBlogModalOpen(false);
+            setIsEditBlogModalOpen(false);
+            setSelectedBlog(null);
+          },
         }}
       >
-        <div className="space-y-4 max-h-[60vh] overflow-y-auto">
-          <AdminFormInput label="Title" name="title" required value={blogForm.title} onChange={(value) => setBlogForm({ ...blogForm, title: value })} placeholder="Enter blog title" />
-          <AdminFormInput label="Slug" name="slug" value={blogForm.slug} onChange={(value) => setBlogForm({ ...blogForm, slug: value })} placeholder="auto-generated-if-empty" />
-          <AdminFormInput label="Excerpt" name="excerpt" value={blogForm.excerpt} onChange={(value) => setBlogForm({ ...blogForm, excerpt: value })} placeholder="Brief description" />
+        <div className="max-h-[60vh] space-y-4 overflow-y-auto">
+          <AdminFormInput
+            label="Title"
+            name="title"
+            required
+            value={blogForm.title}
+            onChange={(value) => setBlogForm({ ...blogForm, title: value })}
+            placeholder="Enter blog title"
+          />
+          <AdminFormInput
+            label="Slug"
+            name="slug"
+            value={blogForm.slug}
+            onChange={(value) => setBlogForm({ ...blogForm, slug: value })}
+            placeholder="auto-generated-if-empty"
+          />
+          <AdminFormInput
+            label="Excerpt"
+            name="excerpt"
+            value={blogForm.excerpt}
+            onChange={(value) => setBlogForm({ ...blogForm, excerpt: value })}
+            placeholder="Brief description"
+          />
           <div>
-            <label className="text-white text-sm font-medium mb-2 block">Content *</label>
+            <label className="mb-2 block text-sm font-medium text-white">
+              Content *
+            </label>
             <textarea
               value={blogForm.content}
-              onChange={(e) => setBlogForm({ ...blogForm, content: e.target.value })}
+              onChange={(e) =>
+                setBlogForm({ ...blogForm, content: e.target.value })
+              }
               rows={6}
               placeholder="Write your blog content..."
-              className="w-full bg-[rgba(255,255,255,0.08)] border border-[rgba(255,255,255,0.18)] rounded-lg px-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#3B82F6] resize-none"
+              className="w-full resize-none rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(255,255,255,0.08)] px-4 py-3 text-sm text-white focus:ring-2 focus:ring-[#3B82F6] focus:outline-none"
             />
           </div>
-          <AdminFormInput label="Featured Image URL" name="featuredImage" value={blogForm.featuredImage} onChange={(value) => setBlogForm({ ...blogForm, featuredImage: value })} placeholder="https://..." />
+          <AdminFormInput
+            label="Featured Image URL"
+            name="featuredImage"
+            value={blogForm.featuredImage}
+            onChange={(value) =>
+              setBlogForm({ ...blogForm, featuredImage: value })
+            }
+            placeholder="https://..."
+          />
           <div>
-            <label className="text-white text-sm font-medium mb-2 block">Category</label>
-            <select
-              value={blogForm.categoryId}
-              onChange={(e) => setBlogForm({ ...blogForm, categoryId: e.target.value })}
-              className="w-full bg-[rgba(255,255,255,0.08)] border border-[rgba(255,255,255,0.18)] rounded-lg px-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#3B82F6] [&>option]:bg-[#1E293B] [&>option]:text-white"
+            <label className="mb-2 block text-sm font-medium text-white">
+              Category
+            </label>
+            <Select
+              value={blogForm.categoryId || '__placeholder__'}
+              onValueChange={(v) =>
+                setBlogForm({
+                  ...blogForm,
+                  categoryId: v === '__placeholder__' ? '' : v,
+                })
+              }
             >
-              <option value="">Select category</option>
-              {categories.map((cat) => (<option key={cat.id} value={cat.id}>{cat.name}</option>))}
-            </select>
+              <SelectTrigger className="w-full rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(255,255,255,0.08)] px-4 py-3 text-base text-white focus-visible:ring-2 focus-visible:ring-[#3B82F6] focus-visible:outline-none data-[size=default]:h-auto data-[size=default]:min-h-12 lg:text-sm">
+                <SelectValue placeholder="Select category" />
+              </SelectTrigger>
+              <SelectContent className="max-h-72 border-[rgba(255,255,255,0.18)] bg-[#1E293B] text-white">
+                <SelectItem
+                  value="__placeholder__"
+                  className="text-white focus:bg-[rgba(59,130,246,0.15)] focus:text-white"
+                >
+                  Select category
+                </SelectItem>
+                {categories.map((cat) => (
+                  <SelectItem
+                    key={cat.id}
+                    value={cat.id}
+                    className="text-white focus:bg-[rgba(59,130,246,0.15)] focus:text-white"
+                  >
+                    {cat.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           <div>
-            <label className="text-white text-sm font-medium mb-2 block">Author</label>
-            <select
-              value={blogForm.authorId}
-              onChange={(e) => setBlogForm({ ...blogForm, authorId: e.target.value })}
-              className="w-full bg-[rgba(255,255,255,0.08)] border border-[rgba(255,255,255,0.18)] rounded-lg px-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#3B82F6] [&>option]:bg-[#1E293B] [&>option]:text-white"
+            <label className="mb-2 block text-sm font-medium text-white">
+              Author
+            </label>
+            <Select
+              value={blogForm.authorId || '__placeholder__'}
+              onValueChange={(v) =>
+                setBlogForm({
+                  ...blogForm,
+                  authorId: v === '__placeholder__' ? '' : v,
+                })
+              }
             >
-              <option value="">Select author</option>
-              {authors.map((author) => (<option key={author.id} value={author.id}>{author.name}</option>))}
-            </select>
+              <SelectTrigger className="w-full rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(255,255,255,0.08)] px-4 py-3 text-base text-white focus-visible:ring-2 focus-visible:ring-[#3B82F6] focus-visible:outline-none data-[size=default]:h-auto data-[size=default]:min-h-12 lg:text-sm">
+                <SelectValue placeholder="Select author" />
+              </SelectTrigger>
+              <SelectContent className="max-h-72 border-[rgba(255,255,255,0.18)] bg-[#1E293B] text-white">
+                <SelectItem
+                  value="__placeholder__"
+                  className="text-white focus:bg-[rgba(59,130,246,0.15)] focus:text-white"
+                >
+                  Select author
+                </SelectItem>
+                {authors.map((author) => (
+                  <SelectItem
+                    key={author.id}
+                    value={author.id}
+                    className="text-white focus:bg-[rgba(59,130,246,0.15)] focus:text-white"
+                  >
+                    {author.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
-          <AdminFormInput label="Tags" name="tags" value={blogForm.tags} onChange={(value) => setBlogForm({ ...blogForm, tags: value })} placeholder="tag1, tag2, tag3" />
+          <AdminFormInput
+            label="Tags"
+            name="tags"
+            value={blogForm.tags}
+            onChange={(value) => setBlogForm({ ...blogForm, tags: value })}
+            placeholder="tag1, tag2, tag3"
+          />
           <div>
-            <label className="text-white text-sm font-medium mb-2 block">Status</label>
-            <select
+            <label className="mb-2 block text-sm font-medium text-white">
+              Status
+            </label>
+            <Select
               value={blogForm.status}
-              onChange={(e) => setBlogForm({ ...blogForm, status: e.target.value as any })}
-              className="w-full bg-[rgba(255,255,255,0.08)] border border-[rgba(255,255,255,0.18)] rounded-lg px-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#3B82F6] [&>option]:bg-[#1E293B] [&>option]:text-white"
+              onValueChange={(v) =>
+                setBlogForm({ ...blogForm, status: v as any })
+              }
             >
-              <option value="DRAFT">Draft</option>
-              <option value="PUBLISHED">Published</option>
-              <option value="ARCHIVED">Archived</option>
-            </select>
+              <SelectTrigger className="w-full rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(255,255,255,0.08)] px-4 py-3 text-base text-white focus-visible:ring-2 focus-visible:ring-[#3B82F6] focus-visible:outline-none data-[size=default]:h-auto data-[size=default]:min-h-12 lg:text-sm">
+                <SelectValue placeholder="Select status" />
+              </SelectTrigger>
+              <SelectContent className="max-h-72 border-[rgba(255,255,255,0.18)] bg-[#1E293B] text-white">
+                <SelectItem
+                  value="DRAFT"
+                  className="text-white focus:bg-[rgba(59,130,246,0.15)] focus:text-white"
+                >
+                  Draft
+                </SelectItem>
+                <SelectItem
+                  value="PUBLISHED"
+                  className="text-white focus:bg-[rgba(59,130,246,0.15)] focus:text-white"
+                >
+                  Published
+                </SelectItem>
+                <SelectItem
+                  value="ARCHIVED"
+                  className="text-white focus:bg-[rgba(59,130,246,0.15)] focus:text-white"
+                >
+                  Archived
+                </SelectItem>
+              </SelectContent>
+            </Select>
           </div>
         </div>
       </AdminModal>
@@ -1116,34 +1532,93 @@ export default function AdminBlogsPage() {
       {/* Create/Edit Category Modal */}
       <AdminModal
         isOpen={isCreateCategoryModalOpen || isEditCategoryModalOpen}
-        onClose={() => { setIsCreateCategoryModalOpen(false); setIsEditCategoryModalOpen(false); setSelectedCategory(null); }}
-        title={isEditCategoryModalOpen ? "Edit Category" : "Create Category"}
+        onClose={() => {
+          setIsCreateCategoryModalOpen(false);
+          setIsEditCategoryModalOpen(false);
+          setSelectedCategory(null);
+        }}
+        title={isEditCategoryModalOpen ? 'Edit Category' : 'Create Category'}
         primaryAction={{
-          label: isEditCategoryModalOpen ? "Update" : "Create",
-          onClick: isEditCategoryModalOpen ? handleEditCategory : handleCreateCategory,
+          label: isEditCategoryModalOpen ? 'Update' : 'Create',
+          onClick: isEditCategoryModalOpen
+            ? handleEditCategory
+            : handleCreateCategory,
           loading: isLoading,
-          variant: "primary",
+          variant: 'primary',
         }}
         secondaryAction={{
-          label: "Cancel",
-          onClick: () => { setIsCreateCategoryModalOpen(false); setIsEditCategoryModalOpen(false); setSelectedCategory(null); },
+          label: 'Cancel',
+          onClick: () => {
+            setIsCreateCategoryModalOpen(false);
+            setIsEditCategoryModalOpen(false);
+            setSelectedCategory(null);
+          },
         }}
       >
         <div className="space-y-4">
-          <AdminFormInput label="Category Name" name="categoryName" required value={categoryForm.name} onChange={(value) => setCategoryForm({ ...categoryForm, name: value })} placeholder="Enter category name" />
-          <AdminFormInput label="Slug" name="categorySlug" value={categoryForm.slug} onChange={(value) => setCategoryForm({ ...categoryForm, slug: value })} placeholder="auto-generated-if-empty" />
-          <AdminFormInput label="Description" name="categoryDescription" value={categoryForm.description} onChange={(value) => setCategoryForm({ ...categoryForm, description: value })} placeholder="Category description" />
-          {categorySubTab === "subcategory" && (
+          <AdminFormInput
+            label="Category Name"
+            name="categoryName"
+            required
+            value={categoryForm.name}
+            onChange={(value) =>
+              setCategoryForm({ ...categoryForm, name: value })
+            }
+            placeholder="Enter category name"
+          />
+          <AdminFormInput
+            label="Slug"
+            name="categorySlug"
+            value={categoryForm.slug}
+            onChange={(value) =>
+              setCategoryForm({ ...categoryForm, slug: value })
+            }
+            placeholder="auto-generated-if-empty"
+          />
+          <AdminFormInput
+            label="Description"
+            name="categoryDescription"
+            value={categoryForm.description}
+            onChange={(value) =>
+              setCategoryForm({ ...categoryForm, description: value })
+            }
+            placeholder="Category description"
+          />
+          {categorySubTab === 'subcategory' && (
             <div>
-              <label className="text-white text-sm font-medium mb-2 block">Parent Category</label>
-              <select
-                value={categoryForm.parentId}
-                onChange={(e) => setCategoryForm({ ...categoryForm, parentId: e.target.value })}
-                className="w-full bg-[rgba(255,255,255,0.08)] border border-[rgba(255,255,255,0.18)] rounded-lg px-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#3B82F6] [&>option]:bg-[#1E293B] [&>option]:text-white"
+              <label className="mb-2 block text-sm font-medium text-white">
+                Parent Category
+              </label>
+              <Select
+                value={categoryForm.parentId || '__placeholder__'}
+                onValueChange={(v) =>
+                  setCategoryForm({
+                    ...categoryForm,
+                    parentId: v === '__placeholder__' ? '' : v,
+                  })
+                }
               >
-                <option value="">Select parent category</option>
-                {parentCategories.map((cat) => (<option key={cat.id} value={cat.id}>{cat.name}</option>))}
-              </select>
+                <SelectTrigger className="w-full rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(255,255,255,0.08)] px-4 py-3 text-base text-white focus-visible:ring-2 focus-visible:ring-[#3B82F6] focus-visible:outline-none data-[size=default]:h-auto data-[size=default]:min-h-12 lg:text-sm">
+                  <SelectValue placeholder="Select parent category" />
+                </SelectTrigger>
+                <SelectContent className="max-h-72 border-[rgba(255,255,255,0.18)] bg-[#1E293B] text-white">
+                  <SelectItem
+                    value="__placeholder__"
+                    className="text-white focus:bg-[rgba(59,130,246,0.15)] focus:text-white"
+                  >
+                    Select parent category
+                  </SelectItem>
+                  {parentCategories.map((cat) => (
+                    <SelectItem
+                      key={cat.id}
+                      value={cat.id}
+                      className="text-white focus:bg-[rgba(59,130,246,0.15)] focus:text-white"
+                    >
+                      {cat.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           )}
         </div>
@@ -1152,47 +1627,110 @@ export default function AdminBlogsPage() {
       {/* Create/Edit Author Modal */}
       <AdminModal
         isOpen={isCreateAuthorModalOpen || isEditAuthorModalOpen}
-        onClose={() => { setIsCreateAuthorModalOpen(false); setIsEditAuthorModalOpen(false); setSelectedAuthor(null); }}
-        title={isEditAuthorModalOpen ? "Edit Author" : "Create Author"}
+        onClose={() => {
+          setIsCreateAuthorModalOpen(false);
+          setIsEditAuthorModalOpen(false);
+          setSelectedAuthor(null);
+        }}
+        title={isEditAuthorModalOpen ? 'Edit Author' : 'Create Author'}
         primaryAction={{
-          label: isEditAuthorModalOpen ? "Update" : "Create",
-          onClick: isEditAuthorModalOpen ? handleEditAuthor : handleCreateAuthor,
+          label: isEditAuthorModalOpen ? 'Update' : 'Create',
+          onClick: isEditAuthorModalOpen
+            ? handleEditAuthor
+            : handleCreateAuthor,
           loading: isLoading,
-          variant: "primary",
+          variant: 'primary',
         }}
         secondaryAction={{
-          label: "Cancel",
-          onClick: () => { setIsCreateAuthorModalOpen(false); setIsEditAuthorModalOpen(false); setSelectedAuthor(null); },
+          label: 'Cancel',
+          onClick: () => {
+            setIsCreateAuthorModalOpen(false);
+            setIsEditAuthorModalOpen(false);
+            setSelectedAuthor(null);
+          },
         }}
       >
         <div className="space-y-4">
-          <AdminFormInput label="Author Name" name="authorName" required value={authorForm.name} onChange={(value) => setAuthorForm({ ...authorForm, name: value })} placeholder="Enter author name" />
-          <AdminFormInput label="Slug" name="authorSlug" value={authorForm.slug} onChange={(value) => setAuthorForm({ ...authorForm, slug: value })} placeholder="auto-generated-if-empty" />
-          <AdminFormInput label="Bio" name="authorBio" value={authorForm.bio} onChange={(value) => setAuthorForm({ ...authorForm, bio: value })} placeholder="Author bio/description" />
-          <AdminFormInput label="Avatar URL" name="authorAvatar" value={authorForm.avatar} onChange={(value) => setAuthorForm({ ...authorForm, avatar: value })} placeholder="https://..." />
-          <AdminFormInput label="Email" name="authorEmail" value={authorForm.email} onChange={(value) => setAuthorForm({ ...authorForm, email: value })} placeholder="author@example.com" />
-          <AdminFormInput label="Website" name="authorWebsite" value={authorForm.website} onChange={(value) => setAuthorForm({ ...authorForm, website: value })} placeholder="https://..." />
+          <AdminFormInput
+            label="Author Name"
+            name="authorName"
+            required
+            value={authorForm.name}
+            onChange={(value) => setAuthorForm({ ...authorForm, name: value })}
+            placeholder="Enter author name"
+          />
+          <AdminFormInput
+            label="Slug"
+            name="authorSlug"
+            value={authorForm.slug}
+            onChange={(value) => setAuthorForm({ ...authorForm, slug: value })}
+            placeholder="auto-generated-if-empty"
+          />
+          <AdminFormInput
+            label="Bio"
+            name="authorBio"
+            value={authorForm.bio}
+            onChange={(value) => setAuthorForm({ ...authorForm, bio: value })}
+            placeholder="Author bio/description"
+          />
+          <AdminFormInput
+            label="Avatar URL"
+            name="authorAvatar"
+            value={authorForm.avatar}
+            onChange={(value) =>
+              setAuthorForm({ ...authorForm, avatar: value })
+            }
+            placeholder="https://..."
+          />
+          <AdminFormInput
+            label="Email"
+            name="authorEmail"
+            value={authorForm.email}
+            onChange={(value) => setAuthorForm({ ...authorForm, email: value })}
+            placeholder="author@example.com"
+          />
+          <AdminFormInput
+            label="Website"
+            name="authorWebsite"
+            value={authorForm.website}
+            onChange={(value) =>
+              setAuthorForm({ ...authorForm, website: value })
+            }
+            placeholder="https://..."
+          />
         </div>
       </AdminModal>
 
       {/* Delete Confirmation Modal */}
       <AdminModal
         isOpen={isDeleteModalOpen}
-        onClose={() => { setIsDeleteModalOpen(false); setSelectedBlog(null); setSelectedCategory(null); setSelectedAuthor(null); }}
+        onClose={() => {
+          setIsDeleteModalOpen(false);
+          setSelectedBlog(null);
+          setSelectedCategory(null);
+          setSelectedAuthor(null);
+        }}
         title="Confirm Delete"
         primaryAction={{
-          label: "Delete",
+          label: 'Delete',
           onClick: handleDelete,
           loading: isLoading,
-          variant: "danger",
+          variant: 'danger',
         }}
         secondaryAction={{
-          label: "Cancel",
-          onClick: () => { setIsDeleteModalOpen(false); setSelectedBlog(null); setSelectedCategory(null); setSelectedAuthor(null); },
+          label: 'Cancel',
+          onClick: () => {
+            setIsDeleteModalOpen(false);
+            setSelectedBlog(null);
+            setSelectedCategory(null);
+            setSelectedAuthor(null);
+          },
         }}
       >
         <p className="text-[#94A3B8]">
-          Are you sure you want to delete <span className="text-white font-medium">{getDeleteItemName()}</span>? This action cannot be undone.
+          Are you sure you want to delete{' '}
+          <span className="font-medium text-white">{getDeleteItemName()}</span>?
+          This action cannot be undone.
         </p>
       </AdminModal>
     </div>

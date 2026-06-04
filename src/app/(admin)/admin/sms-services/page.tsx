@@ -58,6 +58,13 @@ import {
 import { apiClient } from '@/config/api-client.config';
 import { API_ENDPOINTS } from '@/config/server.config';
 import { type MembershipPlan } from '@/lib/api/membershipApi';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 interface Service {
   id: string;
@@ -1978,8 +1985,8 @@ export default function AdminSmsServicesPage() {
       {activeTab === 'vip' && (
         <div className="space-y-6">
           {/* VIP Controls */}
-          <div className="rounded-xl border border-[rgba(255,255,255,0.1)] bg-[rgba(15,23,42,0.6)] p-6 backdrop-blur-xl">
-            <div className="flex items-center justify-between">
+          <div className="rounded-xl border border-[rgba(255,255,255,0.1)] bg-[rgba(15,23,42,0.6)] p-4 backdrop-blur-xl sm:p-6">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <h3 className="mb-1 text-lg font-semibold text-white">
                   VIP Categories
@@ -1989,7 +1996,7 @@ export default function AdminSmsServicesPage() {
                   providers
                 </p>
               </div>
-              <div className="flex items-center gap-3">
+              <div className="flex flex-wrap items-center gap-3">
                 {/* Toggle VIP On/Off */}
                 <div className="flex items-center gap-2">
                   <span className="text-sm text-[#94A3B8]">
@@ -1998,7 +2005,7 @@ export default function AdminSmsServicesPage() {
                   <button
                     onClick={handleToggleVip}
                     disabled={isTogglingVip}
-                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                    className={`size-icon relative inline-flex h-6 w-11 items-center rounded-full !p-0 transition-colors ${
                       isVipEnabled
                         ? 'bg-[#22C55E]'
                         : 'bg-[rgba(255,255,255,0.18)]'
@@ -2102,23 +2109,23 @@ export default function AdminSmsServicesPage() {
                         key={country.id}
                         className="rounded-lg border border-[rgba(255,255,255,0.05)] bg-[rgba(0,0,0,0.2)] p-4"
                       >
-                        <div className="mb-2 flex items-center justify-between">
-                          <div className="flex items-center gap-2">
+                        <div className="mb-2 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                          <div className="flex min-w-0 flex-wrap items-center gap-2">
                             {country.iconUrl && (
                               <img
                                 src={country.iconUrl}
                                 alt={country.name}
-                                className="h-5 w-5 rounded"
+                                className="h-5 w-5 shrink-0 rounded"
                               />
                             )}
-                            <span className="text-sm font-medium text-white">
+                            <span className="text-sm font-medium break-words text-white">
                               {country.name}
                             </span>
                             <span className="text-xs text-[#64748B]">
                               ({country.code})
                             </span>
                           </div>
-                          <span className="rounded-full bg-[#F59E0B]/20 px-2 py-1 text-xs font-medium text-[#F59E0B]">
+                          <span className="self-start rounded-full bg-[#F59E0B]/20 px-2 py-1 text-xs font-medium whitespace-nowrap text-[#F59E0B] sm:self-auto">
                             Best Rating: {country.bestRating}/5
                           </span>
                         </div>
@@ -2162,9 +2169,9 @@ export default function AdminSmsServicesPage() {
       {activeTab === 'pricing' && (
         <div className="space-y-6">
           {/* Global Markup Control */}
-          <div className="rounded-xl border border-[rgba(255,255,255,0.1)] bg-[rgba(15,23,42,0.6)] p-6 backdrop-blur-xl">
+          <div className="rounded-xl border border-[rgba(255,255,255,0.1)] bg-[rgba(15,23,42,0.6)] p-4 backdrop-blur-xl sm:p-6">
             <div className="mb-4 flex items-center gap-3">
-              <Percent className="h-6 w-6 text-[#F59E0B]" />
+              <Percent className="h-6 w-6 shrink-0 text-[#F59E0B]" />
               <h3 className="text-lg font-semibold text-white">
                 Global Markup Control
               </h3>
@@ -2174,8 +2181,8 @@ export default function AdminSmsServicesPage() {
               increase prices, negative values decrease.
             </p>
 
-            <div className="flex items-center gap-4">
-              <div className="max-w-md flex-1">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-end">
+              <div className="w-full sm:max-w-md sm:flex-1">
                 <label className="mb-2 block text-sm font-medium text-white">
                   Markup Percentage (%)
                 </label>
@@ -2185,7 +2192,7 @@ export default function AdminSmsServicesPage() {
                   onChange={(e) =>
                     setGlobalMarkup(parseFloat(e.target.value) || 0)
                   }
-                  className="w-full rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.4)] px-4 py-3 text-sm text-white focus:ring-2 focus:ring-[#3B82F6] focus:outline-none"
+                  className="w-full rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.4)] px-4 py-3 text-base text-white focus:ring-2 focus:ring-[#3B82F6] focus:outline-none sm:text-sm"
                   placeholder="Enter markup percentage"
                   step="0.1"
                 />
@@ -2197,7 +2204,7 @@ export default function AdminSmsServicesPage() {
               <button
                 onClick={handleApplyGlobalMarkup}
                 disabled={isLoading}
-                className="mt-6 flex items-center gap-2 rounded-lg bg-[#F59E0B] px-6 py-3 text-sm font-medium text-white transition-colors hover:bg-[#D97706] disabled:opacity-50"
+                className="flex w-full items-center justify-center gap-2 rounded-lg bg-[#F59E0B] px-6 py-3 text-base font-medium whitespace-nowrap text-white transition-colors hover:bg-[#D97706] disabled:opacity-50 sm:mb-7 sm:w-auto sm:text-sm"
               >
                 {isLoading ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
@@ -2219,9 +2226,9 @@ export default function AdminSmsServicesPage() {
           </div>
 
           {/* Search Bar + Lock Filter + Bulk Actions */}
-          <div className="rounded-xl border border-[rgba(255,255,255,0.1)] bg-[rgba(15,23,42,0.6)] p-6 backdrop-blur-xl">
-            <div className="flex flex-wrap items-center gap-3">
-              <div className="relative min-w-[250px] flex-1">
+          <div className="rounded-xl border border-[rgba(255,255,255,0.1)] bg-[rgba(15,23,42,0.6)] p-4 backdrop-blur-xl sm:p-6">
+            <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
+              <div className="relative w-full sm:min-w-[250px] sm:flex-1">
                 <Search className="absolute top-1/2 left-4 h-5 w-5 -translate-y-1/2 transform text-[#64748B]" />
                 <input
                   type="text"
@@ -2231,7 +2238,7 @@ export default function AdminSmsServicesPage() {
                     setPricingPage(1);
                   }}
                   placeholder="Search services by name, country, or provider..."
-                  className="w-full rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.4)] py-3 pr-4 pl-12 text-sm text-white focus:ring-2 focus:ring-[#3B82F6] focus:outline-none"
+                  className="w-full rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.4)] py-3 pr-4 pl-12 text-base text-white focus:ring-2 focus:ring-[#3B82F6] focus:outline-none sm:text-sm"
                 />
                 {isPricingLoading && (
                   <Loader2 className="absolute top-1/2 right-4 h-4 w-4 -translate-y-1/2 animate-spin text-[#3B82F6]" />
@@ -2243,26 +2250,50 @@ export default function AdminSmsServicesPage() {
                 <span className="text-sm whitespace-nowrap text-[#94A3B8]">
                   Per page:
                 </span>
-                <select
-                  value={pricingLimit}
-                  onChange={(e) => {
-                    setPricingLimit(Number(e.target.value));
+                <Select
+                  value={String(pricingLimit)}
+                  onValueChange={(v) => {
+                    setPricingLimit(Number(v));
                     setPricingPage(1);
                   }}
-                  className="cursor-pointer rounded-lg border border-[rgba(255,255,255,0.1)] bg-[#1E293B] px-3 py-2.5 text-sm text-white focus:ring-2 focus:ring-[#3B82F6] focus:outline-none [&>option]:bg-[#1E293B] [&>option]:text-white"
                 >
-                  <option value={50}>50</option>
-                  <option value={100}>100</option>
-                  <option value={150}>150</option>
-                  <option value={200}>200</option>
-                </select>
+                  <SelectTrigger className="cursor-pointer rounded-lg border border-[rgba(255,255,255,0.1)] bg-[#1E293B] px-3 py-2.5 text-base text-white focus-visible:ring-2 focus-visible:ring-[#3B82F6] focus-visible:outline-none data-[size=default]:h-auto data-[size=default]:min-h-11 lg:text-sm">
+                    <SelectValue placeholder="Per page" />
+                  </SelectTrigger>
+                  <SelectContent className="max-h-72 border-[rgba(255,255,255,0.18)] bg-[#1E293B] text-white">
+                    <SelectItem
+                      value="50"
+                      className="text-white focus:bg-[rgba(59,130,246,0.15)] focus:text-white"
+                    >
+                      50
+                    </SelectItem>
+                    <SelectItem
+                      value="100"
+                      className="text-white focus:bg-[rgba(59,130,246,0.15)] focus:text-white"
+                    >
+                      100
+                    </SelectItem>
+                    <SelectItem
+                      value="150"
+                      className="text-white focus:bg-[rgba(59,130,246,0.15)] focus:text-white"
+                    >
+                      150
+                    </SelectItem>
+                    <SelectItem
+                      value="200"
+                      className="text-white focus:bg-[rgba(59,130,246,0.15)] focus:text-white"
+                    >
+                      200
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
               <button
                 onClick={() => {
                   setShowLockedOnly(!showLockedOnly);
                   setPricingPage(1);
                 }}
-                className={`flex items-center gap-2 rounded-lg px-4 py-3 text-sm font-medium whitespace-nowrap transition-all ${
+                className={`flex w-full items-center justify-center gap-2 rounded-lg px-4 py-3 text-base font-medium whitespace-nowrap transition-all sm:w-auto sm:justify-start sm:text-sm ${
                   showLockedOnly
                     ? 'bg-[#3B82F6] text-white'
                     : 'border border-[rgba(255,255,255,0.18)] bg-[rgba(255,255,255,0.05)] text-[#94A3B8] hover:bg-[rgba(255,255,255,0.08)]'
@@ -2481,17 +2512,17 @@ export default function AdminSmsServicesPage() {
 
                 {/* Pagination */}
                 {pricingTotalPages > 1 && (
-                  <div className="flex items-center justify-between border-t border-[rgba(255,255,255,0.1)] px-6 py-4">
-                    <div className="text-sm text-[#94A3B8]">
+                  <div className="flex flex-col gap-3 border-t border-[rgba(255,255,255,0.1)] px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+                    <div className="text-center text-sm text-[#94A3B8] sm:text-left">
                       Showing {(pricingPage - 1) * pricingLimit + 1}-
                       {Math.min(pricingPage * pricingLimit, pricingTotal)} of{' '}
                       {pricingTotal}
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-wrap items-center justify-center gap-2">
                       <button
                         onClick={() => setPricingPage(1)}
                         disabled={pricingPage === 1 || isPricingLoading}
-                        className="rounded-lg bg-[rgba(255,255,255,0.05)] px-3 py-1.5 text-sm font-medium text-[#94A3B8] transition-colors hover:bg-[rgba(255,255,255,0.1)] disabled:cursor-not-allowed disabled:opacity-50"
+                        className="hidden rounded-lg bg-[rgba(255,255,255,0.05)] px-3 py-1.5 text-sm font-medium text-[#94A3B8] transition-colors hover:bg-[rgba(255,255,255,0.1)] disabled:cursor-not-allowed disabled:opacity-50 sm:inline-flex"
                       >
                         First
                       </button>
@@ -2502,7 +2533,7 @@ export default function AdminSmsServicesPage() {
                         disabled={pricingPage === 1 || isPricingLoading}
                         className="rounded-lg bg-[rgba(255,255,255,0.05)] px-3 py-1.5 text-sm font-medium text-[#94A3B8] transition-colors hover:bg-[rgba(255,255,255,0.1)] disabled:cursor-not-allowed disabled:opacity-50"
                       >
-                        Previous
+                        Prev
                       </button>
                       <div className="flex items-center gap-1">
                         {Array.from(
@@ -2523,7 +2554,7 @@ export default function AdminSmsServicesPage() {
                                 key={pageNum}
                                 onClick={() => setPricingPage(pageNum)}
                                 disabled={isPricingLoading}
-                                className={`h-8 w-8 rounded-lg text-sm font-medium transition-colors ${
+                                className={`size-icon inline-flex h-8 w-8 items-center justify-center rounded-lg !p-0 text-sm font-medium transition-colors ${
                                   pricingPage === pageNum
                                     ? 'bg-[#3B82F6] text-white'
                                     : 'bg-[rgba(255,255,255,0.05)] text-[#94A3B8] hover:bg-[rgba(255,255,255,0.1)]'
@@ -2553,7 +2584,7 @@ export default function AdminSmsServicesPage() {
                         disabled={
                           pricingPage === pricingTotalPages || isPricingLoading
                         }
-                        className="rounded-lg bg-[rgba(255,255,255,0.05)] px-3 py-1.5 text-sm font-medium text-[#94A3B8] transition-colors hover:bg-[rgba(255,255,255,0.1)] disabled:cursor-not-allowed disabled:opacity-50"
+                        className="hidden rounded-lg bg-[rgba(255,255,255,0.05)] px-3 py-1.5 text-sm font-medium text-[#94A3B8] transition-colors hover:bg-[rgba(255,255,255,0.1)] disabled:cursor-not-allowed disabled:opacity-50 sm:inline-flex"
                       >
                         Last
                       </button>
@@ -2784,37 +2815,102 @@ export default function AdminSmsServicesPage() {
                     <span className="text-sm whitespace-nowrap text-[#94A3B8]">
                       Category:
                     </span>
-                    <select
-                      value={serviceCategoryFilter}
-                      onChange={(e) => setServiceCategoryFilter(e.target.value)}
-                      className="cursor-pointer rounded-lg border border-[rgba(255,255,255,0.1)] bg-[#1E293B] px-3 py-2 text-sm text-white focus:ring-2 focus:ring-[#3B82F6] focus:outline-none [&>option]:bg-[#1E293B] [&>option]:text-white"
+                    <Select
+                      value={serviceCategoryFilter || '__all__'}
+                      onValueChange={(v) =>
+                        setServiceCategoryFilter(v === '__all__' ? '' : v)
+                      }
                     >
-                      <option value="">All</option>
-                      <option value="social">Social Media</option>
-                      <option value="messaging">Messaging</option>
-                      <option value="finance">Finance</option>
-                      <option value="gaming">Gaming</option>
-                      <option value="shopping">Shopping</option>
-                      <option value="other">Other</option>
-                    </select>
+                      <SelectTrigger className="cursor-pointer rounded-lg border border-[rgba(255,255,255,0.1)] bg-[#1E293B] px-3 py-2 text-base text-white focus-visible:ring-2 focus-visible:ring-[#3B82F6] focus-visible:outline-none data-[size=default]:h-auto data-[size=default]:min-h-11 lg:text-sm">
+                        <SelectValue placeholder="All" />
+                      </SelectTrigger>
+                      <SelectContent className="max-h-72 border-[rgba(255,255,255,0.18)] bg-[#1E293B] text-white">
+                        <SelectItem
+                          value="__all__"
+                          className="text-white focus:bg-[rgba(59,130,246,0.15)] focus:text-white"
+                        >
+                          All
+                        </SelectItem>
+                        <SelectItem
+                          value="social"
+                          className="text-white focus:bg-[rgba(59,130,246,0.15)] focus:text-white"
+                        >
+                          Social Media
+                        </SelectItem>
+                        <SelectItem
+                          value="messaging"
+                          className="text-white focus:bg-[rgba(59,130,246,0.15)] focus:text-white"
+                        >
+                          Messaging
+                        </SelectItem>
+                        <SelectItem
+                          value="finance"
+                          className="text-white focus:bg-[rgba(59,130,246,0.15)] focus:text-white"
+                        >
+                          Finance
+                        </SelectItem>
+                        <SelectItem
+                          value="gaming"
+                          className="text-white focus:bg-[rgba(59,130,246,0.15)] focus:text-white"
+                        >
+                          Gaming
+                        </SelectItem>
+                        <SelectItem
+                          value="shopping"
+                          className="text-white focus:bg-[rgba(59,130,246,0.15)] focus:text-white"
+                        >
+                          Shopping
+                        </SelectItem>
+                        <SelectItem
+                          value="other"
+                          className="text-white focus:bg-[rgba(59,130,246,0.15)] focus:text-white"
+                        >
+                          Other
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
                   <div className="flex items-center gap-2">
                     <span className="text-sm whitespace-nowrap text-[#94A3B8]">
                       Per page:
                     </span>
-                    <select
-                      value={servicesLimit}
-                      onChange={(e) => {
-                        setServicesLimit(Number(e.target.value));
+                    <Select
+                      value={String(servicesLimit)}
+                      onValueChange={(v) => {
+                        setServicesLimit(Number(v));
                         setServicesPage(1);
                       }}
-                      className="cursor-pointer rounded-lg border border-[rgba(255,255,255,0.1)] bg-[#1E293B] px-3 py-2 text-sm text-white focus:ring-2 focus:ring-[#3B82F6] focus:outline-none [&>option]:bg-[#1E293B] [&>option]:text-white"
                     >
-                      <option value={50}>50</option>
-                      <option value={100}>100</option>
-                      <option value={150}>150</option>
-                      <option value={200}>200</option>
-                    </select>
+                      <SelectTrigger className="cursor-pointer rounded-lg border border-[rgba(255,255,255,0.1)] bg-[#1E293B] px-3 py-2 text-base text-white focus-visible:ring-2 focus-visible:ring-[#3B82F6] focus-visible:outline-none data-[size=default]:h-auto data-[size=default]:min-h-11 lg:text-sm">
+                        <SelectValue placeholder="Per page" />
+                      </SelectTrigger>
+                      <SelectContent className="max-h-72 border-[rgba(255,255,255,0.18)] bg-[#1E293B] text-white">
+                        <SelectItem
+                          value="50"
+                          className="text-white focus:bg-[rgba(59,130,246,0.15)] focus:text-white"
+                        >
+                          50
+                        </SelectItem>
+                        <SelectItem
+                          value="100"
+                          className="text-white focus:bg-[rgba(59,130,246,0.15)] focus:text-white"
+                        >
+                          100
+                        </SelectItem>
+                        <SelectItem
+                          value="150"
+                          className="text-white focus:bg-[rgba(59,130,246,0.15)] focus:text-white"
+                        >
+                          150
+                        </SelectItem>
+                        <SelectItem
+                          value="200"
+                          className="text-white focus:bg-[rgba(59,130,246,0.15)] focus:text-white"
+                        >
+                          200
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
                 </div>
 
@@ -3252,22 +3348,51 @@ export default function AdminSmsServicesPage() {
                   <label className="mb-2 block text-sm font-medium text-white">
                     Version
                   </label>
-                  <select
+                  <Select
                     value={providerFormData.version}
-                    onChange={(e) =>
+                    onValueChange={(v) =>
                       setProviderFormData({
                         ...providerFormData,
-                        version: e.target.value,
+                        version: v,
                       })
                     }
-                    className="w-full rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.4)] px-4 py-3 text-sm text-white focus:ring-2 focus:ring-[#3B82F6] focus:outline-none"
                   >
-                    <option value="V1_STANDARD">V1 - Premium</option>
-                    <option value="V2">V2 - Standard</option>
-                    <option value="V3">V3 - Basic</option>
-                    <option value="V4">V4</option>
-                    <option value="V5">V5</option>
-                  </select>
+                    <SelectTrigger className="w-full rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.4)] px-4 py-3 text-sm text-white focus-visible:ring-2 focus-visible:ring-[#3B82F6] focus-visible:outline-none data-[size=default]:h-auto data-[size=default]:min-h-12">
+                      <SelectValue placeholder="Select version" />
+                    </SelectTrigger>
+                    <SelectContent className="max-h-72 border-[rgba(255,255,255,0.18)] bg-[#1E293B] text-white">
+                      <SelectItem
+                        value="V1_STANDARD"
+                        className="text-white focus:bg-[rgba(59,130,246,0.15)] focus:text-white"
+                      >
+                        V1 - Premium
+                      </SelectItem>
+                      <SelectItem
+                        value="V2"
+                        className="text-white focus:bg-[rgba(59,130,246,0.15)] focus:text-white"
+                      >
+                        V2 - Standard
+                      </SelectItem>
+                      <SelectItem
+                        value="V3"
+                        className="text-white focus:bg-[rgba(59,130,246,0.15)] focus:text-white"
+                      >
+                        V3 - Basic
+                      </SelectItem>
+                      <SelectItem
+                        value="V4"
+                        className="text-white focus:bg-[rgba(59,130,246,0.15)] focus:text-white"
+                      >
+                        V4
+                      </SelectItem>
+                      <SelectItem
+                        value="V5"
+                        className="text-white focus:bg-[rgba(59,130,246,0.15)] focus:text-white"
+                      >
+                        V5
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
 
                 <div>
@@ -3586,7 +3711,7 @@ export default function AdminSmsServicesPage() {
                     isPriceLocked: !selectedServicePrice.isPriceLocked,
                   })
                 }
-                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                className={`size-icon relative inline-flex h-6 w-11 items-center rounded-full !p-0 transition-colors ${
                   selectedServicePrice.isPriceLocked
                     ? 'bg-[#3B82F6]'
                     : 'bg-[rgba(255,255,255,0.18)]'
@@ -3703,21 +3828,35 @@ export default function AdminSmsServicesPage() {
                   <label className="mb-2 block text-sm font-medium text-white">
                     Status
                   </label>
-                  <select
+                  <Select
                     value={
                       subscriptionFormData.isActive ? 'active' : 'inactive'
                     }
-                    onChange={(e) =>
+                    onValueChange={(v) =>
                       setSubscriptionFormData({
                         ...subscriptionFormData,
-                        isActive: e.target.value === 'active',
+                        isActive: v === 'active',
                       })
                     }
-                    className="w-full rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.4)] px-4 py-3 text-sm text-white focus:ring-2 focus:ring-[#3B82F6] focus:outline-none"
                   >
-                    <option value="active">Active</option>
-                    <option value="inactive">Inactive</option>
-                  </select>
+                    <SelectTrigger className="w-full rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.4)] px-4 py-3 text-sm text-white focus-visible:ring-2 focus-visible:ring-[#3B82F6] focus-visible:outline-none data-[size=default]:h-auto data-[size=default]:min-h-12">
+                      <SelectValue placeholder="Select status" />
+                    </SelectTrigger>
+                    <SelectContent className="max-h-72 border-[rgba(255,255,255,0.18)] bg-[#1E293B] text-white">
+                      <SelectItem
+                        value="active"
+                        className="text-white focus:bg-[rgba(59,130,246,0.15)] focus:text-white"
+                      >
+                        Active
+                      </SelectItem>
+                      <SelectItem
+                        value="inactive"
+                        className="text-white focus:bg-[rgba(59,130,246,0.15)] focus:text-white"
+                      >
+                        Inactive
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
 
@@ -4046,13 +4185,13 @@ export default function AdminSmsServicesPage() {
       {showIconManagementModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
           <div className="flex max-h-[90vh] w-full max-w-4xl flex-col overflow-hidden rounded-xl border border-[rgba(255,255,255,0.1)] bg-[#0F172A]">
-            <div className="sticky top-0 z-10 border-b border-[rgba(255,255,255,0.1)] bg-[#0F172A] p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h2 className="mb-1 text-2xl font-semibold text-white">
+            <div className="sticky top-0 z-10 border-b border-[rgba(255,255,255,0.1)] bg-[#0F172A] p-4 sm:p-6">
+              <div className="flex items-center justify-between gap-3">
+                <div className="min-w-0">
+                  <h2 className="mb-1 text-xl font-semibold text-white sm:text-2xl">
                     Manage Service Icons
                   </h2>
-                  <p className="text-sm text-[#94A3B8]">
+                  <p className="text-xs text-[#94A3B8] sm:text-sm">
                     Upload or set icon URLs for services
                   </p>
                 </div>
@@ -4073,20 +4212,20 @@ export default function AdminSmsServicesPage() {
               {/* Filters — sticky to the top of the scroll container so
                   search/filter buttons stay reachable while admin scrolls
                   through the grid below. */}
-              <div className="sticky top-0 z-20 flex items-center gap-3 border-b border-[rgba(255,255,255,0.05)] bg-[#0F172A] px-6 py-4">
-                <div className="relative flex-1">
+              <div className="sticky top-0 z-20 flex flex-col gap-2 border-b border-[rgba(255,255,255,0.05)] bg-[#0F172A] px-4 py-4 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3 sm:px-6">
+                <div className="relative w-full sm:flex-1">
                   <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-[#64748B]" />
                   <input
                     type="text"
                     placeholder="Search services..."
                     value={iconSearchQuery}
                     onChange={(e) => setIconSearchQuery(e.target.value)}
-                    className="w-full rounded-lg border border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.05)] py-2.5 pr-4 pl-10 text-sm text-white placeholder:text-[#64748B] focus:ring-2 focus:ring-[#8B5CF6] focus:outline-none"
+                    className="w-full rounded-lg border border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.05)] py-2.5 pr-4 pl-10 text-base text-white placeholder:text-[#64748B] focus:ring-2 focus:ring-[#8B5CF6] focus:outline-none sm:text-sm"
                   />
                 </div>
                 <button
                   onClick={() => handleIconFilterChange(!iconFilterMissing)}
-                  className={`flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium whitespace-nowrap transition-all ${
+                  className={`flex w-full items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-base font-medium whitespace-nowrap transition-all sm:w-auto sm:justify-start sm:text-sm ${
                     iconFilterMissing
                       ? 'bg-[#EF4444] text-white'
                       : 'border border-[rgba(255,255,255,0.18)] bg-[rgba(255,255,255,0.05)] text-[#94A3B8] hover:bg-[rgba(255,255,255,0.08)]'
@@ -4098,7 +4237,7 @@ export default function AdminSmsServicesPage() {
                   onClick={() => handleBackfillIcons(false)}
                   disabled={isBackfillingIcons}
                   title="Fill in icons for services that don't have one. Doesn't touch existing icons."
-                  className="flex items-center gap-2 rounded-lg bg-[#22C55E] px-4 py-2.5 text-sm font-medium whitespace-nowrap text-white transition-colors hover:bg-[#16A34A] disabled:cursor-not-allowed disabled:opacity-50"
+                  className="flex w-full items-center justify-center gap-2 rounded-lg bg-[#22C55E] px-4 py-2.5 text-base font-medium whitespace-nowrap text-white transition-colors hover:bg-[#16A34A] disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto sm:justify-start sm:text-sm"
                 >
                   {isBackfillingIcons ? (
                     <Loader2 className="h-4 w-4 animate-spin" />
@@ -4111,7 +4250,7 @@ export default function AdminSmsServicesPage() {
                   onClick={() => handleBackfillIcons(true)}
                   disabled={isBackfillingIcons}
                   title="Re-resolve ALL public CDN icons (fixes broken simpleicons URLs). Admin storage uploads are preserved."
-                  className="flex items-center gap-2 rounded-lg bg-[#F59E0B] px-4 py-2.5 text-sm font-medium whitespace-nowrap text-white transition-colors hover:bg-[#D97706] disabled:cursor-not-allowed disabled:opacity-50"
+                  className="flex w-full items-center justify-center gap-2 rounded-lg bg-[#F59E0B] px-4 py-2.5 text-base font-medium whitespace-nowrap text-white transition-colors hover:bg-[#D97706] disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto sm:justify-start sm:text-sm"
                 >
                   {isBackfillingIcons ? (
                     <Loader2 className="h-4 w-4 animate-spin" />

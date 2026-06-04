@@ -16,7 +16,16 @@ import {
   Loader2,
   AlertCircle,
   Inbox,
+  MoreVertical,
+  Eye,
+  XCircle,
 } from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import {
   getAdminTicketStats,
   getAdminTickets,
@@ -360,9 +369,12 @@ export default function AdminSupportPage() {
 
     if (column.key === 'subject') {
       return (
-        <div className="flex items-center gap-2">
+        <div
+          className="flex max-w-[260px] items-center gap-2"
+          title={item.subject}
+        >
           <MessageSquare className="h-4 w-4 flex-shrink-0 text-[#3B82F6]" />
-          <span className="truncate font-medium text-white">
+          <span className="min-w-0 flex-1 truncate font-medium text-white">
             {item.subject}
           </span>
         </div>
@@ -400,7 +412,7 @@ export default function AdminSupportPage() {
     if (column.key === 'status') {
       return (
         <span
-          className={`inline-flex items-center gap-1 rounded-lg px-3 py-1 text-xs font-medium ${statusColors[item.status] || statusColors.OPEN}`}
+          className={`inline-flex items-center gap-1 rounded-lg px-3 py-1 text-xs font-medium whitespace-nowrap ${statusColors[item.status] || statusColors.OPEN}`}
         >
           {statusIcons[item.status] || statusIcons.OPEN}
           {statusLabel(item.status)}
@@ -417,26 +429,43 @@ export default function AdminSupportPage() {
     }
 
     if (column.key === 'actions') {
+      const canClose = item.status !== 'CLOSED' && item.status !== 'RESOLVED';
       return (
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => handleViewChat(item)}
-            className="rounded-lg bg-[rgba(59,130,246,0.1)] px-3 py-1.5 text-xs font-medium text-[#3B82F6] transition-colors hover:bg-[rgba(59,130,246,0.15)]"
-          >
-            View Chat
-          </button>
-          {item.status !== 'CLOSED' && item.status !== 'RESOLVED' && (
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
             <button
-              onClick={() => {
-                setSelectedTicket(item);
-                setIsCloseModalOpen(true);
-              }}
-              className="rounded-lg bg-[rgba(239,68,68,0.1)] px-3 py-1.5 text-xs font-medium text-[#EF4444] transition-colors hover:bg-[rgba(239,68,68,0.15)]"
+              type="button"
+              aria-label="Open ticket actions"
+              className="size-icon inline-flex h-8 w-8 items-center justify-center rounded-[8px] border border-[rgba(255,255,255,0.18)] bg-[rgba(255,255,255,0.05)] !p-0 text-white transition-colors hover:bg-[rgba(255,255,255,0.12)]"
             >
-              Close
+              <MoreVertical className="h-4 w-4" />
             </button>
-          )}
-        </div>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent
+            align="end"
+            className="min-w-[160px] border-[rgba(255,255,255,0.1)] bg-[#1E293B] p-1 text-white"
+          >
+            <DropdownMenuItem
+              onSelect={() => handleViewChat(item)}
+              className="cursor-pointer text-white focus:bg-[rgba(59,130,246,0.15)] focus:text-white"
+            >
+              <Eye className="mr-2 h-4 w-4 text-[#3B82F6]" />
+              View Chat
+            </DropdownMenuItem>
+            {canClose && (
+              <DropdownMenuItem
+                onSelect={() => {
+                  setSelectedTicket(item);
+                  setIsCloseModalOpen(true);
+                }}
+                className="cursor-pointer text-[#EF4444] focus:bg-[rgba(239,68,68,0.12)] focus:text-[#EF4444]"
+              >
+                <XCircle className="mr-2 h-4 w-4" />
+                Close ticket
+              </DropdownMenuItem>
+            )}
+          </DropdownMenuContent>
+        </DropdownMenu>
       );
     }
 

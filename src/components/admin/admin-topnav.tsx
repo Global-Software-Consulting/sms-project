@@ -1,6 +1,18 @@
 'use client';
 
-import { Bell, User, LogOut, UserCircle, Key, Globe, X, Eye, EyeOff, Loader2, Check } from "lucide-react";
+import {
+  Bell,
+  User,
+  LogOut,
+  UserCircle,
+  Key,
+  Globe,
+  X,
+  Eye,
+  EyeOff,
+  Loader2,
+  Check,
+} from 'lucide-react';
 import { AdminDropdown } from './dropdown';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
@@ -9,7 +21,10 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { changePassword } from '@/lib/api/usersApi';
 import { apiClient } from '@/config/api-client.config';
 import { API_ENDPOINTS } from '@/config/server.config';
-import { getNotificationIcon, type AppNotification } from '@/lib/api/notificationsApi';
+import {
+  getNotificationIcon,
+  type AppNotification,
+} from '@/lib/api/notificationsApi';
 import { toast } from 'sonner';
 import { formatDistanceToNow } from 'date-fns';
 import { getTokens } from '@/lib/api/tokenStorage';
@@ -30,12 +45,14 @@ export function AdminTopNav() {
   const fetchNotifications = useCallback(async () => {
     try {
       setIsNotifLoading(true);
-      const response = await apiClient.get<{ notifications: AppNotification[]; total: number }>(
-        API_ENDPOINTS.ADMIN.NOTIFICATIONS.MY,
-        { params: { limit: 10 } },
-      );
+      const response = await apiClient.get<{
+        notifications: AppNotification[];
+        total: number;
+      }>(API_ENDPOINTS.ADMIN.NOTIFICATIONS.MY, { params: { limit: 10 } });
       setNotifications(response.data.notifications || []);
-      setUnreadCount((response.data.notifications || []).filter((n) => !n.read).length);
+      setUnreadCount(
+        (response.data.notifications || []).filter((n) => !n.read).length,
+      );
     } catch {
       // silently fail
     } finally {
@@ -60,13 +77,13 @@ export function AdminTopNav() {
     console.log('[Admin Socket] Connecting to:', SOCKET_URL);
 
     const socket = io(`${SOCKET_URL}/notifications`, {
-  auth: { token: tokens.accessToken },
-  transports: ['websocket', 'polling'],
-  reconnection: true,
-  reconnectionAttempts: Infinity,
-  reconnectionDelay: 3000,
-  reconnectionDelayMax: 10000,
-});
+      auth: { token: tokens.accessToken },
+      transports: ['websocket', 'polling'],
+      reconnection: true,
+      reconnectionAttempts: Infinity,
+      reconnectionDelay: 3000,
+      reconnectionDelayMax: 10000,
+    });
     socket.on('connect', () => {
       console.log('[Admin Socket] Connected! Socket ID:', socket.id);
     });
@@ -108,8 +125,12 @@ export function AdminTopNav() {
 
   const handleMarkAsRead = async (id: string) => {
     try {
-      await apiClient.post(`${API_ENDPOINTS.ADMIN.NOTIFICATIONS.MY}/${id}/read`);
-      setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, read: true } : n)));
+      await apiClient.post(
+        `${API_ENDPOINTS.ADMIN.NOTIFICATIONS.MY}/${id}/read`,
+      );
+      setNotifications((prev) =>
+        prev.map((n) => (n.id === id ? { ...n, read: true } : n)),
+      );
       setUnreadCount((prev) => Math.max(0, prev - 1));
     } catch {
       toast.error('Failed to mark as read');
@@ -209,8 +230,18 @@ export function AdminTopNav() {
       await logout();
       router.push('/auth/login');
     } catch (error: any) {
-      const message = error?.response?.data?.message || 'Failed to change password';
-      if (message.toLowerCase().includes('current') || message.toLowerCase().includes('incorrect') || message.toLowerCase().includes('wrong')) {
+      const raw = error?.response?.data?.message;
+      const message = Array.isArray(raw)
+        ? raw.join('. ')
+        : typeof raw === 'string'
+          ? raw
+          : 'Failed to change password';
+      const lower = message.toLowerCase();
+      if (
+        lower.includes('current') ||
+        lower.includes('incorrect') ||
+        lower.includes('wrong')
+      ) {
         setPasswordStep('verify');
         setCurrentPassword('');
         toast.error('Current password is incorrect');
@@ -224,64 +255,66 @@ export function AdminTopNav() {
 
   const profileItems = [
     {
-      label: "Profile Settings",
-      icon: <UserCircle className="w-4 h-4" />,
-      onClick: () => router.push("/admin/settings"),
+      label: 'Profile Settings',
+      icon: <UserCircle className="h-4 w-4" />,
+      onClick: () => router.push('/admin/settings'),
     },
     {
-      label: "Change Password",
-      icon: <Key className="w-4 h-4" />,
+      label: 'Change Password',
+      icon: <Key className="h-4 w-4" />,
       onClick: () => setShowPasswordModal(true),
     },
     {
-      label: "Logout",
-      icon: <LogOut className="w-4 h-4" />,
+      label: 'Logout',
+      icon: <LogOut className="h-4 w-4" />,
       onClick: async () => {
         await logout();
         router.push('/auth/login');
       },
-      variant: "danger" as const,
+      variant: 'danger' as const,
     },
   ];
 
   return (
     <>
-      <header className="fixed top-0 left-0 lg:left-60 right-0 h-18 bg-[rgba(255,255,255,0.05)] border-b border-[rgba(255,255,255,0.18)] backdrop-blur-xl z-10">
-        <div className="h-full px-4 lg:px-8 flex items-center justify-between gap-4">
-          <div className="flex items-center gap-2 lg:gap-3 ml-auto">
+      <header className="fixed top-0 right-0 left-0 z-10 h-18 border-b border-[rgba(255,255,255,0.18)] bg-[rgba(255,255,255,0.05)] backdrop-blur-xl lg:left-60">
+        <div className="flex h-full items-center justify-between gap-4 px-4 lg:px-8">
+          <div className="ml-auto flex items-center gap-2 lg:gap-3">
             {/* Notifications */}
             <div className="relative" ref={notifRef}>
               <button
                 onClick={() => setShowNotifDropdown(!showNotifDropdown)}
-                className="relative p-2 rounded-xl hover:bg-[rgba(255,255,255,0.08)] transition-colors"
+                className="relative rounded-xl p-2 transition-colors hover:bg-[rgba(255,255,255,0.08)]"
               >
-                <Bell className="w-5 h-5 text-[#94A3B8]" />
+                <Bell className="h-5 w-5 text-[#94A3B8]" />
                 {unreadCount > 0 && (
-                  <span className="absolute -top-1 -right-1 w-5 h-5 bg-[#EF4444] rounded-full text-white text-xs flex items-center justify-center font-semibold">
+                  <span className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-[#EF4444] text-xs font-semibold text-white">
                     {unreadCount > 9 ? '9+' : unreadCount}
                   </span>
                 )}
               </button>
 
               {showNotifDropdown && (
-                <div className="absolute right-0 top-full mt-2 w-[380px] rounded-xl bg-[#0F172A] border border-[rgba(255,255,255,0.15)] shadow-2xl z-50 overflow-hidden">
+                <div className="fixed inset-x-4 top-[4.5rem] z-50 overflow-hidden rounded-xl border border-[rgba(255,255,255,0.15)] bg-[#0F172A] shadow-2xl sm:absolute sm:inset-x-auto sm:top-full sm:right-0 sm:mt-2 sm:w-[380px]">
                   {/* Header */}
-                  <div className="flex items-center justify-between px-4 py-3 border-b border-[rgba(255,255,255,0.1)]">
-                    <h3 className="text-white text-sm font-semibold">Notifications</h3>
+                  <div className="flex items-center justify-between border-b border-[rgba(255,255,255,0.1)] px-4 py-3">
+                    <h3 className="text-sm font-semibold text-white">
+                      Notifications
+                    </h3>
                     {notifications.length > 0 && (
                       <div className="flex items-center gap-2">
                         {unreadCount > 0 && (
                           <button
                             onClick={handleMarkAllRead}
-                            className="text-[#3B82F6] text-xs font-medium hover:text-[#60A5FA] transition-colors flex items-center gap-1"
+                            className="flex items-center gap-1 text-xs font-medium text-[#3B82F6] transition-colors hover:text-[#60A5FA]"
                           >
-                            <Check className="w-3 h-3" />
+                            <Check className="h-3 w-3" />
                             Mark all read
                           </button>
                         )}
                         <button
                           onClick={handleClearAll}
-                          className="text-[#64748B] text-xs font-medium hover:text-[#94A3B8] transition-colors"
+                          className="text-xs font-medium text-[#64748B] transition-colors hover:text-[#94A3B8]"
                         >
                           Clear all
                         </button>
@@ -292,12 +325,12 @@ export function AdminTopNav() {
                   {/* Body */}
                   {isNotifLoading ? (
                     <div className="flex items-center justify-center py-12">
-                      <Loader2 className="w-5 h-5 text-[#3B82F6] animate-spin" />
+                      <Loader2 className="h-5 w-5 animate-spin text-[#3B82F6]" />
                     </div>
                   ) : notifications.length === 0 ? (
                     <div className="py-12 text-center">
-                      <Bell className="w-12 h-12 text-[#64748B] opacity-20 mx-auto mb-3" />
-                      <p className="text-[#64748B] text-sm">No notifications</p>
+                      <Bell className="mx-auto mb-3 h-12 w-12 text-[#64748B] opacity-20" />
+                      <p className="text-sm text-[#64748B]">No notifications</p>
                     </div>
                   ) : (
                     <div className="max-h-[400px] overflow-y-auto">
@@ -305,47 +338,49 @@ export function AdminTopNav() {
                         {notifications.slice(0, 10).map((notification) => (
                           <div
                             key={notification.id}
-                            className={`group relative flex items-start gap-3 px-4 py-3 cursor-pointer transition-colors ${
+                            className={`group relative flex cursor-pointer items-start gap-3 px-4 py-3 transition-colors ${
                               !notification.read
                                 ? 'bg-[rgba(59,130,246,0.05)] hover:bg-[rgba(59,130,246,0.1)]'
                                 : 'hover:bg-[rgba(255,255,255,0.03)]'
                             }`}
-                            onClick={() => !notification.read && handleMarkAsRead(notification.id)}
+                            onClick={() =>
+                              !notification.read &&
+                              handleMarkAsRead(notification.id)
+                            }
                           >
                             <div className="mt-0.5 shrink-0 text-xl">
                               {getNotificationIcon(notification.type)}
                             </div>
                             <div className="min-w-0 flex-1 space-y-1">
                               <div className="flex items-start justify-between gap-2">
-                                <p className="text-white text-sm font-medium leading-tight">
+                                <p className="text-sm leading-tight font-medium text-white">
                                   {notification.title}
                                 </p>
                                 {!notification.read && (
-                                  <div className="w-2 h-2 shrink-0 rounded-full bg-[#3B82F6] mt-1" />
+                                  <div className="mt-1 h-2 w-2 shrink-0 rounded-full bg-[#3B82F6]" />
                                 )}
                               </div>
-                              <p className="text-[#94A3B8] text-xs line-clamp-2">
+                              <p className="line-clamp-2 text-xs text-[#94A3B8]">
                                 {notification.message}
                               </p>
-                              <p className="text-[#64748B] text-xs">
+                              <p className="text-xs text-[#64748B]">
                                 {formatTime(notification.createdAt)}
                               </p>
                             </div>
                             <button
-                              className="shrink-0 p-1 rounded-lg text-[#64748B] hover:text-white hover:bg-[rgba(255,255,255,0.1)] opacity-0 group-hover:opacity-100 transition-all"
+                              className="shrink-0 rounded-lg p-1 text-[#64748B] opacity-0 transition-all group-hover:opacity-100 hover:bg-[rgba(255,255,255,0.1)] hover:text-white"
                               onClick={(e) => {
                                 e.stopPropagation();
                                 handleRemoveNotification(notification.id);
                               }}
                             >
-                              <X className="w-3 h-3" />
+                              <X className="h-3 w-3" />
                             </button>
                           </div>
                         ))}
                       </div>
                     </div>
                   )}
-
                 </div>
               )}
             </div>
@@ -354,10 +389,10 @@ export function AdminTopNav() {
             <div className="relative">
               <button
                 onClick={() => setShowLangPicker(!showLangPicker)}
-                className="hidden lg:flex items-center gap-2 p-2 rounded-xl hover:bg-[rgba(255,255,255,0.08)] transition-colors"
+                className="hidden items-center gap-2 rounded-xl p-2 transition-colors hover:bg-[rgba(255,255,255,0.08)] lg:flex"
                 title="Translate Page"
               >
-                <Globe className="w-5 h-5 text-[#94A3B8]" />
+                <Globe className="h-5 w-5 text-[#94A3B8]" />
               </button>
               <LanguagePickerDropdown
                 isOpen={showLangPicker}
@@ -368,13 +403,19 @@ export function AdminTopNav() {
             {/* Profile Dropdown */}
             <AdminDropdown
               trigger={
-                <div className="flex items-center gap-3 pl-2 lg:pl-4 border-l border-[rgba(255,255,255,0.18)] cursor-pointer">
-                  <div className="text-right hidden lg:block">
-                    <p className="text-white text-sm font-medium">{(user as any)?.name || user?.email?.split('@')[0] || 'Admin User'}</p>
-                    <p className="text-[#64748B] text-xs">{user?.email || ''}</p>
+                <div className="flex cursor-pointer items-center gap-3 border-l border-[rgba(255,255,255,0.18)] pl-2 lg:pl-4">
+                  <div className="hidden text-right lg:block">
+                    <p className="text-sm font-medium text-white">
+                      {(user as any)?.name ||
+                        user?.email?.split('@')[0] ||
+                        'Admin User'}
+                    </p>
+                    <p className="text-xs text-[#64748B]">
+                      {user?.email || ''}
+                    </p>
                   </div>
-                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#3B82F6] to-[#8B5CF6] flex items-center justify-center">
-                    <User className="w-5 h-5 text-white" />
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-[#3B82F6] to-[#8B5CF6]">
+                    <User className="h-5 w-5 text-white" />
                   </div>
                 </div>
               }
@@ -387,38 +428,61 @@ export function AdminTopNav() {
       {/* Change Password Modal */}
       {showPasswordModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-          <div className="w-full max-w-md mx-4 rounded-2xl bg-[#1E293B] border border-[rgba(255,255,255,0.18)] shadow-2xl">
-            <div className="flex items-center justify-between p-6 border-b border-[rgba(255,255,255,0.1)]">
+          <div className="mx-4 w-full max-w-md rounded-2xl border border-[rgba(255,255,255,0.18)] bg-[#1E293B] shadow-2xl">
+            <div className="flex items-center justify-between border-b border-[rgba(255,255,255,0.1)] p-6">
               <div>
-                <h3 className="text-white text-lg font-semibold">Change Password</h3>
-                <p className="text-[#64748B] text-xs mt-1">
-                  {passwordStep === 'verify' ? 'Step 1: Verify your identity' : 'Step 2: Set new password'}
+                <h3 className="text-lg font-semibold text-white">
+                  Change Password
+                </h3>
+                <p className="mt-1 text-xs text-[#64748B]">
+                  {passwordStep === 'verify'
+                    ? 'Step 1: Verify your identity'
+                    : 'Step 2: Set new password'}
                 </p>
               </div>
-              <button onClick={resetPasswordModal} className="text-[#94A3B8] hover:text-white transition-colors">
-                <X className="w-5 h-5" />
+              <button
+                onClick={resetPasswordModal}
+                className="text-[#94A3B8] transition-colors hover:text-white"
+              >
+                <X className="h-5 w-5" />
               </button>
             </div>
 
-            <div className="p-6 space-y-4">
+            <div className="space-y-4 p-6">
               {passwordStep === 'verify' ? (
                 <>
-                  <p className="text-[#94A3B8] text-sm">Enter your current password to continue.</p>
+                  <p className="text-sm text-[#94A3B8]">
+                    Enter your current password to continue.
+                  </p>
                   <div>
-                    <label className="text-white text-sm font-medium mb-2 block">Current Password</label>
+                    <label className="mb-2 block text-sm font-medium text-white">
+                      Current Password
+                    </label>
                     <div className="relative">
                       <input
                         type={showCurrentPassword ? 'text' : 'password'}
                         value={currentPassword}
                         onChange={(e) => setCurrentPassword(e.target.value)}
-                        onKeyDown={(e) => e.key === 'Enter' && handleVerifyCurrentPassword()}
+                        onKeyDown={(e) =>
+                          e.key === 'Enter' && handleVerifyCurrentPassword()
+                        }
                         placeholder="Enter current password"
                         autoFocus
                         autoComplete="new-password"
-                        className="w-full px-4 py-3 pr-12 rounded-xl bg-[rgba(255,255,255,0.08)] border border-[rgba(255,255,255,0.18)] text-white text-sm placeholder:text-[#64748B] focus:outline-none focus:ring-2 focus:ring-[#3B82F6]"
+                        className="w-full rounded-xl border border-[rgba(255,255,255,0.18)] bg-[rgba(255,255,255,0.08)] px-4 py-3 pr-12 text-sm text-white placeholder:text-[#64748B] focus:ring-2 focus:ring-[#3B82F6] focus:outline-none"
                       />
-                      <button type="button" onClick={() => setShowCurrentPassword(!showCurrentPassword)} className="absolute right-4 top-1/2 -translate-y-1/2 text-[#64748B] hover:text-white transition-colors">
-                        {showCurrentPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setShowCurrentPassword(!showCurrentPassword)
+                        }
+                        className="absolute top-1/2 right-4 -translate-y-1/2 text-[#64748B] transition-colors hover:text-white"
+                      >
+                        {showCurrentPassword ? (
+                          <EyeOff className="h-4 w-4" />
+                        ) : (
+                          <Eye className="h-4 w-4" />
+                        )}
                       </button>
                     </div>
                   </div>
@@ -426,7 +490,9 @@ export function AdminTopNav() {
               ) : (
                 <>
                   <div>
-                    <label className="text-white text-sm font-medium mb-2 block">New Password</label>
+                    <label className="mb-2 block text-sm font-medium text-white">
+                      New Password
+                    </label>
                     <div className="relative">
                       <input
                         type={showNewPassword ? 'text' : 'password'}
@@ -434,55 +500,103 @@ export function AdminTopNav() {
                         onChange={(e) => setNewPassword(e.target.value)}
                         placeholder="Enter new password"
                         autoFocus
-                        className="w-full px-4 py-3 pr-12 rounded-xl bg-[rgba(255,255,255,0.08)] border border-[rgba(255,255,255,0.18)] text-white text-sm placeholder:text-[#64748B] focus:outline-none focus:ring-2 focus:ring-[#3B82F6]"
+                        className="w-full rounded-xl border border-[rgba(255,255,255,0.18)] bg-[rgba(255,255,255,0.08)] px-4 py-3 pr-12 text-sm text-white placeholder:text-[#64748B] focus:ring-2 focus:ring-[#3B82F6] focus:outline-none"
                       />
-                      <button type="button" onClick={() => setShowNewPassword(!showNewPassword)} className="absolute right-4 top-1/2 -translate-y-1/2 text-[#64748B] hover:text-white transition-colors">
-                        {showNewPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      <button
+                        type="button"
+                        onClick={() => setShowNewPassword(!showNewPassword)}
+                        className="absolute top-1/2 right-4 -translate-y-1/2 text-[#64748B] transition-colors hover:text-white"
+                      >
+                        {showNewPassword ? (
+                          <EyeOff className="h-4 w-4" />
+                        ) : (
+                          <Eye className="h-4 w-4" />
+                        )}
                       </button>
                     </div>
-                    <p className="text-[#64748B] text-xs mt-1">Min 8 characters with uppercase, lowercase, and number</p>
+                    <p className="mt-1 text-xs text-[#64748B]">
+                      Min 8 characters with uppercase, lowercase, and number
+                    </p>
                   </div>
                   <div>
-                    <label className="text-white text-sm font-medium mb-2 block">Confirm New Password</label>
+                    <label className="mb-2 block text-sm font-medium text-white">
+                      Confirm New Password
+                    </label>
                     <div className="relative">
                       <input
                         type={showConfirmPassword ? 'text' : 'password'}
                         value={confirmPassword}
                         onChange={(e) => setConfirmPassword(e.target.value)}
-                        onKeyDown={(e) => e.key === 'Enter' && handleChangePassword()}
+                        onKeyDown={(e) =>
+                          e.key === 'Enter' && handleChangePassword()
+                        }
                         placeholder="Confirm new password"
-                        className="w-full px-4 py-3 pr-12 rounded-xl bg-[rgba(255,255,255,0.08)] border border-[rgba(255,255,255,0.18)] text-white text-sm placeholder:text-[#64748B] focus:outline-none focus:ring-2 focus:ring-[#3B82F6]"
+                        className="w-full rounded-xl border border-[rgba(255,255,255,0.18)] bg-[rgba(255,255,255,0.08)] px-4 py-3 pr-12 text-sm text-white placeholder:text-[#64748B] focus:ring-2 focus:ring-[#3B82F6] focus:outline-none"
                       />
-                      <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)} className="absolute right-4 top-1/2 -translate-y-1/2 text-[#64748B] hover:text-white transition-colors">
-                        {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setShowConfirmPassword(!showConfirmPassword)
+                        }
+                        className="absolute top-1/2 right-4 -translate-y-1/2 text-[#64748B] transition-colors hover:text-white"
+                      >
+                        {showConfirmPassword ? (
+                          <EyeOff className="h-4 w-4" />
+                        ) : (
+                          <Eye className="h-4 w-4" />
+                        )}
                       </button>
                     </div>
                     {confirmPassword && newPassword !== confirmPassword && (
-                      <p className="text-[#EF4444] text-xs mt-1">Passwords do not match</p>
+                      <p className="mt-1 text-xs text-[#EF4444]">
+                        Passwords do not match
+                      </p>
                     )}
                   </div>
                 </>
               )}
             </div>
 
-            <div className="flex items-center gap-3 p-6 border-t border-[rgba(255,255,255,0.1)]">
+            <div className="flex items-center gap-3 border-t border-[rgba(255,255,255,0.1)] p-6">
               {passwordStep === 'new' && (
-                <button onClick={() => setPasswordStep('verify')} className="px-5 py-2.5 rounded-xl bg-[rgba(255,255,255,0.08)] border border-[rgba(255,255,255,0.18)] text-white text-sm font-medium hover:bg-[rgba(255,255,255,0.12)] transition-colors">
+                <button
+                  onClick={() => setPasswordStep('verify')}
+                  className="rounded-xl border border-[rgba(255,255,255,0.18)] bg-[rgba(255,255,255,0.08)] px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-[rgba(255,255,255,0.12)]"
+                >
                   Back
                 </button>
               )}
               <div className="flex-1" />
-              <button onClick={resetPasswordModal} className="px-5 py-2.5 rounded-xl bg-[rgba(255,255,255,0.08)] border border-[rgba(255,255,255,0.18)] text-white text-sm font-medium hover:bg-[rgba(255,255,255,0.12)] transition-colors">
+              <button
+                onClick={resetPasswordModal}
+                className="rounded-xl border border-[rgba(255,255,255,0.18)] bg-[rgba(255,255,255,0.08)] px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-[rgba(255,255,255,0.12)]"
+              >
                 Cancel
               </button>
               <button
-                onClick={passwordStep === 'verify' ? handleVerifyCurrentPassword : handleChangePassword}
-                disabled={isChangingPassword || (passwordStep === 'verify' && !currentPassword.trim()) || (passwordStep === 'new' && (!newPassword.trim() || !confirmPassword.trim()))}
-                className="px-5 py-2.5 rounded-xl bg-[#3B82F6] hover:bg-[#2563EB] text-white text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                onClick={
+                  passwordStep === 'verify'
+                    ? handleVerifyCurrentPassword
+                    : handleChangePassword
+                }
+                disabled={
+                  isChangingPassword ||
+                  (passwordStep === 'verify' && !currentPassword.trim()) ||
+                  (passwordStep === 'new' &&
+                    (!newPassword.trim() || !confirmPassword.trim()))
+                }
+                className="flex items-center gap-2 rounded-xl bg-[#3B82F6] px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-[#2563EB] disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {isChangingPassword ? (
-                  <><Loader2 className="w-4 h-4 animate-spin" />Changing...</>
-                ) : passwordStep === 'verify' ? 'Continue' : 'Change Password'}
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Changing...
+                  </>
+                ) : passwordStep === 'verify' ? (
+                  'Continue'
+                ) : (
+                  'Change Password'
+                )}
               </button>
             </div>
           </div>
