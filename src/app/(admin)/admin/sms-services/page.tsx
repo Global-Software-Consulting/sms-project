@@ -2226,9 +2226,9 @@ export default function AdminSmsServicesPage() {
           </div>
 
           {/* Search Bar + Lock Filter + Bulk Actions */}
-          <div className="rounded-xl border border-[rgba(255,255,255,0.1)] bg-[rgba(15,23,42,0.6)] p-6 backdrop-blur-xl">
-            <div className="flex flex-wrap items-center gap-3">
-              <div className="relative min-w-[250px] flex-1">
+          <div className="rounded-xl border border-[rgba(255,255,255,0.1)] bg-[rgba(15,23,42,0.6)] p-4 backdrop-blur-xl sm:p-6">
+            <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
+              <div className="relative w-full sm:min-w-[250px] sm:flex-1">
                 <Search className="absolute top-1/2 left-4 h-5 w-5 -translate-y-1/2 transform text-[#64748B]" />
                 <input
                   type="text"
@@ -2238,7 +2238,7 @@ export default function AdminSmsServicesPage() {
                     setPricingPage(1);
                   }}
                   placeholder="Search services by name, country, or provider..."
-                  className="w-full rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.4)] py-3 pr-4 pl-12 text-sm text-white focus:ring-2 focus:ring-[#3B82F6] focus:outline-none"
+                  className="w-full rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.4)] py-3 pr-4 pl-12 text-base text-white focus:ring-2 focus:ring-[#3B82F6] focus:outline-none sm:text-sm"
                 />
                 {isPricingLoading && (
                   <Loader2 className="absolute top-1/2 right-4 h-4 w-4 -translate-y-1/2 animate-spin text-[#3B82F6]" />
@@ -2293,7 +2293,7 @@ export default function AdminSmsServicesPage() {
                   setShowLockedOnly(!showLockedOnly);
                   setPricingPage(1);
                 }}
-                className={`flex items-center gap-2 rounded-lg px-4 py-3 text-sm font-medium whitespace-nowrap transition-all ${
+                className={`flex w-full items-center justify-center gap-2 rounded-lg px-4 py-3 text-base font-medium whitespace-nowrap transition-all sm:w-auto sm:justify-start sm:text-sm ${
                   showLockedOnly
                     ? 'bg-[#3B82F6] text-white'
                     : 'border border-[rgba(255,255,255,0.18)] bg-[rgba(255,255,255,0.05)] text-[#94A3B8] hover:bg-[rgba(255,255,255,0.08)]'
@@ -2512,17 +2512,17 @@ export default function AdminSmsServicesPage() {
 
                 {/* Pagination */}
                 {pricingTotalPages > 1 && (
-                  <div className="flex items-center justify-between border-t border-[rgba(255,255,255,0.1)] px-6 py-4">
-                    <div className="text-sm text-[#94A3B8]">
+                  <div className="flex flex-col gap-3 border-t border-[rgba(255,255,255,0.1)] px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+                    <div className="text-center text-sm text-[#94A3B8] sm:text-left">
                       Showing {(pricingPage - 1) * pricingLimit + 1}-
                       {Math.min(pricingPage * pricingLimit, pricingTotal)} of{' '}
                       {pricingTotal}
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-wrap items-center justify-center gap-2">
                       <button
                         onClick={() => setPricingPage(1)}
                         disabled={pricingPage === 1 || isPricingLoading}
-                        className="rounded-lg bg-[rgba(255,255,255,0.05)] px-3 py-1.5 text-sm font-medium text-[#94A3B8] transition-colors hover:bg-[rgba(255,255,255,0.1)] disabled:cursor-not-allowed disabled:opacity-50"
+                        className="hidden rounded-lg bg-[rgba(255,255,255,0.05)] px-3 py-1.5 text-sm font-medium text-[#94A3B8] transition-colors hover:bg-[rgba(255,255,255,0.1)] disabled:cursor-not-allowed disabled:opacity-50 sm:inline-flex"
                       >
                         First
                       </button>
@@ -2533,7 +2533,7 @@ export default function AdminSmsServicesPage() {
                         disabled={pricingPage === 1 || isPricingLoading}
                         className="rounded-lg bg-[rgba(255,255,255,0.05)] px-3 py-1.5 text-sm font-medium text-[#94A3B8] transition-colors hover:bg-[rgba(255,255,255,0.1)] disabled:cursor-not-allowed disabled:opacity-50"
                       >
-                        Previous
+                        Prev
                       </button>
                       <div className="flex items-center gap-1">
                         {Array.from(
@@ -2554,7 +2554,7 @@ export default function AdminSmsServicesPage() {
                                 key={pageNum}
                                 onClick={() => setPricingPage(pageNum)}
                                 disabled={isPricingLoading}
-                                className={`h-8 w-8 rounded-lg text-sm font-medium transition-colors ${
+                                className={`size-icon inline-flex h-8 w-8 items-center justify-center rounded-lg !p-0 text-sm font-medium transition-colors ${
                                   pricingPage === pageNum
                                     ? 'bg-[#3B82F6] text-white'
                                     : 'bg-[rgba(255,255,255,0.05)] text-[#94A3B8] hover:bg-[rgba(255,255,255,0.1)]'
@@ -2584,7 +2584,7 @@ export default function AdminSmsServicesPage() {
                         disabled={
                           pricingPage === pricingTotalPages || isPricingLoading
                         }
-                        className="rounded-lg bg-[rgba(255,255,255,0.05)] px-3 py-1.5 text-sm font-medium text-[#94A3B8] transition-colors hover:bg-[rgba(255,255,255,0.1)] disabled:cursor-not-allowed disabled:opacity-50"
+                        className="hidden rounded-lg bg-[rgba(255,255,255,0.05)] px-3 py-1.5 text-sm font-medium text-[#94A3B8] transition-colors hover:bg-[rgba(255,255,255,0.1)] disabled:cursor-not-allowed disabled:opacity-50 sm:inline-flex"
                       >
                         Last
                       </button>
