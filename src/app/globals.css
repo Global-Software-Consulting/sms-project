@@ -1,5 +1,5 @@
-/* ========== Font Import ========== */
-@import url('https://api.fontshare.com/v2/css?f[]=satoshi@700,500,400&display=swap');
+/* Satoshi font is loaded non-blocking from app/layout.tsx <head> using
+   the preload+swap pattern, so it no longer blocks first paint. */
 
 /* ========== Tailwind CSS ========== */
 @import 'tailwindcss' source(none);

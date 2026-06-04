@@ -95,6 +95,50 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
+        {/*
+          Satoshi font (Fontshare) loaded non-blocking. Was previously
+          @import'd inside globals.css, which Lighthouse flagged as
+          render-blocking (~300 ms). Preconnects warm DNS/TLS for both
+          the CSS API and the CDN that serves the woff2 files; the
+          preload tells the browser this resource is high-priority; the
+          inline script below attaches the actual <link rel="stylesheet">
+          after the parser is unblocked. `display=swap` in the URL means
+          fallback fonts render immediately and Satoshi swaps when ready.
+        */}
+        <link
+          rel="preconnect"
+          href="https://api.fontshare.com"
+          crossOrigin="anonymous"
+        />
+        <link
+          rel="preconnect"
+          href="https://cdn.fontshare.com"
+          crossOrigin="anonymous"
+        />
+        <link
+          rel="preload"
+          as="style"
+          href="https://api.fontshare.com/v2/css?f[]=satoshi@700,500,400&display=swap"
+        />
+        {/*
+          Inject the stylesheet via inline script so the browser does not
+          treat it as render-blocking. Preload above warms the cache,
+          this <script> just attaches it once the parser has finished
+          discovering critical resources. `display=swap` in the URL means
+          fallback fonts render immediately and Satoshi swaps when ready.
+        */}
+        <script
+          // eslint-disable-next-line react/no-danger
+          dangerouslySetInnerHTML={{
+            __html: `(function(){var l=document.createElement('link');l.rel='stylesheet';l.href='https://api.fontshare.com/v2/css?f[]=satoshi@700,500,400&display=swap';document.head.appendChild(l);})();`,
+          }}
+        />
+        <noscript>
+          <link
+            rel="stylesheet"
+            href="https://api.fontshare.com/v2/css?f[]=satoshi@700,500,400&display=swap"
+          />
+        </noscript>
         <JsonLd data={organizationSchema()} />
         <JsonLd data={websiteSchema()} />
         {/*
