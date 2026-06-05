@@ -21,12 +21,17 @@ ENV NODE_ENV=production
 RUN addgroup --system --gid 1001 nextjs && \
     adduser --system --uid 1001 nextjs
 
-COPY --from=builder /app/package.json ./
-COPY --from=builder /app/package-lock.json ./
-COPY --from=builder /app/node_modules ./node_modules
-COPY --from=builder /app/.next ./.next
-COPY --from=builder /app/public ./public
-COPY --from=builder /app/next.config.ts ./
+# --chown is critical: without it, the runtime nextjs user inherits files
+# owned by root and cannot write to .next/cache or .next/server during
+# ISR prerender cache updates. Symptom in container logs:
+#   Failed to update prerender cache for /privacy
+#   Error: EACCES: permission denied, open '/app/.next/server/app/privacy.html'
+COPY --from=builder --chown=nextjs:nextjs /app/package.json ./
+COPY --from=builder --chown=nextjs:nextjs /app/package-lock.json ./
+COPY --from=builder --chown=nextjs:nextjs /app/node_modules ./node_modules
+COPY --from=builder --chown=nextjs:nextjs /app/.next ./.next
+COPY --from=builder --chown=nextjs:nextjs /app/public ./public
+COPY --from=builder --chown=nextjs:nextjs /app/next.config.ts ./
 
 USER nextjs
 
