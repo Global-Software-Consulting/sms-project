@@ -6,6 +6,7 @@ import { MaintenanceGuard } from '@/components/providers/MaintenanceGuard';
 import { Toaster } from '@/components/ui/sonner';
 import { GoogleTranslate } from '@/components/google-translate';
 import { AddonsLoader } from '@/components/addons-loader';
+import SwCleanup from './sw-cleanup';
 import {
   SITE_URL,
   SITE_NAME,
@@ -203,6 +204,7 @@ export default function RootLayout({
                 <Toaster />
                 <GoogleTranslate />
                 <AddonsLoader />
+                <SwCleanup />
               </MaintenanceGuard>
             </BrandingProvider>
           </ThemeProvider>
