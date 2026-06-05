@@ -22,6 +22,14 @@ services:
     # under `environment:` takes precedence over env_file values.
     environment:
       NODE_ENV: production
+      # Pin the port too. The .env from the ENV_DEV secret contains
+      # PORT=3000, which overrode the Dockerfile's ENV PORT=3001 once we
+      # switched from `next start -p 3001` (CLI flag, env-immune) to the
+      # custom server.js (reads process.env.PORT). Without this pin the
+      # server boots on 3000 while compose maps/health-checks 3001 —
+      # health check fails and the deploy rolls back.
+      PORT: 3001
+      HOSTNAME: 0.0.0.0
     healthcheck:
       test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3001/"]
       interval: 15s
