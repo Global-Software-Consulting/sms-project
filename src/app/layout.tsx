@@ -6,7 +6,6 @@ import { MaintenanceGuard } from '@/components/providers/MaintenanceGuard';
 import { Toaster } from '@/components/ui/sonner';
 import { GoogleTranslate } from '@/components/google-translate';
 import { AddonsLoader } from '@/components/addons-loader';
-import { LinkClickRecovery } from '@/components/link-click-recovery';
 import {
   SITE_URL,
   SITE_NAME,
@@ -235,7 +234,6 @@ export default function RootLayout({
                 <Toaster />
                 <GoogleTranslate />
                 <AddonsLoader />
-                <LinkClickRecovery />
               </MaintenanceGuard>
             </BrandingProvider>
           </ThemeProvider>
