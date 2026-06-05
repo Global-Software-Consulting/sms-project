@@ -12,6 +12,16 @@ services:
       - "3001:3001"
     env_file:
       - .env
+    # Force NODE_ENV=production at runtime so Next.js + React run their
+    # production code paths. The image is built with `next build`, but
+    # the .env file (sourced from the ENV_DEV CI secret) historically
+    # contained NODE_ENV=development which overrode the Dockerfile's
+    # ENV NODE_ENV=production and caused next start to behave in
+    # development mode — including the symptom of first-click route
+    # transitions never committing on production. Setting it here
+    # under `environment:` takes precedence over env_file values.
+    environment:
+      NODE_ENV: production
     healthcheck:
       test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3001/"]
       interval: 15s
