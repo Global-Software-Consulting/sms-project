@@ -141,89 +141,42 @@ export default function RootLayout({
         <JsonLd data={organizationSchema()} />
         <JsonLd data={websiteSchema()} />
         {/*
-          Google Translate (and a few browser extensions) wrap text nodes
-          in <font> tags, which makes React throw
-          "Cannot read properties of null (reading 'removeChild')"
-          on the first navigation that unmounts touched text. Patch
-          Node.prototype.removeChild / insertBefore so they no-op when
-          the reference node has been re-parented by a third party.
-          Loaded inline in <head> so it runs before React commits any DOM.
-        */}
-        <script
-          // eslint-disable-next-line react/no-danger
-          dangerouslySetInnerHTML={{
-            __html: `
-              (function () {
-                if (typeof Node !== 'undefined') {
-                  var origRemove = Node.prototype.removeChild;
-                  Node.prototype.removeChild = function (child) {
-                    if (child && child.parentNode !== this) {
-                      return child;
-                    }
-                    return origRemove.apply(this, arguments);
-                  };
-                  var origInsert = Node.prototype.insertBefore;
-                  Node.prototype.insertBefore = function (newNode, refNode) {
-                    if (refNode && refNode.parentNode !== this) {
-                      return newNode;
-                    }
-                    return origInsert.apply(this, arguments);
-                  };
-                }
-                // The prototype patch above covers \`parent.removeChild(orphan)\`,
-                // but React's commit-phase also does \`stateNode.parentNode.removeChild(stateNode)\`
-                // where \`stateNode.parentNode\` is null after Google Translate has
-                // detached the node — that throws on the property access itself,
-                // before we ever reach the prototype method. React's own
-                // try/catch absorbs the fiber-level error and keeps rendering,
-                // but the throw still surfaces as an Uncaught TypeError in the
-                // console. Swallow exactly that pattern so logs stay clean.
-                if (typeof window !== 'undefined') {
-                  var swallow = function (msg) {
-                    return (
-                      typeof msg === 'string' &&
-                      msg.indexOf('Cannot read properties of null') !== -1 &&
-                      (msg.indexOf('removeChild') !== -1 ||
-                        msg.indexOf('insertBefore') !== -1)
-                    );
-                  };
-                  window.addEventListener(
-                    'error',
-                    function (ev) {
-                      var m = ev && ev.error && ev.error.message;
-                      if (swallow(m)) {
-                        ev.preventDefault();
-                        ev.stopImmediatePropagation();
-                      }
-                    },
-                    true,
-                  );
-                  window.addEventListener('unhandledrejection', function (ev) {
-                    var reason = ev && ev.reason;
-                    var m = reason && reason.message;
-                    if (swallow(m)) {
-                      ev.preventDefault();
-                    }
-                  });
+          Removed: previously this <head> ran an inline script that
+          monkey-patched Node.prototype.removeChild and
+          Node.prototype.insertBefore globally, plus installed window
+          error listeners that swallowed "Cannot read properties of
+          null" errors. The intent was to absorb Google-Translate-
+          induced text-node reparenting that throws inside React's
+          reconciler.
 
-                  // Previously this script also installed a pre-hydration
-                  // anchor-click fallback that hard-navigated to the href
-                  // if the URL hadn't moved within 220ms. Live diagnostic
-                  // on the Contabo deployment (where RSC roundtrips are
-                  // ~300ms, not the <50ms of local dev) showed the 220ms
-                  // timeout was firing BEFORE the in-flight RSC fetch
-                  // returned — triggering location.href and aborting every
-                  // in-flight request (mass ERR_ABORTED). That presented as
-                  // "URL changed, page didn't render" because providers
-                  // (Branding/Maintenance/Addons) aborted mid-flight. The
-                  // post-hydration <LinkClickRecovery /> component is the
-                  // proper place for this — it sees the actual router
-                  // state, not just window.location.
-                }
-              })();
-            `,
-          }}
-        />
+          Live tracing on the Contabo prod deployment identified the
+          patches as the cause of the "first click works, subsequent
+          clicks need 2 clicks" bug. Sequence:
+            1. Page lands. After ~2s, third-party scripts injected by
+               AddonsLoader (Tawk.to chat, Trustpilot, GA, Clarity)
+               finish mutating the DOM — wrapping/inserting nodes that
+               React did not create.
+            2. User clicks another <Link>.
+            3. React's reconciler calls
+                 parent.insertBefore(newNode, refNode)
+               where `refNode.parentNode !== parent` because the
+               third party reparented the node. The patch silently
+               returns `newNode` without inserting it.
+            4. React's fiber tree believes the DOM updated; the real
+               DOM did not. URL changes (router accepted the push)
+               but visible content does not change.
+            5. window.error swallow listener catches the
+               null-property TypeError before it surfaces in DevTools
+               — bug invisible in logs.
+            6. Second click forces React to re-reconcile from a
+               cleaner reference path and the DOM finally syncs.
+
+          Google Translate is now lazy-loaded (only mounts when the
+          user opens the language picker), so for ~all users the
+          patches were pure interference. If a user does open the
+          picker and GT throws, the resulting error surfacing in the
+          console is acceptable — silent fiber/DOM divergence is not.
+        */}
       </head>
       <body suppressHydrationWarning>
         <StoreProvider>
