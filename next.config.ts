@@ -6,81 +6,22 @@ const nextConfig: NextConfig = {
     ignoreBuildErrors: true,
   },
 
-  // ----------------------------------------------------------------------
-  // The real fix for "first click changes URL but page doesn't render"
-  // (production-only, Contabo VPS behind nginx).
+  // NOTE on the original "first click changes URL but page doesnt load"
+  // production bug:
   //
-  // The Iptv project (also on Contabo + nginx) hit the same class of bug —
-  // "clicking login shows cart page until hard reload" — and traced it to
-  // nginx/proxy caching of HTML and RSC payloads. The proxy was serving a
-  // stale cached response for a different route. Our previous workarounds
-  // (220ms inline-head fallback, LinkClickRecovery, staleTimes:0) all
-  // targeted the symptom; this fix targets the cause.
+  // Earlier attempt: experimental.staleTimes: { dynamic: 0, static: 0 }
+  //   - removed, made things worse
+  // Earlier attempt: Cache-Control: private, no-store headers on /:path*
+  //   - tanked mobile Lighthouse from 98 -> 71 because it disabled
+  //     browser caching for HTML/RSC entirely. Reverted.
   //
-  // private + no-store + no-cache + must-revalidate stops the nginx layer
-  // from holding onto page HTML and RSC payloads at all. Static assets
-  // (/_next/static, fonts, icons) are overridden with long immutable cache
-  // below so we don't pay any CDN-cache cost on assets that legitimately
-  // never change.
-  // ----------------------------------------------------------------------
-  async headers() {
-    return [
-      {
-        source: '/:path*',
-        headers: [
-          {
-            key: 'Cache-Control',
-            value: 'private, no-store, no-cache, must-revalidate',
-          },
-        ],
-      },
-      {
-        source: '/_next/static/:path*',
-        headers: [
-          {
-            key: 'Cache-Control',
-            value: 'public, max-age=31536000, immutable',
-          },
-        ],
-      },
-      {
-        source: '/_next/image/:path*',
-        headers: [
-          {
-            key: 'Cache-Control',
-            value: 'public, max-age=86400',
-          },
-        ],
-      },
-      {
-        source: '/fonts/:path*',
-        headers: [
-          {
-            key: 'Cache-Control',
-            value: 'public, max-age=31536000, immutable',
-          },
-        ],
-      },
-      {
-        source: '/icons/:path*',
-        headers: [
-          {
-            key: 'Cache-Control',
-            value: 'public, max-age=31536000, immutable',
-          },
-        ],
-      },
-      {
-        source: '/favicon.ico',
-        headers: [
-          {
-            key: 'Cache-Control',
-            value: 'public, max-age=86400',
-          },
-        ],
-      },
-    ];
-  },
+  // Actual root cause (identified via live browser trace): the
+  // production deployment was running `next dev` (Turbopack dev
+  // server) instead of `next start` (production build). The on-demand
+  // route compilation in dev mode was cancelling in-flight RSC
+  // requests, presenting as "URL changes, page doesnt render".
+  // Fix lives on the server side: run `next build` then `next start`
+  // under PM2/systemd. No Next.js config change needed for that.
 };
 
 export default nextConfig;
