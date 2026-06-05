@@ -141,42 +141,58 @@ export default function RootLayout({
         <JsonLd data={organizationSchema()} />
         <JsonLd data={websiteSchema()} />
         {/*
-          Removed: previously this <head> ran an inline script that
-          monkey-patched Node.prototype.removeChild and
-          Node.prototype.insertBefore globally, plus installed window
-          error listeners that swallowed "Cannot read properties of
-          null" errors. The intent was to absorb Google-Translate-
-          induced text-node reparenting that throws inside React's
-          reconciler.
+          Targeted removeChild guard.
 
-          Live tracing on the Contabo prod deployment identified the
-          patches as the cause of the "first click works, subsequent
-          clicks need 2 clicks" bug. Sequence:
-            1. Page lands. After ~2s, third-party scripts injected by
-               AddonsLoader (Tawk.to chat, Trustpilot, GA, Clarity)
-               finish mutating the DOM — wrapping/inserting nodes that
-               React did not create.
-            2. User clicks another <Link>.
-            3. React's reconciler calls
-                 parent.insertBefore(newNode, refNode)
-               where `refNode.parentNode !== parent` because the
-               third party reparented the node. The patch silently
-               returns `newNode` without inserting it.
-            4. React's fiber tree believes the DOM updated; the real
-               DOM did not. URL changes (router accepted the push)
-               but visible content does not change.
-            5. window.error swallow listener catches the
-               null-property TypeError before it surfaces in DevTools
-               — bug invisible in logs.
-            6. Second click forces React to re-reconcile from a
-               cleaner reference path and the DOM finally syncs.
+          Background: third-party scripts injected by AddonsLoader
+          (Tawk.to chat widget, Microsoft Clarity, Google Analytics,
+          Trustpilot, etc.) detach DOM nodes that React still tracks
+          in its fiber tree. When React next tries to commit a
+          re-render that involves removing one of those nodes,
+            parent.removeChild(child)
+          throws "Cannot read properties of null (reading
+          'removeChild')" because child.parentNode is already null —
+          the third party detached it. The commit aborts; the new
+          route's RSC payload arrives but never visually applies.
+          User sees: URL bar moves, sidebar/nav active state moves,
+          but main content stays on the previous page.
 
-          Google Translate is now lazy-loaded (only mounts when the
-          user opens the language picker), so for ~all users the
-          patches were pure interference. If a user does open the
-          picker and GT throws, the resulting error surfacing in the
-          console is acceptable — silent fiber/DOM divergence is not.
+          Prior history (read before changing this):
+          - We had a broader patch that also wrapped insertBefore and
+            no-op'd whenever `refNode.parentNode !== this`. That
+            version caused a "first click works, second click needs
+            two clicks" bug because it ALSO silently no-op'd
+            legitimate React reconciliations of nodes a third party
+            had reparented (insertBefore case) — see PR #43 commit
+            for the full trace.
+          - We then removed the patch entirely. That made the silent
+            no-op gone, but exposed the original removeChild race:
+            navigation now actually breaks instead of being a silent
+            corruption. Live console traces show the TypeError firing
+            inside the framework chunk on transitions like / -> /api
+            -> /pricing.
+
+          This narrower version:
+          - Only intercepts removeChild, NOT insertBefore (the
+            insertBefore case was the source of the 2-click bug).
+          - Only no-ops when child.parentNode === null (already fully
+            detached by a third party — React's intent was to remove
+            it, the third party beat us to it, no-op is correct).
+          - Calls the original removeChild in every other case,
+            including the dangerous "child reparented to a different
+            parent" case which SHOULD throw so we notice.
+
+          Trade-off accepted: if the underlying React-vs-third-party
+          conflict mutates to a different shape, this patch won't
+          cover it. The real fix is to identify which AddonsLoader
+          script is doing the detachment and either guard it or
+          remove it. Until then this prevents the commit abort.
         */}
+        <script
+          // eslint-disable-next-line react/no-danger
+          dangerouslySetInnerHTML={{
+            __html: `(function(){if(typeof Node==='undefined')return;var o=Node.prototype.removeChild;Node.prototype.removeChild=function(c){if(c&&c.parentNode===null)return c;return o.apply(this,arguments);};})();`,
+          }}
+        />
       </head>
       <body suppressHydrationWarning>
         <StoreProvider>
