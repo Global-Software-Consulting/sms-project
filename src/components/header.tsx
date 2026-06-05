@@ -1,6 +1,6 @@
 'use client';
 import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 import { useTheme } from 'next-themes';
 import { Moon, Sun, Menu, X, Globe } from 'lucide-react';
 import { Button } from './ui/button';
@@ -17,7 +17,6 @@ export function Header() {
   const [langOpen, setLangOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
   const pathname = usePathname();
-  const router = useRouter();
   const { isAuthenticated, isAdmin } = useAuth();
   // Avoid hydration flash — only flip the CTAs after the client has mounted.
   const showAuthedCta = mounted && isAuthenticated;
@@ -48,11 +47,7 @@ export function Header() {
     <header className="border-border sticky top-0 z-50 w-full border-b backdrop-blur-[var(--glass-blur)] [background:var(--glass-secondary)]">
       <div className="container mx-auto flex h-14 items-center justify-between gap-2 px-4 sm:h-16">
         {/* Logo */}
-        <Link
-          href="/"
-          onClick={() => router.refresh()}
-          className="flex flex-shrink-0 items-center space-x-2"
-        >
+        <Link href="/" className="flex flex-shrink-0 items-center space-x-2">
           <div className="from-primary to-accent flex h-8 w-8 items-center justify-center overflow-hidden rounded-xl bg-gradient-to-br sm:h-10 sm:w-10">
             {siteLogo ? (
               // eslint-disable-next-line @next/next/no-img-element
