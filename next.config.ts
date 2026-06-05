@@ -6,6 +6,13 @@ const nextConfig: NextConfig = {
     ignoreBuildErrors: true,
   },
 
+  // Produce a self-contained server build at .next/standalone/ so we can
+  // run via a custom server.js instead of `next start`. Mirrors IPTV
+  // (cheapstreamtv.com)'s deployment — same Contabo + nginx + Cloudflare
+  // stack, working production. Matching their runtime model is the last
+  // remaining variable in the navigation-bug investigation.
+  output: 'standalone',
+
   // ----------------------------------------------------------------------
   // THE actual fix for the "click changes URL but page doesn't render"
   // production-only bug on Contabo + Cloudflare.

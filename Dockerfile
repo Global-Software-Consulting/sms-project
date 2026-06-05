@@ -9,7 +9,11 @@ COPY . .
 
 ARG NEXT_PUBLIC_API_URL
 ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
+ENV NODE_ENV=production
 
+# Webpack build (matches IPTV reference). `next build --webpack` produces
+# the .next/standalone/ directory because next.config.ts has
+# `output: "standalone"`.
 RUN npm run build
 
 # ---- Production ----
@@ -17,28 +21,28 @@ FROM node:22-alpine AS runner
 WORKDIR /app
 
 ENV NODE_ENV=production
+ENV NEXT_TELEMETRY_DISABLED=1
 
-RUN addgroup --system --gid 1001 nextjs && \
+RUN addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 nextjs
 
-# --chown is critical: without it, the runtime nextjs user inherits files
-# owned by root and cannot write to .next/cache or .next/server during
-# ISR prerender cache updates. Symptom in container logs:
-#   Failed to update prerender cache for /privacy
-#   Error: EACCES: permission denied, open '/app/.next/server/app/privacy.html'
-COPY --from=builder --chown=nextjs:nextjs /app/package.json ./
-COPY --from=builder --chown=nextjs:nextjs /app/package-lock.json ./
-COPY --from=builder --chown=nextjs:nextjs /app/node_modules ./node_modules
-COPY --from=builder --chown=nextjs:nextjs /app/.next ./.next
-COPY --from=builder --chown=nextjs:nextjs /app/public ./public
-COPY --from=builder --chown=nextjs:nextjs /app/next.config.ts ./
+# Copy the standalone build output. .next/standalone/ contains a minimal
+# Node app with only the files needed at runtime, plus a generated
+# server.js that re-exports the request handler. We override that
+# generated server.js with our own at the project root.
+COPY --from=builder --chown=nextjs:nodejs /app/public ./public
+COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
+COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+COPY --from=builder --chown=nextjs:nodejs /app/server.js ./server.js
 
 USER nextjs
 
 EXPOSE 3001
+
 ENV PORT=3001
+ENV HOSTNAME=0.0.0.0
 
 HEALTHCHECK --interval=30s --timeout=5s --retries=3 \
   CMD wget --no-verbose --tries=1 --spider http://localhost:3001/ || exit 1
 
-CMD ["npm", "start"]
+CMD ["node", "server.js"]
