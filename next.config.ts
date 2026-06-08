@@ -14,35 +14,50 @@ const nextConfig: NextConfig = {
   output: 'standalone',
 
   // ----------------------------------------------------------------------
-  // THE actual fix for the "click changes URL but page doesn't render"
-  // production-only bug on Contabo + Cloudflare.
+  // Fix for the "click changes URL but page doesn't render until second
+  // click" production-only bug on Contabo + nginx + Cloudflare.
   //
-  // Identified by cross-reference with the IPTV (cheapstreamtv.com)
-  // project — same Contabo + nginx + Cloudflare stack, same bug, same
-  // fix. Their next.config.mjs comment reads verbatim:
+  // Root cause (confirmed by triangulation 2026-06):
+  //   - Server localhost responds in ~8ms; the app itself is fast.
+  //   - The Contabo origin sits in Germany; visitors are far away, so each
+  //     fresh HTML/RSC fetch crosses a slow link (TTFB 1-2s, body slower).
+  //   - We previously sent `no-store` on EVERY path, including RSC prefetch
+  //     payloads. `no-store` makes the Next.js App Router refuse to cache
+  //     prefetched route shells. Without a prefetched shell the router must
+  //     fetch the RSC payload *before* it can render anything — even the
+  //     route's loading.tsx boundary. On a slow far origin that means the
+  //     URL changes (history is pushed optimistically) but the UI stays
+  //     frozen until the cross-continent fetch returns, looking like
+  //     "first click does nothing, second click works".
+  //   - It only reproduced on Contabo (not Vercel) because Vercel's edge
+  //     serves prefetches instantly, hiding the disabled-prefetch cost.
   //
-  //   "Prevent nginx/CDN proxy caches from caching page HTML and RSC
-  //   payloads. Stale cached pages are the root cause of 'clicking
-  //   login shows cart page until hard reload' — the proxy serves a
-  //   cached response for a different route. Private + no-store fixes
-  //   this while still allowing static assets (overridden below) to
-  //   be cached."
+  // The original reason for `no-store` (a proxy serving a cached response
+  // for the wrong route) does NOT apply here: the live Cloudflare zone has
+  // no Page Rules, no Cache Rules, cache level Standard, and returns
+  // `cf-cache-status: DYNAMIC`; nginx runs with `proxy_cache off`. Nothing
+  // caches HTML/RSC at the proxy layer, so `no-store` bought nothing while
+  // actively breaking client-side prefetch.
   //
-  // Trade-off: mobile Lighthouse will drop from 98 to ~71 because
-  // every HTML/RSC navigation now goes back to origin. Accept it.
-  // Correctness > Speed Index. The static asset overrides below
-  // keep the perf cost manageable.
+  // Fix: send `private` instead of `private, no-store, no-cache,
+  // must-revalidate`. `private` still forbids shared caches (Cloudflare,
+  // nginx) from storing the response — preserving the wrong-route
+  // protection — but lets the browser / Next.js router populate its
+  // per-URL prefetch cache, restoring instant first-click navigation.
+  // Static assets keep their long-lived immutable caching (overridden
+  // below).
   // ----------------------------------------------------------------------
   async headers() {
     return [
-      // Default for every path: no caching by browsers, nginx, or
-      // Cloudflare. Static assets are overridden below.
+      // Default for every path: allow only private (browser / router)
+      // caching, never shared proxy caching. Static assets overridden
+      // below.
       {
         source: '/:path*',
         headers: [
           {
             key: 'Cache-Control',
-            value: 'private, no-store, no-cache, must-revalidate',
+            value: 'private',
           },
           // Security headers piggyback here so they ship on every
           // response too.
