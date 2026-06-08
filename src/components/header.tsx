@@ -11,7 +11,7 @@ import { LanguagePickerDropdown } from './google-translate';
 import { useAuth } from '@/hooks/useAuth';
 
 export function Header() {
-  const { theme, setTheme } = useTheme();
+  const { theme, setTheme, resolvedTheme } = useTheme();
   const { siteLogo } = useBranding();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [langOpen, setLangOpen] = useState(false);
@@ -47,7 +47,11 @@ export function Header() {
     <header className="border-border sticky top-0 z-50 w-full border-b backdrop-blur-[var(--glass-blur)] [background:var(--glass-secondary)]">
       <div className="container mx-auto flex h-14 items-center justify-between gap-2 px-4 sm:h-16">
         {/* Logo */}
-        <Link prefetch={false} href="/" className="flex flex-shrink-0 items-center space-x-2">
+        <Link
+          prefetch={false}
+          href="/"
+          className="flex flex-shrink-0 items-center space-x-2"
+        >
           <div className="from-primary to-accent flex h-8 w-8 items-center justify-center overflow-hidden rounded-xl bg-gradient-to-br sm:h-10 sm:w-10">
             {siteLogo ? (
               // eslint-disable-next-line @next/next/no-img-element
@@ -70,7 +74,8 @@ export function Header() {
         {/* Desktop Navigation */}
         <nav className="hidden items-center space-x-1 md:flex">
           {navItems.map((item) => (
-            <Link prefetch={false}
+            <Link
+              prefetch={false}
               key={item.name}
               href={item.href}
               className={cn(
@@ -107,22 +112,32 @@ export function Header() {
             />
           </div>
 
-          {mounted && (
-            <Button
-              variant="ghost"
-              size="icon"
-              className="size-icon h-9 !min-h-0 w-9 shrink-0 !p-0"
-              onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-            >
-              <Sun className="h-4 w-4 scale-100 rotate-0 transition-all dark:scale-0 dark:-rotate-90" />
-              <Moon className="absolute h-4 w-4 scale-0 rotate-90 transition-all dark:scale-100 dark:rotate-0" />
-              <span className="sr-only">Toggle theme</span>
-            </Button>
-          )}
+          {/*
+            Render the toggle unconditionally (no `mounted` gate) to avoid
+            the pop-in blink on load. The Sun/Moon visibility is driven
+            purely by the `dark` class that next-themes sets on <html>
+            before first paint, so the correct icon shows immediately with
+            no hydration flash. `resolvedTheme` accounts for the system
+            preference when toggling.
+          */}
+          <Button
+            variant="ghost"
+            size="icon"
+            className="size-icon h-9 !min-h-0 w-9 shrink-0 !p-0"
+            onClick={() =>
+              setTheme((resolvedTheme ?? theme) === 'dark' ? 'light' : 'dark')
+            }
+          >
+            <Sun className="h-4 w-4 scale-100 rotate-0 transition-all dark:scale-0 dark:-rotate-90" />
+            <Moon className="absolute h-4 w-4 scale-0 rotate-90 transition-all dark:scale-100 dark:rotate-0" />
+            <span className="sr-only">Toggle theme</span>
+          </Button>
 
           {showAuthedCta ? (
             <Button asChild size="sm" className="hidden md:inline-flex">
-              <Link prefetch={false} href={homeHref}>{homeLabel}</Link>
+              <Link prefetch={false} href={homeHref}>
+                {homeLabel}
+              </Link>
             </Button>
           ) : (
             <>
@@ -132,11 +147,15 @@ export function Header() {
                 size="sm"
                 className="hidden md:inline-flex"
               >
-                <Link prefetch={false} href="/auth/login">Sign In</Link>
+                <Link prefetch={false} href="/auth/login">
+                  Sign In
+                </Link>
               </Button>
 
               <Button asChild size="sm" className="hidden md:inline-flex">
-                <Link prefetch={false} href="/auth/signup">Get Started</Link>
+                <Link prefetch={false} href="/auth/signup">
+                  Get Started
+                </Link>
               </Button>
             </>
           )}
@@ -167,7 +186,8 @@ export function Header() {
       >
         <nav className="container mx-auto flex flex-col px-4 py-3">
           {navItems.map((item) => (
-            <Link prefetch={false}
+            <Link
+              prefetch={false}
               key={item.name}
               href={item.href}
               className={cn(
@@ -184,14 +204,19 @@ export function Header() {
           <div className="flex flex-col gap-2 pt-4 pb-2">
             {showAuthedCta ? (
               <Button asChild className="w-full">
-                <Link prefetch={false} href={homeHref} onClick={() => setMobileMenuOpen(false)}>
+                <Link
+                  prefetch={false}
+                  href={homeHref}
+                  onClick={() => setMobileMenuOpen(false)}
+                >
                   {homeLabel}
                 </Link>
               </Button>
             ) : (
               <>
                 <Button asChild variant="outline" className="w-full">
-                  <Link prefetch={false}
+                  <Link
+                    prefetch={false}
                     href="/auth/login"
                     onClick={() => setMobileMenuOpen(false)}
                   >
@@ -199,7 +224,8 @@ export function Header() {
                   </Link>
                 </Button>
                 <Button asChild className="w-full">
-                  <Link prefetch={false}
+                  <Link
+                    prefetch={false}
                     href="/auth/signup"
                     onClick={() => setMobileMenuOpen(false)}
                   >
