@@ -116,7 +116,7 @@ export default function ApiClient() {
 
           <div className="flex flex-col items-center justify-center gap-4 pt-4 sm:flex-row">
             <Button asChild size="lg">
-              <Link href="/auth/signup">
+              <Link href="/auth/signup" prefetch={false}>
                 Get Started <ArrowRight className="ml-2 h-4 w-4" />
               </Link>
             </Button>
@@ -675,7 +675,7 @@ print(response.json())`}</code>
           </p>
           <div className="flex flex-col items-center justify-center gap-4 sm:flex-row">
             <Button asChild size="lg">
-              <Link href="/auth/signup">
+              <Link href="/auth/signup" prefetch={false}>
                 Get Started <ArrowRight className="ml-2 h-4 w-4" />
               </Link>
             </Button>

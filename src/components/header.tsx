@@ -132,11 +132,11 @@ export function Header() {
                 size="sm"
                 className="hidden md:inline-flex"
               >
-                <Link href="/auth/login">Sign In</Link>
+                <Link href="/auth/login" prefetch={false}>Sign In</Link>
               </Button>
 
               <Button asChild size="sm" className="hidden md:inline-flex">
-                <Link href="/auth/signup">Get Started</Link>
+                <Link href="/auth/signup" prefetch={false}>Get Started</Link>
               </Button>
             </>
           )}

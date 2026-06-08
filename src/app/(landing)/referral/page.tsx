@@ -256,7 +256,7 @@ export default function Referral() {
 
           <div className="flex flex-col items-center justify-center gap-4 sm:flex-row">
             <Button asChild size="lg" className="btn-premium text-base">
-              <Link href="/auth/signup">
+              <Link href="/auth/signup" prefetch={false}>
                 Start Referring Now <ArrowRight className="ml-2 h-4 w-4" />
               </Link>
             </Button>
@@ -610,7 +610,7 @@ export default function Referral() {
 
               <div className="flex flex-col items-center justify-center gap-4 sm:flex-row">
                 <Button asChild size="lg" className="btn-premium text-base">
-                  <Link href="/auth/signup">
+                  <Link href="/auth/signup" prefetch={false}>
                     Create Free Account <ArrowRight className="ml-2 h-4 w-4" />
                   </Link>
                 </Button>
@@ -620,7 +620,7 @@ export default function Referral() {
                   variant="outline"
                   className="text-base"
                 >
-                  <Link href="/auth/login">Already Have Account?</Link>
+                  <Link href="/auth/login" prefetch={false}>Already Have Account?</Link>
                 </Button>
               </div>
 

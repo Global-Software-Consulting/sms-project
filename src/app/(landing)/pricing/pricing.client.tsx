@@ -336,7 +336,7 @@ export default function PricingClient() {
                       className="w-full"
                       variant={tier.popular || tier.elite ? 'default' : 'outline'}
                     >
-                      <Link href="/auth/signup">
+                      <Link href="/auth/signup" prefetch={false}>
                         Get Started <ArrowRight className="ml-2 h-4 w-4" />
                       </Link>
                     </Button>
@@ -632,7 +632,7 @@ export default function PricingClient() {
           </p>
           <div className="flex flex-col items-center justify-center gap-4 sm:flex-row">
             <Button asChild size="lg">
-              <Link href="/auth/signup">
+              <Link href="/auth/signup" prefetch={false}>
                 Create Free Account <ArrowRight className="ml-2 h-4 w-4" />
               </Link>
             </Button>
