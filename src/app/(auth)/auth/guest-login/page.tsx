@@ -214,7 +214,7 @@ export default function GuestLogin() {
           <div className="text-center">
             <p className="text-muted-foreground text-sm">
               Have an account?{' '}
-              <Link prefetch={false}
+              <Link
                 href="/auth/login"
                 className="text-primary font-medium hover:underline"
               >

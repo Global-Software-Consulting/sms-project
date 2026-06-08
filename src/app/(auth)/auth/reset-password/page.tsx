@@ -81,7 +81,7 @@ function ResetPasswordContent() {
               No email provided. Please start from the forgot password page.
             </p>
             <Button asChild className="w-full">
-              <Link prefetch={false} href="/auth/forgot-password">Go to Forgot Password</Link>
+              <Link href="/auth/forgot-password">Go to Forgot Password</Link>
             </Button>
           </CardContent>
         </Card>
@@ -227,7 +227,7 @@ function ResetPasswordContent() {
         <CardFooter className="flex justify-center">
           <p className="text-muted-foreground text-sm">
             Remember your password?{' '}
-            <Link prefetch={false}
+            <Link
               href="/auth/login"
               className="text-primary font-medium hover:underline"
             >

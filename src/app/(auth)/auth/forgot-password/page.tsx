@@ -91,7 +91,7 @@ export default function ForgotPassword() {
           </form>
         </CardContent>
         <CardFooter className="flex justify-center">
-          <Link prefetch={false}
+          <Link
             href="/auth/login"
             className="text-primary flex items-center space-x-1 text-sm font-medium hover:underline"
           >
