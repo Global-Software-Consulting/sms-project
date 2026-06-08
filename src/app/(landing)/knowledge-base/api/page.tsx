@@ -75,7 +75,7 @@ export default function APIArticle() {
   return (
     <div className="container mx-auto px-4 py-12 sm:py-16 md:py-20">
       <div className="mx-auto max-w-4xl space-y-10">
-        <Link
+        <Link prefetch={false}
           href="/knowledge-base"
           className="text-muted-foreground hover:text-primary inline-flex items-center transition-colors"
         >
@@ -126,7 +126,7 @@ export default function APIArticle() {
             <li>Sign up and verify your email.</li>
             <li>
               Open{' '}
-              <Link
+              <Link prefetch={false}
                 href="/dashboard/api"
                 className="text-primary hover:underline"
               >
@@ -149,7 +149,7 @@ export default function APIArticle() {
             Every request must include an <code>Authorization</code> header with
             your secret API key. Keys are scoped to your account; revoke and
             rotate them anytime from{' '}
-            <Link
+            <Link prefetch={false}
               href="/dashboard/api"
               className="text-primary hover:underline"
             >

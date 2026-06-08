@@ -256,7 +256,7 @@ export default function HomeClient() {
               size="lg"
               className="btn-premium w-full text-base sm:w-auto"
             >
-              <Link href={ctaTargetHref}>
+              <Link prefetch={false} href={ctaTargetHref}>
                 {heroCtaLabel} <ArrowRight className="ml-2 h-4 w-4" />
               </Link>
             </Button>
@@ -266,7 +266,7 @@ export default function HomeClient() {
               variant="outline"
               className="w-full text-base sm:w-auto"
             >
-              <Link href="/pricing">View Pricing</Link>
+              <Link prefetch={false} href="/pricing">View Pricing</Link>
             </Button>
           </div>
 
@@ -608,7 +608,7 @@ export default function HomeClient() {
                       className="mt-6 w-full"
                       variant={plan.isPopular ? 'default' : 'outline'}
                     >
-                      <Link href="/dashboard/membership">
+                      <Link prefetch={false} href="/dashboard/membership">
                         {parseFloat(plan.price) === 0
                           ? 'Get Started'
                           : 'Upgrade'}
@@ -698,7 +698,7 @@ export default function HomeClient() {
             Join thousands of satisfied customers using BestSMSHQ
           </p>
           <Button asChild size="lg" className="btn-premium text-base">
-            <Link href={ctaTargetHref}>
+            <Link prefetch={false} href={ctaTargetHref}>
               {finalCtaLabel} <ArrowRight className="ml-2 h-4 w-4" />
             </Link>
           </Button>

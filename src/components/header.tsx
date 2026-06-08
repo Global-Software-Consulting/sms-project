@@ -47,7 +47,7 @@ export function Header() {
     <header className="border-border sticky top-0 z-50 w-full border-b backdrop-blur-[var(--glass-blur)] [background:var(--glass-secondary)]">
       <div className="container mx-auto flex h-14 items-center justify-between gap-2 px-4 sm:h-16">
         {/* Logo */}
-        <Link href="/" className="flex flex-shrink-0 items-center space-x-2">
+        <Link prefetch={false} href="/" className="flex flex-shrink-0 items-center space-x-2">
           <div className="from-primary to-accent flex h-8 w-8 items-center justify-center overflow-hidden rounded-xl bg-gradient-to-br sm:h-10 sm:w-10">
             {siteLogo ? (
               // eslint-disable-next-line @next/next/no-img-element
@@ -70,7 +70,7 @@ export function Header() {
         {/* Desktop Navigation */}
         <nav className="hidden items-center space-x-1 md:flex">
           {navItems.map((item) => (
-            <Link
+            <Link prefetch={false}
               key={item.name}
               href={item.href}
               className={cn(
@@ -122,7 +122,7 @@ export function Header() {
 
           {showAuthedCta ? (
             <Button asChild size="sm" className="hidden md:inline-flex">
-              <Link href={homeHref}>{homeLabel}</Link>
+              <Link prefetch={false} href={homeHref}>{homeLabel}</Link>
             </Button>
           ) : (
             <>
@@ -132,11 +132,11 @@ export function Header() {
                 size="sm"
                 className="hidden md:inline-flex"
               >
-                <Link href="/auth/login" prefetch={false}>Sign In</Link>
+                <Link prefetch={false} href="/auth/login">Sign In</Link>
               </Button>
 
               <Button asChild size="sm" className="hidden md:inline-flex">
-                <Link href="/auth/signup" prefetch={false}>Get Started</Link>
+                <Link prefetch={false} href="/auth/signup">Get Started</Link>
               </Button>
             </>
           )}
@@ -167,7 +167,7 @@ export function Header() {
       >
         <nav className="container mx-auto flex flex-col px-4 py-3">
           {navItems.map((item) => (
-            <Link
+            <Link prefetch={false}
               key={item.name}
               href={item.href}
               className={cn(
@@ -184,14 +184,14 @@ export function Header() {
           <div className="flex flex-col gap-2 pt-4 pb-2">
             {showAuthedCta ? (
               <Button asChild className="w-full">
-                <Link href={homeHref} onClick={() => setMobileMenuOpen(false)}>
+                <Link prefetch={false} href={homeHref} onClick={() => setMobileMenuOpen(false)}>
                   {homeLabel}
                 </Link>
               </Button>
             ) : (
               <>
                 <Button asChild variant="outline" className="w-full">
-                  <Link
+                  <Link prefetch={false}
                     href="/auth/login"
                     onClick={() => setMobileMenuOpen(false)}
                   >
@@ -199,7 +199,7 @@ export function Header() {
                   </Link>
                 </Button>
                 <Button asChild className="w-full">
-                  <Link
+                  <Link prefetch={false}
                     href="/auth/signup"
                     onClick={() => setMobileMenuOpen(false)}
                   >

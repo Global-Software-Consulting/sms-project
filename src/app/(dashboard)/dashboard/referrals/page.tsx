@@ -397,7 +397,7 @@ export default function ReferralDashboard() {
                     </div>
                   )}
                 </div>
-                <Link
+                <Link prefetch={false}
                   href="/dashboard/settings"
                   className="bg-background hover:bg-muted border-border absolute -right-1 -bottom-1 flex h-5 !min-h-0 w-5 items-center justify-center rounded-full border transition-colors sm:h-6 sm:w-6"
                   aria-label="Edit profile"
@@ -464,7 +464,7 @@ export default function ReferralDashboard() {
 
           <div className="mt-6 flex justify-center">
             <Button variant="link" asChild className="text-primary">
-              <Link href="/dashboard/settings">Personalize your profile</Link>
+              <Link prefetch={false} href="/dashboard/settings">Personalize your profile</Link>
             </Button>
           </div>
         </CardContent>

@@ -2631,7 +2631,7 @@ export default function AdminPaymentsPage() {
                       Active Pay ID and QR are auto-detected from the live
                       scraper session. The fallback Pay ID below is only used
                       when no scraper session is configured.
-                      <Link
+                      <Link prefetch={false}
                         href="/admin/binance-session"
                         className="mt-2 inline-flex items-center gap-1 font-medium text-[#3B82F6] hover:underline"
                       >

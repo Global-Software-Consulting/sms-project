@@ -73,7 +73,7 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
           {/* Logo */}
           <div className="border-sidebar-border flex h-16 flex-shrink-0 items-center justify-between border-b px-4">
             {isOpen && (
-              <Link
+              <Link prefetch={false}
                 href="/dashboard"
                 className="flex min-w-0 flex-1 items-center space-x-2"
               >
@@ -132,7 +132,7 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
 
                 return (
                   <li key={item.name}>
-                    <Link
+                    <Link prefetch={false}
                       href={item.href}
                       onClick={() => {
                         if (window.innerWidth < 1024 && isOpen) onToggle();

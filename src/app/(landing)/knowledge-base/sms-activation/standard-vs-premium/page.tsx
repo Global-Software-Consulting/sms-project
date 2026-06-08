@@ -62,14 +62,14 @@ export default function StandardVsPremium() {
       <div className="mx-auto max-w-4xl">
         {/* Breadcrumb */}
         <div className="text-muted-foreground mb-8 flex items-center gap-2 text-sm">
-          <Link
+          <Link prefetch={false}
             href="/knowledge-base"
             className="hover:text-primary transition-colors"
           >
             Knowledge Base
           </Link>
           <ArrowRight className="h-4 w-4" />
-          <Link
+          <Link prefetch={false}
             href="/knowledge-base/sms-activation"
             className="hover:text-primary transition-colors"
           >
@@ -382,14 +382,14 @@ export default function StandardVsPremium() {
 
           {/* Navigation */}
           <div className="flex items-center justify-between gap-4">
-            <Link
+            <Link prefetch={false}
               href="/knowledge-base/sms-activation/how-it-works"
               className="text-muted-foreground hover:text-primary inline-flex items-center transition-colors"
             >
               <ArrowLeft className="mr-2 h-4 w-4" />
               Previous: How It Works
             </Link>
-            <Link
+            <Link prefetch={false}
               href="/knowledge-base/sms-activation"
               className="text-primary inline-flex items-center transition-colors hover:underline"
             >
