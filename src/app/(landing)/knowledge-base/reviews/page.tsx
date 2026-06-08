@@ -42,7 +42,7 @@ export default function ReviewsArticle() {
   return (
     <div className="container mx-auto px-4 py-12 sm:py-16 md:py-20">
       <div className="mx-auto max-w-4xl space-y-8">
-        <Link
+        <Link prefetch={false}
           href="/knowledge-base"
           className="text-muted-foreground hover:text-primary inline-flex items-center transition-colors"
         >
@@ -60,7 +60,7 @@ export default function ReviewsArticle() {
 
         <div className="space-y-4">
           {articles.map((article) => (
-            <Link
+            <Link prefetch={false}
               key={article.id}
               href={`/knowledge-base/reviews/${article.id}`}
               className="group block"

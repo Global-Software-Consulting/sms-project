@@ -257,7 +257,7 @@ function SignupContent() {
         <Card className="relative w-full border-[var(--glass-border)] shadow-[var(--glass-shadow-3)] backdrop-blur-[var(--glass-blur)]">
           <CardHeader className="space-y-1 text-center">
             {/* Logo */}
-            <Link
+            <Link prefetch={false}
               href="/"
               className="from-primary to-accent mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br transition-transform hover:scale-105"
             >
@@ -404,11 +404,11 @@ function SignupContent() {
                   className="text-muted-foreground cursor-pointer text-sm leading-relaxed"
                 >
                   I agree to the{' '}
-                  <Link href="/terms" className="text-primary hover:underline">
+                  <Link prefetch={false} href="/terms" className="text-primary hover:underline">
                     Terms of Use
                   </Link>{' '}
                   and{' '}
-                  <Link
+                  <Link prefetch={false}
                     href="/privacy"
                     className="text-primary hover:underline"
                   >
@@ -498,7 +498,7 @@ function SignupContent() {
           <CardFooter className="flex justify-center">
             <p className="text-muted-foreground text-sm">
               Already have an account?{' '}
-              <Link
+              <Link prefetch={false}
                 href="/auth/login"
                 className="text-primary font-medium hover:underline"
               >

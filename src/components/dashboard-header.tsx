@@ -302,7 +302,7 @@ export function DashboardHeader({ onMenuClick }: DashboardHeaderProps = {}) {
                   <DropdownMenuSeparator />
                   <div className="p-2">
                     <Button asChild variant="outline" className="w-full">
-                      <Link href="/dashboard/notifications">
+                      <Link prefetch={false} href="/dashboard/notifications">
                         View All Notifications
                       </Link>
                     </Button>
@@ -344,17 +344,17 @@ export function DashboardHeader({ onMenuClick }: DashboardHeaderProps = {}) {
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
               <DropdownMenuItem asChild>
-                <Link href="/dashboard/settings">Settings</Link>
+                <Link prefetch={false} href="/dashboard/settings">Settings</Link>
               </DropdownMenuItem>
               <DropdownMenuItem asChild>
-                <Link href="/dashboard/membership">Upgrade Plan</Link>
+                <Link prefetch={false} href="/dashboard/membership">Upgrade Plan</Link>
               </DropdownMenuItem>
               <DropdownMenuItem asChild>
-                <Link href="/dashboard/support">Support</Link>
+                <Link prefetch={false} href="/dashboard/support">Support</Link>
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem asChild>
-                <Link href="/">Back to Home</Link>
+                <Link prefetch={false} href="/">Back to Home</Link>
               </DropdownMenuItem>
               <DropdownMenuItem
                 className="text-destructive cursor-pointer"

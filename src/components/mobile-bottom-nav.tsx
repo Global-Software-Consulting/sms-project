@@ -78,7 +78,7 @@ export function MobileBottomNav() {
               const Icon = item.icon;
               const active = isActive(item.href);
               return (
-                <Link
+                <Link prefetch={false}
                   key={item.name}
                   href={item.href}
                   onClick={() => setShowMore(false)}
@@ -152,7 +152,7 @@ export function MobileBottomNav() {
             }
 
             return (
-              <Link
+              <Link prefetch={false}
                 key={item.name}
                 href={item.href}
                 className="flex flex-col items-center justify-center gap-0 overflow-hidden pt-1"

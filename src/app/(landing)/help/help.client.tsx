@@ -112,7 +112,7 @@ export default function HelpClient() {
               {filteredTopics.map((topic) => {
                 const Icon = topic.icon;
                 return (
-                  <Link
+                  <Link prefetch={false}
                     key={topic.id}
                     href={topic.href}
                     className="group block"
@@ -147,7 +147,7 @@ export default function HelpClient() {
                   No quick topics match &ldquo;{searchQuery}&rdquo;.
                 </p>
                 <Button asChild variant="outline" size="sm">
-                  <Link
+                  <Link prefetch={false}
                     href={`/knowledge-base?q=${encodeURIComponent(searchQuery)}`}
                   >
                     Search Knowledge Base

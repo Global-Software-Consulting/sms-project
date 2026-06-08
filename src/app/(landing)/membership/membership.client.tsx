@@ -292,7 +292,7 @@ export default function MembershipClient() {
                       ))}
                     </ul>
 
-                    <Link href="/dashboard/membership">
+                    <Link prefetch={false} href="/dashboard/membership">
                       <Button
                         className="w-full"
                         variant={isBest ? 'default' : 'outline'}
@@ -616,7 +616,7 @@ export default function MembershipClient() {
               plans. Upgrade today and start getting more value from every
               activation.
             </p>
-            <Link href="/dashboard/membership">
+            <Link prefetch={false} href="/dashboard/membership">
               <Button size="lg" className="px-8">
                 View Plans in Dashboard
                 <ArrowRight className="ml-2 h-5 w-5" />

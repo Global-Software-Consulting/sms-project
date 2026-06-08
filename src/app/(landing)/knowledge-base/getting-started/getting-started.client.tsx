@@ -64,7 +64,7 @@ export default function GettingStartedArticleClient() {
     <div className="container mx-auto px-4 py-12 sm:py-16 md:py-20">
       <div className="mx-auto max-w-4xl space-y-8">
         {/* Back Button */}
-        <Link
+        <Link prefetch={false}
           href="/knowledge-base"
           className="text-muted-foreground hover:text-primary inline-flex items-center transition-colors"
         >
@@ -146,7 +146,7 @@ export default function GettingStartedArticleClient() {
           <CardContent className="py-6">
             <h3 className="mb-4 font-semibold">Next Steps</h3>
             <div className="space-y-3">
-              <Link
+              <Link prefetch={false}
                 href="/knowledge-base/sms-activation"
                 className="hover:bg-accent group flex items-center justify-between rounded-lg p-3 transition-colors"
               >
@@ -155,7 +155,7 @@ export default function GettingStartedArticleClient() {
                 </span>
                 <ArrowLeft className="text-muted-foreground group-hover:text-primary h-4 w-4 rotate-180" />
               </Link>
-              <Link
+              <Link prefetch={false}
                 href="/knowledge-base/wallet"
                 className="hover:bg-accent group flex items-center justify-between rounded-lg p-3 transition-colors"
               >
@@ -164,7 +164,7 @@ export default function GettingStartedArticleClient() {
                 </span>
                 <ArrowLeft className="text-muted-foreground group-hover:text-primary h-4 w-4 rotate-180" />
               </Link>
-              <Link
+              <Link prefetch={false}
                 href="/knowledge-base/membership"
                 className="hover:bg-accent group flex items-center justify-between rounded-lg p-3 transition-colors"
               >

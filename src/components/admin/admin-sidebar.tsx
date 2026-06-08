@@ -130,7 +130,7 @@ export function AdminSidebar() {
               const isActive = pathname === item.path;
 
               return (
-                <Link
+                <Link prefetch={false}
                   key={item.path}
                   href={item.path}
                   onClick={() => setIsOpen(false)}

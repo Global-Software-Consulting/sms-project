@@ -268,7 +268,7 @@ export default function KnowledgeBaseClient() {
             <p className="text-muted-foreground mb-6">
               Our support team is here to help you with any questions.
             </p>
-            <Link
+            <Link prefetch={false}
               href="/help"
               className="bg-primary text-primary-foreground inline-flex items-center justify-center rounded-lg px-6 py-3 font-medium transition-all duration-180 hover:[box-shadow:var(--glow-accent-active)]"
             >

@@ -136,7 +136,7 @@ export default function BlogClient() {
               const coverImg = post.coverImage || post.thumbnailUrl || post.imageUrl;
 
               return (
-                <Link key={post.id} href={`/blog/${post.slug}`} className="group block">
+                <Link prefetch={false} key={post.id} href={`/blog/${post.slug}`} className="group block">
                   <Card className="h-full overflow-hidden transition-all duration-180 hover:-translate-y-1 hover:[box-shadow:var(--glass-shadow-3),var(--glow-accent)]">
                     {coverImg && (
                       <div className="aspect-video w-full overflow-hidden">

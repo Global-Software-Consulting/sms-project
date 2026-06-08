@@ -336,7 +336,7 @@ export default function PricingClient() {
                       className="w-full"
                       variant={tier.popular || tier.elite ? 'default' : 'outline'}
                     >
-                      <Link href="/auth/signup" prefetch={false}>
+                      <Link prefetch={false} href="/auth/signup">
                         Get Started <ArrowRight className="ml-2 h-4 w-4" />
                       </Link>
                     </Button>
@@ -418,7 +418,7 @@ export default function PricingClient() {
             <CardContent className="pt-6 text-center">
               <p className="text-muted-foreground text-sm">
                 Prices vary by country and service. View full pricing in the{' '}
-                <Link
+                <Link prefetch={false}
                   href="/dashboard/activation"
                   className="text-primary hover:underline"
                 >
@@ -496,7 +496,7 @@ export default function PricingClient() {
 
           <div className="mt-8 text-center">
             <Button asChild size="lg">
-              <Link href="/dashboard/membership">
+              <Link prefetch={false} href="/dashboard/membership">
                 View Full Membership Details{' '}
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Link>
@@ -632,12 +632,12 @@ export default function PricingClient() {
           </p>
           <div className="flex flex-col items-center justify-center gap-4 sm:flex-row">
             <Button asChild size="lg">
-              <Link href="/auth/signup" prefetch={false}>
+              <Link prefetch={false} href="/auth/signup">
                 Create Free Account <ArrowRight className="ml-2 h-4 w-4" />
               </Link>
             </Button>
             <Button asChild size="lg" variant="outline">
-              <Link href="/help">Contact Support</Link>
+              <Link prefetch={false} href="/help">Contact Support</Link>
             </Button>
           </div>
         </div>

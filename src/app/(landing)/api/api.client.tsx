@@ -116,12 +116,12 @@ export default function ApiClient() {
 
           <div className="flex flex-col items-center justify-center gap-4 pt-4 sm:flex-row">
             <Button asChild size="lg">
-              <Link href="/auth/signup" prefetch={false}>
+              <Link prefetch={false} href="/auth/signup">
                 Get Started <ArrowRight className="ml-2 h-4 w-4" />
               </Link>
             </Button>
             <Button asChild size="lg" variant="outline">
-              <Link href="/knowledge-base/api">Full Documentation</Link>
+              <Link prefetch={false} href="/knowledge-base/api">Full Documentation</Link>
             </Button>
           </div>
         </div>
@@ -214,7 +214,7 @@ export default function ApiClient() {
                 </div>
                 <p className="text-muted-foreground mt-3 text-sm">
                   Visit{' '}
-                  <Link
+                  <Link prefetch={false}
                     href="/dashboard/api"
                     className="text-primary hover:underline"
                   >
@@ -581,7 +581,7 @@ print(response.json())`}</code>
                       </code>
                     </div>
                     <Button variant="ghost" size="sm" asChild>
-                      <Link href="/knowledge-base/api">
+                      <Link prefetch={false} href="/knowledge-base/api">
                         View Docs <ArrowRight className="ml-2 h-3 w-3" />
                       </Link>
                     </Button>
@@ -675,12 +675,12 @@ print(response.json())`}</code>
           </p>
           <div className="flex flex-col items-center justify-center gap-4 sm:flex-row">
             <Button asChild size="lg">
-              <Link href="/auth/signup" prefetch={false}>
+              <Link prefetch={false} href="/auth/signup">
                 Get Started <ArrowRight className="ml-2 h-4 w-4" />
               </Link>
             </Button>
             <Button asChild size="lg" variant="outline">
-              <Link href="/knowledge-base/api">Read Full Docs</Link>
+              <Link prefetch={false} href="/knowledge-base/api">Read Full Docs</Link>
             </Button>
           </div>
         </div>

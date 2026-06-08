@@ -35,13 +35,13 @@ export default function NotFound() {
         {/* Actions */}
         <div className="flex flex-col justify-center gap-3 sm:flex-row">
           <Button asChild size="lg">
-            <Link href="/">
+            <Link prefetch={false} href="/">
               <Home className="mr-2 h-4 w-4" />
               Back to Home
             </Link>
           </Button>
           <Button asChild variant="outline" size="lg">
-            <Link href="/dashboard">
+            <Link prefetch={false} href="/dashboard">
               <ArrowLeft className="mr-2 h-4 w-4" />
               Go to Dashboard
             </Link>
@@ -52,22 +52,22 @@ export default function NotFound() {
         <div className="pt-8">
           <p className="text-muted-foreground mb-3 text-sm">Quick Links</p>
           <div className="flex flex-wrap justify-center gap-2">
-            <Link
+            <Link prefetch={false}
               href="/features"
               className="text-primary text-sm hover:underline"
             >
               Features
             </Link>
             <span className="text-muted-foreground">•</span>
-            <Link href="/api" className="text-primary text-sm hover:underline">
+            <Link prefetch={false} href="/api" className="text-primary text-sm hover:underline">
               API Docs
             </Link>
             <span className="text-muted-foreground">•</span>
-            <Link href="/help" className="text-primary text-sm hover:underline">
+            <Link prefetch={false} href="/help" className="text-primary text-sm hover:underline">
               Help Center
             </Link>
             <span className="text-muted-foreground">•</span>
-            <Link
+            <Link prefetch={false}
               href="/contact"
               className="text-primary text-sm hover:underline"
             >

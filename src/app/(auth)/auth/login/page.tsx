@@ -184,7 +184,7 @@ export default function Login() {
         <Card className="relative w-full border-[var(--glass-border)] shadow-[var(--glass-shadow-3)] backdrop-blur-[var(--glass-blur)]">
           <CardHeader className="space-y-1 text-center">
             {/* Logo */}
-            <Link
+            <Link prefetch={false}
               href="/"
               className="from-primary to-accent mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br transition-transform hover:scale-105 overflow-hidden"
             >
@@ -261,7 +261,7 @@ export default function Login() {
                     Remember me
                   </Label>
                 </div>
-                <Link
+                <Link prefetch={false}
                   href="/auth/forgot-password"
                   className="text-primary text-sm hover:underline"
                 >
@@ -336,7 +336,7 @@ export default function Login() {
           <CardFooter className="flex flex-col items-center gap-2">
             <p className="text-muted-foreground text-sm">
               Don&apos;t have an account?{' '}
-              <Link
+              <Link prefetch={false}
                 href="/auth/signup"
                 className="text-primary font-medium hover:underline"
               >
@@ -345,7 +345,7 @@ export default function Login() {
             </p>
             <p className="text-muted-foreground text-sm">
               Just checking orders?{' '}
-              <Link
+              <Link prefetch={false}
                 href="/auth/guest-login"
                 className="text-primary font-medium hover:underline"
               >

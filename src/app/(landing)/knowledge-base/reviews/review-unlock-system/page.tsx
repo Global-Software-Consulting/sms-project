@@ -24,14 +24,14 @@ export default function ReviewUnlockSystem() {
       <div className="mx-auto max-w-4xl">
         {/* Breadcrumb */}
         <div className="text-muted-foreground mb-8 flex items-center gap-2 text-sm">
-          <Link
+          <Link prefetch={false}
             href="/knowledge-base"
             className="hover:text-primary transition-colors"
           >
             Knowledge Base
           </Link>
           <ArrowRight className="h-4 w-4" />
-          <Link
+          <Link prefetch={false}
             href="/knowledge-base/reviews"
             className="hover:text-primary transition-colors"
           >
@@ -232,7 +232,7 @@ export default function ReviewUnlockSystem() {
                 </h3>
                 <p className="text-muted-foreground">
                   You can view your available review slots at any time in the{' '}
-                  <Link
+                  <Link prefetch={false}
                     href="/dashboard/reviews"
                     className="text-primary hover:underline"
                   >
@@ -247,14 +247,14 @@ export default function ReviewUnlockSystem() {
 
           {/* Navigation */}
           <div className="flex items-center justify-between gap-4">
-            <Link
+            <Link prefetch={false}
               href="/knowledge-base/reviews"
               className="text-muted-foreground hover:text-primary inline-flex items-center transition-colors"
             >
               <ArrowLeft className="mr-2 h-4 w-4" />
               Back to Reviews & Limits
             </Link>
-            <Link
+            <Link prefetch={false}
               href="/dashboard/reviews"
               className="text-primary inline-flex items-center transition-colors hover:underline"
             >
