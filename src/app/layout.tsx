@@ -7,7 +7,6 @@ import { Toaster } from '@/components/ui/sonner';
 import { GoogleTranslate } from '@/components/google-translate';
 import { AddonsLoader } from '@/components/addons-loader';
 import { NavCrashRecovery } from '@/components/nav-crash-recovery';
-import { ForceFullNavigation } from '@/components/force-full-navigation';
 import SwCleanup from './sw-cleanup';
 import {
   SITE_URL,
@@ -198,7 +197,6 @@ export default function RootLayout({
         />
       </head>
       <body suppressHydrationWarning>
-        <ForceFullNavigation />
         <NavCrashRecovery />
         <StoreProvider>
           <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>

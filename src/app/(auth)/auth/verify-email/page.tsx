@@ -152,7 +152,7 @@ export default function VerifyEmail() {
 
           {/* Back to signup */}
           <div className="text-center">
-            <Link prefetch={false}
+            <Link
               href="/auth/signup"
               className="text-muted-foreground hover:text-foreground inline-flex items-center gap-1 text-sm transition-colors"
             >

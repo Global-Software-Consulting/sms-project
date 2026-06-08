@@ -387,7 +387,7 @@ export default function Dashboard() {
             </div>
             <p className="text-muted-foreground mt-1 text-xs">
               <Button asChild variant="link" className="h-auto p-0 text-xs">
-                <Link prefetch={false} href="/dashboard/wallet">
+                <Link href="/dashboard/wallet">
                   Add Funds <ArrowUpRight className="ml-1 h-3 w-3" />
                 </Link>
               </Button>
@@ -445,7 +445,7 @@ export default function Dashboard() {
             <p className="text-muted-foreground mt-1 text-xs">
               {data.membership?.currentPlan?.slug !== 'vip' ? (
                 <Button asChild variant="link" className="h-auto p-0 text-xs">
-                  <Link prefetch={false} href="/dashboard/membership">
+                  <Link href="/dashboard/membership">
                     Upgrade Plan <ArrowUpRight className="ml-1 h-3 w-3" />
                   </Link>
                 </Button>
@@ -475,7 +475,7 @@ export default function Dashboard() {
               delivery
             </p>
             <Button asChild className="w-full" size="lg">
-              <Link prefetch={false} href="/dashboard/activation">Order SMS Now</Link>
+              <Link href="/dashboard/activation">Order SMS Now</Link>
             </Button>
           </CardContent>
         </Card>
@@ -574,7 +574,7 @@ export default function Dashboard() {
               </div>
             )}
             <Button asChild variant="outline" className="w-full">
-              <Link prefetch={false} href="/dashboard/orders">View All Orders</Link>
+              <Link href="/dashboard/orders">View All Orders</Link>
             </Button>
           </CardContent>
         </Card>
@@ -625,7 +625,7 @@ export default function Dashboard() {
                     </Badge>
                     <div className="flex gap-2">
                       <Button size="sm" variant="outline" asChild>
-                        <Link prefetch={false} href={`/dashboard/rent-numbers?id=${rental.id}`}>
+                        <Link href={`/dashboard/rent-numbers?id=${rental.id}`}>
                           Details
                         </Link>
                       </Button>
@@ -644,7 +644,7 @@ export default function Dashboard() {
             </div>
           )}
           <Button asChild variant="link" className="mt-4 w-full">
-            <Link prefetch={false} href="/dashboard/rent-numbers">Manage All Rentals</Link>
+            <Link href="/dashboard/rent-numbers">Manage All Rentals</Link>
           </Button>
         </CardContent>
       </Card>

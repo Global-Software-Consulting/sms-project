@@ -439,7 +439,7 @@ export default function MembershipDashboard() {
                       Renew Early
                     </Button>
                   )}
-                  <Link prefetch={false} href="/dashboard/support" className="w-full">
+                  <Link href="/dashboard/support" className="w-full">
                     <Button
                       variant="ghost"
                       size="sm"
