@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { AdminPageHeader } from '@/components/admin/page-header';
 import { AdminGlassCard } from '@/components/admin/glass-card';
 import { AdminFormInput } from '@/components/admin/form-input';
@@ -15,7 +15,15 @@ import {
   Loader2,
   Eye,
   X,
+  Download,
+  ImageIcon,
 } from 'lucide-react';
+import {
+  processImage,
+  downloadBlob,
+  formatBytes,
+  type ProcessedImage,
+} from '@/lib/blog-image-editor';
 import {
   Select,
   SelectContent,
@@ -152,6 +160,112 @@ export default function AdminBlogsPage() {
     stripEXIF: true,
     bypassMode: false,
   });
+
+  const imageFileInputRef = useRef<HTMLInputElement | null>(null);
+  const [pendingImageFiles, setPendingImageFiles] = useState<File[]>([]);
+  const [processedImages, setProcessedImages] = useState<ProcessedImage[]>([]);
+  const [isProcessingImages, setIsProcessingImages] = useState(false);
+  const [previewImage, setPreviewImage] = useState<{
+    url: string;
+    filename: string;
+  } | null>(null);
+
+  const handleImageFilesChosen = (files: FileList | null): void => {
+    if (!files || files.length === 0) return;
+    const next = Array.from(files).filter((f) => f.type.startsWith('image/'));
+    if (next.length === 0) {
+      toast.error('Please select image files only');
+      return;
+    }
+    setPendingImageFiles((prev) => [...prev, ...next]);
+    setProcessedImages([]);
+  };
+
+  const removePendingImage = (index: number): void => {
+    setPendingImageFiles((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const clearImageEditor = (): void => {
+    processedImages.forEach((p) =>
+      p.variants.forEach((v) => URL.revokeObjectURL(v.previewUrl)),
+    );
+    setPendingImageFiles([]);
+    setProcessedImages([]);
+  };
+
+  const handleProcessImages = async (): Promise<void> => {
+    if (pendingImageFiles.length === 0) {
+      toast.error('Choose at least one image first');
+      return;
+    }
+
+    const cropValues = [
+      imageConfig.crop1,
+      imageConfig.crop2,
+      imageConfig.crop3,
+      imageConfig.crop4,
+    ]
+      .map((v) => Number(v))
+      .filter((n) => Number.isFinite(n));
+
+    if (cropValues.length === 0) {
+      toast.error('Provide at least one crop value');
+      return;
+    }
+
+    const ranges = {
+      cropValues,
+      saturationRange: [
+        Number(imageConfig.saturation1),
+        Number(imageConfig.saturation2),
+      ] as [number, number],
+      brightnessRange: [
+        Number(imageConfig.brightness1),
+        Number(imageConfig.brightness2),
+      ] as [number, number],
+      contrastRange: [
+        Number(imageConfig.contrast1),
+        Number(imageConfig.contrast2),
+      ] as [number, number],
+      convertWebP: imageConfig.convertWebP,
+      stripEXIF: imageConfig.stripEXIF,
+    };
+
+    setIsProcessingImages(true);
+    processedImages.forEach((p) =>
+      p.variants.forEach((v) => URL.revokeObjectURL(v.previewUrl)),
+    );
+    setProcessedImages([]);
+
+    try {
+      const results: ProcessedImage[] = [];
+      for (const file of pendingImageFiles) {
+        const baseName = imageConfig.searchName.trim() || file.name;
+        const processed = await processImage(file, ranges, baseName);
+        results.push(processed);
+      }
+      setProcessedImages(results);
+      const totalVariants = results.reduce(
+        (sum, r) => sum + r.variants.length,
+        0,
+      );
+      toast.success(
+        `Generated ${totalVariants} variants from ${results.length} image${results.length === 1 ? '' : 's'}`,
+      );
+    } catch (err) {
+      toast.error(
+        err instanceof Error ? err.message : 'Image processing failed',
+      );
+    } finally {
+      setIsProcessingImages(false);
+    }
+  };
+
+  const handleDownloadAllVariants = (): void => {
+    processedImages.forEach((p) =>
+      p.variants.forEach((v) => downloadBlob(v.blob, v.filename)),
+    );
+  };
 
   // Fetch functions
   const fetchBlogPosts = useCallback(async () => {
@@ -1184,13 +1298,67 @@ export default function AdminBlogsPage() {
       {activeTab === 'image' && (
         <div className="space-y-6">
           <div className="rounded-xl border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.3)] p-4 sm:p-6">
-            <h3 className="mb-4 text-base font-semibold text-white">
-              Upload Images
-            </h3>
-            <button className="flex w-full items-center justify-center gap-2 rounded-lg bg-[#06B6D4] px-6 py-3 text-base font-medium text-white transition-colors hover:bg-[#0891B2] sm:w-auto sm:text-sm">
+            <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+              <h3 className="text-base font-semibold text-white">
+                Upload Images
+              </h3>
+              {pendingImageFiles.length > 0 && (
+                <button
+                  type="button"
+                  onClick={clearImageEditor}
+                  className="text-xs text-[#94A3B8] underline-offset-2 hover:text-white hover:underline"
+                >
+                  Clear all
+                </button>
+              )}
+            </div>
+            <input
+              ref={imageFileInputRef}
+              type="file"
+              accept="image/*"
+              multiple
+              hidden
+              onChange={(e) => {
+                handleImageFilesChosen(e.target.files);
+                if (e.target) e.target.value = '';
+              }}
+            />
+            <button
+              type="button"
+              onClick={() => imageFileInputRef.current?.click()}
+              className="flex w-full items-center justify-center gap-2 rounded-lg bg-[#06B6D4] px-6 py-3 text-base font-medium text-white transition-colors hover:bg-[#0891B2] sm:w-auto sm:text-sm"
+            >
               <Upload className="h-5 w-5" />
               Choose Images
             </button>
+            {pendingImageFiles.length > 0 && (
+              <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
+                {pendingImageFiles.map((file, idx) => (
+                  <div
+                    key={`${file.name}-${idx}`}
+                    className="group relative overflow-hidden rounded-lg border border-[rgba(255,255,255,0.12)] bg-[rgba(255,255,255,0.04)]"
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={URL.createObjectURL(file)}
+                      alt={file.name}
+                      className="aspect-square w-full object-cover"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => removePendingImage(idx)}
+                      className="absolute top-1 right-1 rounded-full bg-black/60 p-1 text-white opacity-0 transition-opacity group-hover:opacity-100"
+                      aria-label="Remove"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                    <div className="truncate p-1 text-[10px] text-[#94A3B8]">
+                      {file.name}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           <div className="rounded-xl border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.3)] p-4 sm:p-6">
@@ -1338,9 +1506,159 @@ export default function AdminBlogsPage() {
             </div>
           </div>
 
-          <button className="rounded-lg bg-[#06B6D4] px-8 py-3 text-sm font-medium text-white transition-colors hover:bg-[#0891B2]">
-            Process Images
-          </button>
+          <div className="flex flex-wrap items-center gap-3">
+            <button
+              type="button"
+              onClick={handleProcessImages}
+              disabled={isProcessingImages || pendingImageFiles.length === 0}
+              className="flex items-center gap-2 rounded-lg bg-[#06B6D4] px-8 py-3 text-sm font-medium text-white transition-colors hover:bg-[#0891B2] disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {isProcessingImages ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Processing…
+                </>
+              ) : (
+                <>
+                  <ImageIcon className="h-4 w-4" />
+                  Process Images
+                </>
+              )}
+            </button>
+            {processedImages.length > 0 && (
+              <button
+                type="button"
+                onClick={handleDownloadAllVariants}
+                className="flex items-center gap-2 rounded-lg border border-[rgba(255,255,255,0.18)] bg-transparent px-6 py-3 text-sm font-medium text-white transition-colors hover:bg-[rgba(255,255,255,0.08)]"
+              >
+                <Download className="h-4 w-4" />
+                Download all
+              </button>
+            )}
+          </div>
+
+          {processedImages.length > 0 && (
+            <div className="space-y-6">
+              {processedImages.map((processed, pIdx) => (
+                <div
+                  key={`${processed.sourceFile.name}-${pIdx}`}
+                  className="rounded-xl border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.3)] p-4 sm:p-6"
+                >
+                  <div className="mb-4 flex items-center justify-between gap-2">
+                    <h4 className="truncate text-sm font-semibold text-white">
+                      {processed.sourceFile.name}
+                    </h4>
+                    <span className="text-xs text-[#94A3B8]">
+                      {processed.variants.length} variant
+                      {processed.variants.length === 1 ? '' : 's'}
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
+                    {processed.variants.map((variant) => (
+                      <div
+                        key={variant.filename}
+                        className="overflow-hidden rounded-lg border border-[rgba(255,255,255,0.12)] bg-[rgba(255,255,255,0.04)]"
+                      >
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setPreviewImage({
+                              url: variant.previewUrl,
+                              filename: variant.filename,
+                            })
+                          }
+                          className="group relative block w-full"
+                          aria-label={`Preview ${variant.filename}`}
+                        >
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={variant.previewUrl}
+                            alt={variant.filename}
+                            className="aspect-square w-full object-cover"
+                          />
+                          <span className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 transition-opacity group-hover:opacity-100">
+                            <Eye className="h-5 w-5 text-white" />
+                          </span>
+                        </button>
+                        <div className="space-y-1 p-2">
+                          <div className="truncate text-xs text-white">
+                            {variant.filename}
+                          </div>
+                          <div className="text-[10px] text-[#94A3B8]">
+                            {variant.width}×{variant.height} ·{' '}
+                            {formatBytes(variant.size)}
+                          </div>
+                          <div className="text-[10px] text-[#64748B]">
+                            crop {variant.appliedCropPct}% · sat{' '}
+                            {variant.appliedSaturationPct}% · bri{' '}
+                            {variant.appliedBrightnessPct}% · con{' '}
+                            {variant.appliedContrastPct}%
+                          </div>
+                          <div className="mt-1 grid grid-cols-2 gap-1">
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setPreviewImage({
+                                  url: variant.previewUrl,
+                                  filename: variant.filename,
+                                })
+                              }
+                              className="flex items-center justify-center gap-1 rounded bg-[rgba(255,255,255,0.08)] px-2 py-1 text-[11px] text-white transition-colors hover:bg-[rgba(255,255,255,0.16)]"
+                            >
+                              <Eye className="h-3 w-3" />
+                              View
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() =>
+                                downloadBlob(variant.blob, variant.filename)
+                              }
+                              className="flex items-center justify-center gap-1 rounded bg-[rgba(255,255,255,0.08)] px-2 py-1 text-[11px] text-white transition-colors hover:bg-[rgba(255,255,255,0.16)]"
+                            >
+                              <Download className="h-3 w-3" />
+                              Download
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {previewImage && (
+            <div
+              className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 p-4"
+              onClick={() => setPreviewImage(null)}
+              role="dialog"
+              aria-modal="true"
+            >
+              <button
+                type="button"
+                onClick={() => setPreviewImage(null)}
+                className="absolute top-4 right-4 rounded-full bg-white/10 p-2 text-white transition-colors hover:bg-white/20"
+                aria-label="Close preview"
+              >
+                <X className="h-5 w-5" />
+              </button>
+              <div
+                className="flex max-h-full max-w-full flex-col items-center gap-3"
+                onClick={(e) => e.stopPropagation()}
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={previewImage.url}
+                  alt={previewImage.filename}
+                  className="max-h-[85vh] max-w-[90vw] rounded-lg object-contain"
+                />
+                <div className="text-sm text-white">
+                  {previewImage.filename}
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
