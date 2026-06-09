@@ -41,7 +41,11 @@ const DEFAULT_INFO: ContactInfo = {
     'Thank you for choosing BestSMSHQ — where reliable SMS verification meets unbeatable value. We look forward to assisting you!',
 };
 
-export default function ContactClient() {
+export default function ContactClient({
+  heroHeading = 'SUBMIT A SUPPORT TICKET',
+}: {
+  heroHeading?: string;
+} = {}) {
   const [isLoading, setIsLoading] = useState(false);
   const [info, setInfo] = useState<ContactInfo>(DEFAULT_INFO);
   const [formData, setFormData] = useState({
@@ -60,8 +64,14 @@ export default function ContactClient() {
       .then((res) => {
         const d = (res.data || {}) as Record<string, unknown>;
         setInfo({
-          phone: (d.contact_phone as string) || (d.phone as string) || DEFAULT_INFO.phone,
-          email: (d.contact_email as string) || (d.email as string) || DEFAULT_INFO.email,
+          phone:
+            (d.contact_phone as string) ||
+            (d.phone as string) ||
+            DEFAULT_INFO.phone,
+          email:
+            (d.contact_email as string) ||
+            (d.email as string) ||
+            DEFAULT_INFO.email,
           businessHours:
             (d.contact_business_hours as string) ||
             (d.businessHours as string) ||
@@ -108,8 +118,8 @@ export default function ContactClient() {
       });
     } catch (error: unknown) {
       const msg =
-        (error as { response?: { data?: { message?: string } } })?.response?.data
-          ?.message || 'Failed to submit request';
+        (error as { response?: { data?: { message?: string } } })?.response
+          ?.data?.message || 'Failed to submit request';
       toast.error(msg);
     } finally {
       setIsLoading(false);
@@ -125,9 +135,9 @@ export default function ContactClient() {
           <div className="space-y-8">
             <div>
               <h1 className="text-3xl font-black tracking-tight sm:text-4xl md:text-5xl">
-                SUBMIT A SUPPORT TICKET
+                {heroHeading}
               </h1>
-              <p className="text-muted-foreground mt-4 text-sm sm:text-base leading-relaxed">
+              <p className="text-muted-foreground mt-4 text-sm leading-relaxed sm:text-base">
                 {info.helpMessage}
               </p>
             </div>
@@ -167,7 +177,7 @@ export default function ContactClient() {
           </div>
 
           {/* Right: form card */}
-          <Card className="[background:var(--glass-primary)] border-[var(--glass-border)] backdrop-blur-[var(--glass-blur)]">
+          <Card className="border-[var(--glass-border)] backdrop-blur-[var(--glass-blur)] [background:var(--glass-primary)]">
             <CardContent className="p-6 sm:p-8">
               <form onSubmit={handleSubmit} className="space-y-5">
                 <div className="grid gap-4 sm:grid-cols-2">
@@ -291,7 +301,9 @@ function InfoRow({
       <div className="text-primary mt-0.5 flex-shrink-0">{icon}</div>
       <div className="min-w-0">
         <p className="text-muted-foreground text-xs sm:text-sm">{label}</p>
-        <p className="mt-1 text-sm font-medium sm:text-base break-words">{value}</p>
+        <p className="mt-1 text-sm font-medium break-words sm:text-base">
+          {value}
+        </p>
       </div>
     </div>
   );
