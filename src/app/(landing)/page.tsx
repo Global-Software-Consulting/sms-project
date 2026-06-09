@@ -12,21 +12,22 @@ import {
 import { fetchPageContent, pick } from '@/lib/page-content';
 import HomeClient, { type HomeContent } from './home.client';
 
-export const generateMetadata = () => buildLandingMetadata({
-  slug: 'home',
-  title: `${SITE_NAME} — ${SITE_TAGLINE}`,
-  description: SITE_DESCRIPTION,
-  path: '/',
-  keywords: [
-    'SMS verification',
-    'SMS activation',
-    'virtual phone numbers',
-    'OTP verification service',
-    'receive SMS online',
-    'temporary phone number',
-    'rent virtual numbers',
-  ],
-});
+export const generateMetadata = () =>
+  buildLandingMetadata({
+    slug: 'home',
+    title: `${SITE_NAME} — ${SITE_TAGLINE}`,
+    description: SITE_DESCRIPTION,
+    path: '/',
+    keywords: [
+      'SMS verification',
+      'SMS activation',
+      'virtual phone numbers',
+      'OTP verification service',
+      'receive SMS online',
+      'temporary phone number',
+      'rent virtual numbers',
+    ],
+  });
 
 export default async function Home() {
   const raw = await fetchPageContent('home');
@@ -46,11 +47,17 @@ export default async function Home() {
       'page_home_hero_description',
       'Get instant access to SMS verification numbers from 180+ countries. Professional, fast, and secure.',
     ),
+    heroButtonText: pick(raw, 'page_home_hero_button_text', 'Get Started'),
     ctaHeading: pick(raw, 'page_home_cta_heading', 'Ready to Get Started?'),
     ctaBody: pick(
       raw,
       'page_home_cta_body',
       'Join thousands of satisfied customers using BestSMSHQ',
+    ),
+    ctaButtonText: pick(
+      raw,
+      'page_home_cta_button_text',
+      'Start Receiving SMS Now',
     ),
   };
 

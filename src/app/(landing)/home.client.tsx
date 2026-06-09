@@ -64,8 +64,12 @@ export interface HomeContent {
   heroHeadingPart1: string;
   heroHeadingPart2: string;
   heroDescription: string;
+  /** Hero primary button label shown to unauthenticated visitors. */
+  heroButtonText: string;
   ctaHeading: string;
   ctaBody: string;
+  /** Final CTA button label shown to unauthenticated visitors. */
+  ctaButtonText: string;
 }
 
 const FALLBACK_HOME_CONTENT: HomeContent = {
@@ -73,8 +77,10 @@ const FALLBACK_HOME_CONTENT: HomeContent = {
   heroHeadingPart2: 'Instantly & Reliably',
   heroDescription:
     'Get instant access to SMS verification numbers from 180+ countries. Professional, fast, and secure.',
+  heroButtonText: 'Get Started',
   ctaHeading: 'Ready to Get Started?',
   ctaBody: 'Join thousands of satisfied customers using BestSMSHQ',
+  ctaButtonText: 'Start Receiving SMS Now',
 };
 
 export default function HomeClient({
@@ -93,12 +99,12 @@ export default function HomeClient({
     ? isAdmin
       ? 'Go to Admin'
       : 'Go to Dashboard'
-    : 'Get Started';
+    : content.heroButtonText;
   const finalCtaLabel = showAuthedCta
     ? isAdmin
       ? 'Open Admin'
       : 'Open Dashboard'
-    : 'Start Receiving SMS Now';
+    : content.ctaButtonText;
   const ctaTargetHref = showAuthedCta ? ctaHref : '/auth/signup';
 
   const [plans, setPlans] = useState<MembershipPlan[]>([]);

@@ -120,6 +120,13 @@ export const PAGE_EDITOR_PAGES: EditablePage[] = [
             placeholder:
               'Get instant access to SMS verification numbers from 180+ countries. Professional, fast, and secure.',
           },
+          {
+            key: 'button_text',
+            label: 'Primary button (unauthenticated only)',
+            type: 'text',
+            placeholder: 'Get Started',
+            help: 'Authenticated visitors see "Go to Dashboard" / "Go to Admin" instead.',
+          },
         ],
       },
       {
@@ -140,6 +147,13 @@ export const PAGE_EDITOR_PAGES: EditablePage[] = [
             rows: 2,
             placeholder:
               'Join thousands of satisfied customers using BestSMSHQ',
+          },
+          {
+            key: 'button_text',
+            label: 'Button (unauthenticated only)',
+            type: 'text',
+            placeholder: 'Start Receiving SMS Now',
+            help: 'Authenticated visitors see "Open Dashboard" / "Open Admin" instead.',
           },
         ],
       },
@@ -189,6 +203,12 @@ export const PAGE_EDITOR_PAGES: EditablePage[] = [
             rows: 3,
             placeholder:
               'Join thousands of users who are already saving with our membership plans. Upgrade today and start getting more value from every activation.',
+          },
+          {
+            key: 'button_text',
+            label: 'Button label',
+            type: 'text',
+            placeholder: 'View Plans in Dashboard',
           },
         ],
       },
@@ -589,6 +609,42 @@ export const PAGE_EDITOR_PAGES: EditablePage[] = [
             label: 'Heading',
             type: 'text',
             placeholder: 'All Systems Operational',
+          },
+        ],
+      },
+    ],
+  },
+  {
+    slug: 'footer',
+    label: 'Footer (site chrome)',
+    sections: [
+      {
+        key: 'brand',
+        title: 'Brand block',
+        description: 'The short tagline shown under the logo on every page.',
+        fields: [
+          {
+            key: 'tagline',
+            label: 'Tagline',
+            type: 'textarea',
+            rows: 2,
+            placeholder:
+              'Premium SMS activation and number rental platform. Fast, reliable, and secure.',
+          },
+        ],
+      },
+      {
+        key: 'copyright',
+        title: 'Copyright line',
+        description:
+          'Right side of the bottom bar. The year and brand name are prepended automatically.',
+        fields: [
+          {
+            key: 'text',
+            label: 'Suffix',
+            type: 'text',
+            placeholder: 'All rights reserved.',
+            help: 'Rendered as: © {year} {brand}. {suffix}',
           },
         ],
       },
