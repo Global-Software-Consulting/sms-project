@@ -446,9 +446,29 @@ export default function AdminSeoPage() {
     }
   };
 
+  /** Normalize a URL/path for duplicate comparison — case-insensitive,
+   *  trimmed, trailing slash collapsed. Root remains "/". */
+  const normalizeUrl = (u: string): string => {
+    const trimmed = (u ?? '').trim().toLowerCase();
+    if (!trimmed) return '';
+    const noTrail = trimmed.replace(/\/+$/, '');
+    return noTrail === '' ? '/' : noTrail;
+  };
+
   const handleAddPage = async () => {
     if (!newPage.url) {
       toast.error('Page URL is required');
+      return;
+    }
+
+    // Block duplicates — force the admin to edit the existing row rather
+    // than creating a second SEO entry for the same URL.
+    const normalized = normalizeUrl(newPage.url);
+    const duplicate = pages.find((p) => normalizeUrl(p.url) === normalized);
+    if (duplicate) {
+      toast.error(
+        `A SEO entry for ${duplicate.url} already exists. Edit it from the list instead.`,
+      );
       return;
     }
 
@@ -1992,11 +2012,17 @@ export default function AdminSeoPage() {
                     <SelectValue placeholder="Select a page…" />
                   </SelectTrigger>
                   <SelectContent>
-                    {KNOWN_LANDING_PAGES.map((p) => (
-                      <SelectItem key={p.url} value={p.url}>
-                        {p.label} ({p.url})
-                      </SelectItem>
-                    ))}
+                    {KNOWN_LANDING_PAGES.map((p) => {
+                      const taken = pages.some(
+                        (row) => normalizeUrl(row.url) === normalizeUrl(p.url),
+                      );
+                      return (
+                        <SelectItem key={p.url} value={p.url} disabled={taken}>
+                          {p.label} ({p.url})
+                          {taken ? ' — already configured' : ''}
+                        </SelectItem>
+                      );
+                    })}
                     <SelectItem value="__custom__">Custom URL…</SelectItem>
                   </SelectContent>
                 </Select>
