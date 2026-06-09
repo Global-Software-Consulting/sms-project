@@ -207,14 +207,7 @@ export default function RootLayout({
                 {children}
                 <Toaster />
                 <GoogleTranslate />
-                {/* AddonsLoader temporarily disabled to isolate whether
-                    its third-party scripts (Tawk.to, Clarity, GA, etc.)
-                    are causing the production navigation bug. If clicks
-                    work first-try with this disabled, one of those
-                    scripts is the culprit and we re-enable them one at a
-                    time to find which. Restore the line below once
-                    diagnosed. */}
-                {/* <AddonsLoader /> */}
+                <AddonsLoader />
                 <SwCleanup />
               </MaintenanceGuard>
             </BrandingProvider>
