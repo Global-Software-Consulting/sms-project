@@ -15,23 +15,36 @@ import {
   breadcrumbSchema,
   productServiceSchema,
 } from '@/lib/seo/structured-data';
+import { fetchPageContent, pick } from '@/lib/page-content';
 
-export const generateMetadata = () => buildLandingMetadata({
-  slug: 'features',
-  title: 'Features',
-  description:
-    'Instant SMS activation across 180+ countries, virtual number rentals, secure API access, and 24/7 support — all the features that make BestSMSHQ the leading SMS verification platform.',
-  path: '/features',
-  keywords: [
-    'SMS verification features',
-    'virtual number rental',
-    'instant SMS activation',
-    'SMS API',
-    'OTP verification',
-  ],
-});
+export const generateMetadata = () =>
+  buildLandingMetadata({
+    slug: 'features',
+    title: 'Features',
+    description:
+      'Instant SMS activation across 180+ countries, virtual number rentals, secure API access, and 24/7 support — all the features that make BestSMSHQ the leading SMS verification platform.',
+    path: '/features',
+    keywords: [
+      'SMS verification features',
+      'virtual number rental',
+      'instant SMS activation',
+      'SMS API',
+      'OTP verification',
+    ],
+  });
 
-export default function Features() {
+export default async function Features() {
+  const raw = await fetchPageContent('features');
+  const heroHeading = pick(
+    raw,
+    'page_features_hero_heading',
+    'Powerful Features',
+  );
+  const heroDescription = pick(
+    raw,
+    'page_features_hero_description',
+    'Everything you need for seamless SMS verification',
+  );
   const features = [
     {
       icon: Zap,
@@ -94,9 +107,11 @@ export default function Features() {
       />
       <div className="mx-auto max-w-6xl">
         <div className="mb-10 space-y-4 text-center sm:mb-16">
-          <h1 className="text-3xl font-bold sm:text-4xl md:text-5xl">Powerful Features</h1>
+          <h1 className="text-3xl font-bold sm:text-4xl md:text-5xl">
+            {heroHeading}
+          </h1>
           <p className="text-muted-foreground mx-auto max-w-2xl text-base sm:text-xl">
-            Everything you need for seamless SMS verification
+            {heroDescription}
           </p>
         </div>
 

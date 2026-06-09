@@ -34,7 +34,21 @@ interface BlogPost {
   status?: string;
 }
 
-export default function BlogClient() {
+export interface BlogContent {
+  heroHeading: string;
+  heroDescription: string;
+}
+
+const FALLBACK_BLOG_CONTENT: BlogContent = {
+  heroHeading: 'Blog',
+  heroDescription: 'Latest news, guides, and updates from BestSMSHQ',
+};
+
+export default function BlogClient({
+  content = FALLBACK_BLOG_CONTENT,
+}: {
+  content?: BlogContent;
+} = {}) {
   const [posts, setPosts] = useState<BlogPost[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -48,7 +62,11 @@ export default function BlogClient() {
       const data = response.data;
       const list = Array.isArray(data) ? data : data.data || data.posts || [];
       // Only show published posts
-      setPosts(list.filter((p: BlogPost) => p.status !== 'DRAFT' && p.status !== 'ARCHIVED'));
+      setPosts(
+        list.filter(
+          (p: BlogPost) => p.status !== 'DRAFT' && p.status !== 'ARCHIVED',
+        ),
+      );
     } catch {
       setPosts([]);
     } finally {
@@ -66,7 +84,12 @@ export default function BlogClient() {
     return (
       post.title.toLowerCase().includes(q) ||
       (post.excerpt || '').toLowerCase().includes(q) ||
-      (typeof post.category === 'object' ? post.category?.name || '' : post.category || '').toLowerCase().includes(q)
+      (typeof post.category === 'object'
+        ? post.category?.name || ''
+        : post.category || ''
+      )
+        .toLowerCase()
+        .includes(q)
     );
   });
 
@@ -95,9 +118,11 @@ export default function BlogClient() {
       <div className="mx-auto max-w-6xl space-y-8">
         {/* Header */}
         <div className="space-y-6 text-center">
-          <h1 className="text-3xl font-bold sm:text-4xl md:text-5xl">Blog</h1>
+          <h1 className="text-3xl font-bold sm:text-4xl md:text-5xl">
+            {content.heroHeading}
+          </h1>
           <p className="text-muted-foreground mx-auto max-w-2xl text-base sm:text-xl">
-            Latest news, guides, and updates from BestSMSHQ
+            {content.heroDescription}
           </p>
 
           {posts.length > 0 && (
@@ -124,7 +149,9 @@ export default function BlogClient() {
             <CardContent className="py-16 text-center">
               <BookOpen className="text-muted-foreground mx-auto mb-4 h-12 w-12 opacity-20" />
               <p className="text-muted-foreground">
-                {searchQuery ? 'No posts match your search' : 'No blog posts yet. Check back soon!'}
+                {searchQuery
+                  ? 'No posts match your search'
+                  : 'No blog posts yet. Check back soon!'}
               </p>
             </CardContent>
           </Card>
@@ -133,10 +160,16 @@ export default function BlogClient() {
             {filteredPosts.map((post) => {
               const categoryName = getCategoryName(post.category);
               const authorName = getAuthorName(post.author);
-              const coverImg = post.coverImage || post.thumbnailUrl || post.imageUrl;
+              const coverImg =
+                post.coverImage || post.thumbnailUrl || post.imageUrl;
 
               return (
-                <Link prefetch={false} key={post.id} href={`/blog/${post.slug}`} className="group block">
+                <Link
+                  prefetch={false}
+                  key={post.id}
+                  href={`/blog/${post.slug}`}
+                  className="group block"
+                >
                   <Card className="h-full overflow-hidden transition-all duration-180 hover:-translate-y-1 hover:[box-shadow:var(--glass-shadow-3),var(--glow-accent)]">
                     {coverImg && (
                       <div className="aspect-video w-full overflow-hidden">
@@ -148,14 +181,16 @@ export default function BlogClient() {
                       </div>
                     )}
                     <CardHeader>
-                      <div className="flex flex-wrap items-center gap-2 mb-2">
+                      <div className="mb-2 flex flex-wrap items-center gap-2">
                         {categoryName && (
                           <Badge variant="secondary" className="text-xs">
                             {categoryName}
                           </Badge>
                         )}
                         {post.readTime && (
-                          <span className="text-muted-foreground text-xs">{post.readTime} min read</span>
+                          <span className="text-muted-foreground text-xs">
+                            {post.readTime} min read
+                          </span>
                         )}
                       </div>
                       <CardTitle className="group-hover:text-primary line-clamp-2 text-lg transition-colors">
@@ -177,7 +212,9 @@ export default function BlogClient() {
                         )}
                         <div className="flex items-center gap-1">
                           <Calendar className="h-3 w-3" />
-                          <span>{formatDate(post.publishedAt || post.createdAt)}</span>
+                          <span>
+                            {formatDate(post.publishedAt || post.createdAt)}
+                          </span>
                         </div>
                       </div>
                     </CardContent>

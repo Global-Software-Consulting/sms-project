@@ -26,7 +26,26 @@ import {
 } from '@/lib/api/membershipApi';
 import { getProviders, SmsProvider, getProviderBadge } from '@/lib/api/smsApi';
 
-export default function PricingClient() {
+export interface PricingContent {
+  heroHeading: string;
+  heroDescription: string;
+  ctaHeading: string;
+  ctaBody: string;
+}
+
+const FALLBACK_PRICING_CONTENT: PricingContent = {
+  heroHeading: 'Simple, Flexible Pricing',
+  heroDescription:
+    'Choose the provider tier that matches your needs. No hidden fees, no surprises.',
+  ctaHeading: 'Ready to Get Started?',
+  ctaBody: 'Create your account and start using our service today',
+};
+
+export default function PricingClient({
+  content = FALLBACK_PRICING_CONTENT,
+}: {
+  content?: PricingContent;
+} = {}) {
   // Data state
   const [plans, setPlans] = useState<MembershipPlan[]>([]);
   const [providers, setProviders] = useState<SmsProvider[]>([]);
@@ -49,7 +68,7 @@ export default function PricingClient() {
       if (providersRes.status === 'fulfilled') {
         // getProviders returns { providers: [...] }
         const providersList = providersRes.value?.providers || [];
-        setProviders(providersList.filter(p => p.isActive !== false));
+        setProviders(providersList.filter((p) => p.isActive !== false));
       }
     } catch (err) {
       console.error('Failed to fetch pricing data:', err);
@@ -117,34 +136,37 @@ export default function PricingClient() {
   // Map providers to display format. The "From $X.XX" price is fetched live
   // from the backend (cheapest active product × global markup), per client
   // requirement that pricing reflects provider data automatically.
-  const providerTiers = providers.length > 0
-    ? providers.map((provider, index) => {
-        const badge = getProviderBadge(provider.slug);
-        const isPopular = index === 1;
-        const isElite = index === providers.length - 1 && providers.length > 2;
-        const priceRange =
-          provider.fromPrice != null && provider.fromPrice > 0
-            ? `From $${provider.fromPrice.toFixed(2)}`
-            : 'Pricing unavailable';
+  const providerTiers =
+    providers.length > 0
+      ? providers.map((provider, index) => {
+          const badge = getProviderBadge(provider.slug);
+          const isPopular = index === 1;
+          const isElite =
+            index === providers.length - 1 && providers.length > 2;
+          const priceRange =
+            provider.fromPrice != null && provider.fromPrice > 0
+              ? `From $${provider.fromPrice.toFixed(2)}`
+              : 'Pricing unavailable';
 
-        return {
-          id: provider.id,
-          name: provider.displayName,
-          badge: `${badge.icon} ${badge.label}`,
-          tagline: (provider as any).description || 'SMS verification service',
-          priceRange,
-          features: (provider as any).features || [
-            'SMS verification',
-            'Multiple countries',
-            'Fast delivery',
-            'Reliable service',
-          ],
-          color: isElite ? 'warning' : isPopular ? 'primary' : 'blue',
-          popular: isPopular,
-          elite: isElite,
-        };
-      })
-    : defaultProviderTiers;
+          return {
+            id: provider.id,
+            name: provider.displayName,
+            badge: `${badge.icon} ${badge.label}`,
+            tagline:
+              (provider as any).description || 'SMS verification service',
+            priceRange,
+            features: (provider as any).features || [
+              'SMS verification',
+              'Multiple countries',
+              'Fast delivery',
+              'Reliable service',
+            ],
+            color: isElite ? 'warning' : isPopular ? 'primary' : 'blue',
+            popular: isPopular,
+            elite: isElite,
+          };
+        })
+      : defaultProviderTiers;
 
   // Sample pricing (static for now, could be fetched from API)
   const samplePricing = [
@@ -193,54 +215,58 @@ export default function PricingClient() {
   ];
 
   // Map plans to membership benefits
-  const membershipBenefits = plans.length > 0
-    ? plans.map(plan => ({
-        tier: plan.name,
-        price: plan.price === '0' || plan.price === '0.00'
-          ? 'Free'
-          : `${formatPrice(plan.price, plan.currency)}/mo`,
-        discount: `${plan.discountPercent ?? plan.discount ?? 0}%`,
-        description: plan.description || `Save ${plan.discountPercent ?? plan.discount ?? 0}% on every activation`,
-        isVIP: plan.slug === 'vip',
-        color: getPlanColor(plan.slug).text,
-      }))
-    : [
-        {
-          tier: 'Basic',
-          price: 'Free',
-          discount: '0%',
-          description: 'Standard pricing on all services',
-          isVIP: false,
-          color: '#6b7280',
-        },
-        {
-          tier: 'Standard',
-          price: '$29/mo',
-          discount: '10%',
-          description: 'Save 10% on every activation',
-          isVIP: false,
-          color: '#3b82f6',
-        },
-        {
-          tier: 'Pro',
-          price: '$79/mo',
-          discount: '25%',
-          description: 'Maximum savings with priority features',
-          isVIP: false,
-          color: '#8b5cf6',
-        },
-        {
-          tier: 'VIP',
-          price: '$199/mo',
-          discount: '40%',
-          description: 'Ultimate discount + exclusive benefits',
-          isVIP: true,
-          color: '#f59e0b',
-        },
-      ];
+  const membershipBenefits =
+    plans.length > 0
+      ? plans.map((plan) => ({
+          tier: plan.name,
+          price:
+            plan.price === '0' || plan.price === '0.00'
+              ? 'Free'
+              : `${formatPrice(plan.price, plan.currency)}/mo`,
+          discount: `${plan.discountPercent ?? plan.discount ?? 0}%`,
+          description:
+            plan.description ||
+            `Save ${plan.discountPercent ?? plan.discount ?? 0}% on every activation`,
+          isVIP: plan.slug === 'vip',
+          color: getPlanColor(plan.slug).text,
+        }))
+      : [
+          {
+            tier: 'Basic',
+            price: 'Free',
+            discount: '0%',
+            description: 'Standard pricing on all services',
+            isVIP: false,
+            color: '#6b7280',
+          },
+          {
+            tier: 'Standard',
+            price: '$29/mo',
+            discount: '10%',
+            description: 'Save 10% on every activation',
+            isVIP: false,
+            color: '#3b82f6',
+          },
+          {
+            tier: 'Pro',
+            price: '$79/mo',
+            discount: '25%',
+            description: 'Maximum savings with priority features',
+            isVIP: false,
+            color: '#8b5cf6',
+          },
+          {
+            tier: 'VIP',
+            price: '$199/mo',
+            discount: '40%',
+            description: 'Ultimate discount + exclusive benefits',
+            isVIP: true,
+            color: '#f59e0b',
+          },
+        ];
 
   // Get VIP plan for calculation example
-  const vipPlan = plans.find(p => p.slug === 'vip');
+  const vipPlan = plans.find((p) => p.slug === 'vip');
   const vipDiscount = vipPlan?.discountPercent ?? vipPlan?.discount ?? 40;
   const vipPrice = vipPlan ? parseFloat(vipPlan.price) : 199;
 
@@ -255,12 +281,11 @@ export default function PricingClient() {
           </Badge>
 
           <h1 className="text-3xl font-bold tracking-tight sm:text-4xl md:text-5xl">
-            Simple, Flexible Pricing
+            {content.heroHeading}
           </h1>
 
           <p className="text-muted-foreground mx-auto max-w-2xl text-base sm:text-xl">
-            Choose the provider tier that matches your needs. No hidden fees, no
-            surprises.
+            {content.heroDescription}
           </p>
         </div>
       </section>
@@ -269,7 +294,9 @@ export default function PricingClient() {
       <section className="border-border container mx-auto border-t px-4 py-8 sm:py-12">
         <div className="mx-auto max-w-6xl">
           <div className="mb-8 space-y-4 text-center sm:mb-12">
-            <h2 className="text-2xl font-bold sm:text-3xl md:text-4xl">Provider Tiers</h2>
+            <h2 className="text-2xl font-bold sm:text-3xl md:text-4xl">
+              Provider Tiers
+            </h2>
             <p className="text-muted-foreground text-base sm:text-lg">
               Three tiers to match your speed and reliability needs
             </p>
@@ -334,7 +361,9 @@ export default function PricingClient() {
                     <Button
                       asChild
                       className="w-full"
-                      variant={tier.popular || tier.elite ? 'default' : 'outline'}
+                      variant={
+                        tier.popular || tier.elite ? 'default' : 'outline'
+                      }
                     >
                       <Link prefetch={false} href="/auth/signup">
                         Get Started <ArrowRight className="ml-2 h-4 w-4" />
@@ -352,7 +381,9 @@ export default function PricingClient() {
       <section className="border-border container mx-auto border-t px-4 py-12 sm:py-16 md:py-20">
         <div className="mx-auto max-w-5xl">
           <div className="mb-8 space-y-4 text-center sm:mb-12">
-            <h2 className="text-2xl font-bold sm:text-3xl md:text-4xl">Sample Pricing</h2>
+            <h2 className="text-2xl font-bold sm:text-3xl md:text-4xl">
+              Sample Pricing
+            </h2>
             <p className="text-muted-foreground text-base sm:text-lg">
               Popular services across different provider tiers
             </p>
@@ -418,7 +449,8 @@ export default function PricingClient() {
             <CardContent className="pt-6 text-center">
               <p className="text-muted-foreground text-sm">
                 Prices vary by country and service. View full pricing in the{' '}
-                <Link prefetch={false}
+                <Link
+                  prefetch={false}
                   href="/dashboard/activation"
                   className="text-primary hover:underline"
                 >
@@ -455,7 +487,9 @@ export default function PricingClient() {
                 >
                   <CardHeader>
                     <div className="mb-2 flex items-center justify-between">
-                      <CardTitle className="text-xl">{membership.tier}</CardTitle>
+                      <CardTitle className="text-xl">
+                        {membership.tier}
+                      </CardTitle>
                       {membership.isVIP && (
                         <Crown className="text-primary h-5 w-5" />
                       )}
@@ -600,8 +634,8 @@ export default function PricingClient() {
               <CardContent>
                 <p className="text-muted-foreground text-sm">
                   Yes! Your membership discount applies to all provider tiers.
-                  For example, VIP members get {vipDiscount}% off on V1, V2, and V3
-                  pricing.
+                  For example, VIP members get {vipDiscount}% off on V1, V2, and
+                  V3 pricing.
                 </p>
               </CardContent>
             </Card>
@@ -626,9 +660,11 @@ export default function PricingClient() {
       {/* CTA */}
       <section className="border-border container mx-auto border-t px-4 py-12 sm:py-16 md:py-20">
         <div className="mx-auto max-w-3xl space-y-6 text-center">
-          <h2 className="text-2xl font-bold sm:text-3xl">Ready to Get Started?</h2>
+          <h2 className="text-2xl font-bold sm:text-3xl">
+            {content.ctaHeading}
+          </h2>
           <p className="text-muted-foreground text-base sm:text-lg">
-            Create your account and start using our service today
+            {content.ctaBody}
           </p>
           <div className="flex flex-col items-center justify-center gap-4 sm:flex-row">
             <Button asChild size="lg">
@@ -637,7 +673,9 @@ export default function PricingClient() {
               </Link>
             </Button>
             <Button asChild size="lg" variant="outline">
-              <Link prefetch={false} href="/help">Contact Support</Link>
+              <Link prefetch={false} href="/help">
+                Contact Support
+              </Link>
             </Button>
           </div>
         </div>
