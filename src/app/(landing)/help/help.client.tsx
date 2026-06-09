@@ -14,7 +14,22 @@ import {
 import Link from 'next/link';
 import { useMemo, useState } from 'react';
 
-export default function HelpClient() {
+export interface HelpContent {
+  heroHeading: string;
+  heroDescription: string;
+}
+
+const FALLBACK_HELP_CONTENT: HelpContent = {
+  heroHeading: 'Help & Support',
+  heroDescription:
+    "We're here to help. Search our help center for answers and guides.",
+};
+
+export default function HelpClient({
+  content = FALLBACK_HELP_CONTENT,
+}: {
+  content?: HelpContent;
+} = {}) {
   const [searchQuery, setSearchQuery] = useState('');
 
   const quickHelpTopics = [
@@ -86,10 +101,10 @@ export default function HelpClient() {
         {/* Hero Section */}
         <div className="space-y-6 text-center">
           <h1 className="text-3xl font-bold sm:text-4xl md:text-5xl">
-            Help & Support
+            {content.heroHeading}
           </h1>
           <p className="text-muted-foreground mx-auto max-w-2xl text-base sm:text-xl">
-            We're here to help. Search our help center for answers and guides.
+            {content.heroDescription}
           </p>
 
           <div className="relative mx-auto max-w-2xl">
@@ -112,7 +127,8 @@ export default function HelpClient() {
               {filteredTopics.map((topic) => {
                 const Icon = topic.icon;
                 return (
-                  <Link prefetch={false}
+                  <Link
+                    prefetch={false}
                     key={topic.id}
                     href={topic.href}
                     className="group block"
@@ -147,7 +163,8 @@ export default function HelpClient() {
                   No quick topics match &ldquo;{searchQuery}&rdquo;.
                 </p>
                 <Button asChild variant="outline" size="sm">
-                  <Link prefetch={false}
+                  <Link
+                    prefetch={false}
                     href={`/knowledge-base?q=${encodeURIComponent(searchQuery)}`}
                   >
                     Search Knowledge Base

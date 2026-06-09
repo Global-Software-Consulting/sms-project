@@ -256,6 +256,345 @@ export const PAGE_EDITOR_PAGES: EditablePage[] = [
     ],
   },
   {
+    slug: 'features',
+    label: 'Features',
+    path: '/features',
+    sections: [
+      {
+        key: 'hero',
+        title: 'Hero',
+        fields: [
+          {
+            key: 'heading',
+            label: 'Heading',
+            type: 'text',
+            placeholder: 'Powerful Features',
+          },
+          {
+            key: 'description',
+            label: 'Description',
+            type: 'textarea',
+            rows: 2,
+            placeholder: 'Everything you need for seamless SMS verification',
+          },
+        ],
+      },
+    ],
+  },
+  {
+    slug: 'pricing',
+    label: 'Pricing',
+    path: '/pricing',
+    sections: [
+      {
+        key: 'hero',
+        title: 'Hero',
+        fields: [
+          {
+            key: 'heading',
+            label: 'Heading',
+            type: 'text',
+            placeholder: 'Simple, Flexible Pricing',
+          },
+          {
+            key: 'description',
+            label: 'Description',
+            type: 'textarea',
+            rows: 2,
+            placeholder:
+              'Choose the provider tier that matches your needs. No hidden fees, no surprises.',
+          },
+        ],
+      },
+      {
+        key: 'cta',
+        title: 'Bottom CTA',
+        fields: [
+          {
+            key: 'heading',
+            label: 'Heading',
+            type: 'text',
+            placeholder: 'Ready to Get Started?',
+          },
+          {
+            key: 'body',
+            label: 'Body',
+            type: 'textarea',
+            rows: 2,
+            placeholder:
+              'Create your account and start using our service today',
+          },
+        ],
+      },
+    ],
+  },
+  {
+    slug: 'api',
+    label: 'API',
+    path: '/api',
+    sections: [
+      {
+        key: 'hero',
+        title: 'Hero',
+        fields: [
+          {
+            key: 'heading',
+            label: 'Heading',
+            type: 'text',
+            placeholder: 'Developer API',
+          },
+          {
+            key: 'description',
+            label: 'Description',
+            type: 'textarea',
+            rows: 2,
+            placeholder:
+              'Integrate SMS verification into your applications with our simple, powerful API',
+          },
+        ],
+      },
+      {
+        key: 'cta',
+        title: 'Bottom CTA',
+        fields: [
+          {
+            key: 'heading',
+            label: 'Heading',
+            type: 'text',
+            placeholder: 'Ready to Integrate?',
+          },
+          {
+            key: 'body',
+            label: 'Body',
+            type: 'textarea',
+            rows: 2,
+            placeholder: 'Get your API key and start building today',
+          },
+        ],
+      },
+    ],
+  },
+  {
+    slug: 'about',
+    label: 'About',
+    path: '/about',
+    sections: [
+      {
+        key: 'hero',
+        title: 'Hero',
+        fields: [
+          {
+            key: 'heading',
+            label: 'Heading',
+            type: 'text',
+            placeholder: 'About BestSMSHQ',
+          },
+        ],
+      },
+      {
+        key: 'body',
+        title: 'About Body',
+        description:
+          'Three short paragraphs shown under the hero. Leave blank to hide.',
+        fields: [
+          {
+            key: 'intro',
+            label: 'Intro paragraph',
+            type: 'textarea',
+            rows: 3,
+            placeholder:
+              'BestSMSHQ is a premium SMS activation and number rental platform serving customers worldwide.',
+          },
+          {
+            key: 'founding',
+            label: 'Founding paragraph',
+            type: 'textarea',
+            rows: 3,
+          },
+          {
+            key: 'mission',
+            label: 'Mission paragraph',
+            type: 'textarea',
+            rows: 3,
+          },
+        ],
+      },
+    ],
+  },
+  {
+    slug: 'help',
+    label: 'Help',
+    path: '/help',
+    sections: [
+      {
+        key: 'hero',
+        title: 'Hero',
+        fields: [
+          {
+            key: 'heading',
+            label: 'Heading',
+            type: 'text',
+            placeholder: 'Help & Support',
+          },
+          {
+            key: 'description',
+            label: 'Description',
+            type: 'textarea',
+            rows: 2,
+            placeholder:
+              "We're here to help. Search our help center for answers and guides.",
+          },
+        ],
+      },
+    ],
+  },
+  {
+    slug: 'blog',
+    label: 'Blog',
+    path: '/blog',
+    sections: [
+      {
+        key: 'hero',
+        title: 'Hero',
+        fields: [
+          {
+            key: 'heading',
+            label: 'Heading',
+            type: 'text',
+            placeholder: 'Blog',
+          },
+          {
+            key: 'description',
+            label: 'Description',
+            type: 'textarea',
+            rows: 2,
+            placeholder: 'Latest news, guides, and updates from BestSMSHQ',
+          },
+        ],
+      },
+    ],
+  },
+  {
+    slug: 'knowledge-base',
+    label: 'Knowledge Base',
+    path: '/knowledge-base',
+    sections: [
+      {
+        key: 'hero',
+        title: 'Hero',
+        fields: [
+          {
+            key: 'heading',
+            label: 'Heading',
+            type: 'text',
+            placeholder: 'Knowledge Base',
+          },
+          {
+            key: 'description',
+            label: 'Description',
+            type: 'textarea',
+            rows: 2,
+            placeholder:
+              'Everything you need to understand how the platform works, from activation flow to advanced usage.',
+          },
+        ],
+      },
+      {
+        key: 'cta',
+        title: 'Bottom CTA',
+        fields: [
+          {
+            key: 'heading',
+            label: 'Heading',
+            type: 'text',
+            placeholder: "Can't find what you're looking for?",
+          },
+          {
+            key: 'body',
+            label: 'Body',
+            type: 'textarea',
+            rows: 2,
+            placeholder:
+              'Our support team is here to help you with any questions.',
+          },
+        ],
+      },
+    ],
+  },
+  {
+    slug: 'referral',
+    label: 'Referral',
+    path: '/referral',
+    sections: [
+      {
+        key: 'hero',
+        title: 'Hero',
+        fields: [
+          {
+            key: 'heading_part_1',
+            label: 'Heading (line 1)',
+            type: 'text',
+            placeholder: 'Earn Money by',
+          },
+          {
+            key: 'heading_part_2',
+            label: 'Heading (line 2, accent)',
+            type: 'text',
+            placeholder: 'Sharing Our Platform',
+            help: 'Rendered with the gradient accent color',
+          },
+          {
+            key: 'description',
+            label: 'Description',
+            type: 'textarea',
+            rows: 3,
+            placeholder:
+              'Get up to 20% lifetime commission on every purchase made by users you refer. Start earning today with our simple and lucrative referral program.',
+          },
+        ],
+      },
+      {
+        key: 'cta',
+        title: 'Bottom CTA',
+        fields: [
+          {
+            key: 'heading',
+            label: 'Heading',
+            type: 'text',
+            placeholder: 'Ready to Start Earning?',
+          },
+          {
+            key: 'body',
+            label: 'Body',
+            type: 'textarea',
+            rows: 3,
+            placeholder:
+              'Join thousands of users earning passive income through our referral program. Sign up today and get your unique referral link instantly.',
+          },
+        ],
+      },
+    ],
+  },
+  {
+    slug: 'status',
+    label: 'Status',
+    path: '/status',
+    sections: [
+      {
+        key: 'hero',
+        title: 'Hero',
+        fields: [
+          {
+            key: 'heading',
+            label: 'Heading',
+            type: 'text',
+            placeholder: 'All Systems Operational',
+          },
+        ],
+      },
+    ],
+  },
+  {
     slug: 'privacy',
     label: 'Privacy Policy',
     path: '/privacy',

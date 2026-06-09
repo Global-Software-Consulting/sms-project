@@ -2,16 +2,24 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { CheckCircle2, Clock } from 'lucide-react';
 import { buildLandingMetadata } from '@/lib/seo/landing-metadata';
+import { fetchPageContent, pick } from '@/lib/page-content';
 
-export const generateMetadata = () => buildLandingMetadata({
-  slug: 'status',
-  title: 'System Status',
-  description:
-    'Real-time status of BestSMSHQ services — API, SMS gateway, payment processing and dashboard. Live uptime and incident history.',
-  path: '/status',
-});
+export const generateMetadata = () =>
+  buildLandingMetadata({
+    slug: 'status',
+    title: 'System Status',
+    description:
+      'Real-time status of BestSMSHQ services — API, SMS gateway, payment processing and dashboard. Live uptime and incident history.',
+    path: '/status',
+  });
 
-export default function Status() {
+export default async function Status() {
+  const raw = await fetchPageContent('status');
+  const heroHeading = pick(
+    raw,
+    'page_status_hero_heading',
+    'All Systems Operational',
+  );
   const services = [
     { name: 'API Services', status: 'operational', uptime: '99.99%' },
     { name: 'SMS Delivery', status: 'operational', uptime: '99.95%' },
@@ -26,7 +34,7 @@ export default function Status() {
           <div className="flex flex-wrap items-center justify-center gap-3">
             <CheckCircle2 className="text-success h-10 w-10 sm:h-12 sm:w-12" />
             <h1 className="text-2xl font-bold sm:text-4xl md:text-5xl">
-              All Systems Operational
+              {heroHeading}
             </h1>
           </div>
           <p className="text-muted-foreground text-xl">

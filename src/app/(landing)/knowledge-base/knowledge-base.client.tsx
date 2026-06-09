@@ -40,11 +40,32 @@ interface CategoryGroup {
   faqs: FaqItem[];
 }
 
-export default function KnowledgeBaseClient() {
+export interface KnowledgeBaseContent {
+  heroHeading: string;
+  heroDescription: string;
+  ctaHeading: string;
+  ctaBody: string;
+}
+
+const FALLBACK_KB_CONTENT: KnowledgeBaseContent = {
+  heroHeading: 'Knowledge Base',
+  heroDescription:
+    'Everything you need to understand how the platform works, from activation flow to advanced usage.',
+  ctaHeading: "Can't find what you're looking for?",
+  ctaBody: 'Our support team is here to help you with any questions.',
+};
+
+export default function KnowledgeBaseClient({
+  content = FALLBACK_KB_CONTENT,
+}: {
+  content?: KnowledgeBaseContent;
+} = {}) {
   const [searchQuery, setSearchQuery] = useState('');
   const [categories, setCategories] = useState<CategoryGroup[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
+  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(
+    new Set(),
+  );
   const [expandedFaqs, setExpandedFaqs] = useState<Set<string>>(new Set());
 
   const fetchData = useCallback(async () => {
@@ -61,14 +82,18 @@ export default function KnowledgeBaseClient() {
       let catList: any[] = [];
       if (catRes.status === 'fulfilled') {
         const catData = catRes.value.data;
-        catList = Array.isArray(catData) ? catData : catData.data || catData.categories || [];
+        catList = Array.isArray(catData)
+          ? catData
+          : catData.data || catData.categories || [];
       }
 
       // Parse FAQs
       let faqList: FaqItem[] = [];
       if (faqRes.status === 'fulfilled') {
         const faqData = faqRes.value.data;
-        faqList = Array.isArray(faqData) ? faqData : faqData.data || faqData.faqs || [];
+        faqList = Array.isArray(faqData)
+          ? faqData
+          : faqData.data || faqData.faqs || [];
       }
 
       // Group FAQs by category
@@ -102,7 +127,9 @@ export default function KnowledgeBaseClient() {
       });
 
       // Filter out empty categories and sort
-      const result = Array.from(grouped.values()).filter(c => c.faqs.length > 0);
+      const result = Array.from(grouped.values()).filter(
+        (c) => c.faqs.length > 0,
+      );
       setCategories(result);
 
       // Auto-expand first category
@@ -157,10 +184,11 @@ export default function KnowledgeBaseClient() {
       <div className="mx-auto max-w-4xl space-y-8">
         {/* Header */}
         <div className="space-y-6 text-center">
-          <h1 className="text-3xl font-bold sm:text-4xl md:text-5xl">Knowledge Base</h1>
+          <h1 className="text-3xl font-bold sm:text-4xl md:text-5xl">
+            {content.heroHeading}
+          </h1>
           <p className="text-muted-foreground mx-auto max-w-2xl text-base sm:text-xl">
-            Everything you need to understand how the platform works, from
-            activation flow to advanced usage.
+            {content.heroDescription}
           </p>
 
           <div className="relative mx-auto max-w-2xl">
@@ -185,35 +213,43 @@ export default function KnowledgeBaseClient() {
             <CardContent className="py-16 text-center">
               <HelpCircle className="text-muted-foreground mx-auto mb-4 h-12 w-12 opacity-20" />
               <p className="text-muted-foreground">
-                {searchQuery ? 'No articles match your search' : 'No articles available yet'}
+                {searchQuery
+                  ? 'No articles match your search'
+                  : 'No articles available yet'}
               </p>
             </CardContent>
           </Card>
         ) : (
           <div className="space-y-4">
             {filteredCategories.map((category) => {
-              const isExpanded = expandedCategories.has(category.id) || !!searchQuery;
+              const isExpanded =
+                expandedCategories.has(category.id) || !!searchQuery;
               return (
                 <Card key={category.id} className="overflow-hidden">
                   {/* Category header - clickable to expand/collapse */}
                   <button
                     onClick={() => toggleCategory(category.id)}
-                    className="flex w-full items-center justify-between p-6 text-left transition-colors hover:bg-muted/30"
+                    className="hover:bg-muted/30 flex w-full items-center justify-between p-6 text-left transition-colors"
                   >
                     <div className="flex items-center gap-3">
                       <div className="bg-primary/10 flex h-10 w-10 items-center justify-center rounded-lg">
                         <HelpCircle className="text-primary h-5 w-5" />
                       </div>
                       <div>
-                        <h2 className="text-lg font-semibold">{category.name}</h2>
+                        <h2 className="text-lg font-semibold">
+                          {category.name}
+                        </h2>
                         {category.description && (
-                          <p className="text-muted-foreground text-sm">{category.description}</p>
+                          <p className="text-muted-foreground text-sm">
+                            {category.description}
+                          </p>
                         )}
                       </div>
                     </div>
                     <div className="flex items-center gap-3">
                       <span className="text-muted-foreground text-sm">
-                        {category.faqs.length} {category.faqs.length === 1 ? 'article' : 'articles'}
+                        {category.faqs.length}{' '}
+                        {category.faqs.length === 1 ? 'article' : 'articles'}
                       </span>
                       {isExpanded ? (
                         <ChevronDown className="text-muted-foreground h-5 w-5" />
@@ -225,16 +261,21 @@ export default function KnowledgeBaseClient() {
 
                   {/* FAQ items */}
                   {isExpanded && (
-                    <div className="border-t border-border">
+                    <div className="border-border border-t">
                       {category.faqs.map((faq) => {
                         const isFaqExpanded = expandedFaqs.has(faq.id);
                         return (
-                          <div key={faq.id} className="border-b border-border last:border-0">
+                          <div
+                            key={faq.id}
+                            className="border-border border-b last:border-0"
+                          >
                             <button
                               onClick={() => toggleFaq(faq.id)}
-                              className="flex w-full items-center justify-between px-6 py-4 text-left transition-colors hover:bg-muted/20"
+                              className="hover:bg-muted/20 flex w-full items-center justify-between px-6 py-4 text-left transition-colors"
                             >
-                              <span className="pr-4 text-sm font-medium">{faq.question}</span>
+                              <span className="pr-4 text-sm font-medium">
+                                {faq.question}
+                              </span>
                               {isFaqExpanded ? (
                                 <ChevronDown className="text-muted-foreground h-4 w-4 shrink-0" />
                               ) : (
@@ -262,13 +303,10 @@ export default function KnowledgeBaseClient() {
         {/* Bottom CTA */}
         <Card className="mt-12 text-center">
           <CardContent className="py-12">
-            <h3 className="mb-2 text-2xl font-bold">
-              Can't find what you're looking for?
-            </h3>
-            <p className="text-muted-foreground mb-6">
-              Our support team is here to help you with any questions.
-            </p>
-            <Link prefetch={false}
+            <h3 className="mb-2 text-2xl font-bold">{content.ctaHeading}</h3>
+            <p className="text-muted-foreground mb-6">{content.ctaBody}</p>
+            <Link
+              prefetch={false}
               href="/help"
               className="bg-primary text-primary-foreground inline-flex items-center justify-center rounded-lg px-6 py-3 font-medium transition-all duration-180 hover:[box-shadow:var(--glow-accent-active)]"
             >

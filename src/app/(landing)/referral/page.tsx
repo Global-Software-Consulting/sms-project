@@ -9,20 +9,22 @@ import {
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { buildLandingMetadata } from '@/lib/seo/landing-metadata';
+import { fetchPageContent, pick } from '@/lib/page-content';
 
-export const generateMetadata = () => buildLandingMetadata({
-  slug: 'referral',
-  title: 'Referral Program',
-  description:
-    'Earn commission by referring users to BestSMSHQ. Get a unique referral link, track signups and unlock recurring rewards as your network grows.',
-  path: '/referral',
-  keywords: [
-    'BestSMSHQ referral',
-    'SMS referral program',
-    'earn money SMS',
-    'affiliate program',
-  ],
-});
+export const generateMetadata = () =>
+  buildLandingMetadata({
+    slug: 'referral',
+    title: 'Referral Program',
+    description:
+      'Earn commission by referring users to BestSMSHQ. Get a unique referral link, track signups and unlock recurring rewards as your network grows.',
+    path: '/referral',
+    keywords: [
+      'BestSMSHQ referral',
+      'SMS referral program',
+      'earn money SMS',
+      'affiliate program',
+    ],
+  });
 import {
   Users,
   DollarSign,
@@ -43,7 +45,33 @@ import {
   Star,
 } from 'lucide-react';
 
-export default function Referral() {
+export default async function Referral() {
+  const raw = await fetchPageContent('referral');
+  const heroHeadingPart1 = pick(
+    raw,
+    'page_referral_hero_heading_part_1',
+    'Earn Money by',
+  );
+  const heroHeadingPart2 = pick(
+    raw,
+    'page_referral_hero_heading_part_2',
+    'Sharing Our Platform',
+  );
+  const heroDescription = pick(
+    raw,
+    'page_referral_hero_description',
+    'Get up to 20% lifetime commission on every purchase made by users you refer. Start earning today with our simple and lucrative referral program.',
+  );
+  const ctaHeading = pick(
+    raw,
+    'page_referral_cta_heading',
+    'Ready to Start Earning?',
+  );
+  const ctaBody = pick(
+    raw,
+    'page_referral_cta_body',
+    'Join thousands of users earning passive income through our referral program. Sign up today and get your unique referral link instantly.',
+  );
   const stats = [
     { label: 'Active Referrers', value: '2,500+' },
     { label: 'Total Paid Out', value: '$125K+' },
@@ -243,16 +271,14 @@ export default function Referral() {
           </Badge>
 
           <h1 className="text-3xl font-bold tracking-tight sm:text-4xl md:text-6xl">
-            Earn Money by
+            {heroHeadingPart1}
             <span className="from-primary to-accent mt-2 block bg-gradient-to-r bg-clip-text text-transparent">
-              Sharing Our Platform
+              {heroHeadingPart2}
             </span>
           </h1>
 
           <p className="text-muted-foreground mx-auto max-w-2xl text-base sm:text-xl">
-            Get up to 20% lifetime commission on every purchase made by users
-            you refer. Start earning today with our simple and lucrative
-            referral program.
+            {heroDescription}
           </p>
 
           <div className="flex flex-col items-center justify-center gap-4 sm:flex-row">
@@ -262,7 +288,9 @@ export default function Referral() {
               </Link>
             </Button>
             <Button asChild size="lg" variant="outline" className="text-base">
-              <Link prefetch={false} href="/dashboard/referrals">View Dashboard</Link>
+              <Link prefetch={false} href="/dashboard/referrals">
+                View Dashboard
+              </Link>
             </Button>
           </div>
 
@@ -282,7 +310,9 @@ export default function Referral() {
       <section className="border-border container mx-auto border-t px-4 py-12 sm:py-16 md:py-20">
         <div className="mx-auto max-w-6xl">
           <div className="mb-12 space-y-4 text-center">
-            <h2 className="text-2xl font-bold sm:text-3xl md:text-4xl">Commission Tiers</h2>
+            <h2 className="text-2xl font-bold sm:text-3xl md:text-4xl">
+              Commission Tiers
+            </h2>
             <p className="text-muted-foreground text-lg">
               Unlock higher commission rates as you grow your referrals
             </p>
@@ -365,7 +395,9 @@ export default function Referral() {
       <section className="border-border container mx-auto border-t px-4 py-12 sm:py-16 md:py-20">
         <div className="mx-auto max-w-6xl">
           <div className="mb-12 space-y-4 text-center">
-            <h2 className="text-2xl font-bold sm:text-3xl md:text-4xl">How It Works</h2>
+            <h2 className="text-2xl font-bold sm:text-3xl md:text-4xl">
+              How It Works
+            </h2>
             <p className="text-muted-foreground text-lg">
               Start earning in 4 simple steps
             </p>
@@ -600,12 +632,10 @@ export default function Referral() {
             <CardContent className="space-y-6 py-12 text-center">
               <div className="space-y-2">
                 <h2 className="text-2xl font-bold sm:text-3xl md:text-4xl">
-                  Ready to Start Earning?
+                  {ctaHeading}
                 </h2>
                 <p className="text-muted-foreground mx-auto max-w-2xl text-lg">
-                  Join thousands of users earning passive income through our
-                  referral program. Sign up today and get your unique referral
-                  link instantly.
+                  {ctaBody}
                 </p>
               </div>
 
@@ -621,7 +651,9 @@ export default function Referral() {
                   variant="outline"
                   className="text-base"
                 >
-                  <Link prefetch={false} href="/auth/login">Already Have Account?</Link>
+                  <Link prefetch={false} href="/auth/login">
+                    Already Have Account?
+                  </Link>
                 </Button>
               </div>
 

@@ -26,7 +26,26 @@ import { toast } from 'sonner';
 import { getProviders, type SmsProvider } from '@/lib/api/smsApi';
 import { getRateLimits, type RateLimits } from '@/lib/api/rateLimitsApi';
 
-export default function ApiClient() {
+export interface ApiContent {
+  heroHeading: string;
+  heroDescription: string;
+  ctaHeading: string;
+  ctaBody: string;
+}
+
+const FALLBACK_API_CONTENT: ApiContent = {
+  heroHeading: 'Developer API',
+  heroDescription:
+    'Integrate SMS verification into your applications with our simple, powerful API',
+  ctaHeading: 'Ready to Integrate?',
+  ctaBody: 'Get your API key and start building today',
+};
+
+export default function ApiClient({
+  content = FALLBACK_API_CONTENT,
+}: {
+  content?: ApiContent;
+} = {}) {
   const [activeEndpoint, setActiveEndpoint] = useState('create');
   const [providers, setProviders] = useState<SmsProvider[]>([]);
   const [providersLoaded, setProvidersLoaded] = useState(false);
@@ -106,12 +125,11 @@ export default function ApiClient() {
           </Badge>
 
           <h1 className="text-3xl font-bold tracking-tight sm:text-4xl md:text-5xl">
-            Developer API
+            {content.heroHeading}
           </h1>
 
           <p className="text-muted-foreground mx-auto max-w-2xl text-base sm:text-xl">
-            Integrate SMS verification into your applications with our simple,
-            powerful API
+            {content.heroDescription}
           </p>
 
           <div className="flex flex-col items-center justify-center gap-4 pt-4 sm:flex-row">
@@ -121,7 +139,9 @@ export default function ApiClient() {
               </Link>
             </Button>
             <Button asChild size="lg" variant="outline">
-              <Link prefetch={false} href="/knowledge-base/api">Full Documentation</Link>
+              <Link prefetch={false} href="/knowledge-base/api">
+                Full Documentation
+              </Link>
             </Button>
           </div>
         </div>
@@ -214,7 +234,8 @@ export default function ApiClient() {
                 </div>
                 <p className="text-muted-foreground mt-3 text-sm">
                   Visit{' '}
-                  <Link prefetch={false}
+                  <Link
+                    prefetch={false}
                     href="/dashboard/api"
                     className="text-primary hover:underline"
                   >
@@ -669,10 +690,8 @@ print(response.json())`}</code>
       {/* CTA */}
       <section className="border-border container mx-auto border-t px-4 py-12 sm:py-16 md:py-20">
         <div className="mx-auto max-w-3xl space-y-6 text-center">
-          <h2 className="text-3xl font-bold">Ready to Integrate?</h2>
-          <p className="text-muted-foreground text-lg">
-            Get your API key and start building today
-          </p>
+          <h2 className="text-3xl font-bold">{content.ctaHeading}</h2>
+          <p className="text-muted-foreground text-lg">{content.ctaBody}</p>
           <div className="flex flex-col items-center justify-center gap-4 sm:flex-row">
             <Button asChild size="lg">
               <Link prefetch={false} href="/auth/signup">
@@ -680,7 +699,9 @@ print(response.json())`}</code>
               </Link>
             </Button>
             <Button asChild size="lg" variant="outline">
-              <Link prefetch={false} href="/knowledge-base/api">Read Full Docs</Link>
+              <Link prefetch={false} href="/knowledge-base/api">
+                Read Full Docs
+              </Link>
             </Button>
           </div>
         </div>
