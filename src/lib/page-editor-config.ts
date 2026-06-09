@@ -90,6 +90,62 @@ const legalBodySection: PageEditSection = {
 
 export const PAGE_EDITOR_PAGES: EditablePage[] = [
   {
+    slug: 'home',
+    label: 'Home',
+    path: '/',
+    sections: [
+      {
+        key: 'hero',
+        title: 'Hero',
+        description: 'The top section of the home page.',
+        fields: [
+          {
+            key: 'heading_part_1',
+            label: 'Heading (line 1)',
+            type: 'text',
+            placeholder: 'Receive SMS Activations',
+          },
+          {
+            key: 'heading_part_2',
+            label: 'Heading (line 2, accent)',
+            type: 'text',
+            placeholder: 'Instantly & Reliably',
+            help: 'Rendered with the gradient accent color',
+          },
+          {
+            key: 'description',
+            label: 'Description',
+            type: 'textarea',
+            rows: 3,
+            placeholder:
+              'Get instant access to SMS verification numbers from 180+ countries. Professional, fast, and secure.',
+          },
+        ],
+      },
+      {
+        key: 'cta',
+        title: 'Final Call-to-Action',
+        description: 'The bottom band shown after the rest of the page.',
+        fields: [
+          {
+            key: 'heading',
+            label: 'Heading',
+            type: 'text',
+            placeholder: 'Ready to Get Started?',
+          },
+          {
+            key: 'body',
+            label: 'Body',
+            type: 'textarea',
+            rows: 2,
+            placeholder:
+              'Join thousands of satisfied customers using BestSMSHQ',
+          },
+        ],
+      },
+    ],
+  },
+  {
     slug: 'privacy',
     label: 'Privacy Policy',
     path: '/privacy',
