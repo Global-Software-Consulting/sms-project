@@ -56,6 +56,35 @@ interface PageSEO {
   structuredData?: Record<string, unknown>;
 }
 
+/**
+ * Known public landing routes. Used to populate the page picker in the
+ * "Add Page SEO" modal so admins can choose a page instead of typing the
+ * URL by hand. Selecting "Custom URL..." reveals a free-text input for
+ * any path not in this list.
+ *
+ * Keep in sync with the (landing) route group when new public pages ship.
+ */
+const KNOWN_LANDING_PAGES: ReadonlyArray<{ label: string; url: string }> = [
+  { label: 'Home', url: '/' },
+  { label: 'Features', url: '/features' },
+  { label: 'Pricing', url: '/pricing' },
+  { label: 'API', url: '/api' },
+  { label: 'Membership', url: '/membership' },
+  { label: 'Knowledge Base', url: '/knowledge-base' },
+  { label: 'Help', url: '/help' },
+  { label: 'About', url: '/about' },
+  { label: 'Contact', url: '/contact' },
+  { label: 'FAQ', url: '/faq' },
+  { label: 'Blog', url: '/blog' },
+  { label: 'Reviews', url: '/reviews' },
+  { label: 'Referral', url: '/referral' },
+  { label: 'Status', url: '/status' },
+  { label: 'Terms', url: '/terms' },
+  { label: 'Privacy', url: '/privacy' },
+  { label: 'Disclaimer', url: '/disclaimer' },
+  { label: 'Payment Policy', url: '/payment-policy' },
+];
+
 interface OpenGraphData {
   title: string;
   description: string;
@@ -310,6 +339,9 @@ export default function AdminSeoPage() {
     canonicalUrl: '',
     indexed: true,
   });
+  // When true, the Add Page modal shows a free-text URL input instead of
+  // the known-pages dropdown. Reset whenever the modal opens.
+  const [useCustomUrl, setUseCustomUrl] = useState(false);
   const [deleteConfirmPage, setDeleteConfirmPage] = useState<PageSEO | null>(
     null,
   );
@@ -430,6 +462,7 @@ export default function AdminSeoPage() {
       setPages([...pages, transformedPage]);
       toast.success('Page SEO created successfully!');
       setShowAddPageModal(false);
+      setUseCustomUrl(false);
       setNewPage({
         url: '',
         metaTitle: '',
@@ -982,7 +1015,10 @@ export default function AdminSeoPage() {
               </div>
               <div className="flex items-center gap-3">
                 <button
-                  onClick={() => setShowAddPageModal(true)}
+                  onClick={() => {
+                    setUseCustomUrl(false);
+                    setShowAddPageModal(true);
+                  }}
                   className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-[#22C55E] px-4 py-3 text-sm font-medium text-white transition-colors hover:bg-[#16A34A] sm:flex-none sm:justify-start"
                 >
                   <Plus className="h-4 w-4" />
@@ -1934,17 +1970,51 @@ export default function AdminSeoPage() {
                 <label className="mb-2 block text-sm font-medium text-white">
                   Page URL / Path *
                 </label>
-                <input
-                  type="text"
-                  value={newPage.url}
-                  onChange={(e) =>
-                    setNewPage({ ...newPage, url: e.target.value })
+                <Select
+                  value={
+                    useCustomUrl
+                      ? '__custom__'
+                      : KNOWN_LANDING_PAGES.some((p) => p.url === newPage.url)
+                        ? newPage.url
+                        : ''
                   }
-                  className="w-full rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.4)] px-4 py-3 text-base text-white focus:ring-2 focus:ring-[#3B82F6] focus:outline-none lg:text-sm"
-                  placeholder="e.g., /about or /services/*"
-                />
+                  onValueChange={(v) => {
+                    if (v === '__custom__') {
+                      setUseCustomUrl(true);
+                      setNewPage({ ...newPage, url: '' });
+                    } else {
+                      setUseCustomUrl(false);
+                      setNewPage({ ...newPage, url: v });
+                    }
+                  }}
+                >
+                  <SelectTrigger className="w-full rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.4)] px-4 py-3 text-base text-white focus:ring-2 focus:ring-[#3B82F6] focus:outline-none lg:text-sm">
+                    <SelectValue placeholder="Select a page…" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {KNOWN_LANDING_PAGES.map((p) => (
+                      <SelectItem key={p.url} value={p.url}>
+                        {p.label} ({p.url})
+                      </SelectItem>
+                    ))}
+                    <SelectItem value="__custom__">Custom URL…</SelectItem>
+                  </SelectContent>
+                </Select>
+                {useCustomUrl && (
+                  <input
+                    type="text"
+                    value={newPage.url}
+                    onChange={(e) =>
+                      setNewPage({ ...newPage, url: e.target.value })
+                    }
+                    autoFocus
+                    className="mt-2 w-full rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.4)] px-4 py-3 text-base text-white focus:ring-2 focus:ring-[#3B82F6] focus:outline-none lg:text-sm"
+                    placeholder="e.g., /custom-path or /blog/*"
+                  />
+                )}
                 <p className="mt-1 text-xs text-[#64748B]">
-                  Use * for wildcard paths (e.g., /blog/*)
+                  Pick a landing page or choose &quot;Custom URL…&quot; to type
+                  any path (wildcards like /blog/* allowed).
                 </p>
               </div>
 
@@ -2041,6 +2111,7 @@ export default function AdminSeoPage() {
               <button
                 onClick={() => {
                   setShowAddPageModal(false);
+                  setUseCustomUrl(false);
                   setNewPage({
                     url: '',
                     metaTitle: '',
