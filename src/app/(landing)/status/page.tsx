@@ -1,8 +1,35 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { CheckCircle2, Clock } from 'lucide-react';
+import { CheckCircle2, Clock, ExternalLink } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { buildLandingMetadata } from '@/lib/seo/landing-metadata';
 import { fetchPageContent, pick } from '@/lib/page-content';
+
+interface AddonRow {
+  key: string;
+  value: string;
+}
+
+async function fetchUptimeRobotLink(): Promise<string | null> {
+  const base =
+    process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api/v1';
+  try {
+    const res = await fetch(`${base}/settings/addons`, {
+      next: { revalidate: 60 },
+    });
+    if (!res.ok) return null;
+    const rows = (await res.json()) as AddonRow[];
+    const map: Record<string, string> = {};
+    for (const r of rows) map[r.key] = r.value;
+    if (map['addon_uptimerobot_enabled'] !== 'true') return null;
+    const url = map['addon_uptimerobot_status_page_url']?.trim();
+    if (!url) return null;
+    if (!/^https?:\/\//.test(url)) return null;
+    return url;
+  } catch {
+    return null;
+  }
+}
 
 export const generateMetadata = () =>
   buildLandingMetadata({
@@ -14,7 +41,10 @@ export const generateMetadata = () =>
   });
 
 export default async function Status() {
-  const raw = await fetchPageContent('status');
+  const [raw, uptimeRobotUrl] = await Promise.all([
+    fetchPageContent('status'),
+    fetchUptimeRobotLink(),
+  ]);
   const heroHeading = pick(
     raw,
     'page_status_hero_heading',
@@ -70,6 +100,22 @@ export default async function Status() {
             </div>
           </CardContent>
         </Card>
+
+        {uptimeRobotUrl && (
+          <div className="flex justify-center">
+            <Button asChild variant="outline" size="lg">
+              <a
+                href={uptimeRobotUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2"
+              >
+                View live uptime details
+                <ExternalLink className="h-4 w-4" />
+              </a>
+            </Button>
+          </div>
+        )}
 
         <Card>
           <CardHeader>
