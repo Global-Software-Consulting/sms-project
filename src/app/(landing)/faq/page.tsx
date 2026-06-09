@@ -1,10 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { buildLandingMetadata } from '@/lib/seo/landing-metadata';
-import {
-  JsonLd,
-  breadcrumbSchema,
-  faqSchema,
-} from '@/lib/seo/structured-data';
+import { JsonLd, breadcrumbSchema, faqSchema } from '@/lib/seo/structured-data';
+import { fetchPageContent, pick } from '@/lib/page-content';
 
 interface FaqItem {
   id: string;
@@ -41,19 +38,20 @@ const FALLBACK_FAQS: FaqItem[] = [
   },
 ];
 
-export const generateMetadata = () => buildLandingMetadata({
-  slug: 'faq',
-  title: 'Frequently Asked Questions',
-  description:
-    'Answers to common questions about SMS verification, pricing, refunds, virtual numbers, rentals, and getting started with BestSMSHQ.',
-  path: '/faq',
-  keywords: [
-    'SMS verification FAQ',
-    'BestSMSHQ help',
-    'how to receive SMS online',
-    'SMS activation help',
-  ],
-});
+export const generateMetadata = () =>
+  buildLandingMetadata({
+    slug: 'faq',
+    title: 'Frequently Asked Questions',
+    description:
+      'Answers to common questions about SMS verification, pricing, refunds, virtual numbers, rentals, and getting started with BestSMSHQ.',
+    path: '/faq',
+    keywords: [
+      'SMS verification FAQ',
+      'BestSMSHQ help',
+      'how to receive SMS online',
+      'SMS activation help',
+    ],
+  });
 
 async function fetchFaqs(): Promise<FaqItem[]> {
   const apiUrl = process.env.NEXT_PUBLIC_API_URL;
@@ -70,7 +68,12 @@ async function fetchFaqs(): Promise<FaqItem[]> {
 }
 
 export default async function FAQ() {
-  const faqs = await fetchFaqs();
+  const [faqs, raw] = await Promise.all([fetchFaqs(), fetchPageContent('faq')]);
+  const heroHeading = pick(
+    raw,
+    'page_faq_hero_heading',
+    'Frequently Asked Questions',
+  );
 
   return (
     <div className="container mx-auto px-4 py-12 sm:py-20">
@@ -87,7 +90,7 @@ export default async function FAQ() {
       />
       <div className="mx-auto max-w-4xl space-y-6">
         <h1 className="text-3xl font-bold sm:text-4xl md:text-5xl">
-          Frequently Asked Questions
+          {heroHeading}
         </h1>
         {faqs.map((faq) => (
           <Card key={faq.id}>

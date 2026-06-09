@@ -195,6 +195,67 @@ export const PAGE_EDITOR_PAGES: EditablePage[] = [
     ],
   },
   {
+    slug: 'reviews',
+    label: 'Reviews',
+    path: '/reviews',
+    sections: [
+      {
+        key: 'hero',
+        title: 'Hero',
+        description: 'The top section of the Reviews page.',
+        fields: [
+          {
+            key: 'heading',
+            label: 'Heading',
+            type: 'text',
+            placeholder: 'Customer Reviews',
+          },
+        ],
+      },
+    ],
+  },
+  {
+    slug: 'faq',
+    label: 'FAQ',
+    path: '/faq',
+    sections: [
+      {
+        key: 'hero',
+        title: 'Hero',
+        description: 'The top section of the FAQ page.',
+        fields: [
+          {
+            key: 'heading',
+            label: 'Heading',
+            type: 'text',
+            placeholder: 'Frequently Asked Questions',
+          },
+        ],
+      },
+    ],
+  },
+  {
+    slug: 'contact',
+    label: 'Contact',
+    path: '/contact',
+    sections: [
+      {
+        key: 'hero',
+        title: 'Hero',
+        description:
+          'The heading shown above the contact form. Phone / email / hours come from Site Info, not here.',
+        fields: [
+          {
+            key: 'heading',
+            label: 'Heading',
+            type: 'text',
+            placeholder: 'SUBMIT A SUPPORT TICKET',
+          },
+        ],
+      },
+    ],
+  },
+  {
     slug: 'privacy',
     label: 'Privacy Policy',
     path: '/privacy',
