@@ -135,7 +135,27 @@ const fallbackPlans: MembershipPlan[] = [
   },
 ];
 
-export default function MembershipClient() {
+export interface MembershipContent {
+  heroHeading: string;
+  heroDescription: string;
+  ctaHeading: string;
+  ctaBody: string;
+}
+
+const FALLBACK_MEMBERSHIP_CONTENT: MembershipContent = {
+  heroHeading: 'Choose Your Plan',
+  heroDescription:
+    'Save more, get priority access, and unlock premium features with our flexible membership tiers',
+  ctaHeading: 'Ready to Save More?',
+  ctaBody:
+    'Join thousands of users who are already saving with our membership plans. Upgrade today and start getting more value from every activation.',
+};
+
+export default function MembershipClient({
+  content = FALLBACK_MEMBERSHIP_CONTENT,
+}: {
+  content?: MembershipContent;
+} = {}) {
   const [monthlySpend, setMonthlySpend] = useState(500);
   const [plans, setPlans] = useState<MembershipPlan[]>([]);
   const [loading, setLoading] = useState(true);
@@ -150,7 +170,10 @@ export default function MembershipClient() {
         // Silent fallback would mask admin price/feature edits never reaching
         // the public site (e.g., wrong NEXT_PUBLIC_API_URL, CORS, downtime).
         // Log so production logs show the disconnect.
-        console.error('[membership] failed to fetch live plans, showing fallback:', err);
+        console.error(
+          '[membership] failed to fetch live plans, showing fallback:',
+          err,
+        );
         setPlans(fallbackPlans);
       } finally {
         setLoading(false);
@@ -162,7 +185,10 @@ export default function MembershipClient() {
   // Find the highest-discount plan to mark as "best value"
   const bestPlanSlug =
     plans.length > 0
-      ? plans.reduce((best, p) => (p.discount > best.discount ? p : best), plans[0]).slug
+      ? plans.reduce(
+          (best, p) => (p.discount > best.discount ? p : best),
+          plans[0],
+        ).slug
       : null;
 
   const calculateSavings = (spend: number) => {
@@ -194,7 +220,8 @@ export default function MembershipClient() {
   const recommendedPlan = getRecommendedPlan();
   const baseCost = plans.length > 0 ? monthlySpend : 0;
   const recommendedSavings = recommendedPlan
-    ? monthlySpend * (recommendedPlan.discount / 100) - parseFloat(recommendedPlan.price)
+    ? monthlySpend * (recommendedPlan.discount / 100) -
+      parseFloat(recommendedPlan.price)
     : 0;
 
   // Support speed labels per support tier
@@ -225,10 +252,11 @@ export default function MembershipClient() {
         {/* Hero Section */}
         <div className="mx-auto max-w-3xl space-y-6 text-center">
           <Badge className="mx-auto">Membership Plans</Badge>
-          <h1 className="text-3xl font-bold sm:text-4xl md:text-5xl">Choose Your Plan</h1>
+          <h1 className="text-3xl font-bold sm:text-4xl md:text-5xl">
+            {content.heroHeading}
+          </h1>
           <p className="text-muted-foreground text-base sm:text-xl">
-            Save more, get priority access, and unlock premium features with our
-            flexible membership tiers
+            {content.heroDescription}
           </p>
         </div>
 
@@ -236,12 +264,17 @@ export default function MembershipClient() {
         {loading ? (
           <div className="flex items-center justify-center py-20">
             <Loader2 className="text-primary h-8 w-8 animate-spin" />
-            <span className="text-muted-foreground ml-3 text-lg">Loading plans...</span>
+            <span className="text-muted-foreground ml-3 text-lg">
+              Loading plans...
+            </span>
           </div>
         ) : (
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
             {plans.map((plan) => {
-              const isBest = plan.slug === bestPlanSlug && plan.slug !== 'basic' && plan.slug !== 'free';
+              const isBest =
+                plan.slug === bestPlanSlug &&
+                plan.slug !== 'basic' &&
+                plan.slug !== 'free';
               const isPopular = plan.isPopular;
 
               return (
@@ -270,8 +303,12 @@ export default function MembershipClient() {
                     <div className="space-y-4">
                       <CardTitle className="text-2xl">{plan.name}</CardTitle>
                       <div>
-                        <p className="text-3xl font-bold">{formatPrice(plan.price, plan.currency)}</p>
-                        <p className="text-muted-foreground text-sm">per month</p>
+                        <p className="text-3xl font-bold">
+                          {formatPrice(plan.price, plan.currency)}
+                        </p>
+                        <p className="text-muted-foreground text-sm">
+                          per month
+                        </p>
                       </div>
                       <Badge
                         variant={isBest ? 'default' : 'secondary'}
@@ -285,7 +322,10 @@ export default function MembershipClient() {
                   <CardContent className="space-y-6">
                     <ul className="space-y-3">
                       {plan.features.map((feature, i) => (
-                        <li key={i} className="flex items-start space-x-2 text-sm">
+                        <li
+                          key={i}
+                          className="flex items-start space-x-2 text-sm"
+                        >
                           <Check className="text-success mt-0.5 h-4 w-4 flex-shrink-0" />
                           <span>{feature}</span>
                         </li>
@@ -311,7 +351,9 @@ export default function MembershipClient() {
         {/* How Membership Works */}
         <Card>
           <CardHeader>
-            <CardTitle className="text-xl sm:text-2xl md:text-3xl">How Membership Works</CardTitle>
+            <CardTitle className="text-xl sm:text-2xl md:text-3xl">
+              How Membership Works
+            </CardTitle>
             <CardDescription>
               Understanding the benefits and how they apply to your account
             </CardDescription>
@@ -396,7 +438,10 @@ export default function MembershipClient() {
                     <tr className="border-border border-b">
                       <th className="p-4 text-left font-semibold">Feature</th>
                       {plans.map((plan) => (
-                        <th key={plan.slug} className="p-4 text-center font-semibold">
+                        <th
+                          key={plan.slug}
+                          className="p-4 text-center font-semibold"
+                        >
                           {plan.name}
                         </th>
                       ))}
@@ -454,7 +499,9 @@ export default function MembershipClient() {
                             key={plan.slug}
                             className={`p-4 text-center ${isHighTier ? (plan.slug === bestPlanSlug ? 'text-primary font-semibold' : 'text-success font-semibold') : 'text-muted-foreground'}`}
                           >
-                            {plan.activeNumberLimit >= 100 ? 'Unlimited' : plan.activeNumberLimit}
+                            {plan.activeNumberLimit >= 100
+                              ? 'Unlimited'
+                              : plan.activeNumberLimit}
                           </td>
                         );
                       })}
@@ -482,7 +529,9 @@ export default function MembershipClient() {
                             key={plan.slug}
                             className={`p-4 text-center ${isHighTier ? (plan.slug === bestPlanSlug ? 'text-primary font-semibold' : 'text-success font-semibold') : 'text-muted-foreground'}`}
                           >
-                            {plan.bonusDepositPercent > 0 ? `${plan.bonusDepositPercent}%` : '\u2014'}
+                            {plan.bonusDepositPercent > 0
+                              ? `${plan.bonusDepositPercent}%`
+                              : '\u2014'}
                           </td>
                         );
                       })}
@@ -496,7 +545,9 @@ export default function MembershipClient() {
                               className={`mx-auto h-5 w-5 ${plan.slug === bestPlanSlug ? 'text-primary' : 'text-success'}`}
                             />
                           ) : (
-                            <span className="text-muted-foreground">&mdash;</span>
+                            <span className="text-muted-foreground">
+                              &mdash;
+                            </span>
                           )}
                         </td>
                       ))}
@@ -508,7 +559,9 @@ export default function MembershipClient() {
                           {plan.supportTier === 'whatsapp' ? (
                             <Check className="text-primary mx-auto h-5 w-5" />
                           ) : (
-                            <span className="text-muted-foreground">&mdash;</span>
+                            <span className="text-muted-foreground">
+                              &mdash;
+                            </span>
                           )}
                         </td>
                       ))}
@@ -556,7 +609,10 @@ export default function MembershipClient() {
               <>
                 <div className="grid gap-4 md:grid-cols-4">
                   {plans.map((plan) => {
-                    const isBest = plan.slug === bestPlanSlug && plan.slug !== 'basic' && plan.slug !== 'free';
+                    const isBest =
+                      plan.slug === bestPlanSlug &&
+                      plan.slug !== 'basic' &&
+                      plan.slug !== 'free';
                     const isHighTier = plan.routingPriority >= 2;
                     const planSavings = savings[plan.slug] ?? monthlySpend;
                     const saved = monthlySpend - planSavings;
@@ -583,7 +639,9 @@ export default function MembershipClient() {
                             Save ${saved.toFixed(2)}
                           </p>
                         ) : (
-                          <p className="text-muted-foreground text-sm">$0 saved</p>
+                          <p className="text-muted-foreground text-sm">
+                            $0 saved
+                          </p>
                         )}
                       </div>
                     );
@@ -593,11 +651,12 @@ export default function MembershipClient() {
                 {recommendedPlan && (
                   <div className="bg-primary/10 border-primary/20 rounded-lg border p-6 text-center">
                     <p className="text-muted-foreground mb-2 text-sm">
-                      At ${monthlySpend}/month spending, the {recommendedPlan.name} plan
-                      pays for itself
+                      At ${monthlySpend}/month spending, the{' '}
+                      {recommendedPlan.name} plan pays for itself
                     </p>
                     <p className="text-primary font-semibold">
-                      Net savings after membership fee: ${recommendedSavings.toFixed(2)}
+                      Net savings after membership fee: $
+                      {recommendedSavings.toFixed(2)}
                     </p>
                   </div>
                 )}
@@ -610,11 +669,9 @@ export default function MembershipClient() {
         <Card className="text-center">
           <CardContent className="py-12">
             <Crown className="text-primary mx-auto mb-6 h-16 w-16" />
-            <h3 className="mb-4 text-3xl font-bold">Ready to Save More?</h3>
+            <h3 className="mb-4 text-3xl font-bold">{content.ctaHeading}</h3>
             <p className="text-muted-foreground mx-auto mb-8 max-w-2xl">
-              Join thousands of users who are already saving with our membership
-              plans. Upgrade today and start getting more value from every
-              activation.
+              {content.ctaBody}
             </p>
             <Link prefetch={false} href="/dashboard/membership">
               <Button size="lg" className="px-8">

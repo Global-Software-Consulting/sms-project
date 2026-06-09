@@ -146,6 +146,55 @@ export const PAGE_EDITOR_PAGES: EditablePage[] = [
     ],
   },
   {
+    slug: 'membership',
+    label: 'Membership',
+    path: '/membership',
+    sections: [
+      {
+        key: 'hero',
+        title: 'Hero',
+        description: 'The top section of the Membership page.',
+        fields: [
+          {
+            key: 'heading',
+            label: 'Heading',
+            type: 'text',
+            placeholder: 'Choose Your Plan',
+          },
+          {
+            key: 'description',
+            label: 'Description',
+            type: 'textarea',
+            rows: 3,
+            placeholder:
+              'Save more, get priority access, and unlock premium features with our flexible membership tiers',
+          },
+        ],
+      },
+      {
+        key: 'cta',
+        title: 'Bottom CTA',
+        description: 'The card shown at the bottom of the page.',
+        fields: [
+          {
+            key: 'heading',
+            label: 'Heading',
+            type: 'text',
+            placeholder: 'Ready to Save More?',
+          },
+          {
+            key: 'body',
+            label: 'Body',
+            type: 'textarea',
+            rows: 3,
+            placeholder:
+              'Join thousands of users who are already saving with our membership plans. Upgrade today and start getting more value from every activation.',
+          },
+        ],
+      },
+    ],
+  },
+  {
     slug: 'privacy',
     label: 'Privacy Policy',
     path: '/privacy',
