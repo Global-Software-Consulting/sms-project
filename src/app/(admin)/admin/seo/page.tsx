@@ -350,6 +350,49 @@ export default function AdminSeoPage() {
     setShowEditPageModal(true);
   };
 
+  /**
+   * Derive the canonical page slug from the URL stored against a PageSEO
+   * row. The slug is what the landing pages actually consume — see e.g.
+   * `src/components/landing/legal-page.tsx` which reads
+   * `page_<slug>_seo_meta_title`. Root path resolves to "home" so the
+   * landing root still gets its overrides applied.
+   */
+  const derivePageSlug = (url: string): string => {
+    const cleaned = (url ?? '')
+      .trim()
+      .replace(/^\/+/, '')
+      .replace(/\/+$/, '')
+      .toLowerCase();
+    if (cleaned === '') return 'home';
+    return cleaned.replace(/\//g, '-');
+  };
+
+  /**
+   * Dual-write a PageSEO row into the canonical `page_<slug>_seo_*`
+   * system settings used by the landing layer. The dedicated seo_settings
+   * table is kept in sync (existing data path) but those values are not
+   * actually rendered yet — these canonical keys are. Empty values clear
+   * an override and let the per-page hardcoded fallback take over.
+   */
+  const persistCanonicalPageSeo = async (page: PageSEO): Promise<void> => {
+    const slug = derivePageSlug(page.url);
+    await bulkUpdateSettings({
+      settings: [
+        { key: `page_${slug}_seo_meta_title`, value: page.metaTitle ?? '' },
+        {
+          key: `page_${slug}_seo_meta_description`,
+          value: page.metaDescription ?? '',
+        },
+        { key: `page_${slug}_seo_keywords`, value: page.keywords ?? '' },
+        { key: `page_${slug}_seo_og_title`, value: page.ogTitle ?? '' },
+        {
+          key: `page_${slug}_seo_og_description`,
+          value: page.ogDescription ?? '',
+        },
+      ],
+    });
+  };
+
   const handleSavePage = async () => {
     if (!selectedPage) return;
 
@@ -357,6 +400,7 @@ export default function AdminSeoPage() {
     try {
       const apiData = transformToApiFormat(selectedPage);
       await upsertSeoSettings(apiData);
+      await persistCanonicalPageSeo(selectedPage);
 
       setPages(pages.map((p) => (p.id === selectedPage.id ? selectedPage : p)));
       toast.success('Page SEO updated successfully!');
@@ -381,6 +425,7 @@ export default function AdminSeoPage() {
       const apiData = transformToApiFormat(newPage as PageSEO);
       const created = await upsertSeoSettings(apiData);
       const transformedPage = transformToPageSEO(created);
+      await persistCanonicalPageSeo(transformedPage);
 
       setPages([...pages, transformedPage]);
       toast.success('Page SEO created successfully!');
@@ -405,6 +450,16 @@ export default function AdminSeoPage() {
     setIsLoading(true);
     try {
       await deleteSeoSettings(page.url);
+      // Clear the canonical overrides so the landing layer falls back
+      // to its hardcoded defaults for this page.
+      await persistCanonicalPageSeo({
+        ...page,
+        metaTitle: '',
+        metaDescription: '',
+        keywords: '',
+        ogTitle: '',
+        ogDescription: '',
+      });
       setPages(pages.filter((p) => p.id !== page.id));
       toast.success('Page SEO deleted successfully!');
       setDeleteConfirmPage(null);
