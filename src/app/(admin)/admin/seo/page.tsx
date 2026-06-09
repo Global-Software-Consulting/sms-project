@@ -56,6 +56,35 @@ interface PageSEO {
   structuredData?: Record<string, unknown>;
 }
 
+/**
+ * Known public landing routes. Used to populate the page picker in the
+ * "Add Page SEO" modal so admins can choose a page instead of typing the
+ * URL by hand. Selecting "Custom URL..." reveals a free-text input for
+ * any path not in this list.
+ *
+ * Keep in sync with the (landing) route group when new public pages ship.
+ */
+const KNOWN_LANDING_PAGES: ReadonlyArray<{ label: string; url: string }> = [
+  { label: 'Home', url: '/' },
+  { label: 'Features', url: '/features' },
+  { label: 'Pricing', url: '/pricing' },
+  { label: 'API', url: '/api' },
+  { label: 'Membership', url: '/membership' },
+  { label: 'Knowledge Base', url: '/knowledge-base' },
+  { label: 'Help', url: '/help' },
+  { label: 'About', url: '/about' },
+  { label: 'Contact', url: '/contact' },
+  { label: 'FAQ', url: '/faq' },
+  { label: 'Blog', url: '/blog' },
+  { label: 'Reviews', url: '/reviews' },
+  { label: 'Referral', url: '/referral' },
+  { label: 'Status', url: '/status' },
+  { label: 'Terms', url: '/terms' },
+  { label: 'Privacy', url: '/privacy' },
+  { label: 'Disclaimer', url: '/disclaimer' },
+  { label: 'Payment Policy', url: '/payment-policy' },
+];
+
 interface OpenGraphData {
   title: string;
   description: string;
@@ -310,6 +339,9 @@ export default function AdminSeoPage() {
     canonicalUrl: '',
     indexed: true,
   });
+  // When true, the Add Page modal shows a free-text URL input instead of
+  // the known-pages dropdown. Reset whenever the modal opens.
+  const [useCustomUrl, setUseCustomUrl] = useState(false);
   const [deleteConfirmPage, setDeleteConfirmPage] = useState<PageSEO | null>(
     null,
   );
@@ -350,6 +382,49 @@ export default function AdminSeoPage() {
     setShowEditPageModal(true);
   };
 
+  /**
+   * Derive the canonical page slug from the URL stored against a PageSEO
+   * row. The slug is what the landing pages actually consume — see e.g.
+   * `src/components/landing/legal-page.tsx` which reads
+   * `page_<slug>_seo_meta_title`. Root path resolves to "home" so the
+   * landing root still gets its overrides applied.
+   */
+  const derivePageSlug = (url: string): string => {
+    const cleaned = (url ?? '')
+      .trim()
+      .replace(/^\/+/, '')
+      .replace(/\/+$/, '')
+      .toLowerCase();
+    if (cleaned === '') return 'home';
+    return cleaned.replace(/\//g, '-');
+  };
+
+  /**
+   * Dual-write a PageSEO row into the canonical `page_<slug>_seo_*`
+   * system settings used by the landing layer. The dedicated seo_settings
+   * table is kept in sync (existing data path) but those values are not
+   * actually rendered yet — these canonical keys are. Empty values clear
+   * an override and let the per-page hardcoded fallback take over.
+   */
+  const persistCanonicalPageSeo = async (page: PageSEO): Promise<void> => {
+    const slug = derivePageSlug(page.url);
+    await bulkUpdateSettings({
+      settings: [
+        { key: `page_${slug}_seo_meta_title`, value: page.metaTitle ?? '' },
+        {
+          key: `page_${slug}_seo_meta_description`,
+          value: page.metaDescription ?? '',
+        },
+        { key: `page_${slug}_seo_keywords`, value: page.keywords ?? '' },
+        { key: `page_${slug}_seo_og_title`, value: page.ogTitle ?? '' },
+        {
+          key: `page_${slug}_seo_og_description`,
+          value: page.ogDescription ?? '',
+        },
+      ],
+    });
+  };
+
   const handleSavePage = async () => {
     if (!selectedPage) return;
 
@@ -357,6 +432,7 @@ export default function AdminSeoPage() {
     try {
       const apiData = transformToApiFormat(selectedPage);
       await upsertSeoSettings(apiData);
+      await persistCanonicalPageSeo(selectedPage);
 
       setPages(pages.map((p) => (p.id === selectedPage.id ? selectedPage : p)));
       toast.success('Page SEO updated successfully!');
@@ -370,9 +446,29 @@ export default function AdminSeoPage() {
     }
   };
 
+  /** Normalize a URL/path for duplicate comparison — case-insensitive,
+   *  trimmed, trailing slash collapsed. Root remains "/". */
+  const normalizeUrl = (u: string): string => {
+    const trimmed = (u ?? '').trim().toLowerCase();
+    if (!trimmed) return '';
+    const noTrail = trimmed.replace(/\/+$/, '');
+    return noTrail === '' ? '/' : noTrail;
+  };
+
   const handleAddPage = async () => {
     if (!newPage.url) {
       toast.error('Page URL is required');
+      return;
+    }
+
+    // Block duplicates — force the admin to edit the existing row rather
+    // than creating a second SEO entry for the same URL.
+    const normalized = normalizeUrl(newPage.url);
+    const duplicate = pages.find((p) => normalizeUrl(p.url) === normalized);
+    if (duplicate) {
+      toast.error(
+        `A SEO entry for ${duplicate.url} already exists. Edit it from the list instead.`,
+      );
       return;
     }
 
@@ -381,10 +477,12 @@ export default function AdminSeoPage() {
       const apiData = transformToApiFormat(newPage as PageSEO);
       const created = await upsertSeoSettings(apiData);
       const transformedPage = transformToPageSEO(created);
+      await persistCanonicalPageSeo(transformedPage);
 
       setPages([...pages, transformedPage]);
       toast.success('Page SEO created successfully!');
       setShowAddPageModal(false);
+      setUseCustomUrl(false);
       setNewPage({
         url: '',
         metaTitle: '',
@@ -405,6 +503,16 @@ export default function AdminSeoPage() {
     setIsLoading(true);
     try {
       await deleteSeoSettings(page.url);
+      // Clear the canonical overrides so the landing layer falls back
+      // to its hardcoded defaults for this page.
+      await persistCanonicalPageSeo({
+        ...page,
+        metaTitle: '',
+        metaDescription: '',
+        keywords: '',
+        ogTitle: '',
+        ogDescription: '',
+      });
       setPages(pages.filter((p) => p.id !== page.id));
       toast.success('Page SEO deleted successfully!');
       setDeleteConfirmPage(null);
@@ -927,7 +1035,10 @@ export default function AdminSeoPage() {
               </div>
               <div className="flex items-center gap-3">
                 <button
-                  onClick={() => setShowAddPageModal(true)}
+                  onClick={() => {
+                    setUseCustomUrl(false);
+                    setShowAddPageModal(true);
+                  }}
                   className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-[#22C55E] px-4 py-3 text-sm font-medium text-white transition-colors hover:bg-[#16A34A] sm:flex-none sm:justify-start"
                 >
                   <Plus className="h-4 w-4" />
@@ -1879,17 +1990,57 @@ export default function AdminSeoPage() {
                 <label className="mb-2 block text-sm font-medium text-white">
                   Page URL / Path *
                 </label>
-                <input
-                  type="text"
-                  value={newPage.url}
-                  onChange={(e) =>
-                    setNewPage({ ...newPage, url: e.target.value })
+                <Select
+                  value={
+                    useCustomUrl
+                      ? '__custom__'
+                      : KNOWN_LANDING_PAGES.some((p) => p.url === newPage.url)
+                        ? newPage.url
+                        : ''
                   }
-                  className="w-full rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.4)] px-4 py-3 text-base text-white focus:ring-2 focus:ring-[#3B82F6] focus:outline-none lg:text-sm"
-                  placeholder="e.g., /about or /services/*"
-                />
+                  onValueChange={(v) => {
+                    if (v === '__custom__') {
+                      setUseCustomUrl(true);
+                      setNewPage({ ...newPage, url: '' });
+                    } else {
+                      setUseCustomUrl(false);
+                      setNewPage({ ...newPage, url: v });
+                    }
+                  }}
+                >
+                  <SelectTrigger className="w-full rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.4)] px-4 py-3 text-base text-white focus:ring-2 focus:ring-[#3B82F6] focus:outline-none lg:text-sm">
+                    <SelectValue placeholder="Select a page…" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {KNOWN_LANDING_PAGES.map((p) => {
+                      const taken = pages.some(
+                        (row) => normalizeUrl(row.url) === normalizeUrl(p.url),
+                      );
+                      return (
+                        <SelectItem key={p.url} value={p.url} disabled={taken}>
+                          {p.label} ({p.url})
+                          {taken ? ' — already configured' : ''}
+                        </SelectItem>
+                      );
+                    })}
+                    <SelectItem value="__custom__">Custom URL…</SelectItem>
+                  </SelectContent>
+                </Select>
+                {useCustomUrl && (
+                  <input
+                    type="text"
+                    value={newPage.url}
+                    onChange={(e) =>
+                      setNewPage({ ...newPage, url: e.target.value })
+                    }
+                    autoFocus
+                    className="mt-2 w-full rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.4)] px-4 py-3 text-base text-white focus:ring-2 focus:ring-[#3B82F6] focus:outline-none lg:text-sm"
+                    placeholder="e.g., /custom-path or /blog/*"
+                  />
+                )}
                 <p className="mt-1 text-xs text-[#64748B]">
-                  Use * for wildcard paths (e.g., /blog/*)
+                  Pick a landing page or choose &quot;Custom URL…&quot; to type
+                  any path (wildcards like /blog/* allowed).
                 </p>
               </div>
 
@@ -1986,6 +2137,7 @@ export default function AdminSeoPage() {
               <button
                 onClick={() => {
                   setShowAddPageModal(false);
+                  setUseCustomUrl(false);
                   setNewPage({
                     url: '',
                     metaTitle: '',

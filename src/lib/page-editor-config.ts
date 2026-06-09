@@ -51,20 +51,10 @@ export interface EditablePage {
 // Section templates reused across pages
 // =====================================================================
 
-const seoSection: PageEditSection = {
-  key: 'seo',
-  title: 'SEO',
-  description: 'Meta tags, social preview text, and search visibility.',
-  fields: [
-    { key: 'meta_title', label: 'Page Title', type: 'text' },
-    { key: 'meta_description', label: 'Meta Description', type: 'textarea', rows: 2 },
-    { key: 'keywords', label: 'Keywords (comma-separated)', type: 'text' },
-    { key: 'og_title', label: 'Open Graph Title', type: 'text' },
-    { key: 'og_description', label: 'Open Graph Description', type: 'textarea', rows: 2 },
-  ],
-};
 
-const heroSection = (variant: 'banner' | 'simple' = 'banner'): PageEditSection => ({
+const heroSection = (
+  variant: 'banner' | 'simple' = 'banner',
+): PageEditSection => ({
   key: 'hero',
   title: 'Hero / Banner',
   description: 'The top section of the page.',
@@ -78,13 +68,27 @@ const heroSection = (variant: 'banner' | 'simple' = 'banner'): PageEditSection =
             type: 'text',
             help: 'Rendered with the accent color',
           },
-          { key: 'description', label: 'Description', type: 'textarea', rows: 4 },
-          { key: 'input_placeholder', label: 'Input Placeholder', type: 'text' },
+          {
+            key: 'description',
+            label: 'Description',
+            type: 'textarea',
+            rows: 4,
+          },
+          {
+            key: 'input_placeholder',
+            label: 'Input Placeholder',
+            type: 'text',
+          },
           { key: 'button_text', label: 'Button Text', type: 'text' },
         ]
       : [
           { key: 'heading', label: 'Heading', type: 'text' },
-          { key: 'description', label: 'Description', type: 'textarea', rows: 4 },
+          {
+            key: 'description',
+            label: 'Description',
+            type: 'textarea',
+            rows: 4,
+          },
         ],
 });
 
@@ -135,11 +139,26 @@ export const PAGE_EDITOR_PAGES: EditablePage[] = [
         fields: [
           { key: 'heading', label: 'Section Heading', type: 'text' },
           { key: 'item1_title', label: 'Card 1 — Title', type: 'text' },
-          { key: 'item1_body', label: 'Card 1 — Body', type: 'textarea', rows: 2 },
+          {
+            key: 'item1_body',
+            label: 'Card 1 — Body',
+            type: 'textarea',
+            rows: 2,
+          },
           { key: 'item2_title', label: 'Card 2 — Title', type: 'text' },
-          { key: 'item2_body', label: 'Card 2 — Body', type: 'textarea', rows: 2 },
+          {
+            key: 'item2_body',
+            label: 'Card 2 — Body',
+            type: 'textarea',
+            rows: 2,
+          },
           { key: 'item3_title', label: 'Card 3 — Title', type: 'text' },
-          { key: 'item3_body', label: 'Card 3 — Body', type: 'textarea', rows: 2 },
+          {
+            key: 'item3_body',
+            label: 'Card 3 — Body',
+            type: 'textarea',
+            rows: 2,
+          },
         ],
       },
       {
@@ -153,7 +172,6 @@ export const PAGE_EDITOR_PAGES: EditablePage[] = [
           { key: 'button_link', label: 'Button Link', type: 'url' },
         ],
       },
-      seoSection,
     ],
   },
   {
@@ -182,14 +200,13 @@ export const PAGE_EDITOR_PAGES: EditablePage[] = [
           { key: 'body', label: 'Body', type: 'textarea', rows: 2 },
         ],
       },
-      seoSection,
     ],
   },
   {
     slug: 'reviews',
     label: 'Reviews',
     path: '/reviews',
-    sections: [heroSection('simple'), seoSection],
+    sections: [heroSection('simple')],
   },
   {
     slug: 'faq',
@@ -202,9 +219,10 @@ export const PAGE_EDITOR_PAGES: EditablePage[] = [
         title: 'Footer Note',
         description:
           'A short paragraph shown below the FAQ list (e.g. contact prompt).',
-        fields: [{ key: 'body', label: 'Footer text', type: 'textarea', rows: 3 }],
+        fields: [
+          { key: 'body', label: 'Footer text', type: 'textarea', rows: 3 },
+        ],
       },
-      seoSection,
     ],
   },
   {
@@ -220,10 +238,14 @@ export const PAGE_EDITOR_PAGES: EditablePage[] = [
           { key: 'email', label: 'Public Email', type: 'text' },
           { key: 'phone', label: 'Phone (optional)', type: 'text' },
           { key: 'hours', label: 'Support Hours', type: 'text' },
-          { key: 'address', label: 'Address (optional)', type: 'textarea', rows: 2 },
+          {
+            key: 'address',
+            label: 'Address (optional)',
+            type: 'textarea',
+            rows: 2,
+          },
         ],
       },
-      seoSection,
     ],
   },
   {
@@ -234,12 +256,9 @@ export const PAGE_EDITOR_PAGES: EditablePage[] = [
       {
         key: 'header',
         title: 'Header',
-        fields: [
-          { key: 'title', label: 'Page Title (H1)', type: 'text' },
-        ],
+        fields: [{ key: 'title', label: 'Page Title (H1)', type: 'text' }],
       },
       legalBodySection,
-      seoSection,
     ],
   },
   {
@@ -247,9 +266,12 @@ export const PAGE_EDITOR_PAGES: EditablePage[] = [
     label: 'Terms of Service',
     path: '/terms',
     sections: [
-      { key: 'header', title: 'Header', fields: [{ key: 'title', label: 'Page Title (H1)', type: 'text' }] },
+      {
+        key: 'header',
+        title: 'Header',
+        fields: [{ key: 'title', label: 'Page Title (H1)', type: 'text' }],
+      },
       legalBodySection,
-      seoSection,
     ],
   },
   {
@@ -257,9 +279,12 @@ export const PAGE_EDITOR_PAGES: EditablePage[] = [
     label: 'Refund / Payment Policy',
     path: '/payment-policy',
     sections: [
-      { key: 'header', title: 'Header', fields: [{ key: 'title', label: 'Page Title (H1)', type: 'text' }] },
+      {
+        key: 'header',
+        title: 'Header',
+        fields: [{ key: 'title', label: 'Page Title (H1)', type: 'text' }],
+      },
       legalBodySection,
-      seoSection,
     ],
   },
   {
@@ -267,9 +292,12 @@ export const PAGE_EDITOR_PAGES: EditablePage[] = [
     label: 'Disclaimer',
     path: '/disclaimer',
     sections: [
-      { key: 'header', title: 'Header', fields: [{ key: 'title', label: 'Page Title (H1)', type: 'text' }] },
+      {
+        key: 'header',
+        title: 'Header',
+        fields: [{ key: 'title', label: 'Page Title (H1)', type: 'text' }],
+      },
       legalBodySection,
-      seoSection,
     ],
   },
 ];
