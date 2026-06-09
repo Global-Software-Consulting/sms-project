@@ -1,9 +1,10 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Star } from 'lucide-react';
-import { buildMetadata } from '@/lib/seo/metadata';
+import { buildLandingMetadata } from '@/lib/seo/landing-metadata';
 import { JsonLd, breadcrumbSchema } from '@/lib/seo/structured-data';
 
-export const metadata = buildMetadata({
+export const generateMetadata = () => buildLandingMetadata({
+  slug: 'reviews',
   title: 'Customer Reviews',
   description:
     'Read what real customers say about BestSMSHQ — our SMS verification service, reliability, support and value across thousands of users worldwide.',

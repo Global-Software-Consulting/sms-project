@@ -1,11 +1,12 @@
-import { buildMetadata } from '@/lib/seo/metadata';
+import { buildLandingMetadata } from '@/lib/seo/landing-metadata';
 import {
   JsonLd,
   breadcrumbSchema,
 } from '@/lib/seo/structured-data';
 import PricingClient from './pricing.client';
 
-export const metadata = buildMetadata({
+export const generateMetadata = () => buildLandingMetadata({
+  slug: 'pricing',
   title: 'Pricing & Plans',
   description:
     'Transparent SMS verification pricing. Pay-as-you-go for activations, flexible rentals, and membership plans for high-volume users. No hidden fees.',

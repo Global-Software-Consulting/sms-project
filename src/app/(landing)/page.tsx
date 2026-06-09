@@ -1,4 +1,4 @@
-import { buildMetadata } from '@/lib/seo/metadata';
+import { buildLandingMetadata } from '@/lib/seo/landing-metadata';
 import {
   JsonLd,
   breadcrumbSchema,
@@ -7,7 +7,8 @@ import {
 import { SITE_NAME, SITE_TAGLINE, SITE_DESCRIPTION } from '@/lib/seo/site-config';
 import HomeClient from './home.client';
 
-export const metadata = buildMetadata({
+export const generateMetadata = () => buildLandingMetadata({
+  slug: 'home',
   title: `${SITE_NAME} — ${SITE_TAGLINE}`,
   description: SITE_DESCRIPTION,
   path: '/',

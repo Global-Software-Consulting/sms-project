@@ -9,14 +9,15 @@ import {
   TrendingUp,
   Code,
 } from 'lucide-react';
-import { buildMetadata } from '@/lib/seo/metadata';
+import { buildLandingMetadata } from '@/lib/seo/landing-metadata';
 import {
   JsonLd,
   breadcrumbSchema,
   productServiceSchema,
 } from '@/lib/seo/structured-data';
 
-export const metadata = buildMetadata({
+export const generateMetadata = () => buildLandingMetadata({
+  slug: 'features',
   title: 'Features',
   description:
     'Instant SMS activation across 180+ countries, virtual number rentals, secure API access, and 24/7 support — all the features that make BestSMSHQ the leading SMS verification platform.',

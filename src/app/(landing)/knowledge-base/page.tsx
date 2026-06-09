@@ -1,8 +1,9 @@
-import { buildMetadata } from '@/lib/seo/metadata';
+import { buildLandingMetadata } from '@/lib/seo/landing-metadata';
 import { JsonLd, breadcrumbSchema } from '@/lib/seo/structured-data';
 import KnowledgeBaseClient from './knowledge-base.client';
 
-export const metadata = buildMetadata({
+export const generateMetadata = () => buildLandingMetadata({
+  slug: 'knowledge-base',
   title: 'Knowledge Base',
   description:
     'In-depth articles and guides for BestSMSHQ — SMS activation, virtual number rentals, membership, API, wallet and more.',

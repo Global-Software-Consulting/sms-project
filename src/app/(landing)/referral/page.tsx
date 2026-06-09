@@ -8,9 +8,10 @@ import {
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { buildMetadata } from '@/lib/seo/metadata';
+import { buildLandingMetadata } from '@/lib/seo/landing-metadata';
 
-export const metadata = buildMetadata({
+export const generateMetadata = () => buildLandingMetadata({
+  slug: 'referral',
   title: 'Referral Program',
   description:
     'Earn commission by referring users to BestSMSHQ. Get a unique referral link, track signups and unlock recurring rewards as your network grows.',

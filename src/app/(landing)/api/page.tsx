@@ -1,8 +1,9 @@
-import { buildMetadata } from '@/lib/seo/metadata';
+import { buildLandingMetadata } from '@/lib/seo/landing-metadata';
 import { JsonLd, breadcrumbSchema } from '@/lib/seo/structured-data';
 import ApiClient from './api.client';
 
-export const metadata = buildMetadata({
+export const generateMetadata = () => buildLandingMetadata({
+  slug: 'api',
   title: 'Developer API',
   description:
     'Integrate SMS verification into your application with the BestSMSHQ REST API. Endpoints for activations, rentals, balance, services and webhooks.',
