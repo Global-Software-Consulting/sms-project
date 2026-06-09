@@ -106,7 +106,6 @@ export default function AdminSettingsPage() {
   const [activeTab, setActiveTab] = useState<TabType>(initialTab);
   const [isLoading, setIsLoading] = useState(false);
   const [isPageLoading, setIsPageLoading] = useState(true);
-  const [activePage, setActivePage] = useState('home');
 
   // Update URL when tab changes (without full page reload)
   const handleTabChange = (tab: TabType) => {
@@ -186,22 +185,6 @@ www.cheapstreamtv.com`,
     isActive: true,
     maintenanceMessage:
       "We're currently performing maintenance. Please check back later.",
-  });
-
-  // Page Edit State
-  const [pageContent, setPageContent] = useState({
-    headingPart1: 'Best IPTV Subscription Service 2026',
-    headingPart2: 'CheapStreamTV',
-    description:
-      'Enjoy seamless access to 22,000+ live channels and 180,000+ movies & series with CheapStreamTV. Secure IPTV subscription service with 24/7 fast, caring I.A support, and flexible refund policy compatibility. No buffering. No contracts.',
-    inputPlaceholder: 'Email Address',
-    buttonText: 'Get Started',
-    pageTitle: 'Cheap Stream TV Premium Access to Global Digital Store',
-    metaDescription: 'Experience smooth, high-speed digital access for global',
-    keywords: 'best IPTV service, streaming, movies, TV shows, live channels',
-    ogTitle: 'Cheap Stream - Premium IPTV Service Provider test',
-    ogDescription:
-      'best Stream thousands of movies, TV shows, and live channels',
   });
 
   // Addons State
@@ -472,35 +455,6 @@ www.cheapstreamtv.com`,
         setEmailContent(contentMap['email_setup_guide']);
       }
 
-      // Page content for home page (default)
-      if (
-        contentMap['page_home_heading1'] ||
-        contentMap['page_home_description']
-      ) {
-        setPageContent({
-          headingPart1:
-            contentMap['page_home_heading1'] || pageContent.headingPart1,
-          headingPart2:
-            contentMap['page_home_heading2'] || pageContent.headingPart2,
-          description:
-            contentMap['page_home_description'] || pageContent.description,
-          inputPlaceholder:
-            contentMap['page_home_input_placeholder'] ||
-            pageContent.inputPlaceholder,
-          buttonText:
-            contentMap['page_home_button_text'] || pageContent.buttonText,
-          pageTitle:
-            contentMap['page_home_meta_title'] || pageContent.pageTitle,
-          metaDescription:
-            contentMap['page_home_meta_description'] ||
-            pageContent.metaDescription,
-          keywords: contentMap['page_home_keywords'] || pageContent.keywords,
-          ogTitle: contentMap['page_home_og_title'] || pageContent.ogTitle,
-          ogDescription:
-            contentMap['page_home_og_description'] || pageContent.ogDescription,
-        });
-      }
-
       // Languages are now loaded from a dedicated endpoint via fetchLanguages()
     } catch (error) {
       console.error('Failed to fetch settings:', error);
@@ -513,49 +467,6 @@ www.cheapstreamtv.com`,
   useEffect(() => {
     fetchSettings();
   }, [fetchSettings]);
-
-  // Load page-specific content when switching pages in Page Edit tab
-  const loadPageContent = useCallback(async (pageName: string) => {
-    try {
-      const grouped = await getGroupedSettings();
-      const contentSettings = grouped['content'] || [];
-      const generalSettings = grouped['general'] || [];
-      const contentMap: Record<string, string> = {};
-
-      contentSettings.forEach((s) => {
-        contentMap[s.key] = s.value;
-      });
-      generalSettings.forEach((s) => {
-        if (s.key.startsWith(`page_${pageName}_`) && !contentMap[s.key]) {
-          contentMap[s.key] = s.value;
-        }
-      });
-
-      // Set page content if any exists
-      setPageContent({
-        headingPart1: contentMap[`page_${pageName}_heading1`] || '',
-        headingPart2: contentMap[`page_${pageName}_heading2`] || '',
-        description: contentMap[`page_${pageName}_description`] || '',
-        inputPlaceholder:
-          contentMap[`page_${pageName}_input_placeholder`] || 'Email Address',
-        buttonText: contentMap[`page_${pageName}_button_text`] || 'Get Started',
-        pageTitle: contentMap[`page_${pageName}_meta_title`] || '',
-        metaDescription: contentMap[`page_${pageName}_meta_description`] || '',
-        keywords: contentMap[`page_${pageName}_keywords`] || '',
-        ogTitle: contentMap[`page_${pageName}_og_title`] || '',
-        ogDescription: contentMap[`page_${pageName}_og_description`] || '',
-      });
-    } catch (error) {
-      console.error('Failed to load page content:', error);
-    }
-  }, []);
-
-  // Load page content when activePage changes
-  useEffect(() => {
-    if (activeTab === 'page') {
-      loadPageContent(activePage);
-    }
-  }, [activePage, activeTab, loadPageContent]);
 
   const handleSave = async (type: string) => {
     setIsLoading(true);
@@ -771,44 +682,6 @@ www.cheapstreamtv.com`,
         }
         case 'Email content':
           settings = [{ key: 'email_setup_guide', value: emailContent }];
-          break;
-        case 'Page content':
-          settings = [
-            {
-              key: `page_${activePage}_heading1`,
-              value: pageContent.headingPart1,
-            },
-            {
-              key: `page_${activePage}_heading2`,
-              value: pageContent.headingPart2,
-            },
-            {
-              key: `page_${activePage}_description`,
-              value: pageContent.description,
-            },
-            {
-              key: `page_${activePage}_input_placeholder`,
-              value: pageContent.inputPlaceholder,
-            },
-            {
-              key: `page_${activePage}_button_text`,
-              value: pageContent.buttonText,
-            },
-            {
-              key: `page_${activePage}_meta_title`,
-              value: pageContent.pageTitle,
-            },
-            {
-              key: `page_${activePage}_meta_description`,
-              value: pageContent.metaDescription,
-            },
-            { key: `page_${activePage}_keywords`, value: pageContent.keywords },
-            { key: `page_${activePage}_og_title`, value: pageContent.ogTitle },
-            {
-              key: `page_${activePage}_og_description`,
-              value: pageContent.ogDescription,
-            },
-          ];
           break;
         default:
           break;
