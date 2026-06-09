@@ -60,7 +60,28 @@ const fallbackReviews = [
   },
 ];
 
-export default function HomeClient() {
+export interface HomeContent {
+  heroHeadingPart1: string;
+  heroHeadingPart2: string;
+  heroDescription: string;
+  ctaHeading: string;
+  ctaBody: string;
+}
+
+const FALLBACK_HOME_CONTENT: HomeContent = {
+  heroHeadingPart1: 'Receive SMS Activations',
+  heroHeadingPart2: 'Instantly & Reliably',
+  heroDescription:
+    'Get instant access to SMS verification numbers from 180+ countries. Professional, fast, and secure.',
+  ctaHeading: 'Ready to Get Started?',
+  ctaBody: 'Join thousands of satisfied customers using BestSMSHQ',
+};
+
+export default function HomeClient({
+  content = FALLBACK_HOME_CONTENT,
+}: {
+  content?: HomeContent;
+} = {}) {
   const { isAuthenticated, isAdmin } = useAuth();
   const [authMounted, setAuthMounted] = useState(false);
   useEffect(() => {
@@ -239,15 +260,14 @@ export default function HomeClient() {
           </Badge>
 
           <h1 className="text-3xl font-bold tracking-tight sm:text-4xl md:text-6xl">
-            Receive SMS Activations
+            {content.heroHeadingPart1}
             <span className="from-primary to-accent mt-2 block bg-gradient-to-r bg-clip-text text-transparent">
-              Instantly & Reliably
+              {content.heroHeadingPart2}
             </span>
           </h1>
 
           <p className="text-muted-foreground mx-auto max-w-2xl px-2 text-base sm:text-xl">
-            Get instant access to SMS verification numbers from 180+ countries.
-            Professional, fast, and secure.
+            {content.heroDescription}
           </p>
 
           <div className="flex flex-col items-center justify-center gap-3 px-4 sm:flex-row sm:gap-4 sm:px-0">
@@ -266,7 +286,9 @@ export default function HomeClient() {
               variant="outline"
               className="w-full text-base sm:w-auto"
             >
-              <Link prefetch={false} href="/pricing">View Pricing</Link>
+              <Link prefetch={false} href="/pricing">
+                View Pricing
+              </Link>
             </Button>
           </div>
 
@@ -692,10 +714,10 @@ export default function HomeClient() {
       <section className="border-border container mx-auto border-t px-4 py-12 sm:py-16 md:py-20">
         <div className="mx-auto max-w-4xl space-y-6 text-center">
           <h2 className="text-2xl font-bold sm:text-3xl md:text-4xl">
-            Ready to Get Started?
+            {content.ctaHeading}
           </h2>
           <p className="text-muted-foreground text-base sm:text-lg">
-            Join thousands of satisfied customers using BestSMSHQ
+            {content.ctaBody}
           </p>
           <Button asChild size="lg" className="btn-premium text-base">
             <Link prefetch={false} href={ctaTargetHref}>
