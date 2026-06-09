@@ -5,9 +5,9 @@ import { getAddons, addonsToMap } from '@/lib/api/settingsApi';
 
 /**
  * Fetches the public addon settings once on mount and injects each
- * enabled vendor script (Google Analytics, Microsoft Clarity, Cloudflare
- * Web Analytics, Tawk.to, GetButton.io, Trustpilot). reCAPTCHA stays
- * page-local (signup) since it requires per-form integration.
+ * enabled vendor script (Google Analytics, Microsoft Clarity, Tawk.to,
+ * GetButton.io, Trustpilot). reCAPTCHA stays page-local (signup) since it
+ * requires per-form integration.
  *
  * Mount once in the root layout — it renders no UI itself, only
  * <Script> tags via next/script.
@@ -21,16 +21,21 @@ export function AddonsLoader() {
       .catch(() => setMap({}));
   }, []);
 
-  const gaId = map['addon_ga_enabled'] === 'true' ? map['addon_ga_measurement_id'] : '';
+  const gaId =
+    map['addon_ga_enabled'] === 'true' ? map['addon_ga_measurement_id'] : '';
   const clarityId =
-    map['addon_clarity_enabled'] === 'true' ? map['addon_clarity_project_id'] : '';
-  const cfToken =
-    map['addon_cloudflare_enabled'] === 'true' ? map['addon_cloudflare_token'] : '';
+    map['addon_clarity_enabled'] === 'true'
+      ? map['addon_clarity_project_id']
+      : '';
   const tawkProperty =
-    map['addon_tawkto_enabled'] === 'true' ? map['addon_tawkto_property_id'] : '';
+    map['addon_tawkto_enabled'] === 'true'
+      ? map['addon_tawkto_property_id']
+      : '';
   const tawkWidget = map['addon_tawkto_widget_id'] || 'default';
   const getbuttonCode =
-    map['addon_getbutton_enabled'] === 'true' ? map['addon_getbutton_code'] : '';
+    map['addon_getbutton_enabled'] === 'true'
+      ? map['addon_getbutton_code']
+      : '';
   const trustpilotEnabled = map['addon_trustpilot_enabled'] === 'true';
 
   return (
@@ -71,16 +76,6 @@ export function AddonsLoader() {
               })(window, document, "clarity", "script", "${clarityId}");
             `,
           }}
-        />
-      )}
-
-      {cfToken && (
-        <Script
-          id="cf-beacon"
-          defer
-          src="https://static.cloudflareinsights.com/beacon.min.js"
-          data-cf-beacon={JSON.stringify({ token: cfToken })}
-          strategy="afterInteractive"
         />
       )}
 
