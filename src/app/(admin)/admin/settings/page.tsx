@@ -14,7 +14,6 @@ import {
   Star,
   BarChart3,
   Eye,
-  Globe,
   MessageCircle,
   Music,
   Upload,
@@ -53,6 +52,7 @@ import {
   ChevronDown,
   Copy,
   Code,
+  Activity,
 } from 'lucide-react';
 import {
   getAllLanguages,
@@ -217,9 +217,14 @@ www.cheapstreamtv.com`,
       measurementId: 'G-Y7TVVML9P',
     },
     microsoftClarity: { enabled: false, projectId: '' },
-    cloudflare: { enabled: false, token: '' },
     getbutton: { enabled: false, code: '' },
     tawkto: { enabled: false, propertyId: '', widgetId: 'default' },
+    grafana: {
+      enabled: false,
+      dashboardUrl: '',
+      collectorUrl: '',
+      appName: 'sms-frontend',
+    },
   });
 
   // API Rate Limits per tier (req/min)
@@ -394,11 +399,6 @@ www.cheapstreamtv.com`,
               addonsMap['addon_clarity_project_id'] ||
               addons.microsoftClarity.projectId,
           },
-          cloudflare: {
-            enabled: addonsMap['addon_cloudflare_enabled'] === 'true',
-            token:
-              addonsMap['addon_cloudflare_token'] || addons.cloudflare.token,
-          },
           getbutton: {
             enabled: addonsMap['addon_getbutton_enabled'] === 'true',
             code: addonsMap['addon_getbutton_code'] || addons.getbutton.code,
@@ -409,6 +409,16 @@ www.cheapstreamtv.com`,
               addonsMap['addon_tawkto_property_id'] || addons.tawkto.propertyId,
             widgetId:
               addonsMap['addon_tawkto_widget_id'] || addons.tawkto.widgetId,
+          },
+          grafana: {
+            enabled: addonsMap['addon_grafana_enabled'] === 'true',
+            dashboardUrl:
+              addonsMap['addon_grafana_dashboard_url'] ||
+              addons.grafana.dashboardUrl,
+            collectorUrl:
+              addonsMap['addon_faro_collector_url'] ||
+              addons.grafana.collectorUrl,
+            appName: addonsMap['addon_faro_app_name'] || addons.grafana.appName,
           },
         });
       }
@@ -617,12 +627,12 @@ www.cheapstreamtv.com`,
             isEmpty(addons.microsoftClarity.projectId)
           )
             missing.push('Microsoft Clarity Project ID');
-          if (addons.cloudflare.enabled && isEmpty(addons.cloudflare.token))
-            missing.push('Cloudflare Web Analytics Token');
           if (addons.getbutton.enabled && isEmpty(addons.getbutton.code))
             missing.push('GetButton.io Widget Code');
           if (addons.tawkto.enabled && isEmpty(addons.tawkto.propertyId))
             missing.push('Tawk.to Property ID');
+          // Grafana: both URLs are optional. Empty values are no-ops
+          // (sidebar link hidden, Faro SDK not booted). Nothing to validate.
 
           if (missing.length > 0) {
             toast.error(
@@ -675,14 +685,6 @@ www.cheapstreamtv.com`,
               value: str(addons.microsoftClarity.projectId),
             },
             {
-              key: 'addon_cloudflare_enabled',
-              value: String(addons.cloudflare.enabled),
-            },
-            {
-              key: 'addon_cloudflare_token',
-              value: str(addons.cloudflare.token),
-            },
-            {
               key: 'addon_getbutton_enabled',
               value: String(addons.getbutton.enabled),
             },
@@ -701,6 +703,22 @@ www.cheapstreamtv.com`,
             {
               key: 'addon_tawkto_widget_id',
               value: str(addons.tawkto.widgetId),
+            },
+            {
+              key: 'addon_grafana_enabled',
+              value: String(addons.grafana.enabled),
+            },
+            {
+              key: 'addon_grafana_dashboard_url',
+              value: str(addons.grafana.dashboardUrl),
+            },
+            {
+              key: 'addon_faro_collector_url',
+              value: str(addons.grafana.collectorUrl),
+            },
+            {
+              key: 'addon_faro_app_name',
+              value: str(addons.grafana.appName),
             },
           ];
           break;
@@ -2822,33 +2840,33 @@ www.cheapstreamtv.com`,
               )}
             </div>
 
-            {/* Cloudflare */}
+            {/* Grafana (Dashboard link + Faro RUM) */}
             <div className="rounded-xl border border-[rgba(255,255,255,0.1)] bg-[rgba(15,23,42,0.6)] p-6 backdrop-blur-xl">
               <div className="flex items-start justify-between">
                 <div className="flex items-start gap-3">
-                  <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-[#F59E0B]/20">
-                    <Globe className="h-5 w-5 text-[#F59E0B]" />
+                  <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-[#F46800]/20">
+                    <Activity className="h-5 w-5 text-[#F46800]" />
                   </div>
                   <div>
                     <h3 className="mb-1 text-base font-semibold text-white">
-                      Cloudflare
+                      Grafana
                     </h3>
                     <p className="text-sm text-[#64748B]">
-                      CDN, security, and performance optimization
+                      Observability dashboards + Faro RUM (errors, web vitals)
                     </p>
                   </div>
                 </div>
                 <button
-                  onClick={() => toggleAddon('cloudflare')}
+                  onClick={() => toggleAddon('grafana')}
                   className={`size-icon relative h-6 !min-h-0 w-12 shrink-0 rounded-full !p-0 transition-colors ${
-                    addons.cloudflare.enabled
+                    addons.grafana.enabled
                       ? 'bg-[#3B82F6]'
                       : 'bg-[rgba(255,255,255,0.18)]'
                   }`}
                 >
                   <div
                     className={`absolute top-0.5 h-5 w-5 rounded-full bg-white transition-transform ${
-                      addons.cloudflare.enabled
+                      addons.grafana.enabled
                         ? 'translate-x-6'
                         : 'translate-x-0.5'
                     }`}
@@ -2856,26 +2874,80 @@ www.cheapstreamtv.com`,
                 </button>
               </div>
 
-              {addons.cloudflare.enabled && (
-                <div className="border-t border-[rgba(255,255,255,0.1)] pt-4">
-                  <label className="mb-2 block text-xs font-medium text-white">
-                    Web Analytics token
-                  </label>
-                  <input
-                    type="text"
-                    value={addons.cloudflare.token}
-                    placeholder="32-character token from Cloudflare → Analytics → Web Analytics"
-                    onChange={(e) =>
-                      setAddons({
-                        ...addons,
-                        cloudflare: {
-                          ...addons.cloudflare,
-                          token: e.target.value,
-                        },
-                      })
-                    }
-                    className="w-full rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.4)] px-3 py-2 text-base text-white focus:ring-2 focus:ring-[#3B82F6] focus:outline-none lg:text-sm"
-                  />
+              {addons.grafana.enabled && (
+                <div className="space-y-4 border-t border-[rgba(255,255,255,0.1)] pt-4">
+                  <div>
+                    <label className="mb-2 block text-xs font-medium text-white">
+                      Dashboard URL
+                      <span className="ml-1 text-[#64748B]">(optional)</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={addons.grafana.dashboardUrl}
+                      placeholder="https://your-grafana-instance/d/<dashboard-id>/<slug>"
+                      onChange={(e) =>
+                        setAddons({
+                          ...addons,
+                          grafana: {
+                            ...addons.grafana,
+                            dashboardUrl: e.target.value,
+                          },
+                        })
+                      }
+                      className="w-full rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.4)] px-3 py-2 text-base text-white focus:ring-2 focus:ring-[#3B82F6] focus:outline-none lg:text-sm"
+                    />
+                    <p className="mt-1 text-xs text-[#64748B]">
+                      For an admin sidebar link to the dashboard.
+                    </p>
+                  </div>
+
+                  <div className="border-t border-[rgba(255,255,255,0.1)] pt-4">
+                    <p className="mb-3 text-xs font-medium tracking-wider text-[#64748B] uppercase">
+                      Faro RUM (real-user monitoring)
+                    </p>
+                    <label className="mb-2 block text-xs font-medium text-white">
+                      Collector URL
+                      <span className="ml-1 text-[#64748B]">(optional)</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={addons.grafana.collectorUrl}
+                      placeholder="https://faro-collector-prod-<region>.grafana.net/collect/<token>"
+                      onChange={(e) =>
+                        setAddons({
+                          ...addons,
+                          grafana: {
+                            ...addons.grafana,
+                            collectorUrl: e.target.value,
+                          },
+                        })
+                      }
+                      className="w-full rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.4)] px-3 py-2 text-base text-white focus:ring-2 focus:ring-[#3B82F6] focus:outline-none lg:text-sm"
+                    />
+                    <label className="mt-3 mb-2 block text-xs font-medium text-white">
+                      App name
+                    </label>
+                    <input
+                      type="text"
+                      value={addons.grafana.appName}
+                      placeholder="sms-frontend"
+                      onChange={(e) =>
+                        setAddons({
+                          ...addons,
+                          grafana: {
+                            ...addons.grafana,
+                            appName: e.target.value,
+                          },
+                        })
+                      }
+                      className="w-full rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.4)] px-3 py-2 text-base text-white focus:ring-2 focus:ring-[#3B82F6] focus:outline-none lg:text-sm"
+                    />
+                    <p className="mt-2 text-xs text-[#64748B]">
+                      Boots the Faro SDK in every visitor&apos;s browser when
+                      filled. Grafana Cloud → Frontend Observability → your app
+                      → copy Collector URL.
+                    </p>
+                  </div>
                 </div>
               )}
             </div>

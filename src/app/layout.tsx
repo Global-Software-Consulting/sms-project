@@ -7,6 +7,7 @@ import { Toaster } from '@/components/ui/sonner';
 import { GoogleTranslate } from '@/components/google-translate';
 import { AddonsLoader } from '@/components/addons-loader';
 import { NavCrashRecovery } from '@/components/nav-crash-recovery';
+import { FaroInit } from '@/components/faro-init';
 import SwCleanup from './sw-cleanup';
 import {
   SITE_URL,
@@ -198,6 +199,7 @@ export default function RootLayout({
       </head>
       <body suppressHydrationWarning>
         <NavCrashRecovery />
+        <FaroInit />
         <StoreProvider>
           <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
             <BrandingProvider>
