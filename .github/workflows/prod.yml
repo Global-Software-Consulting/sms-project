@@ -82,8 +82,8 @@ jobs:
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SERVER_SSH_KEY }}
           port: ${{ secrets.SERVER_PORT }}
-          source: "docker-compose.prod.yml"
-          target: "~/sms-frontend/"
+          source: 'docker-compose.prod.yml'
+          target: '~/sms-frontend/'
 
       - name: Deploy via SSH
         uses: appleboy/ssh-action@v1
@@ -127,9 +127,41 @@ jobs:
             # Cleanup: remove symlink and tmpfs env after container reads it
             rm -f ~/sms-frontend/.env /dev/shm/sms-frontend/.env
 
-            # Health check
-            sleep 10
-            curl -sf http://localhost:3001/ > /dev/null || { echo "Health check failed"; docker logs sms_frontend_prod --tail 20; exit 1; }
+            # Health check with retries
+            echo "Waiting for container to be healthy..."
+            for i in 1 2 3 4 5; do
+              sleep 10
+              if curl -sf http://localhost:3001/ > /dev/null 2>&1; then
+                echo "Health check passed on attempt $i"
+                break
+              fi
+              echo "Health check attempt $i failed, retrying..."
+              if [ $i -eq 5 ]; then
+                echo "Health check failed after 5 attempts"
+                docker logs sms_frontend_prod --tail 50
+                
+                # Rollback to previous image
+                echo "::error::Deployment failed - initiating rollback..."
+                PREVIOUS_IMAGE=$(cat ~/sms-frontend/.previous-image)
+                if [ "$PREVIOUS_IMAGE" != "none" ]; then
+                  echo "Rolling back to previous image: $PREVIOUS_IMAGE"
+                  docker compose -f docker-compose.prod.yml down
+                  docker pull $PREVIOUS_IMAGE 2>/dev/null || echo "Previous image not found in registry, using local"
+                  IMAGE_TAG=$PREVIOUS_IMAGE docker compose -f docker-compose.prod.yml up -d
+                  
+                  # Verify rollback health
+                  sleep 10
+                  if curl -sf http://localhost:3001/ > /dev/null 2>&1; then
+                    echo "::notice::✓ Rollback successful - service restored"
+                  else
+                    echo "::error::✗ Rollback failed - service still unhealthy"
+                  fi
+                else
+                  echo "::error::No previous image available for rollback"
+                fi
+                exit 1
+              fi
+            done
 
             docker image prune -f
         env:

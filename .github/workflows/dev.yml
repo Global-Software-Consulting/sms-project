@@ -85,8 +85,8 @@ jobs:
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SERVER_SSH_KEY }}
           port: ${{ secrets.SERVER_PORT }}
-          source: "docker-compose.dev.yml"
-          target: "~/sms-frontend/"
+          source: 'docker-compose.dev.yml'
+          target: '~/sms-frontend/'
 
       - name: Build and deploy via SSH
         uses: appleboy/ssh-action@v1
@@ -145,6 +145,26 @@ jobs:
               if [ $i -eq 5 ]; then
                 echo "Health check failed after 5 attempts"
                 docker logs sms_frontend_dev --tail 50
+                
+                # Rollback to previous image
+                echo "::error::Deployment failed - initiating rollback..."
+                PREVIOUS_IMAGE=$(cat ~/sms-frontend/.previous-image)
+                if [ "$PREVIOUS_IMAGE" != "none" ]; then
+                  echo "Rolling back to previous image: $PREVIOUS_IMAGE"
+                  docker compose -f docker-compose.dev.yml down
+                  docker pull $PREVIOUS_IMAGE 2>/dev/null || echo "Previous image not found in registry, using local"
+                  IMAGE_TAG=$PREVIOUS_IMAGE docker compose -f docker-compose.dev.yml up -d
+                  
+                  # Verify rollback health
+                  sleep 10
+                  if curl -sf http://localhost:3001/ > /dev/null 2>&1; then
+                    echo "::notice::✓ Rollback successful - service restored"
+                  else
+                    echo "::error::✗ Rollback failed - service still unhealthy"
+                  fi
+                else
+                  echo "::error::No previous image available for rollback"
+                fi
                 exit 1
               fi
             done
