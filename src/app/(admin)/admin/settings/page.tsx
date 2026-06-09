@@ -2458,19 +2458,23 @@ www.cheapstreamtv.com`,
                           key={lang.id}
                           className="rounded-xl border border-[rgba(255,255,255,0.1)] bg-[rgba(0,0,0,0.3)] p-4"
                         >
-                          <div className="flex items-center gap-3">
-                            <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-[rgba(59,130,246,0.15)] text-sm font-bold text-white">
-                              {lang.code}
+                          <div className="flex flex-col gap-3">
+                            {/* Row 1: flag + language name (never squeezed) */}
+                            <div className="flex min-w-0 items-center gap-3">
+                              <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-[rgba(59,130,246,0.15)] text-sm font-bold text-white">
+                                {lang.code}
+                              </div>
+                              <div className="min-w-0 flex-1">
+                                <h4 className="truncate text-sm font-semibold text-white">
+                                  {lang.name}
+                                </h4>
+                                <p className="text-xs text-[#64748B]">
+                                  {lang.langCode}
+                                </p>
+                              </div>
                             </div>
-                            <div className="min-w-0 flex-1">
-                              <h4 className="truncate text-sm font-semibold text-white">
-                                {lang.name}
-                              </h4>
-                              <p className="text-xs text-[#64748B]">
-                                {lang.langCode}
-                              </p>
-                            </div>
-                            <div className="flex flex-shrink-0 items-center gap-3">
+                            {/* Row 2: controls — always on their own line */}
+                            <div className="flex items-center justify-between gap-3 border-t border-[rgba(255,255,255,0.06)] pt-3">
                               <button
                                 type="button"
                                 onClick={() =>
@@ -2529,26 +2533,30 @@ www.cheapstreamtv.com`,
                           key={lang.id}
                           className="rounded-xl border border-[rgba(255,255,255,0.1)] bg-[rgba(0,0,0,0.3)] p-4 opacity-75"
                         >
-                          <div className="flex items-center gap-3">
-                            <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-[rgba(148,163,184,0.15)] text-sm font-bold text-[#94A3B8]">
-                              {lang.code}
+                          <div className="flex flex-col gap-3">
+                            <div className="flex min-w-0 items-center gap-3">
+                              <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-[rgba(148,163,184,0.15)] text-sm font-bold text-[#94A3B8]">
+                                {lang.code}
+                              </div>
+                              <div className="min-w-0 flex-1">
+                                <h4 className="truncate text-sm font-semibold text-white">
+                                  {lang.name}
+                                </h4>
+                                <p className="text-xs text-[#64748B]">
+                                  {lang.langCode}
+                                </p>
+                              </div>
                             </div>
-                            <div className="min-w-0 flex-1">
-                              <h4 className="truncate text-sm font-semibold text-white">
-                                {lang.name}
-                              </h4>
-                              <p className="text-xs text-[#64748B]">
-                                {lang.langCode}
-                              </p>
+                            <div className="flex items-center justify-end border-t border-[rgba(255,255,255,0.06)] pt-3">
+                              <button
+                                onClick={() =>
+                                  handleToggleLanguage(lang.id, true)
+                                }
+                                className="text-xs font-medium text-[#22C55E] transition-colors hover:text-[#16A34A]"
+                              >
+                                Activate
+                              </button>
                             </div>
-                            <button
-                              onClick={() =>
-                                handleToggleLanguage(lang.id, true)
-                              }
-                              className="text-xs font-medium text-[#22C55E] transition-colors hover:text-[#16A34A]"
-                            >
-                              Activate
-                            </button>
                           </div>
                         </div>
                       ))}
