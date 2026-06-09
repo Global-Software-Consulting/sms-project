@@ -236,14 +236,6 @@ export default function WalletPage() {
               maxAmount: 10000,
               currencies: ['USD'],
             },
-            {
-              gateway: 'VOLET',
-              name: 'Volet',
-              enabled: true,
-              minAmount: 1,
-              maxAmount: 10000,
-              currencies: ['USD'],
-            },
           ];
           setGateways(defaultGateways);
         }
