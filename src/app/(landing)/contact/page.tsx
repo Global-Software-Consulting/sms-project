@@ -1,11 +1,12 @@
-import { buildMetadata } from '@/lib/seo/metadata';
+import { buildLandingMetadata } from '@/lib/seo/landing-metadata';
 import {
   JsonLd,
   breadcrumbSchema,
 } from '@/lib/seo/structured-data';
 import ContactClient from './contact.client';
 
-export const metadata = buildMetadata({
+export const generateMetadata = () => buildLandingMetadata({
+  slug: 'contact',
   title: 'Contact Us',
   description:
     'Get in touch with the BestSMSHQ team. Reach customer support for help with SMS activation, billing, partnerships and general inquiries.',

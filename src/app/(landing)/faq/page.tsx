@@ -1,5 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { buildMetadata } from '@/lib/seo/metadata';
+import { buildLandingMetadata } from '@/lib/seo/landing-metadata';
 import {
   JsonLd,
   breadcrumbSchema,
@@ -41,7 +41,8 @@ const FALLBACK_FAQS: FaqItem[] = [
   },
 ];
 
-export const metadata = buildMetadata({
+export const generateMetadata = () => buildLandingMetadata({
+  slug: 'faq',
   title: 'Frequently Asked Questions',
   description:
     'Answers to common questions about SMS verification, pricing, refunds, virtual numbers, rentals, and getting started with BestSMSHQ.',

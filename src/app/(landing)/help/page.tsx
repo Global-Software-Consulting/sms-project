@@ -1,8 +1,9 @@
-import { buildMetadata } from '@/lib/seo/metadata';
+import { buildLandingMetadata } from '@/lib/seo/landing-metadata';
 import { JsonLd, breadcrumbSchema } from '@/lib/seo/structured-data';
 import HelpClient from './help.client';
 
-export const metadata = buildMetadata({
+export const generateMetadata = () => buildLandingMetadata({
+  slug: 'help',
   title: 'Help Center',
   description:
     'Find answers, guides and how-tos for using BestSMSHQ. Browse the public help center for SMS activation, rentals, billing and account topics.',

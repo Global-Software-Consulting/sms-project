@@ -1,11 +1,12 @@
-import { buildMetadata } from '@/lib/seo/metadata';
+import { buildLandingMetadata } from '@/lib/seo/landing-metadata';
 import {
   JsonLd,
   breadcrumbSchema,
 } from '@/lib/seo/structured-data';
 import BlogClient from './blog.client';
 
-export const metadata = buildMetadata({
+export const generateMetadata = () => buildLandingMetadata({
+  slug: 'blog',
   title: 'Blog & News',
   description:
     'Guides, tutorials, and news from BestSMSHQ. Learn about SMS verification, virtual numbers, security best practices and platform updates.',

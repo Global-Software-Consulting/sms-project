@@ -1,12 +1,13 @@
 import { Card, CardContent } from '@/components/ui/card';
-import { buildMetadata } from '@/lib/seo/metadata';
+import { buildLandingMetadata } from '@/lib/seo/landing-metadata';
 import {
   JsonLd,
   breadcrumbSchema,
   organizationSchema,
 } from '@/lib/seo/structured-data';
 
-export const metadata = buildMetadata({
+export const generateMetadata = () => buildLandingMetadata({
+  slug: 'about',
   title: 'About Us',
   description:
     'BestSMSHQ is a premium SMS activation and number rental platform serving customers across 180+ countries. Learn about our mission and story.',
