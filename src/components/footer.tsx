@@ -16,7 +16,22 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 
-export function Footer() {
+export interface FooterContent {
+  brandTagline: string;
+  copyrightText: string;
+}
+
+const FALLBACK_FOOTER_CONTENT: FooterContent = {
+  brandTagline:
+    'Premium SMS activation and number rental platform. Fast, reliable, and secure.',
+  copyrightText: 'All rights reserved.',
+};
+
+export function Footer({
+  content = FALLBACK_FOOTER_CONTENT,
+}: {
+  content?: FooterContent;
+} = {}) {
   const currentYear = new Date().getFullYear();
   const { siteLogo } = useBranding();
   const [ads, setAds] = useState<Ad[]>([]);
@@ -54,8 +69,7 @@ export function Footer() {
               <span className="text-lg font-bold sm:text-xl">BestSMSHQ</span>
             </div>
             <p className="text-muted-foreground max-w-xs text-sm">
-              Premium SMS activation and number rental platform. Fast, reliable,
-              and secure.
+              {content.brandTagline}
             </p>
             <SocialIcons />
             <TrustpilotWidget />
@@ -68,7 +82,8 @@ export function Footer() {
             </h3>
             <ul className="space-y-2">
               <li>
-                <Link prefetch={false}
+                <Link
+                  prefetch={false}
                   href="/features"
                   className="text-muted-foreground hover:text-foreground text-sm transition-colors"
                 >
@@ -76,7 +91,8 @@ export function Footer() {
                 </Link>
               </li>
               <li>
-                <Link prefetch={false}
+                <Link
+                  prefetch={false}
                   href="/pricing"
                   className="text-muted-foreground hover:text-foreground text-sm transition-colors"
                 >
@@ -84,7 +100,8 @@ export function Footer() {
                 </Link>
               </li>
               <li>
-                <Link prefetch={false}
+                <Link
+                  prefetch={false}
                   href="/membership"
                   className="text-muted-foreground hover:text-foreground text-sm transition-colors"
                 >
@@ -92,7 +109,8 @@ export function Footer() {
                 </Link>
               </li>
               <li>
-                <Link prefetch={false}
+                <Link
+                  prefetch={false}
                   href="/api"
                   className="text-muted-foreground hover:text-foreground text-sm transition-colors"
                 >
@@ -100,7 +118,8 @@ export function Footer() {
                 </Link>
               </li>
               <li>
-                <Link prefetch={false}
+                <Link
+                  prefetch={false}
                   href="/status"
                   className="text-muted-foreground hover:text-foreground text-sm transition-colors"
                 >
@@ -117,7 +136,8 @@ export function Footer() {
             </h3>
             <ul className="space-y-2">
               <li>
-                <Link prefetch={false}
+                <Link
+                  prefetch={false}
                   href="/blog"
                   className="text-muted-foreground hover:text-foreground text-sm transition-colors"
                 >
@@ -125,7 +145,8 @@ export function Footer() {
                 </Link>
               </li>
               <li>
-                <Link prefetch={false}
+                <Link
+                  prefetch={false}
                   href="/help"
                   className="text-muted-foreground hover:text-foreground text-sm transition-colors"
                 >
@@ -133,7 +154,8 @@ export function Footer() {
                 </Link>
               </li>
               <li>
-                <Link prefetch={false}
+                <Link
+                  prefetch={false}
                   href="/faq"
                   className="text-muted-foreground hover:text-foreground text-sm transition-colors"
                 >
@@ -141,7 +163,8 @@ export function Footer() {
                 </Link>
               </li>
               <li>
-                <Link prefetch={false}
+                <Link
+                  prefetch={false}
                   href="/reviews"
                   className="text-muted-foreground hover:text-foreground text-sm transition-colors"
                 >
@@ -149,7 +172,8 @@ export function Footer() {
                 </Link>
               </li>
               <li>
-                <Link prefetch={false}
+                <Link
+                  prefetch={false}
                   href="/knowledge-base"
                   className="text-muted-foreground hover:text-foreground text-sm transition-colors"
                 >
@@ -166,7 +190,8 @@ export function Footer() {
             </h3>
             <ul className="space-y-2">
               <li>
-                <Link prefetch={false}
+                <Link
+                  prefetch={false}
                   href="/about"
                   className="text-muted-foreground hover:text-foreground text-sm transition-colors"
                 >
@@ -174,7 +199,8 @@ export function Footer() {
                 </Link>
               </li>
               <li>
-                <Link prefetch={false}
+                <Link
+                  prefetch={false}
                   href="/contact"
                   className="text-muted-foreground hover:text-foreground text-sm transition-colors"
                 >
@@ -182,7 +208,8 @@ export function Footer() {
                 </Link>
               </li>
               <li>
-                <Link prefetch={false}
+                <Link
+                  prefetch={false}
                   href="/referral"
                   className="text-muted-foreground hover:text-foreground text-sm transition-colors"
                 >
@@ -190,7 +217,8 @@ export function Footer() {
                 </Link>
               </li>
               <li>
-                <Link prefetch={false}
+                <Link
+                  prefetch={false}
                   href="/privacy"
                   className="text-muted-foreground hover:text-foreground text-sm transition-colors"
                 >
@@ -198,7 +226,8 @@ export function Footer() {
                 </Link>
               </li>
               <li>
-                <Link prefetch={false}
+                <Link
+                  prefetch={false}
                   href="/terms"
                   className="text-muted-foreground hover:text-foreground text-sm transition-colors"
                 >
@@ -255,28 +284,32 @@ export function Footer() {
         <div className="border-border mt-8 border-t pt-6 sm:pt-8">
           <div className="text-muted-foreground flex flex-col items-center justify-between gap-3 text-sm sm:flex-row">
             <p className="text-center sm:text-left">
-              &copy; {currentYear} BestSMSHQ. All rights reserved.
+              &copy; {currentYear} BestSMSHQ. {content.copyrightText}
             </p>
             <div className="flex flex-wrap items-center justify-center gap-3 sm:gap-4">
-              <Link prefetch={false}
+              <Link
+                prefetch={false}
                 href="/privacy"
                 className="hover:text-foreground transition-colors"
               >
                 Privacy
               </Link>
-              <Link prefetch={false}
+              <Link
+                prefetch={false}
                 href="/terms"
                 className="hover:text-foreground transition-colors"
               >
                 Terms
               </Link>
-              <Link prefetch={false}
+              <Link
+                prefetch={false}
                 href="/payment-policy"
                 className="hover:text-foreground transition-colors"
               >
                 Payment Policy
               </Link>
-              <Link prefetch={false}
+              <Link
+                prefetch={false}
                 href="/disclaimer"
                 className="hover:text-foreground transition-colors"
               >

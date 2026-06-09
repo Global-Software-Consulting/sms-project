@@ -140,6 +140,7 @@ export interface MembershipContent {
   heroDescription: string;
   ctaHeading: string;
   ctaBody: string;
+  ctaButtonText: string;
 }
 
 const FALLBACK_MEMBERSHIP_CONTENT: MembershipContent = {
@@ -149,6 +150,7 @@ const FALLBACK_MEMBERSHIP_CONTENT: MembershipContent = {
   ctaHeading: 'Ready to Save More?',
   ctaBody:
     'Join thousands of users who are already saving with our membership plans. Upgrade today and start getting more value from every activation.',
+  ctaButtonText: 'View Plans in Dashboard',
 };
 
 export default function MembershipClient({
@@ -675,7 +677,7 @@ export default function MembershipClient({
             </p>
             <Link prefetch={false} href="/dashboard/membership">
               <Button size="lg" className="px-8">
-                View Plans in Dashboard
+                {content.ctaButtonText}
                 <ArrowRight className="ml-2 h-5 w-5" />
               </Button>
             </Link>

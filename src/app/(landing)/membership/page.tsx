@@ -27,15 +27,16 @@ export default async function MembershipPage() {
       'page_membership_hero_description',
       'Save more, get priority access, and unlock premium features with our flexible membership tiers',
     ),
-    ctaHeading: pick(
-      raw,
-      'page_membership_cta_heading',
-      'Ready to Save More?',
-    ),
+    ctaHeading: pick(raw, 'page_membership_cta_heading', 'Ready to Save More?'),
     ctaBody: pick(
       raw,
       'page_membership_cta_body',
       'Join thousands of users who are already saving with our membership plans. Upgrade today and start getting more value from every activation.',
+    ),
+    ctaButtonText: pick(
+      raw,
+      'page_membership_cta_button_text',
+      'View Plans in Dashboard',
     ),
   };
 
