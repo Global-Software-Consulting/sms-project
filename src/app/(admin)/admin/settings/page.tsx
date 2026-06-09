@@ -225,6 +225,11 @@ www.cheapstreamtv.com`,
       collectorUrl: '',
       appName: 'sms-frontend',
     },
+    uptimerobot: {
+      enabled: false,
+      statusPageUrl: '',
+      apiKey: '',
+    },
   });
 
   // API Rate Limits per tier (req/min)
@@ -419,6 +424,15 @@ www.cheapstreamtv.com`,
               addonsMap['addon_faro_collector_url'] ||
               addons.grafana.collectorUrl,
             appName: addonsMap['addon_faro_app_name'] || addons.grafana.appName,
+          },
+          uptimerobot: {
+            enabled: addonsMap['addon_uptimerobot_enabled'] === 'true',
+            statusPageUrl:
+              addonsMap['addon_uptimerobot_status_page_url'] ||
+              addons.uptimerobot.statusPageUrl,
+            apiKey:
+              addonsMap['addon_uptimerobot_api_key'] ||
+              addons.uptimerobot.apiKey,
           },
         });
       }
@@ -719,6 +733,18 @@ www.cheapstreamtv.com`,
             {
               key: 'addon_faro_app_name',
               value: str(addons.grafana.appName),
+            },
+            {
+              key: 'addon_uptimerobot_enabled',
+              value: String(addons.uptimerobot.enabled),
+            },
+            {
+              key: 'addon_uptimerobot_status_page_url',
+              value: str(addons.uptimerobot.statusPageUrl),
+            },
+            {
+              key: 'addon_uptimerobot_api_key',
+              value: str(addons.uptimerobot.apiKey),
             },
           ];
           break;
@@ -2948,6 +2974,101 @@ www.cheapstreamtv.com`,
                       → copy Collector URL.
                     </p>
                   </div>
+                </div>
+              )}
+            </div>
+
+            {/* UptimeRobot */}
+            <div className="rounded-xl border border-[rgba(255,255,255,0.1)] bg-[rgba(15,23,42,0.6)] p-6 backdrop-blur-xl">
+              <div className="flex items-start justify-between">
+                <div className="flex items-start gap-3">
+                  <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-[#13AA52]/20">
+                    <Activity className="h-5 w-5 text-[#13AA52]" />
+                  </div>
+                  <div>
+                    <h3 className="mb-1 text-base font-semibold text-white">
+                      UptimeRobot
+                    </h3>
+                    <p className="text-sm text-[#64748B]">
+                      External uptime monitoring — public status page + API key
+                      for in-app status widgets
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => toggleAddon('uptimerobot')}
+                  className={`size-icon relative h-6 !min-h-0 w-12 shrink-0 rounded-full !p-0 transition-colors ${
+                    addons.uptimerobot.enabled
+                      ? 'bg-[#3B82F6]'
+                      : 'bg-[rgba(255,255,255,0.18)]'
+                  }`}
+                >
+                  <div
+                    className={`absolute top-0.5 h-5 w-5 rounded-full bg-white transition-transform ${
+                      addons.uptimerobot.enabled
+                        ? 'translate-x-6'
+                        : 'translate-x-0.5'
+                    }`}
+                  />
+                </button>
+              </div>
+
+              {addons.uptimerobot.enabled && (
+                <div className="space-y-4 border-t border-[rgba(255,255,255,0.1)] pt-4">
+                  <div>
+                    <label className="mb-2 block text-xs font-medium text-white">
+                      Public status page URL
+                      <span className="ml-1 text-[#64748B]">(optional)</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={addons.uptimerobot.statusPageUrl}
+                      placeholder="https://stats.uptimerobot.com/<your-id>"
+                      onChange={(e) =>
+                        setAddons({
+                          ...addons,
+                          uptimerobot: {
+                            ...addons.uptimerobot,
+                            statusPageUrl: e.target.value,
+                          },
+                        })
+                      }
+                      className="w-full rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.4)] px-3 py-2 text-base text-white focus:ring-2 focus:ring-[#3B82F6] focus:outline-none lg:text-sm"
+                    />
+                    <p className="mt-1 text-xs text-[#64748B]">
+                      Link or embed on footer / maintenance page.
+                    </p>
+                  </div>
+                  <div>
+                    <label className="mb-2 block text-xs font-medium text-white">
+                      Read-only API key
+                      <span className="ml-1 text-[#64748B]">(optional)</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={addons.uptimerobot.apiKey}
+                      placeholder="ur123456-readonly-key"
+                      onChange={(e) =>
+                        setAddons({
+                          ...addons,
+                          uptimerobot: {
+                            ...addons.uptimerobot,
+                            apiKey: e.target.value,
+                          },
+                        })
+                      }
+                      className="w-full rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.4)] px-3 py-2 text-base text-white focus:ring-2 focus:ring-[#3B82F6] focus:outline-none lg:text-sm"
+                    />
+                    <p className="mt-2 text-xs text-[#64748B]">
+                      UptimeRobot → My Settings → API Settings → create a
+                      Read-Only API key. Used to fetch monitor status for a
+                      custom badge.
+                    </p>
+                  </div>
+                  <p className="text-xs text-[#64748B]">
+                    Uptime monitoring itself runs at uptimerobot.com — these
+                    fields only enable optional in-app display.
+                  </p>
                 </div>
               )}
             </div>
