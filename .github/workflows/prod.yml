@@ -129,8 +129,13 @@ jobs:
             fi
 
             # Pull and restart
+            # GHCR rejects mixed-case repository names but github.repository
+            # preserves the org casing (Global-Software-Consulting/...). The
+            # build job's docker/metadata-action lowercases automatically when
+            # pushing; here we lowercase explicitly before pulling.
             echo "$GHCR_TOKEN" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
-            docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:prod
+            IMAGE="${{ env.REGISTRY }}/$(echo '${{ env.IMAGE_NAME }}' | tr '[:upper:]' '[:lower:]'):prod"
+            docker pull "$IMAGE"
 
             # Symlink env so compose env_file: .env resolves correctly
             ln -sf /dev/shm/sms-frontend/.env ~/sms-frontend/.env
