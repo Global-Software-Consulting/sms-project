@@ -1,0 +1,114 @@
+---
+# ============================================
+# SMS Sort Frontend — Verify Server Dependencies
+# ============================================
+# Checks that all required software is installed and running.
+#
+# Usage:
+#   ansible-playbook verify.yml --ask-pass
+# ============================================
+
+- name: Verify SMS Sort Frontend server dependencies
+  hosts: sms_servers
+  become: true
+
+  tasks:
+    # ------------------------------------------
+    # Version checks
+    # ------------------------------------------
+    - name: Check Docker version
+      command: docker --version
+      register: docker_ver
+      changed_when: false
+
+    - name: Check Docker Compose version
+      command: docker compose version
+      register: compose_ver
+      changed_when: false
+
+    - name: Check Nginx version
+      command: nginx -v
+      register: nginx_ver
+      changed_when: false
+
+    - name: Check Node.js version
+      command: node --version
+      register: node_ver
+      changed_when: false
+
+    - name: Check Git version
+      command: git --version
+      register: git_ver
+      changed_when: false
+
+    # ------------------------------------------
+    # Service checks
+    # ------------------------------------------
+    - name: Check Docker service is running
+      systemd:
+        name: docker
+      register: docker_svc
+
+    - name: Check Nginx service is running
+      systemd:
+        name: nginx
+      register: nginx_svc
+
+    # ------------------------------------------
+    # Container checks
+    # ------------------------------------------
+    - name: Check frontend container
+      command: docker ps --filter name=sms_frontend --format "{{ '{{' }}.Status{{ '}}' }}"
+      register: frontend_container
+      changed_when: false
+
+    - name: Check API container
+      command: docker ps --filter name=sms_app --format "{{ '{{' }}.Status{{ '}}' }}"
+      register: api_container
+      changed_when: false
+
+    # ------------------------------------------
+    # Resource checks
+    # ------------------------------------------
+    - name: Check disk space
+      command: df -h /
+      register: disk_info
+      changed_when: false
+
+    - name: Check memory
+      command: free -h
+      register: mem_info
+      changed_when: false
+
+    # ------------------------------------------
+    # Print report
+    # ------------------------------------------
+    - name: Server verification report
+      debug:
+        msg: |
+
+          ============================================
+           SMS Sort — Server Verification Report
+          ============================================
+
+           Software:
+             Docker:          {{ docker_ver.stdout }}
+             Docker Compose:  {{ compose_ver.stdout }}
+             Nginx:           {{ nginx_ver.stderr }}
+             Node.js:         {{ node_ver.stdout }}
+             Git:             {{ git_ver.stdout }}
+
+           Services:
+             Docker:          {{ docker_svc.status.ActiveState }}
+             Nginx:           {{ nginx_svc.status.ActiveState }}
+
+           Containers:
+             Frontend:        {{ frontend_container.stdout | default('not running') }}
+             API:             {{ api_container.stdout | default('not running') }}
+
+           Resources:
+           {{ disk_info.stdout }}
+
+           {{ mem_info.stdout }}
+
+          ============================================

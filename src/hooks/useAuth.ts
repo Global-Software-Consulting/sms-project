@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAppDispatch, useAppSelector } from '@/lib/store/hooks';
+import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import {
   login,
   register,
@@ -21,16 +21,16 @@ import {
   selectUserRole,
   selectIsAdmin,
   selectIsUser,
-} from '@/lib/store/slices/authSlice';
+} from '@/store/slices/authSlice';
 import type { LoginRequest, RegisterRequest } from '@/lib/api';
-import { 
-  getGoogleOAuthUrl, 
-  getGithubOAuthUrl, 
-  getTelegramOAuthUrl, 
+import {
+  getGoogleOAuthUrl,
+  getGithubOAuthUrl,
+  getTelegramOAuthUrl,
   getTwitterOAuthUrl,
   requestGuestLogin,
   verifyOtpAndLogin,
-  isAdmin as checkIsAdmin,
+  isOwner as checkIsOwner,
 } from '@/lib/api';
 
 export const useAuth = () => {
@@ -50,18 +50,13 @@ export const useAuth = () => {
   const isInitialized = useAppSelector(selectIsInitialized);
   const error = useAppSelector(selectAuthError);
   const emailVerificationSent = useAppSelector(selectEmailVerificationSent);
-  
+
   // Role selectors
   const userRole = useAppSelector(selectUserRole);
   const isAdmin = useAppSelector(selectIsAdmin);
   const isUser = useAppSelector(selectIsUser);
 
-  // Initialize auth on mount
-  useEffect(() => {
-    if (!isInitialized) {
-      dispatch(initializeAuth());
-    }
-  }, [dispatch, isInitialized]);
+  // Auth initialization is handled by StoreProvider
 
   // Login handler
   const handleLogin = useCallback(
@@ -70,7 +65,7 @@ export const useAuth = () => {
       if (login.fulfilled.match(result)) {
         // Redirect based on user role (supports 6 admin roles)
         const userRole = result.payload.user.role;
-        if (checkIsAdmin(userRole)) {
+        if (checkIsOwner(userRole)) {
           router.push('/admin');
         } else {
           router.push('/dashboard');
@@ -79,7 +74,7 @@ export const useAuth = () => {
       }
       return { success: false, error: result.payload as string };
     },
-    [dispatch, router]
+    [dispatch, router],
   );
 
   // Register handler
@@ -92,13 +87,13 @@ export const useAuth = () => {
       }
       return { success: false, error: result.payload as string };
     },
-    [dispatch, router]
+    [dispatch, router],
   );
 
   // Logout handler
   const handleLogout = useCallback(async () => {
     await dispatch(logout());
-    router.push('/login');
+    router.push('/');
   }, [dispatch, router]);
 
   // Email verification handlers
@@ -112,7 +107,7 @@ export const useAuth = () => {
       const result = await dispatch(verifyEmailOtp(code));
       return verifyEmailOtp.fulfilled.match(result);
     },
-    [dispatch]
+    [dispatch],
   );
 
   // Clear error
@@ -157,29 +152,32 @@ export const useAuth = () => {
     }
   }, []);
 
-  const handleVerifyGuestOtp = useCallback(async (email: string, code: string) => {
-    try {
-      setGuestLoginLoading(true);
-      setGuestLoginError(null);
-      const response = await verifyOtpAndLogin({ email, code });
-      // Update Redux state with user
-      dispatch(setUser(response.user));
-      // Redirect based on role
-      if (checkIsAdmin(response.user.role)) {
-        router.push('/admin');
-      } else {
-        router.push('/dashboard');
+  const handleVerifyGuestOtp = useCallback(
+    async (email: string, code: string) => {
+      try {
+        setGuestLoginLoading(true);
+        setGuestLoginError(null);
+        const response = await verifyOtpAndLogin({ email, code });
+        // Update Redux state with user
+        dispatch(setUser(response.user));
+        // Redirect based on role
+        if (checkIsOwner(response.user.role)) {
+          router.push('/admin');
+        } else {
+          router.push('/dashboard');
+        }
+        return { success: true };
+      } catch (err: unknown) {
+        const error = err as { response?: { data?: { message?: string } } };
+        const message = error.response?.data?.message || 'Invalid OTP code';
+        setGuestLoginError(message);
+        return { success: false, error: message };
+      } finally {
+        setGuestLoginLoading(false);
       }
-      return { success: true };
-    } catch (err: unknown) {
-      const error = err as { response?: { data?: { message?: string } } };
-      const message = error.response?.data?.message || 'Invalid OTP code';
-      setGuestLoginError(message);
-      return { success: false, error: message };
-    } finally {
-      setGuestLoginLoading(false);
-    }
-  }, [dispatch, router]);
+    },
+    [dispatch, router],
+  );
 
   const resetGuestLogin = useCallback(() => {
     setOtpSent(false);
@@ -195,7 +193,7 @@ export const useAuth = () => {
     isInitialized,
     error,
     emailVerificationSent,
-    
+
     // Role state
     userRole,
     isAdmin,
@@ -229,4 +227,3 @@ export const useAuth = () => {
 };
 
 export default useAuth;
-

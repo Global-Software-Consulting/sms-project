@@ -1,552 +1,1079 @@
 'use client';
 
-import { useState } from 'react';
-import Link from 'next/link';
-import { 
-  Star, 
-  Search,
-  Filter,
-  ChevronLeft,
-  ChevronRight,
-  CheckCircle,
-  XCircle,
-  Clock,
-  User,
-  Calendar,
-  RefreshCw,
-  ThumbsUp,
-  ThumbsDown,
-  MessageSquare,
-  Flag
+import { useState, useEffect, useCallback } from 'react';
+import { toast } from 'sonner';
+import {
+  Star,
+  Check,
+  X,
+  Edit,
+  Trash2,
+  Loader2,
+  Send,
+  Users,
+  ListChecks,
+  Layers,
+  Plus,
 } from 'lucide-react';
-import { Button, Alert } from '@/components/ui';
+import { AdminDataTable } from '@/components/admin/data-table';
+import { AdminPageHeader } from '@/components/admin/page-header';
+import { AdminFilterBar } from '@/components/admin/filter-bar';
+import { AdminModal } from '@/components/admin/modal';
+import {
+  getAdminReviews,
+  approveReview,
+  rejectReview,
+  updateReview,
+  deleteReview,
+  bulkApproveReviews,
+  bulkRejectReviews,
+  bulkDeleteReviews,
+  scheduleBulkReviews,
+  listUniqueNames,
+  addUniqueNames,
+  deleteUniqueName,
+  type AdminReview,
+  type UniqueName,
+} from '@/lib/api/adminModulesApi';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
-interface Review {
-  id: string;
-  userId: string;
-  userEmail: string;
-  userName: string;
-  rating: number;
-  title: string;
-  content: string;
-  status: 'pending' | 'approved' | 'rejected';
-  featured: boolean;
-  helpful: number;
-  notHelpful: number;
-  createdAt: string;
-  moderatedAt: string | null;
-  moderatedBy: string | null;
+type TabKey = 'reviews' | 'bulk' | 'names';
+
+// Local row shape — we keep the API row plus a derived display name.
+interface ReviewRow extends AdminReview {
+  displayName: string;
+  comment: string;
+  isBulkGenerated?: boolean;
+  reviewerName?: string | null;
+  scheduledFor?: string | null;
+  postedAt?: string | null;
 }
 
-const sampleReviews: Review[] = [
-  {
-    id: '1',
-    userId: 'user1',
-    userEmail: 'john@example.com',
-    userName: 'John D.',
-    rating: 5,
-    title: 'Excellent service, fast and reliable!',
-    content: 'I have been using SMS Sort for 3 months now and it has been amazing. The numbers work perfectly for all services I need. Customer support is also very responsive.',
-    status: 'approved',
-    featured: true,
-    helpful: 45,
-    notHelpful: 2,
-    createdAt: '2024-01-15T10:00:00Z',
-    moderatedAt: '2024-01-15T12:00:00Z',
-    moderatedBy: 'admin@smssort.com',
-  },
-  {
-    id: '2',
-    userId: 'user2',
-    userEmail: 'sarah@example.com',
-    userName: 'Sarah M.',
-    rating: 4,
-    title: 'Good service, could be cheaper',
-    content: 'The service works well and I have had no issues with verification. However, I think the prices could be a bit more competitive.',
-    status: 'approved',
-    featured: false,
-    helpful: 23,
-    notHelpful: 5,
-    createdAt: '2024-01-14T08:00:00Z',
-    moderatedAt: '2024-01-14T10:00:00Z',
-    moderatedBy: 'admin@smssort.com',
-  },
-  {
-    id: '3',
-    userId: 'user3',
-    userEmail: 'mike@example.com',
-    userName: 'Mike R.',
-    rating: 5,
-    title: 'Best SMS verification service!',
-    content: 'Tried many services before and this is by far the best. Quick delivery, great prices, and excellent support.',
-    status: 'pending',
-    featured: false,
-    helpful: 0,
-    notHelpful: 0,
-    createdAt: '2024-01-18T14:00:00Z',
-    moderatedAt: null,
-    moderatedBy: null,
-  },
-  {
-    id: '4',
-    userId: 'user4',
-    userEmail: 'spam@test.com',
-    userName: 'Test User',
-    rating: 1,
-    title: 'This is spam',
-    content: 'Buy cheap products at www.spam-link.com',
-    status: 'rejected',
-    featured: false,
-    helpful: 0,
-    notHelpful: 10,
-    createdAt: '2024-01-17T09:00:00Z',
-    moderatedAt: '2024-01-17T09:30:00Z',
-    moderatedBy: 'admin@smssort.com',
-  },
+const columns: { key: string; label: string; width?: string }[] = [
+  { key: 'select', label: '', width: '4%' },
+  { key: 'user', label: 'Reviewer', width: '14%' },
+  { key: 'rating', label: 'Rating', width: '10%' },
+  { key: 'comment', label: 'Comment', width: '32%' },
+  { key: 'source', label: 'Source', width: '10%' },
+  { key: 'status', label: 'Status', width: '10%' },
+  { key: 'date', label: 'Date', width: '12%' },
+  { key: 'actions', label: 'Actions', width: '8%' },
 ];
 
-/**
- * Admin Reviews Page
- * 
- * Features:
- * - List all reviews
- * - Approve/Reject reviews
- * - Feature reviews
- * - Filter by status
- * - View review details
- */
-export default function AdminReviewsPage() {
-  const [reviews, setReviews] = useState<Review[]>(sampleReviews);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
-  const [searchInput, setSearchInput] = useState('');
-  const [selectedStatus, setSelectedStatus] = useState<string>('');
-  const [selectedRating, setSelectedRating] = useState<string>('');
+const STATUS_VARIANT: Record<
+  string,
+  'success' | 'warning' | 'error' | 'default'
+> = {
+  APPROVED: 'success',
+  PENDING: 'warning',
+  REJECTED: 'error',
+};
 
-  // Filter reviews
-  const filteredReviews = reviews.filter(review => {
-    const matchesSearch = review.title.toLowerCase().includes(searchInput.toLowerCase()) ||
-                         review.content.toLowerCase().includes(searchInput.toLowerCase()) ||
-                         review.userEmail.toLowerCase().includes(searchInput.toLowerCase());
-    const matchesStatus = !selectedStatus || review.status === selectedStatus;
-    const matchesRating = !selectedRating || review.rating === parseInt(selectedRating);
-    return matchesSearch && matchesStatus && matchesRating;
+// Helper — comparisons against backend status (uppercase enum)
+function isApproved(s: string): boolean {
+  return s?.toUpperCase() === 'APPROVED';
+}
+function isRejected(s: string): boolean {
+  return s?.toUpperCase() === 'REJECTED';
+}
+
+function formatDate(s?: string | null): string {
+  if (!s) return '-';
+  return new Date(s).toLocaleString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
   });
+}
 
-  // Stats
-  const stats = {
-    total: reviews.length,
-    pending: reviews.filter(r => r.status === 'pending').length,
-    approved: reviews.filter(r => r.status === 'approved').length,
-    rejected: reviews.filter(r => r.status === 'rejected').length,
-    avgRating: (reviews.filter(r => r.status === 'approved').reduce((acc, r) => acc + r.rating, 0) / reviews.filter(r => r.status === 'approved').length || 0).toFixed(1),
-  };
-
-  // Approve review
-  const handleApprove = async (reviewId: string) => {
-    try {
-      setLoading(true);
-      await new Promise(resolve => setTimeout(resolve, 500));
-      setReviews(prev => prev.map(r => 
-        r.id === reviewId 
-          ? { ...r, status: 'approved', moderatedAt: new Date().toISOString(), moderatedBy: 'admin@smssort.com' }
-          : r
-      ));
-      setSuccess('Review approved successfully');
-    } catch (err) {
-      setError('Failed to approve review');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Reject review
-  const handleReject = async (reviewId: string) => {
-    try {
-      setLoading(true);
-      await new Promise(resolve => setTimeout(resolve, 500));
-      setReviews(prev => prev.map(r => 
-        r.id === reviewId 
-          ? { ...r, status: 'rejected', moderatedAt: new Date().toISOString(), moderatedBy: 'admin@smssort.com' }
-          : r
-      ));
-      setSuccess('Review rejected');
-    } catch (err) {
-      setError('Failed to reject review');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Toggle featured
-  const handleToggleFeatured = async (reviewId: string) => {
-    try {
-      setReviews(prev => prev.map(r => 
-        r.id === reviewId ? { ...r, featured: !r.featured } : r
-      ));
-      setSuccess('Featured status updated');
-    } catch (err) {
-      setError('Failed to update featured status');
-    }
-  };
-
+function renderStars(n: number): string {
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: 'var(--bg-primary)' }}>
-      {/* Header */}
-      <div style={{ 
-        backgroundColor: 'var(--bg-card)', 
-        borderBottom: '1px solid var(--border-default)',
-        padding: '24px'
-      }}>
-        <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px' }}>
-            <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
-                <Link href="/admin" style={{ color: 'var(--text-muted)', textDecoration: 'none', fontSize: '14px' }}>
-                  Admin
-                </Link>
-                <span style={{ color: 'var(--text-muted)' }}>/</span>
-                <span style={{ color: 'var(--text-primary)', fontWeight: 500 }}>Reviews</span>
-              </div>
-              <h1 style={{ fontSize: '28px', fontWeight: 700, color: 'var(--text-primary)' }}>
-                Review Moderation
-              </h1>
-            </div>
-            <Button variant="outline" onClick={() => window.location.reload()}>
-              <RefreshCw style={{ width: '16px', height: '16px', marginRight: '8px' }} />
-              Refresh
-            </Button>
+    '★'.repeat(Math.max(0, Math.min(5, n))) +
+    '☆'.repeat(5 - Math.max(0, Math.min(5, n)))
+  );
+}
+
+export default function AdminReviewsPage() {
+  const [tab, setTab] = useState<TabKey>('reviews');
+
+  // ============================================
+  // Tab 1: Review Management
+  // ============================================
+  const [reviews, setReviews] = useState<ReviewRow[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isPageLoading, setIsPageLoading] = useState(true);
+  const [statusFilter, setStatusFilter] = useState('');
+  const [sourceFilter, setSourceFilter] = useState('');
+  const [scheduleFilter, setScheduleFilter] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [showFilters, setShowFilters] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+
+  // Per-row modals
+  const [selectedReview, setSelectedReview] = useState<ReviewRow | null>(null);
+  const [isApproveOpen, setIsApproveOpen] = useState(false);
+  const [isRejectOpen, setIsRejectOpen] = useState(false);
+  const [isEditOpen, setIsEditOpen] = useState(false);
+  const [isDeleteOpen, setIsDeleteOpen] = useState(false);
+  const [rejectReason, setRejectReason] = useState('');
+  const [editRating, setEditRating] = useState(5);
+  const [editComment, setEditComment] = useState('');
+
+  // Bulk action modal (confirms before destructive bulk delete / reject)
+  const [bulkAction, setBulkAction] = useState<
+    'approve' | 'reject' | 'delete' | null
+  >(null);
+  const [bulkReason, setBulkReason] = useState('');
+
+  const fetchReviews = useCallback(async () => {
+    try {
+      const params: Record<string, string> = {};
+      if (statusFilter) params.status = statusFilter.toUpperCase();
+      if (sourceFilter === 'bulk') params.isBulkGenerated = 'true';
+      if (sourceFilter === 'user') params.isBulkGenerated = 'false';
+      if (scheduleFilter) params.scheduleFilter = scheduleFilter;
+      if (searchQuery) params.search = searchQuery;
+
+      const response = await getAdminReviews(params);
+      const data = (response as { data: AdminReview[] }).data || [];
+      setReviews(
+        data.map((r) => {
+          const anyR = r as unknown as Record<string, unknown>;
+          const reviewerName = (anyR.reviewerName as string | null) ?? null;
+          const userObj = (anyR.user as Record<string, unknown> | null) ?? null;
+          const displayName = reviewerName
+            ? reviewerName
+            : (userObj?.username as string | undefined) ||
+              (userObj?.firstName as string | undefined) ||
+              ((userObj?.email as string | undefined)?.split('@')[0] ??
+                'Unknown');
+          return {
+            ...r,
+            displayName,
+            comment: (anyR.text as string) || (anyR.content as string) || '',
+            isBulkGenerated: anyR.isBulkGenerated as boolean | undefined,
+            reviewerName,
+            scheduledFor: anyR.scheduledFor as string | null,
+            postedAt: anyR.postedAt as string | null,
+          };
+        }),
+      );
+      setSelectedIds(new Set());
+    } catch (err) {
+      console.error('Failed to fetch reviews:', err);
+      toast.error('Failed to load reviews');
+    }
+  }, [statusFilter, sourceFilter, scheduleFilter, searchQuery]);
+
+  useEffect(() => {
+    if (tab !== 'reviews') return;
+    let cancelled = false;
+    (async () => {
+      setIsPageLoading(true);
+      await fetchReviews();
+      if (!cancelled) setIsPageLoading(false);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [tab, fetchReviews]);
+
+  const toggleSelected = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+  const toggleSelectAll = () => {
+    setSelectedIds((prev) =>
+      prev.size === reviews.length
+        ? new Set()
+        : new Set(reviews.map((r) => r.id)),
+    );
+  };
+
+  const handleApprove = async () => {
+    if (!selectedReview) return;
+    setIsLoading(true);
+    try {
+      await approveReview(selectedReview.id);
+      toast.success('Review approved');
+      setIsApproveOpen(false);
+      await fetchReviews();
+    } catch (e: any) {
+      toast.error(e?.response?.data?.message || 'Failed to approve');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  const handleReject = async () => {
+    if (!selectedReview) return;
+    setIsLoading(true);
+    try {
+      await rejectReview(selectedReview.id, rejectReason || undefined);
+      toast.success('Review rejected');
+      setIsRejectOpen(false);
+      setRejectReason('');
+      await fetchReviews();
+    } catch (e: any) {
+      toast.error(e?.response?.data?.message || 'Failed to reject');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  const handleEdit = async () => {
+    if (!selectedReview) return;
+    if (!editComment.trim()) {
+      toast.error('Comment is required');
+      return;
+    }
+    setIsLoading(true);
+    try {
+      await updateReview(selectedReview.id, {
+        rating: editRating,
+        text: editComment,
+      });
+      toast.success('Review updated');
+      setIsEditOpen(false);
+      await fetchReviews();
+    } catch (e: any) {
+      toast.error(e?.response?.data?.message || 'Failed to update');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  const handleDelete = async () => {
+    if (!selectedReview) return;
+    setIsLoading(true);
+    try {
+      await deleteReview(selectedReview.id);
+      toast.success('Review deleted');
+      setIsDeleteOpen(false);
+      await fetchReviews();
+    } catch (e: any) {
+      toast.error(e?.response?.data?.message || 'Failed to delete');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleBulkConfirm = async () => {
+    const ids = Array.from(selectedIds);
+    if (ids.length === 0) return;
+    setIsLoading(true);
+    try {
+      if (bulkAction === 'approve') {
+        const res = await bulkApproveReviews(ids);
+        toast.success(`Approved ${res.updated} review(s)`);
+      } else if (bulkAction === 'reject') {
+        const res = await bulkRejectReviews(ids, bulkReason || undefined);
+        toast.success(`Rejected ${res.updated} review(s)`);
+      } else if (bulkAction === 'delete') {
+        const res = await bulkDeleteReviews(ids);
+        toast.success(`Deleted ${res.deleted} review(s)`);
+      }
+      setBulkAction(null);
+      setBulkReason('');
+      await fetchReviews();
+    } catch (e: any) {
+      toast.error(e?.response?.data?.message || 'Bulk action failed');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const renderCell = (item: ReviewRow, col: { key: string }) => {
+    switch (col.key) {
+      case 'select':
+        return (
+          <input
+            type="checkbox"
+            checked={selectedIds.has(item.id)}
+            onChange={() => toggleSelected(item.id)}
+            className="h-4 w-4 cursor-pointer accent-[#3B82F6]"
+          />
+        );
+      case 'user':
+        return (
+          <div className="flex flex-col">
+            <span className="text-sm font-medium text-white">
+              {item.displayName}
+            </span>
+            {item.user?.email && !item.isBulkGenerated && (
+              <span className="text-xs text-[#64748B]">{item.user.email}</span>
+            )}
           </div>
-        </div>
+        );
+      case 'rating':
+        return (
+          <span className="text-amber-400">{renderStars(item.rating)}</span>
+        );
+      case 'comment':
+        return (
+          <span
+            className="line-clamp-2 text-sm text-white"
+            title={item.comment}
+          >
+            {item.comment}
+          </span>
+        );
+      case 'source':
+        return item.isBulkGenerated ? (
+          <span className="rounded-full bg-[#3B82F6]/15 px-2 py-0.5 text-xs font-medium text-[#3B82F6]">
+            Bulk
+          </span>
+        ) : (
+          <span className="rounded-full bg-[rgba(255,255,255,0.08)] px-2 py-0.5 text-xs font-medium text-[#94A3B8]">
+            User
+          </span>
+        );
+      case 'status':
+        return (
+          <span
+            className={`rounded-full px-2 py-0.5 text-xs font-medium uppercase ${
+              STATUS_VARIANT[item.status] === 'success'
+                ? 'bg-[#22C55E]/15 text-[#22C55E]'
+                : STATUS_VARIANT[item.status] === 'warning'
+                  ? 'bg-[#F59E0B]/15 text-[#F59E0B]'
+                  : STATUS_VARIANT[item.status] === 'error'
+                    ? 'bg-[#EF4444]/15 text-[#EF4444]'
+                    : 'bg-[rgba(255,255,255,0.08)] text-[#94A3B8]'
+            }`}
+          >
+            {item.status}
+          </span>
+        );
+      case 'date':
+        return (
+          <div className="flex flex-col">
+            <span className="text-sm text-white">
+              {formatDate(item.createdAt)}
+            </span>
+            {item.scheduledFor &&
+              new Date(item.scheduledFor).getTime() > Date.now() && (
+                <span className="text-[11px] text-[#3B82F6]">
+                  Scheduled {formatDate(item.scheduledFor)}
+                </span>
+              )}
+          </div>
+        );
+      case 'actions':
+        return (
+          <div className="flex items-center gap-1.5">
+            {!isApproved(item.status) && (
+              <button
+                onClick={() => {
+                  setSelectedReview(item);
+                  setIsApproveOpen(true);
+                }}
+                title="Approve"
+                className="rounded-md bg-[#22C55E]/10 p-1.5 text-[#22C55E] hover:bg-[#22C55E]/20"
+              >
+                <Check className="h-3.5 w-3.5" />
+              </button>
+            )}
+            {!isRejected(item.status) && (
+              <button
+                onClick={() => {
+                  setSelectedReview(item);
+                  setIsRejectOpen(true);
+                }}
+                title="Reject"
+                className="rounded-md bg-[#F59E0B]/10 p-1.5 text-[#F59E0B] hover:bg-[#F59E0B]/20"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            )}
+            <button
+              onClick={() => {
+                setSelectedReview(item);
+                setEditRating(item.rating);
+                setEditComment(item.comment);
+                setIsEditOpen(true);
+              }}
+              title="Edit"
+              className="rounded-md bg-[#3B82F6]/10 p-1.5 text-[#3B82F6] hover:bg-[#3B82F6]/20"
+            >
+              <Edit className="h-3.5 w-3.5" />
+            </button>
+            <button
+              onClick={() => {
+                setSelectedReview(item);
+                setIsDeleteOpen(true);
+              }}
+              title="Delete"
+              className="rounded-md bg-[#EF4444]/10 p-1.5 text-[#EF4444] hover:bg-[#EF4444]/20"
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+            </button>
+          </div>
+        );
+      default:
+        return null;
+    }
+  };
+
+  // ============================================
+  // Tab 2: Bulk Review Handling
+  // ============================================
+  const [bulkText, setBulkText] = useState('');
+  const [timerMin, setTimerMin] = useState(1800); // 30 min
+  const [timerMax, setTimerMax] = useState(7200); // 2 h
+  const [ratingMin, setRatingMin] = useState(4);
+  const [ratingMax, setRatingMax] = useState(5);
+  const [startImmediately, setStartImmediately] = useState(false);
+  const [isScheduling, setIsScheduling] = useState(false);
+
+  const handleSchedule = async () => {
+    const lines = bulkText
+      .split('\n')
+      .map((s) => s.trim())
+      .filter(Boolean);
+    if (lines.length === 0) {
+      toast.error('Add at least one review text');
+      return;
+    }
+    if (timerMin > timerMax) {
+      toast.error('Min delay must be ≤ max delay');
+      return;
+    }
+    if (ratingMin > ratingMax) {
+      toast.error('Min rating must be ≤ max rating');
+      return;
+    }
+    setIsScheduling(true);
+    try {
+      const res = await scheduleBulkReviews({
+        reviews: lines,
+        timerRange: { min: timerMin, max: timerMax },
+        ratingRange: { min: ratingMin, max: ratingMax },
+        startImmediately,
+      });
+      toast.success(
+        `Scheduled ${res.scheduled}/${res.total} reviews. First posts ${res.nextPosting ? formatDate(res.nextPosting) : 'now'}.`,
+      );
+      if (res.skipped.length > 0) {
+        toast.warning(
+          `${res.skipped.length} skipped — not enough unique names in the pool`,
+        );
+      }
+      setBulkText('');
+    } catch (e: any) {
+      toast.error(e?.response?.data?.message || 'Failed to schedule');
+    } finally {
+      setIsScheduling(false);
+    }
+  };
+
+  // ============================================
+  // Tab 3: Unique Name Handle
+  // ============================================
+  const [names, setNames] = useState<UniqueName[]>([]);
+  const [namesLoading, setNamesLoading] = useState(false);
+  const [nameSearch, setNameSearch] = useState('');
+  const [nameUsedFilter, setNameUsedFilter] = useState<'' | 'true' | 'false'>(
+    '',
+  );
+  const [newNamesText, setNewNamesText] = useState('');
+  const [isAddingNames, setIsAddingNames] = useState(false);
+
+  const fetchNames = useCallback(async () => {
+    setNamesLoading(true);
+    try {
+      const res = await listUniqueNames({
+        limit: 100,
+        search: nameSearch || undefined,
+        used: nameUsedFilter === '' ? undefined : nameUsedFilter === 'true',
+      });
+      setNames(res.data);
+    } catch (e: any) {
+      toast.error(e?.response?.data?.message || 'Failed to load names');
+    } finally {
+      setNamesLoading(false);
+    }
+  }, [nameSearch, nameUsedFilter]);
+
+  useEffect(() => {
+    if (tab !== 'names') return;
+    fetchNames();
+  }, [tab, fetchNames]);
+
+  const handleAddNames = async () => {
+    const list = newNamesText
+      .split('\n')
+      .map((s) => s.trim())
+      .filter(Boolean);
+    if (list.length === 0) {
+      toast.error('Add at least one name');
+      return;
+    }
+    setIsAddingNames(true);
+    try {
+      const res = await addUniqueNames({ names: list });
+      toast.success(
+        `Added ${res.added} new name(s)${res.duplicates > 0 ? `, ${res.duplicates} duplicate(s) skipped` : ''}`,
+      );
+      setNewNamesText('');
+      await fetchNames();
+    } catch (e: any) {
+      toast.error(e?.response?.data?.message || 'Failed to add names');
+    } finally {
+      setIsAddingNames(false);
+    }
+  };
+
+  const handleDeleteName = async (id: string) => {
+    try {
+      await deleteUniqueName(id);
+      toast.success('Name removed');
+      await fetchNames();
+    } catch (e: any) {
+      toast.error(e?.response?.data?.message || 'Failed to delete name');
+    }
+  };
+
+  // ============================================
+  // Render
+  // ============================================
+  return (
+    <div className="p-4 lg:p-8">
+      <AdminPageHeader
+        title="Review Management"
+        description="Approve, edit, delete and bulk-schedule platform reviews."
+      />
+
+      {/* Tabs */}
+      <div className="mb-6 flex items-center gap-2 overflow-x-auto border-b border-[rgba(255,255,255,0.1)] [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        {(
+          [
+            { id: 'reviews', label: 'Review Management', icon: ListChecks },
+            { id: 'bulk', label: 'Bulk Review Handling', icon: Layers },
+            { id: 'names', label: 'Unique Name Handle', icon: Users },
+          ] as { id: TabKey; label: string; icon: any }[]
+        ).map((t) => {
+          const Icon = t.icon;
+          const active = tab === t.id;
+          return (
+            <button
+              key={t.id}
+              onClick={() => setTab(t.id)}
+              className={`flex shrink-0 items-center gap-2 border-b-2 px-4 py-2.5 text-sm font-medium whitespace-nowrap transition-colors ${
+                active
+                  ? 'border-[#3B82F6] text-white'
+                  : 'border-transparent text-[#94A3B8] hover:text-white'
+              }`}
+            >
+              <Icon className="h-4 w-4 shrink-0" />
+              {t.label}
+            </button>
+          );
+        })}
       </div>
 
-      {/* Content */}
-      <div style={{ maxWidth: '1400px', margin: '0 auto', padding: '24px' }}>
-        {/* Alerts */}
-        {error && (
-          <div style={{ marginBottom: '24px' }}>
-            <Alert variant="error" dismissible onDismiss={() => setError(null)}>
-              {error}
-            </Alert>
+      {/* ============================================ */}
+      {/* TAB: Review Management                       */}
+      {/* ============================================ */}
+      {tab === 'reviews' && (
+        <>
+          <AdminFilterBar
+            searchPlaceholder="Search title, text, or reviewer name..."
+            onSearch={(v: string) => setSearchQuery(v)}
+            showFilters={showFilters}
+            onToggleFilters={() => setShowFilters((s) => !s)}
+            filters={[
+              {
+                label: 'Status',
+                options: ['PENDING', 'APPROVED', 'REJECTED'],
+                value: statusFilter,
+                onChange: (v: string) => setStatusFilter(v),
+              },
+              {
+                label: 'Source',
+                options: ['user', 'bulk'],
+                optionLabels: ['User Reviews', 'Bulk Generated'],
+                value: sourceFilter,
+                onChange: (v: string) => setSourceFilter(v),
+              },
+              {
+                label: 'Schedule',
+                options: ['current', 'future'],
+                optionLabels: ['Posted / Live', 'Scheduled Future'],
+                value: scheduleFilter,
+                onChange: (v: string) => setScheduleFilter(v),
+              },
+            ]}
+            onApplyFilters={() => fetchReviews()}
+            onResetFilters={() => {
+              setStatusFilter('');
+              setSourceFilter('');
+              setScheduleFilter('');
+            }}
+          />
+
+          {/* Bulk action bar */}
+          {selectedIds.size > 0 && (
+            <div className="mb-4 flex flex-col gap-3 rounded-xl border border-[rgba(255,255,255,0.18)] bg-[rgba(59,130,246,0.08)] p-3 sm:flex-row sm:items-center sm:justify-between">
+              <span className="text-sm whitespace-nowrap text-white">
+                {selectedIds.size} selected
+              </span>
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  onClick={() => setBulkAction('approve')}
+                  className="flex items-center gap-1.5 rounded-lg bg-[#22C55E]/10 px-3 py-1.5 text-xs font-medium whitespace-nowrap text-[#22C55E] hover:bg-[#22C55E]/20"
+                >
+                  <Check className="h-3.5 w-3.5" />
+                  Approve
+                </button>
+                <button
+                  onClick={() => setBulkAction('reject')}
+                  className="flex items-center gap-1.5 rounded-lg bg-[#F59E0B]/10 px-3 py-1.5 text-xs font-medium whitespace-nowrap text-[#F59E0B] hover:bg-[#F59E0B]/20"
+                >
+                  <X className="h-3.5 w-3.5" />
+                  Reject
+                </button>
+                <button
+                  onClick={() => setBulkAction('delete')}
+                  className="flex items-center gap-1.5 rounded-lg bg-[#EF4444]/10 px-3 py-1.5 text-xs font-medium whitespace-nowrap text-[#EF4444] hover:bg-[#EF4444]/20"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                  Delete
+                </button>
+                <button
+                  onClick={() => setSelectedIds(new Set())}
+                  className="text-xs whitespace-nowrap text-[#94A3B8] hover:text-white"
+                >
+                  Clear
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Header with select-all checkbox */}
+          <div className="mb-2 flex items-center gap-2 px-4 text-xs text-[#94A3B8]">
+            <input
+              type="checkbox"
+              checked={
+                reviews.length > 0 && selectedIds.size === reviews.length
+              }
+              onChange={toggleSelectAll}
+              className="h-4 w-4 cursor-pointer accent-[#3B82F6]"
+            />
+            <span>Select all on this page</span>
           </div>
-        )}
 
-        {success && (
-          <div style={{ marginBottom: '24px' }}>
-            <Alert variant="success" dismissible onDismiss={() => setSuccess(null)}>
-              {success}
-            </Alert>
-          </div>
-        )}
+          {isPageLoading ? (
+            <div className="flex items-center justify-center py-20">
+              <Loader2 className="h-8 w-8 animate-spin text-[#3B82F6]" />
+            </div>
+          ) : (
+            <AdminDataTable
+              columns={columns}
+              data={reviews}
+              renderCell={renderCell}
+              emptyIcon={<Star className="h-8 w-8 text-[#64748B]" />}
+              emptyTitle="No reviews found"
+              emptyDescription="Adjust filters or schedule new bulk reviews."
+            />
+          )}
 
-        {/* Stats */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px', marginBottom: '24px' }} className="lg:!grid-cols-5">
-          <StatCard label="Total Reviews" value={stats.total} icon={MessageSquare} />
-          <StatCard label="Pending" value={stats.pending} icon={Clock} color="yellow" />
-          <StatCard label="Approved" value={stats.approved} icon={CheckCircle} color="green" />
-          <StatCard label="Rejected" value={stats.rejected} icon={XCircle} color="red" />
-          <StatCard label="Avg Rating" value={stats.avgRating} icon={Star} color="gold" isString />
-        </div>
+          {/* Per-row modals */}
+          <AdminModal
+            isOpen={isApproveOpen}
+            onClose={() => setIsApproveOpen(false)}
+            title="Approve Review"
+            size="sm"
+            primaryAction={{
+              label: 'Approve',
+              onClick: handleApprove,
+              loading: isLoading,
+            }}
+            secondaryAction={{
+              label: 'Cancel',
+              onClick: () => setIsApproveOpen(false),
+            }}
+          >
+            <p className="text-sm text-[#94A3B8]">
+              Make this review visible to the public?
+            </p>
+          </AdminModal>
 
-        {/* Filters */}
-        <div style={{ 
-          backgroundColor: 'var(--bg-card)', 
-          border: '1px solid var(--border-default)', 
-          borderRadius: '16px',
-          padding: '20px',
-          marginBottom: '24px'
-        }}>
-          <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
-            <div style={{ flex: 1, minWidth: '200px' }}>
-              <div style={{ position: 'relative' }}>
-                <Search style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', width: '16px', height: '16px', color: 'var(--text-muted)' }} />
+          <AdminModal
+            isOpen={isRejectOpen}
+            onClose={() => {
+              setIsRejectOpen(false);
+              setRejectReason('');
+            }}
+            title="Reject Review"
+            size="sm"
+            primaryAction={{
+              label: 'Reject',
+              onClick: handleReject,
+              variant: 'danger',
+              loading: isLoading,
+            }}
+            secondaryAction={{
+              label: 'Cancel',
+              onClick: () => setIsRejectOpen(false),
+            }}
+          >
+            <textarea
+              value={rejectReason}
+              onChange={(e) => setRejectReason(e.target.value)}
+              placeholder="Reason (optional, visible to admins)"
+              rows={3}
+              className="w-full rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.4)] p-3 text-sm text-white"
+            />
+          </AdminModal>
+
+          <AdminModal
+            isOpen={isEditOpen}
+            onClose={() => setIsEditOpen(false)}
+            title="Edit Review"
+            size="md"
+            primaryAction={{
+              label: 'Save',
+              onClick: handleEdit,
+              loading: isLoading,
+            }}
+            secondaryAction={{
+              label: 'Cancel',
+              onClick: () => setIsEditOpen(false),
+            }}
+          >
+            <div className="space-y-3">
+              <label className="block text-sm font-medium text-white">
+                Rating
+              </label>
+              <div className="flex items-center gap-1">
+                {[1, 2, 3, 4, 5].map((n) => (
+                  <button
+                    key={n}
+                    onClick={() => setEditRating(n)}
+                    className={`text-2xl transition ${n <= editRating ? 'text-amber-400' : 'text-[#64748B]'}`}
+                  >
+                    ★
+                  </button>
+                ))}
+              </div>
+              <label className="block text-sm font-medium text-white">
+                Comment
+              </label>
+              <textarea
+                value={editComment}
+                onChange={(e) => setEditComment(e.target.value)}
+                rows={5}
+                className="w-full rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.4)] p-3 text-sm text-white"
+              />
+            </div>
+          </AdminModal>
+
+          <AdminModal
+            isOpen={isDeleteOpen}
+            onClose={() => setIsDeleteOpen(false)}
+            title="Delete Review"
+            size="sm"
+            primaryAction={{
+              label: 'Delete',
+              onClick: handleDelete,
+              variant: 'danger',
+              loading: isLoading,
+            }}
+            secondaryAction={{
+              label: 'Cancel',
+              onClick: () => setIsDeleteOpen(false),
+            }}
+          >
+            <p className="text-sm text-[#94A3B8]">
+              This permanently removes the review. The user's review slot is
+              returned if it was a user-submitted review.
+            </p>
+          </AdminModal>
+
+          {/* Bulk action confirmation modal */}
+          <AdminModal
+            isOpen={bulkAction !== null}
+            onClose={() => {
+              setBulkAction(null);
+              setBulkReason('');
+            }}
+            title={
+              bulkAction === 'approve'
+                ? `Approve ${selectedIds.size} reviews`
+                : bulkAction === 'reject'
+                  ? `Reject ${selectedIds.size} reviews`
+                  : `Delete ${selectedIds.size} reviews`
+            }
+            size="sm"
+            primaryAction={{
+              label: 'Confirm',
+              onClick: handleBulkConfirm,
+              variant: bulkAction === 'approve' ? 'primary' : 'danger',
+              loading: isLoading,
+            }}
+            secondaryAction={{
+              label: 'Cancel',
+              onClick: () => setBulkAction(null),
+            }}
+          >
+            {bulkAction === 'reject' ? (
+              <textarea
+                value={bulkReason}
+                onChange={(e) => setBulkReason(e.target.value)}
+                placeholder="Reason for rejection (optional)"
+                rows={3}
+                className="w-full rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.4)] p-3 text-sm text-white"
+              />
+            ) : (
+              <p className="text-sm text-[#94A3B8]">
+                {bulkAction === 'delete'
+                  ? 'Permanently delete these reviews. This cannot be undone.'
+                  : 'Make these reviews visible to the public.'}
+              </p>
+            )}
+          </AdminModal>
+        </>
+      )}
+
+      {/* ============================================ */}
+      {/* TAB: Bulk Review Handling                    */}
+      {/* ============================================ */}
+      {tab === 'bulk' && (
+        <div className="rounded-xl border border-[rgba(255,255,255,0.1)] bg-[rgba(15,23,42,0.6)] p-6">
+          <h2 className="mb-1 text-lg font-semibold text-white">
+            Schedule a Batch of Reviews
+          </h2>
+          <p className="mb-4 text-sm text-[#94A3B8]">
+            One review text per line. Each entry gets a unique name from the
+            pool, a random rating inside your range, and is scheduled at a
+            random delay inside your timer range. Reviews auto-flip to APPROVED
+            as their scheduled time arrives.
+          </p>
+
+          <textarea
+            value={bulkText}
+            onChange={(e) => setBulkText(e.target.value)}
+            rows={10}
+            placeholder={
+              'Great service, fast delivery!\nSMS arrived in 5 seconds, perfect.\nBeen using for months — 5 stars.'
+            }
+            className="mb-4 w-full rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.4)] p-3 font-mono text-sm text-white focus:ring-2 focus:ring-[#3B82F6] focus:outline-none"
+          />
+
+          <div className="mb-4 grid grid-cols-1 gap-4 md:grid-cols-2">
+            <div className="rounded-lg border border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.03)] p-4">
+              <p className="mb-2 text-sm font-medium text-white">
+                Timer Range (seconds between posts)
+              </p>
+              <div className="grid grid-cols-2 gap-2">
                 <input
-                  type="text"
-                  placeholder="Search reviews..."
-                  value={searchInput}
-                  onChange={(e) => setSearchInput(e.target.value)}
-                  style={{
-                    width: '100%',
-                    height: '44px',
-                    paddingLeft: '40px',
-                    paddingRight: '16px',
-                    backgroundColor: 'var(--bg-secondary)',
-                    border: '1px solid var(--border-default)',
-                    borderRadius: '12px',
-                    fontSize: '14px',
-                    color: 'var(--text-primary)',
-                    outline: 'none'
-                  }}
+                  type="number"
+                  min={0}
+                  value={timerMin}
+                  onChange={(e) => setTimerMin(parseInt(e.target.value) || 0)}
+                  className="rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.4)] px-3 py-2 text-sm text-white"
+                  placeholder="Min"
+                />
+                <input
+                  type="number"
+                  min={0}
+                  value={timerMax}
+                  onChange={(e) => setTimerMax(parseInt(e.target.value) || 0)}
+                  className="rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.4)] px-3 py-2 text-sm text-white"
+                  placeholder="Max"
                 />
               </div>
+              <p className="mt-1 text-[11px] text-[#64748B]">
+                Default 1800s (30m) – 7200s (2h)
+              </p>
             </div>
-            <select
-              value={selectedStatus}
-              onChange={(e) => setSelectedStatus(e.target.value)}
-              style={{
-                height: '44px',
-                padding: '0 12px',
-                backgroundColor: 'var(--bg-secondary)',
-                border: '1px solid var(--border-default)',
-                borderRadius: '12px',
-                fontSize: '14px',
-                color: 'var(--text-primary)',
-                minWidth: '150px'
-              }}
-            >
-              <option value="">All Status</option>
-              <option value="pending">Pending</option>
-              <option value="approved">Approved</option>
-              <option value="rejected">Rejected</option>
-            </select>
-            <select
-              value={selectedRating}
-              onChange={(e) => setSelectedRating(e.target.value)}
-              style={{
-                height: '44px',
-                padding: '0 12px',
-                backgroundColor: 'var(--bg-secondary)',
-                border: '1px solid var(--border-default)',
-                borderRadius: '12px',
-                fontSize: '14px',
-                color: 'var(--text-primary)',
-                minWidth: '150px'
-              }}
-            >
-              <option value="">All Ratings</option>
-              <option value="5">5 Stars</option>
-              <option value="4">4 Stars</option>
-              <option value="3">3 Stars</option>
-              <option value="2">2 Stars</option>
-              <option value="1">1 Star</option>
-            </select>
-          </div>
-        </div>
 
-        {/* Reviews List */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          {filteredReviews.map((review) => (
-            <ReviewCard 
-              key={review.id} 
-              review={review}
-              onApprove={() => handleApprove(review.id)}
-              onReject={() => handleReject(review.id)}
-              onToggleFeatured={() => handleToggleFeatured(review.id)}
-              loading={loading}
+            <div className="rounded-lg border border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.03)] p-4">
+              <p className="mb-2 text-sm font-medium text-white">
+                Rating Range (1 – 5)
+              </p>
+              <div className="grid grid-cols-2 gap-2">
+                <input
+                  type="number"
+                  min={1}
+                  max={5}
+                  step={0.5}
+                  value={ratingMin}
+                  onChange={(e) =>
+                    setRatingMin(parseFloat(e.target.value) || 1)
+                  }
+                  className="rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.4)] px-3 py-2 text-sm text-white"
+                  placeholder="Min"
+                />
+                <input
+                  type="number"
+                  min={1}
+                  max={5}
+                  step={0.5}
+                  value={ratingMax}
+                  onChange={(e) =>
+                    setRatingMax(parseFloat(e.target.value) || 5)
+                  }
+                  className="rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.4)] px-3 py-2 text-sm text-white"
+                  placeholder="Max"
+                />
+              </div>
+              <p className="mt-1 text-[11px] text-[#64748B]">
+                Rounded to whole stars on save
+              </p>
+            </div>
+          </div>
+
+          <label className="mb-4 flex items-center gap-2 text-sm text-white">
+            <input
+              type="checkbox"
+              checked={startImmediately}
+              onChange={(e) => setStartImmediately(e.target.checked)}
+              className="h-4 w-4 accent-[#3B82F6]"
             />
-          ))}
-        </div>
+            Post the first review immediately (otherwise wait the first random
+            delay)
+          </label>
 
-        {filteredReviews.length === 0 && (
-          <div style={{ 
-            backgroundColor: 'var(--bg-card)', 
-            border: '1px solid var(--border-default)', 
-            borderRadius: '16px',
-            padding: '64px',
-            textAlign: 'center'
-          }}>
-            <MessageSquare style={{ width: '48px', height: '48px', color: 'var(--text-muted)', margin: '0 auto 16px' }} />
-            <p style={{ color: 'var(--text-muted)' }}>No reviews found</p>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
-/* ==================== COMPONENTS ==================== */
-
-interface StatCardProps {
-  label: string;
-  value: number | string;
-  icon: React.ComponentType<{ style?: React.CSSProperties }>;
-  color?: 'gold' | 'green' | 'red' | 'yellow' | 'blue';
-  isString?: boolean;
-}
-
-function StatCard({ label, value, icon: Icon, color, isString }: StatCardProps) {
-  const colors = {
-    gold: { bg: 'rgba(198, 167, 94, 0.1)', text: 'var(--accent-gold)' },
-    green: { bg: 'rgba(34, 197, 94, 0.1)', text: 'var(--success)' },
-    red: { bg: 'rgba(239, 68, 68, 0.1)', text: 'var(--danger)' },
-    yellow: { bg: 'rgba(245, 158, 11, 0.1)', text: 'var(--warning)' },
-    blue: { bg: 'rgba(59, 130, 246, 0.1)', text: 'var(--info)' },
-  };
-  const c = color ? colors[color] : { bg: 'rgba(107, 114, 128, 0.1)', text: 'var(--text-secondary)' };
-
-  return (
-    <div style={{ 
-      backgroundColor: 'var(--bg-card)', 
-      border: '1px solid var(--border-default)', 
-      borderRadius: '16px', 
-      padding: '20px' 
-    }}>
-      <div style={{ 
-        width: '40px', 
-        height: '40px', 
-        borderRadius: '10px', 
-        backgroundColor: c.bg, 
-        display: 'flex', 
-        alignItems: 'center', 
-        justifyContent: 'center',
-        marginBottom: '12px'
-      }}>
-        <Icon style={{ width: '20px', height: '20px', color: c.text }} />
-      </div>
-      <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '4px' }}>{label}</p>
-      <p style={{ fontSize: '24px', fontWeight: 700, color: 'var(--text-primary)' }}>
-        {isString ? value : (value as number).toLocaleString()}
-      </p>
-    </div>
-  );
-}
-
-interface ReviewCardProps {
-  review: Review;
-  onApprove: () => void;
-  onReject: () => void;
-  onToggleFeatured: () => void;
-  loading: boolean;
-}
-
-function ReviewCard({ review, onApprove, onReject, onToggleFeatured, loading }: ReviewCardProps) {
-  const statusColors: Record<string, { bg: string; text: string }> = {
-    pending: { bg: 'rgba(245, 158, 11, 0.1)', text: 'var(--warning)' },
-    approved: { bg: 'rgba(34, 197, 94, 0.1)', text: 'var(--success)' },
-    rejected: { bg: 'rgba(239, 68, 68, 0.1)', text: 'var(--danger)' },
-  };
-
-  return (
-    <div style={{ 
-      backgroundColor: 'var(--bg-card)', 
-      border: '1px solid var(--border-default)', 
-      borderRadius: '16px',
-      padding: '24px'
-    }}>
-      {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '16px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <div style={{ 
-            width: '48px', 
-            height: '48px', 
-            borderRadius: '50%', 
-            backgroundColor: 'rgba(198, 167, 94, 0.2)', 
-            display: 'flex', 
-            alignItems: 'center', 
-            justifyContent: 'center',
-            color: 'var(--accent-gold)',
-            fontWeight: 600,
-            fontSize: '18px'
-          }}>
-            {review.userName[0]}
-          </div>
-          <div>
-            <p style={{ fontWeight: 500, color: 'var(--text-primary)' }}>{review.userName}</p>
-            <p style={{ fontSize: '13px', color: 'var(--text-muted)' }}>{review.userEmail}</p>
-          </div>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          {review.featured && (
-            <span style={{ 
-              padding: '4px 10px', 
-              borderRadius: '6px', 
-              fontSize: '11px', 
-              fontWeight: 600,
-              backgroundColor: 'rgba(198, 167, 94, 0.1)',
-              color: 'var(--accent-gold)'
-            }}>
-              Featured
-            </span>
-          )}
-          <span style={{ 
-            padding: '4px 10px', 
-            borderRadius: '6px', 
-            fontSize: '11px', 
-            fontWeight: 600,
-            backgroundColor: statusColors[review.status].bg,
-            color: statusColors[review.status].text,
-            textTransform: 'capitalize'
-          }}>
-            {review.status}
-          </span>
-        </div>
-      </div>
-
-      {/* Rating */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '12px' }}>
-        {[1, 2, 3, 4, 5].map((star) => (
-          <Star 
-            key={star}
-            style={{ 
-              width: '18px', 
-              height: '18px', 
-              color: star <= review.rating ? 'var(--accent-gold)' : 'var(--border-default)',
-              fill: star <= review.rating ? 'var(--accent-gold)' : 'transparent'
-            }} 
-          />
-        ))}
-        <span style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)', marginLeft: '8px' }}>
-          {review.rating}/5
-        </span>
-      </div>
-
-      {/* Content */}
-      <h3 style={{ fontSize: '16px', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '8px' }}>
-        {review.title}
-      </h3>
-      <p style={{ fontSize: '14px', color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: '16px' }}>
-        {review.content}
-      </p>
-
-      {/* Meta */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '16px', fontSize: '12px', color: 'var(--text-muted)', marginBottom: '16px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-          <Calendar style={{ width: '12px', height: '12px' }} />
-          {new Date(review.createdAt).toLocaleDateString()}
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-          <ThumbsUp style={{ width: '12px', height: '12px' }} />
-          {review.helpful} helpful
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-          <ThumbsDown style={{ width: '12px', height: '12px' }} />
-          {review.notHelpful} not helpful
-        </div>
-      </div>
-
-      {/* Actions */}
-      <div style={{ display: 'flex', gap: '12px', paddingTop: '16px', borderTop: '1px solid var(--border-default)' }}>
-        {review.status === 'pending' && (
-          <>
-            <Button variant="primary" size="sm" onClick={onApprove} isLoading={loading}>
-              <CheckCircle style={{ width: '14px', height: '14px', marginRight: '6px' }} />
-              Approve
-            </Button>
-            <Button variant="danger" size="sm" onClick={onReject} isLoading={loading}>
-              <XCircle style={{ width: '14px', height: '14px', marginRight: '6px' }} />
-              Reject
-            </Button>
-          </>
-        )}
-        {review.status === 'approved' && (
-          <Button 
-            variant={review.featured ? 'outline' : 'secondary'} 
-            size="sm" 
-            onClick={onToggleFeatured}
+          <button
+            onClick={handleSchedule}
+            disabled={isScheduling}
+            className="inline-flex items-center gap-2 rounded-lg bg-[#3B82F6] px-5 py-2.5 text-sm font-medium text-white hover:bg-[#2563EB] disabled:cursor-not-allowed disabled:opacity-50"
           >
-            <Star style={{ width: '14px', height: '14px', marginRight: '6px' }} />
-            {review.featured ? 'Remove Featured' : 'Make Featured'}
-          </Button>
-        )}
-        {review.status === 'rejected' && (
-          <Button variant="outline" size="sm" onClick={onApprove}>
-            <CheckCircle style={{ width: '14px', height: '14px', marginRight: '6px' }} />
-            Approve
-          </Button>
-        )}
-      </div>
+            {isScheduling ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Send className="h-4 w-4" />
+            )}
+            Schedule Batch
+          </button>
+
+          <p className="mt-3 text-xs text-[#64748B]">
+            Reviewer names are pulled from the Unique Name pool — add more in
+            the third tab if you run out.
+          </p>
+        </div>
+      )}
+
+      {/* ============================================ */}
+      {/* TAB: Unique Name Handle                      */}
+      {/* ============================================ */}
+      {tab === 'names' && (
+        <div className="space-y-4">
+          {/* Add new names */}
+          <div className="rounded-xl border border-[rgba(255,255,255,0.1)] bg-[rgba(15,23,42,0.6)] p-6">
+            <h2 className="mb-1 text-lg font-semibold text-white">Add Names</h2>
+            <p className="mb-3 text-sm text-[#94A3B8]">
+              One name per line. Duplicates are skipped silently.
+            </p>
+            <textarea
+              value={newNamesText}
+              onChange={(e) => setNewNamesText(e.target.value)}
+              rows={5}
+              placeholder={'John Smith\nMaria Garcia\nDavid Lee'}
+              className="mb-3 w-full rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.4)] p-3 text-sm text-white"
+            />
+            <button
+              onClick={handleAddNames}
+              disabled={isAddingNames}
+              className="inline-flex items-center gap-2 rounded-lg bg-[#3B82F6] px-4 py-2 text-sm font-medium text-white hover:bg-[#2563EB] disabled:opacity-50"
+            >
+              {isAddingNames ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Plus className="h-4 w-4" />
+              )}
+              Add Names
+            </button>
+          </div>
+
+          {/* List */}
+          <div className="rounded-xl border border-[rgba(255,255,255,0.1)] bg-[rgba(15,23,42,0.6)]">
+            <div className="flex flex-col items-stretch gap-2 border-b border-[rgba(255,255,255,0.1)] p-4 md:flex-row md:items-center md:justify-between">
+              <input
+                value={nameSearch}
+                onChange={(e) => setNameSearch(e.target.value)}
+                placeholder="Search names..."
+                className="rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.4)] px-3 py-2 text-sm text-white md:w-72"
+              />
+              <Select
+                value={nameUsedFilter === '' ? '__all__' : nameUsedFilter}
+                onValueChange={(v) =>
+                  setNameUsedFilter(
+                    v === '__all__' ? '' : (v as 'true' | 'false'),
+                  )
+                }
+              >
+                <SelectTrigger className="rounded-lg border border-[rgba(255,255,255,0.18)] bg-[#1E293B] px-3 py-2 text-base text-white focus-visible:ring-2 focus-visible:ring-[#3B82F6] focus-visible:outline-none data-[size=default]:h-auto data-[size=default]:min-h-11 lg:text-sm">
+                  <SelectValue placeholder="All names" />
+                </SelectTrigger>
+                <SelectContent className="max-h-72 border-[rgba(255,255,255,0.18)] bg-[#1E293B] text-white">
+                  <SelectItem
+                    value="__all__"
+                    className="text-white focus:bg-[rgba(59,130,246,0.15)] focus:text-white"
+                  >
+                    All names
+                  </SelectItem>
+                  <SelectItem
+                    value="false"
+                    className="text-white focus:bg-[rgba(59,130,246,0.15)] focus:text-white"
+                  >
+                    Available
+                  </SelectItem>
+                  <SelectItem
+                    value="true"
+                    className="text-white focus:bg-[rgba(59,130,246,0.15)] focus:text-white"
+                  >
+                    In use
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {namesLoading ? (
+              <div className="flex items-center justify-center py-16">
+                <Loader2 className="h-8 w-8 animate-spin text-[#3B82F6]" />
+              </div>
+            ) : names.length === 0 ? (
+              <p className="py-16 text-center text-sm text-[#64748B]">
+                No names in the pool yet.
+              </p>
+            ) : (
+              <div className="grid grid-cols-1 gap-2 p-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                {names.map((n) => (
+                  <div
+                    key={n.id}
+                    className="flex items-center justify-between gap-2 rounded-lg border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.03)] px-3 py-2"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm text-white">{n.name}</p>
+                      <p className="text-[11px] text-[#64748B]">
+                        {n.reviewUsed ? 'In use' : 'Available'}
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => handleDeleteName(n.id)}
+                      className="rounded-md bg-[#EF4444]/10 p-1.5 text-[#EF4444] hover:bg-[#EF4444]/20"
+                      title="Delete name"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
-

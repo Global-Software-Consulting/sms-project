@@ -1,0 +1,63 @@
+---
+# ============================================
+# BestSMSHQ Frontend — Nginx Setup
+# ============================================
+# Deploys frontend reverse proxy config only.
+# Backend API nginx is already configured separately.
+# SSL is handled by Cloudflare.
+#
+# Usage:
+#   ansible-playbook nginx.yml --ask-pass -e "domain=bestsmshq.com"
+# ============================================
+
+- name: Setup Nginx for BestSMSHQ Frontend
+  hosts: sms_servers
+  become: true
+
+  vars:
+    domain: "bestsmshq.com"
+
+  tasks:
+    # ------------------------------------------
+    # Install Nginx (if not already)
+    # ------------------------------------------
+    - name: Install Nginx
+      apt:
+        name: nginx
+        state: present
+        update_cache: true
+
+    - name: Enable Nginx service on boot
+      systemd:
+        name: nginx
+        state: started
+        enabled: true
+
+    # ------------------------------------------
+    # Deploy frontend config
+    # ------------------------------------------
+    - name: Deploy frontend Nginx config
+      template:
+        src: templates/sms-frontend.conf.j2
+        dest: /etc/nginx/sites-available/sms-frontend.conf
+      notify: Reload Nginx
+
+    - name: Enable frontend site
+      file:
+        src: /etc/nginx/sites-available/sms-frontend.conf
+        dest: /etc/nginx/sites-enabled/sms-frontend.conf
+        state: link
+      notify: Reload Nginx
+
+    # ------------------------------------------
+    # Validate and reload
+    # ------------------------------------------
+    - name: Test Nginx configuration
+      command: nginx -t
+      changed_when: false
+
+  handlers:
+    - name: Reload Nginx
+      systemd:
+        name: nginx
+        state: reloaded

@@ -1,13 +1,13 @@
-"use client";
+'use client';
 
-import React, { useEffect, useState, useCallback } from "react";
-import { X, CheckCircle, AlertCircle, AlertTriangle, Info } from "lucide-react";
+import React, { useEffect, useState, useCallback } from 'react';
+import { X, CheckCircle, AlertCircle, AlertTriangle, Info } from 'lucide-react';
 
 // ============================================
 // Toast Types
 // ============================================
 
-export type ToastType = "success" | "error" | "warning" | "info";
+export type ToastType = 'success' | 'error' | 'warning' | 'info';
 
 export interface ToastData {
   id: string;
@@ -50,44 +50,41 @@ const Toast: React.FC<ToastProps> = ({
   }, [duration, handleDismiss]);
 
   const icons = {
-    success: <CheckCircle className="w-5 h-5 text-success" />,
-    error: <AlertCircle className="w-5 h-5 text-danger" />,
-    warning: <AlertTriangle className="w-5 h-5 text-warning" />,
-    info: <Info className="w-5 h-5 text-info" />,
+    success: <CheckCircle className="text-success h-5 w-5" />,
+    error: <AlertCircle className="text-danger h-5 w-5" />,
+    warning: <AlertTriangle className="text-warning h-5 w-5" />,
+    info: <Info className="text-info h-5 w-5" />,
   };
 
   const bgColors = {
-    success: "bg-success/10 border-success/20",
-    error: "bg-danger/10 border-danger/20",
-    warning: "bg-warning/10 border-warning/20",
-    info: "bg-info/10 border-info/20",
+    success: 'bg-success/10 border-success/20',
+    error: 'bg-danger/10 border-danger/20',
+    warning: 'bg-warning/10 border-warning/20',
+    info: 'bg-info/10 border-info/20',
   };
 
   return (
     <div
-      className={`
-        flex items-start gap-3 p-4 rounded-xl border shadow-lg backdrop-blur-sm
-        ${bgColors[type]}
-        ${isExiting ? "animate-slide-out-right" : "animate-slide-in-right"}
-        transition-all duration-200
-      `}
+      className={`flex items-start gap-3 rounded-xl border p-4 shadow-lg backdrop-blur-sm ${bgColors[type]} ${isExiting ? 'animate-slide-out-right' : 'animate-slide-in-right'} transition-all duration-200`}
       role="alert"
-      style={{ minWidth: "320px", maxWidth: "420px" }}
+      style={{ minWidth: '320px', maxWidth: '420px' }}
     >
-      <div className="flex-shrink-0 mt-0.5">{icons[type]}</div>
-      <div className="flex-1 min-w-0">
+      <div className="mt-0.5 flex-shrink-0">{icons[type]}</div>
+      <div className="min-w-0 flex-1">
         {title && (
-          <p className="text-sm font-semibold text-text-primary mb-1">{title}</p>
+          <p className="text-text-primary mb-1 text-sm font-semibold">
+            {title}
+          </p>
         )}
-        <p className="text-sm text-text-secondary">{message}</p>
+        <p className="text-text-secondary text-sm">{message}</p>
       </div>
       {dismissible && (
         <button
           onClick={handleDismiss}
-          className="flex-shrink-0 p-1 rounded-lg hover:bg-bg-hover transition-colors"
+          className="hover:bg-bg-hover flex-shrink-0 rounded-lg p-1 transition-colors"
           aria-label="Dismiss"
         >
-          <X className="w-4 h-4 text-text-muted" />
+          <X className="text-text-muted h-4 w-4" />
         </button>
       )}
     </div>
@@ -101,21 +98,27 @@ const Toast: React.FC<ToastProps> = ({
 interface ToastContainerProps {
   toasts: ToastData[];
   onDismiss: (id: string) => void;
-  position?: "top-right" | "top-left" | "bottom-right" | "bottom-left" | "top-center" | "bottom-center";
+  position?:
+    | 'top-right'
+    | 'top-left'
+    | 'bottom-right'
+    | 'bottom-left'
+    | 'top-center'
+    | 'bottom-center';
 }
 
 export const ToastContainer: React.FC<ToastContainerProps> = ({
   toasts,
   onDismiss,
-  position = "top-right",
+  position = 'top-right',
 }) => {
   const positionClasses = {
-    "top-right": "top-4 right-4",
-    "top-left": "top-4 left-4",
-    "bottom-right": "bottom-4 right-4",
-    "bottom-left": "bottom-4 left-4",
-    "top-center": "top-4 left-1/2 -translate-x-1/2",
-    "bottom-center": "bottom-4 left-1/2 -translate-x-1/2",
+    'top-right': 'top-4 right-4',
+    'top-left': 'top-4 left-4',
+    'bottom-right': 'bottom-4 right-4',
+    'bottom-left': 'bottom-4 left-4',
+    'top-center': 'top-4 left-1/2 -translate-x-1/2',
+    'bottom-center': 'bottom-4 left-1/2 -translate-x-1/2',
   };
 
   if (toasts.length === 0) return null;
@@ -133,4 +136,3 @@ export const ToastContainer: React.FC<ToastContainerProps> = ({
 };
 
 export default Toast;
-

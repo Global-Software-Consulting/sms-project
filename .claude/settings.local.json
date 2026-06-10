@@ -1,0 +1,29 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm install:*)",
+      "WebFetch(domain:cheapstreamtv.com)",
+      "Bash(find /c/Users/UCP/Desktop/sms-project/src -type f \\\\\\(-name *support* -o -name *ticket* \\\\\\))",
+      "Bash(find /c/Users/UCP/Desktop/sms-project/src/app -type f -path *api*)",
+      "Bash(ls -la /c/Users/UCP/Desktop/sms-project/src/app/\\\\\\(dashboard\\\\\\)/dashboard/support/)",
+      "Bash(find /c/Users/UCP/Desktop/sms-project/src -type f \\\\\\(-path *api* -o -path *service* \\\\\\) -name *.ts -o -name *.tsx)",
+      "Bash(ls -la /c/Users/UCP/Desktop/sms-project/src/app/\\\\\\(dashboard\\\\\\)/dashboard/api/)",
+      "Bash(grep -E \"\\\\.tsx$|\\\\.ts$\")",
+      "Bash(for f:*)",
+      "Bash(do)",
+      "Bash(sed -i 's/px-4 py-20/px-4 py-12 sm:py-16 md:py-20/g' \"$f\")",
+      "Bash(sed -i 's/mb-4 text-4xl font-bold/mb-4 text-3xl font-bold sm:text-4xl/g' \"$f\")",
+      "Bash(done)",
+      "Bash(grep -E \"\\\\.tsx$\")",
+      "Bash(grep -E \"\\\\.md$|\\\\.config\")",
+      "Bash(ls \"F:/Projects/sms-project/src/app/\\(admin\\)/admin/\")",
+      "Bash(ls \"F:/Projects/sms-project/src/app/\\(admin\\)/\")",
+      "Bash(ls -la \"F:/Projects/sms-project/src/app/\\(admin\\)/admin/\")",
+      "Bash(ls \"f:/Projects/sms-project/.claude/worktrees/agent-ae2c64c7/src/app/\\(admin\\)/\")",
+      "Bash(find f:/Projects/sms-project/.claude/worktrees -name *.tsx)",
+      "Bash(for wt:*)",
+      "Bash(do echo:*)",
+      "Bash(ls \"f:/Projects/sms-project/src/app/\\(admin\\)/\")"
+    ]
+  }
+}

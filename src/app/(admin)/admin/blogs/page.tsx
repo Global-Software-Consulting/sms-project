@@ -1,0 +1,2082 @@
+'use client';
+
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { AdminPageHeader } from '@/components/admin/page-header';
+import { AdminGlassCard } from '@/components/admin/glass-card';
+import { AdminFormInput } from '@/components/admin/form-input';
+import { AdminModal } from '@/components/admin/modal';
+import { toast } from 'sonner';
+import {
+  Plus,
+  Edit,
+  Trash2,
+  Upload,
+  Copy,
+  Loader2,
+  Eye,
+  X,
+  Download,
+  ImageIcon,
+} from 'lucide-react';
+import {
+  processImage,
+  downloadBlob,
+  formatBytes,
+  MAX_FILE_BYTES,
+  MAX_BATCH_FILES,
+  type ProcessedImage,
+} from '@/lib/blog-image-editor';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
+  getBlogPosts,
+  createBlogPost,
+  updateBlogPost,
+  deleteBlogPost,
+  publishBlogPost,
+  unpublishBlogPost,
+  getBlogCategories,
+  createBlogCategory,
+  updateBlogCategory,
+  deleteBlogCategory,
+  getBlogAuthors,
+  createBlogAuthor,
+  updateBlogAuthor,
+  deleteBlogAuthor,
+  bulkCreateBlogPosts,
+  type BlogPost,
+  type BlogCategory,
+  type BlogAuthor,
+} from '@/lib/api/adminModulesApi';
+
+export default function AdminBlogsPage() {
+  const [activeTab, setActiveTab] = useState<
+    'manual' | 'auto' | 'category' | 'author' | 'image'
+  >('manual');
+  const [categorySubTab, setCategorySubTab] = useState<
+    'category' | 'subcategory'
+  >('category');
+
+  // Data states
+  const [blogs, setBlogs] = useState<BlogPost[]>([]);
+  const [categories, setCategories] = useState<BlogCategory[]>([]);
+  const [authors, setAuthors] = useState<BlogAuthor[]>([]);
+
+  // Loading states
+  const [isLoading, setIsLoading] = useState(false);
+  const [isPageLoading, setIsPageLoading] = useState(true);
+
+  // Modal states
+  const [isCreateBlogModalOpen, setIsCreateBlogModalOpen] = useState(false);
+  const [isEditBlogModalOpen, setIsEditBlogModalOpen] = useState(false);
+  const [isCreateCategoryModalOpen, setIsCreateCategoryModalOpen] =
+    useState(false);
+  const [isEditCategoryModalOpen, setIsEditCategoryModalOpen] = useState(false);
+  const [isCreateAuthorModalOpen, setIsCreateAuthorModalOpen] = useState(false);
+  const [isEditAuthorModalOpen, setIsEditAuthorModalOpen] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [deleteType, setDeleteType] = useState<'blog' | 'category' | 'author'>(
+    'blog',
+  );
+
+  // Selected items
+  const [selectedBlog, setSelectedBlog] = useState<BlogPost | null>(null);
+  const [selectedCategory, setSelectedCategory] = useState<BlogCategory | null>(
+    null,
+  );
+  const [selectedAuthor, setSelectedAuthor] = useState<BlogAuthor | null>(null);
+
+  // Filter
+  const [statusFilter, setStatusFilter] = useState<string>('all');
+
+  // Form states
+  const [blogForm, setBlogForm] = useState({
+    title: '',
+    slug: '',
+    excerpt: '',
+    content: '',
+    featuredImage: '',
+    categoryId: '',
+    authorId: '',
+    tags: '',
+    status: 'DRAFT' as 'DRAFT' | 'PUBLISHED' | 'ARCHIVED',
+  });
+
+  const [categoryForm, setCategoryForm] = useState({
+    name: '',
+    slug: '',
+    description: '',
+    parentId: '',
+  });
+
+  const [authorForm, setAuthorForm] = useState({
+    name: '',
+    slug: '',
+    bio: '',
+    avatar: '',
+    email: '',
+    website: '',
+  });
+
+  // Auto Blog Upload State
+  const [autoBlogConfig, setAutoBlogConfig] = useState({
+    category: '',
+    author: '',
+  });
+
+  const [blogPostDraft, setBlogPostDraft] = useState({
+    title: '',
+    content: '',
+    tags: '',
+  });
+
+  const [scheduling, setScheduling] = useState({
+    minHours: '8',
+    maxHours: '11',
+    authorRotation: true,
+  });
+
+  // Image Editor State
+  const [imageConfig, setImageConfig] = useState({
+    searchName: '',
+    crop1: '2',
+    crop2: '4',
+    crop3: '10',
+    crop4: '15',
+    saturation1: '1',
+    saturation2: '15',
+    brightness1: '5',
+    brightness2: '10',
+    contrast1: '5',
+    contrast2: '10',
+    rotation1: '-1',
+    rotation2: '1',
+    noise1: '1',
+    noise2: '2',
+    convertWebP: true,
+    stripEXIF: true,
+    bypassMode: false,
+  });
+
+  const imageFileInputRef = useRef<HTMLInputElement | null>(null);
+  const [pendingImageFiles, setPendingImageFiles] = useState<File[]>([]);
+  const [processedImages, setProcessedImages] = useState<ProcessedImage[]>([]);
+  const [isProcessingImages, setIsProcessingImages] = useState(false);
+  const [previewImage, setPreviewImage] = useState<{
+    url: string;
+    filename: string;
+  } | null>(null);
+
+  const handleImageFilesChosen = (files: FileList | null): void => {
+    if (!files || files.length === 0) return;
+    const incoming = Array.from(files).filter((f) =>
+      f.type.startsWith('image/'),
+    );
+    if (incoming.length === 0) {
+      toast.error('Please select image files only');
+      return;
+    }
+    const oversize = incoming.filter((f) => f.size > MAX_FILE_BYTES);
+    const next = incoming.filter((f) => f.size <= MAX_FILE_BYTES);
+    if (oversize.length > 0) {
+      toast.error(
+        `Skipped ${oversize.length} file${oversize.length === 1 ? '' : 's'} over ${formatBytes(MAX_FILE_BYTES)}`,
+      );
+    }
+    if (next.length === 0) return;
+
+    setPendingImageFiles((prev) => {
+      const room = MAX_BATCH_FILES - prev.length;
+      if (room <= 0) {
+        toast.error(`Batch limit is ${MAX_BATCH_FILES} files`);
+        return prev;
+      }
+      if (next.length > room) {
+        toast.error(
+          `Only the first ${room} file${room === 1 ? '' : 's'} added — batch limit is ${MAX_BATCH_FILES}`,
+        );
+        return [...prev, ...next.slice(0, room)];
+      }
+      return [...prev, ...next];
+    });
+    setProcessedImages([]);
+  };
+
+  const removePendingImage = (index: number): void => {
+    setPendingImageFiles((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const clearImageEditor = (): void => {
+    processedImages.forEach((p) =>
+      p.variants.forEach((v) => URL.revokeObjectURL(v.previewUrl)),
+    );
+    setPendingImageFiles([]);
+    setProcessedImages([]);
+  };
+
+  const handleProcessImages = async (): Promise<void> => {
+    if (pendingImageFiles.length === 0) {
+      toast.error('Choose at least one image first');
+      return;
+    }
+
+    const cropValues = [
+      imageConfig.crop1,
+      imageConfig.crop2,
+      imageConfig.crop3,
+      imageConfig.crop4,
+    ]
+      .map((v) => Number(v))
+      .filter((n) => Number.isFinite(n));
+
+    if (cropValues.length === 0) {
+      toast.error('Provide at least one crop value');
+      return;
+    }
+
+    const ranges = {
+      cropValues,
+      saturationRange: [
+        Number(imageConfig.saturation1),
+        Number(imageConfig.saturation2),
+      ] as [number, number],
+      brightnessRange: [
+        Number(imageConfig.brightness1),
+        Number(imageConfig.brightness2),
+      ] as [number, number],
+      contrastRange: [
+        Number(imageConfig.contrast1),
+        Number(imageConfig.contrast2),
+      ] as [number, number],
+      convertWebP: imageConfig.convertWebP,
+      stripEXIF: imageConfig.stripEXIF,
+    };
+
+    setIsProcessingImages(true);
+    processedImages.forEach((p) =>
+      p.variants.forEach((v) => URL.revokeObjectURL(v.previewUrl)),
+    );
+    setProcessedImages([]);
+
+    try {
+      const results: ProcessedImage[] = [];
+      for (const file of pendingImageFiles) {
+        const baseName = imageConfig.searchName.trim() || file.name;
+        const processed = await processImage(file, ranges, baseName);
+        results.push(processed);
+      }
+      setProcessedImages(results);
+      const totalVariants = results.reduce(
+        (sum, r) => sum + r.variants.length,
+        0,
+      );
+      toast.success(
+        `Generated ${totalVariants} variants from ${results.length} image${results.length === 1 ? '' : 's'}`,
+      );
+    } catch (err) {
+      toast.error(
+        err instanceof Error ? err.message : 'Image processing failed',
+      );
+    } finally {
+      setIsProcessingImages(false);
+    }
+  };
+
+  const handleDownloadAllVariants = (): void => {
+    processedImages.forEach((p) =>
+      p.variants.forEach((v) => downloadBlob(v.blob, v.filename)),
+    );
+  };
+
+  // Fetch functions
+  const fetchBlogPosts = useCallback(async () => {
+    try {
+      const params: any = {};
+      if (statusFilter !== 'all') {
+        params.status = statusFilter;
+      }
+      const response = await getBlogPosts(params);
+      setBlogs(response.data);
+    } catch (error) {
+      console.error('Failed to fetch blog posts:', error);
+      toast.error('Failed to load blog posts');
+    }
+  }, [statusFilter]);
+
+  const fetchCategories = useCallback(async () => {
+    try {
+      const data = await getBlogCategories(true);
+      setCategories(data);
+    } catch (error) {
+      console.error('Failed to fetch categories:', error);
+    }
+  }, []);
+
+  const fetchAuthors = useCallback(async () => {
+    try {
+      const data = await getBlogAuthors(true);
+      setAuthors(data);
+    } catch (error) {
+      console.error('Failed to fetch authors:', error);
+    }
+  }, []);
+
+  useEffect(() => {
+    const loadData = async () => {
+      setIsPageLoading(true);
+      await Promise.all([fetchBlogPosts(), fetchCategories(), fetchAuthors()]);
+      setIsPageLoading(false);
+    };
+    loadData();
+  }, [fetchBlogPosts, fetchCategories, fetchAuthors]);
+
+  // Blog handlers
+  const handleCreateBlog = async () => {
+    if (!blogForm.title || !blogForm.content) {
+      toast.error('Title and content are required');
+      return;
+    }
+    setIsLoading(true);
+    try {
+      await createBlogPost({
+        title: blogForm.title,
+        slug: blogForm.slug || undefined,
+        excerpt: blogForm.excerpt || undefined,
+        content: blogForm.content,
+        featuredImage: blogForm.featuredImage || undefined,
+        categoryId: blogForm.categoryId || undefined,
+        authorId: blogForm.authorId || undefined,
+        tags: blogForm.tags
+          ? blogForm.tags.split(',').map((t) => t.trim())
+          : [],
+        status: blogForm.status,
+      });
+      toast.success('Blog post created successfully!');
+      setIsCreateBlogModalOpen(false);
+      resetBlogForm();
+      await fetchBlogPosts();
+    } catch (error: any) {
+      toast.error(
+        error.response?.data?.message || 'Failed to create blog post',
+      );
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleEditBlog = async () => {
+    if (!selectedBlog || !blogForm.title || !blogForm.content) {
+      toast.error('Title and content are required');
+      return;
+    }
+    setIsLoading(true);
+    try {
+      await updateBlogPost(selectedBlog.id, {
+        title: blogForm.title,
+        slug: blogForm.slug || undefined,
+        excerpt: blogForm.excerpt || undefined,
+        content: blogForm.content,
+        featuredImage: blogForm.featuredImage || undefined,
+        categoryId: blogForm.categoryId || undefined,
+        authorId: blogForm.authorId || undefined,
+        tags: blogForm.tags
+          ? blogForm.tags.split(',').map((t) => t.trim())
+          : [],
+        status: blogForm.status,
+      });
+      toast.success('Blog post updated successfully!');
+      setIsEditBlogModalOpen(false);
+      setSelectedBlog(null);
+      resetBlogForm();
+      await fetchBlogPosts();
+    } catch (error: any) {
+      toast.error(
+        error.response?.data?.message || 'Failed to update blog post',
+      );
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handlePublishToggle = async (blog: BlogPost) => {
+    try {
+      if (blog.status === 'PUBLISHED') {
+        await unpublishBlogPost(blog.id);
+        toast.success('Blog unpublished successfully!');
+      } else {
+        await publishBlogPost(blog.id);
+        toast.success('Blog published successfully!');
+      }
+      await fetchBlogPosts();
+    } catch (error: any) {
+      toast.error(
+        error.response?.data?.message || 'Failed to update blog status',
+      );
+    }
+  };
+
+  const handleDeleteBlog = async () => {
+    if (!selectedBlog) return;
+    setIsLoading(true);
+    try {
+      await deleteBlogPost(selectedBlog.id);
+      toast.success('Blog deleted successfully!');
+      setIsDeleteModalOpen(false);
+      setSelectedBlog(null);
+      await fetchBlogPosts();
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Failed to delete blog');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Bulk create handler
+  const handleBulkCreate = async () => {
+    if (!autoBlogConfig.category) {
+      toast.error('Please select a category');
+      return;
+    }
+    if (!blogPostDraft.title || !blogPostDraft.content) {
+      toast.error('Title and content are required');
+      return;
+    }
+    if (!scheduling.authorRotation && !autoBlogConfig.author) {
+      toast.error('Please select an author or enable author rotation');
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const result = await bulkCreateBlogPosts({
+        categoryId: autoBlogConfig.category,
+        authorId: autoBlogConfig.author || undefined,
+        title: blogPostDraft.title,
+        content: blogPostDraft.content,
+        tags: blogPostDraft.tags
+          ? blogPostDraft.tags
+              .split(',')
+              .map((t) => t.trim())
+              .filter(Boolean)
+          : [],
+        minHoursBetweenPosts: parseInt(scheduling.minHours) || 8,
+        maxHoursBetweenPosts: parseInt(scheduling.maxHours) || 12,
+        authorRotation: scheduling.authorRotation,
+        count: 1,
+      });
+      toast.success(result.message);
+      // Reset form
+      setBlogPostDraft({ title: '', content: '', tags: '' });
+      await fetchBlogPosts();
+    } catch (error: any) {
+      toast.error(
+        error.response?.data?.message || 'Failed to create bulk blogs',
+      );
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Category handlers
+  const handleCreateCategory = async () => {
+    if (!categoryForm.name) {
+      toast.error('Category name is required');
+      return;
+    }
+    setIsLoading(true);
+    try {
+      await createBlogCategory({
+        name: categoryForm.name,
+        slug: categoryForm.slug || undefined,
+        description: categoryForm.description || undefined,
+        parentId: categoryForm.parentId || undefined,
+      });
+      toast.success('Category created successfully!');
+      setIsCreateCategoryModalOpen(false);
+      resetCategoryForm();
+      await fetchCategories();
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Failed to create category');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleEditCategory = async () => {
+    if (!selectedCategory || !categoryForm.name) {
+      toast.error('Category name is required');
+      return;
+    }
+    setIsLoading(true);
+    try {
+      await updateBlogCategory(selectedCategory.id, {
+        name: categoryForm.name,
+        slug: categoryForm.slug || undefined,
+        description: categoryForm.description || undefined,
+        parentId: categoryForm.parentId || undefined,
+      });
+      toast.success('Category updated successfully!');
+      setIsEditCategoryModalOpen(false);
+      setSelectedCategory(null);
+      resetCategoryForm();
+      await fetchCategories();
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Failed to update category');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleDeleteCategory = async () => {
+    if (!selectedCategory) return;
+    setIsLoading(true);
+    try {
+      await deleteBlogCategory(selectedCategory.id);
+      toast.success('Category deleted successfully!');
+      setIsDeleteModalOpen(false);
+      setSelectedCategory(null);
+      await fetchCategories();
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Failed to delete category');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Author handlers
+  const handleCreateAuthor = async () => {
+    if (!authorForm.name) {
+      toast.error('Author name is required');
+      return;
+    }
+    setIsLoading(true);
+    try {
+      await createBlogAuthor({
+        name: authorForm.name,
+        slug: authorForm.slug || undefined,
+        bio: authorForm.bio || undefined,
+        avatar: authorForm.avatar || undefined,
+        email: authorForm.email || undefined,
+        website: authorForm.website || undefined,
+      });
+      toast.success('Author created successfully!');
+      setIsCreateAuthorModalOpen(false);
+      resetAuthorForm();
+      await fetchAuthors();
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Failed to create author');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleEditAuthor = async () => {
+    if (!selectedAuthor || !authorForm.name) {
+      toast.error('Author name is required');
+      return;
+    }
+    setIsLoading(true);
+    try {
+      await updateBlogAuthor(selectedAuthor.id, {
+        name: authorForm.name,
+        slug: authorForm.slug || undefined,
+        bio: authorForm.bio || undefined,
+        avatar: authorForm.avatar || undefined,
+        email: authorForm.email || undefined,
+        website: authorForm.website || undefined,
+      });
+      toast.success('Author updated successfully!');
+      setIsEditAuthorModalOpen(false);
+      setSelectedAuthor(null);
+      resetAuthorForm();
+      await fetchAuthors();
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Failed to update author');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleDeleteAuthor = async () => {
+    if (!selectedAuthor) return;
+    setIsLoading(true);
+    try {
+      await deleteBlogAuthor(selectedAuthor.id);
+      toast.success('Author deleted successfully!');
+      setIsDeleteModalOpen(false);
+      setSelectedAuthor(null);
+      await fetchAuthors();
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Failed to delete author');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Reset form functions
+  const resetBlogForm = () => {
+    setBlogForm({
+      title: '',
+      slug: '',
+      excerpt: '',
+      content: '',
+      featuredImage: '',
+      categoryId: '',
+      authorId: '',
+      tags: '',
+      status: 'DRAFT',
+    });
+  };
+
+  const resetCategoryForm = () => {
+    setCategoryForm({ name: '', slug: '', description: '', parentId: '' });
+  };
+
+  const resetAuthorForm = () => {
+    setAuthorForm({
+      name: '',
+      slug: '',
+      bio: '',
+      avatar: '',
+      email: '',
+      website: '',
+    });
+  };
+
+  // Open edit modals
+  const openEditBlog = (blog: BlogPost) => {
+    setSelectedBlog(blog);
+    setBlogForm({
+      title: blog.title,
+      slug: blog.slug,
+      excerpt: blog.excerpt || '',
+      content: blog.content,
+      featuredImage: blog.featuredImage || '',
+      categoryId: blog.categoryId || '',
+      authorId: blog.authorId || '',
+      tags: blog.tags.join(', '),
+      status: blog.status,
+    });
+    setIsEditBlogModalOpen(true);
+  };
+
+  const openEditCategory = (category: BlogCategory) => {
+    setSelectedCategory(category);
+    setCategoryForm({
+      name: category.name,
+      slug: category.slug,
+      description: category.description || '',
+      parentId: category.parentId || '',
+    });
+    setIsEditCategoryModalOpen(true);
+  };
+
+  const openEditAuthor = (author: BlogAuthor) => {
+    setSelectedAuthor(author);
+    setAuthorForm({
+      name: author.name,
+      slug: author.slug,
+      bio: author.bio || '',
+      avatar: author.avatar || '',
+      email: author.email || '',
+      website: author.website || '',
+    });
+    setIsEditAuthorModalOpen(true);
+  };
+
+  // Open delete modals
+  const openDeleteBlog = (blog: BlogPost) => {
+    setSelectedBlog(blog);
+    setDeleteType('blog');
+    setIsDeleteModalOpen(true);
+  };
+
+  const openDeleteCategory = (category: BlogCategory) => {
+    setSelectedCategory(category);
+    setDeleteType('category');
+    setIsDeleteModalOpen(true);
+  };
+
+  const openDeleteAuthor = (author: BlogAuthor) => {
+    setSelectedAuthor(author);
+    setDeleteType('author');
+    setIsDeleteModalOpen(true);
+  };
+
+  const handleDelete = () => {
+    if (deleteType === 'blog') handleDeleteBlog();
+    else if (deleteType === 'category') handleDeleteCategory();
+    else if (deleteType === 'author') handleDeleteAuthor();
+  };
+
+  const getDeleteItemName = () => {
+    if (deleteType === 'blog') return selectedBlog?.title;
+    if (deleteType === 'category') return selectedCategory?.name;
+    if (deleteType === 'author') return selectedAuthor?.name;
+    return '';
+  };
+
+  const formatDate = (dateString?: string) => {
+    if (!dateString) return 'Not published';
+    return new Date(dateString).toLocaleString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'PUBLISHED':
+        return 'bg-[#22C55E]/20 text-[#22C55E]';
+      case 'DRAFT':
+        return 'bg-[#F59E0B]/20 text-[#F59E0B]';
+      case 'ARCHIVED':
+        return 'bg-[#64748B]/20 text-[#64748B]';
+      default:
+        return 'bg-[#64748B]/20 text-[#64748B]';
+    }
+  };
+
+  const tabs = [
+    { id: 'manual', label: 'Add Blog Manually' },
+    { id: 'auto', label: 'Auto Blog Upload' },
+    { id: 'category', label: 'Category Management' },
+    { id: 'author', label: 'Author Pool' },
+    { id: 'image', label: 'Image Auto Editor' },
+  ];
+
+  // Get parent categories for dropdown
+  const parentCategories = categories.filter((c) => !c.parentId);
+  const subCategories = categories.filter((c) => c.parentId);
+
+  if (isPageLoading) {
+    return (
+      <div className="flex min-h-[400px] items-center justify-center p-8">
+        <Loader2 className="h-8 w-8 animate-spin text-[#3B82F6]" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="p-4 lg:p-8">
+      <AdminPageHeader
+        title="Blog Management"
+        description="Manage blogs, categories, authors, and auto-upload"
+      />
+
+      {/* Navigation Tabs */}
+      <div className="mb-8 flex items-center gap-6 overflow-x-auto border-b border-[rgba(255,255,255,0.18)] [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        {tabs.map((tab) => (
+          <button
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id as any)}
+            className={`relative px-2 pb-4 text-sm font-medium whitespace-nowrap transition-colors ${
+              activeTab === tab.id
+                ? 'text-[#3B82F6]'
+                : 'text-[#64748B] hover:text-white'
+            }`}
+          >
+            {tab.label}
+            {activeTab === tab.id && (
+              <div className="absolute right-0 bottom-0 left-0 h-0.5 bg-[#3B82F6]" />
+            )}
+          </button>
+        ))}
+      </div>
+
+      {/* Add Blog Manually Tab */}
+      {activeTab === 'manual' && (
+        <AdminGlassCard>
+          <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <h2 className="text-xl font-semibold text-white">Manage Blogs</h2>
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
+              <Select
+                value={statusFilter}
+                onValueChange={(v) => setStatusFilter(v)}
+              >
+                <SelectTrigger className="w-full rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(255,255,255,0.08)] px-4 py-2 text-base text-white focus-visible:ring-2 focus-visible:ring-[#3B82F6] focus-visible:outline-none data-[size=default]:h-auto data-[size=default]:min-h-11 sm:w-auto lg:text-sm">
+                  <SelectValue placeholder="All Blogs" />
+                </SelectTrigger>
+                <SelectContent className="max-h-72 border-[rgba(255,255,255,0.18)] bg-[#1E293B] text-white">
+                  <SelectItem
+                    value="all"
+                    className="text-white focus:bg-[rgba(59,130,246,0.15)] focus:text-white"
+                  >
+                    All Blogs
+                  </SelectItem>
+                  <SelectItem
+                    value="PUBLISHED"
+                    className="text-white focus:bg-[rgba(59,130,246,0.15)] focus:text-white"
+                  >
+                    Published
+                  </SelectItem>
+                  <SelectItem
+                    value="DRAFT"
+                    className="text-white focus:bg-[rgba(59,130,246,0.15)] focus:text-white"
+                  >
+                    Draft
+                  </SelectItem>
+                  <SelectItem
+                    value="ARCHIVED"
+                    className="text-white focus:bg-[rgba(59,130,246,0.15)] focus:text-white"
+                  >
+                    Archived
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+              <button
+                onClick={() => {
+                  resetBlogForm();
+                  setIsCreateBlogModalOpen(true);
+                }}
+                className="flex w-full items-center justify-center gap-2 rounded-lg bg-[#06B6D4] px-4 py-2 text-base font-medium whitespace-nowrap text-white transition-colors hover:bg-[#0891B2] sm:w-auto sm:justify-start sm:text-sm"
+              >
+                <Plus className="h-4 w-4" />
+                Create Blog
+              </button>
+            </div>
+          </div>
+
+          {blogs.length === 0 ? (
+            <div className="py-12 text-center">
+              <p className="text-[#64748B]">
+                No blog posts found. Create your first blog post!
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {blogs.map((blog) => (
+                <div
+                  key={blog.id}
+                  className="rounded-xl border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.3)] p-6"
+                >
+                  <div className="flex items-start gap-4">
+                    {blog.featuredImage && (
+                      <img
+                        src={blog.featuredImage}
+                        alt={blog.title}
+                        className="h-20 w-20 flex-shrink-0 rounded-lg object-cover"
+                      />
+                    )}
+
+                    <div className="min-w-0 flex-1">
+                      <div className="mb-2 flex items-start justify-between">
+                        <div>
+                          <h3 className="mb-1 text-lg font-semibold text-white">
+                            {blog.title}
+                          </h3>
+                          <p className="text-sm text-[#94A3B8]">
+                            By {blog.author?.name || 'Unknown'} •{' '}
+                            {formatDate(blog.publishedAt)}
+                          </p>
+                        </div>
+                        <span
+                          className={`rounded-full px-3 py-1 text-xs font-medium ${getStatusColor(blog.status)}`}
+                        >
+                          {blog.status}
+                        </span>
+                      </div>
+
+                      {blog.category && (
+                        <p className="mb-3 text-sm text-[#3B82F6]">
+                          📁 {blog.category.name}
+                        </p>
+                      )}
+
+                      {blog.tags.length > 0 && (
+                        <div className="mb-4 flex flex-wrap items-center gap-2">
+                          {blog.tags.map((tag, index) => (
+                            <span
+                              key={index}
+                              className="rounded-full bg-[#06B6D4]/20 px-3 py-1 text-xs text-[#06B6D4]"
+                            >
+                              {tag}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => handlePublishToggle(blog)}
+                          className={`rounded-lg px-4 py-2 text-sm font-medium text-white transition-colors ${
+                            blog.status === 'PUBLISHED'
+                              ? 'bg-[#F59E0B] hover:bg-[#D97706]'
+                              : 'bg-[#22C55E] hover:bg-[#16A34A]'
+                          }`}
+                        >
+                          {blog.status === 'PUBLISHED'
+                            ? 'Unpublish'
+                            : 'Publish'}
+                        </button>
+                        <button
+                          onClick={() => openEditBlog(blog)}
+                          className="flex items-center gap-2 rounded-lg bg-[#3B82F6] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[#2563EB]"
+                        >
+                          <Edit className="h-4 w-4" />
+                          Edit
+                        </button>
+                        <button
+                          onClick={() => openDeleteBlog(blog)}
+                          className="flex items-center gap-2 rounded-lg bg-[#EF4444] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[#DC2626]"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                          Delete
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="text-right text-xs text-[#64748B]">
+                      <p>Slug: {blog.slug}</p>
+                      <p>Views: {blog.viewCount}</p>
+                      <p>Created: {formatDate(blog.createdAt)}</p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </AdminGlassCard>
+      )}
+
+      {/* Auto Blog Upload Tab */}
+      {activeTab === 'auto' && (
+        <div className="space-y-6">
+          <div className="rounded-xl border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.3)] p-6">
+            <h3 className="mb-4 text-base font-semibold text-white">
+              📋 Blog Configuration
+            </h3>
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <div>
+                <label className="mb-2 block text-sm font-medium text-white">
+                  Category
+                </label>
+                <Select
+                  value={autoBlogConfig.category || '__placeholder__'}
+                  onValueChange={(v) =>
+                    setAutoBlogConfig({
+                      ...autoBlogConfig,
+                      category: v === '__placeholder__' ? '' : v,
+                    })
+                  }
+                >
+                  <SelectTrigger className="w-full rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(255,255,255,0.08)] px-4 py-3 text-base text-white focus-visible:ring-2 focus-visible:ring-[#3B82F6] focus-visible:outline-none data-[size=default]:h-auto data-[size=default]:min-h-12 lg:text-sm">
+                    <SelectValue placeholder="Select category" />
+                  </SelectTrigger>
+                  <SelectContent className="max-h-72 border-[rgba(255,255,255,0.18)] bg-[#1E293B] text-white">
+                    <SelectItem
+                      value="__placeholder__"
+                      className="text-white focus:bg-[rgba(59,130,246,0.15)] focus:text-white"
+                    >
+                      Select category
+                    </SelectItem>
+                    {categories.map((cat) => (
+                      <SelectItem
+                        key={cat.id}
+                        value={cat.id}
+                        className="text-white focus:bg-[rgba(59,130,246,0.15)] focus:text-white"
+                      >
+                        {cat.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <label className="mb-2 block text-sm font-medium text-white">
+                  Author
+                </label>
+                <Select
+                  value={autoBlogConfig.author || '__rotation__'}
+                  onValueChange={(v) =>
+                    setAutoBlogConfig({
+                      ...autoBlogConfig,
+                      author: v === '__rotation__' ? '' : v,
+                    })
+                  }
+                >
+                  <SelectTrigger className="w-full rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(255,255,255,0.08)] px-4 py-3 text-base text-white focus-visible:ring-2 focus-visible:ring-[#3B82F6] focus-visible:outline-none data-[size=default]:h-auto data-[size=default]:min-h-12 lg:text-sm">
+                    <SelectValue placeholder="Random rotation" />
+                  </SelectTrigger>
+                  <SelectContent className="max-h-72 border-[rgba(255,255,255,0.18)] bg-[#1E293B] text-white">
+                    <SelectItem
+                      value="__rotation__"
+                      className="text-white focus:bg-[rgba(59,130,246,0.15)] focus:text-white"
+                    >
+                      Random rotation
+                    </SelectItem>
+                    {authors.map((author) => (
+                      <SelectItem
+                        key={author.id}
+                        value={author.id}
+                        className="text-white focus:bg-[rgba(59,130,246,0.15)] focus:text-white"
+                      >
+                        {author.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          </div>
+
+          <div className="rounded-xl border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.3)] p-6">
+            <h3 className="mb-4 text-base font-semibold text-white">
+              ✏️ Blog Post Draft
+            </h3>
+            <div className="space-y-4">
+              <div>
+                <label className="mb-2 block text-sm font-medium text-white">
+                  Title *
+                </label>
+                <input
+                  type="text"
+                  value={blogPostDraft.title}
+                  onChange={(e) =>
+                    setBlogPostDraft({
+                      ...blogPostDraft,
+                      title: e.target.value,
+                    })
+                  }
+                  placeholder="Enter blog title"
+                  className="w-full rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(255,255,255,0.08)] px-4 py-3 text-sm text-white placeholder:text-[#64748B] focus:ring-2 focus:ring-[#3B82F6] focus:outline-none"
+                />
+              </div>
+              <div>
+                <label className="mb-2 block text-sm font-medium text-white">
+                  Content
+                </label>
+                <textarea
+                  value={blogPostDraft.content}
+                  onChange={(e) =>
+                    setBlogPostDraft({
+                      ...blogPostDraft,
+                      content: e.target.value,
+                    })
+                  }
+                  rows={6}
+                  placeholder="Write your blog content here..."
+                  className="w-full resize-none rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(255,255,255,0.08)] px-4 py-3 text-sm text-white placeholder:text-[#64748B] focus:ring-2 focus:ring-[#3B82F6] focus:outline-none"
+                />
+              </div>
+              <div>
+                <label className="mb-2 block text-sm font-medium text-white">
+                  Tags
+                </label>
+                <input
+                  type="text"
+                  value={blogPostDraft.tags}
+                  onChange={(e) =>
+                    setBlogPostDraft({ ...blogPostDraft, tags: e.target.value })
+                  }
+                  placeholder="tag1, tag2, tag3"
+                  className="w-full rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(255,255,255,0.08)] px-4 py-3 text-sm text-white placeholder:text-[#64748B] focus:ring-2 focus:ring-[#3B82F6] focus:outline-none"
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="rounded-xl border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.3)] p-6">
+            <h3 className="mb-4 text-base font-semibold text-white">
+              ⏰ Scheduling Options
+            </h3>
+            <div className="mb-4 grid grid-cols-1 gap-4 md:grid-cols-2">
+              <div>
+                <label className="mb-2 block text-sm font-medium text-white">
+                  Min Hours Between Posts
+                </label>
+                <input
+                  type="number"
+                  value={scheduling.minHours}
+                  onChange={(e) =>
+                    setScheduling({ ...scheduling, minHours: e.target.value })
+                  }
+                  className="w-full rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(255,255,255,0.08)] px-4 py-3 text-sm text-white focus:ring-2 focus:ring-[#3B82F6] focus:outline-none"
+                />
+              </div>
+              <div>
+                <label className="mb-2 block text-sm font-medium text-white">
+                  Max Hours Between Posts
+                </label>
+                <input
+                  type="number"
+                  value={scheduling.maxHours}
+                  onChange={(e) =>
+                    setScheduling({ ...scheduling, maxHours: e.target.value })
+                  }
+                  className="w-full rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(255,255,255,0.08)] px-4 py-3 text-sm text-white focus:ring-2 focus:ring-[#3B82F6] focus:outline-none"
+                />
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <input
+                type="checkbox"
+                id="authorRotation"
+                checked={scheduling.authorRotation}
+                onChange={(e) =>
+                  setScheduling({
+                    ...scheduling,
+                    authorRotation: e.target.checked,
+                  })
+                }
+                className="h-4 w-4 rounded border-[rgba(255,255,255,0.18)] bg-[rgba(255,255,255,0.08)] text-[#3B82F6] focus:ring-[#3B82F6]"
+              />
+              <label htmlFor="authorRotation" className="text-sm text-white">
+                Author Rotation{' '}
+                <span className="text-[#22C55E]">
+                  {scheduling.authorRotation ? 'ON' : 'OFF'}
+                </span>
+              </label>
+            </div>
+          </div>
+
+          <button
+            onClick={handleBulkCreate}
+            disabled={isLoading}
+            className="rounded-lg bg-[#06B6D4] px-8 py-3 text-sm font-medium text-white transition-colors hover:bg-[#0891B2] disabled:opacity-50"
+          >
+            {isLoading ? 'Creating...' : 'Create Bulk Blogs'}
+          </button>
+        </div>
+      )}
+
+      {/* Category Management Tab */}
+      {activeTab === 'category' && (
+        <AdminGlassCard>
+          <div className="mb-6 flex items-center gap-6 overflow-x-auto border-b border-[rgba(255,255,255,0.18)] [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            <button
+              onClick={() => setCategorySubTab('category')}
+              className={`relative shrink-0 px-2 pb-3 text-sm font-medium whitespace-nowrap transition-colors ${
+                categorySubTab === 'category'
+                  ? 'text-[#3B82F6]'
+                  : 'text-[#64748B] hover:text-white'
+              }`}
+            >
+              Category Management
+              {categorySubTab === 'category' && (
+                <div className="absolute right-0 bottom-0 left-0 h-0.5 bg-[#3B82F6]" />
+              )}
+            </button>
+            <button
+              onClick={() => setCategorySubTab('subcategory')}
+              className={`relative shrink-0 px-2 pb-3 text-sm font-medium whitespace-nowrap transition-colors ${
+                categorySubTab === 'subcategory'
+                  ? 'text-[#3B82F6]'
+                  : 'text-[#64748B] hover:text-white'
+              }`}
+            >
+              Sub-Category Management
+              {categorySubTab === 'subcategory' && (
+                <div className="absolute right-0 bottom-0 left-0 h-0.5 bg-[#3B82F6]" />
+              )}
+            </button>
+          </div>
+
+          <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <h2 className="text-xl font-semibold text-white">
+              {categorySubTab === 'category'
+                ? 'Manage Categories'
+                : 'Manage Sub-Categories'}
+            </h2>
+            <button
+              onClick={() => {
+                resetCategoryForm();
+                setIsCreateCategoryModalOpen(true);
+              }}
+              className="w-full rounded-lg bg-[#06B6D4] px-4 py-2 text-base font-medium whitespace-nowrap text-white transition-colors hover:bg-[#0891B2] sm:w-auto sm:text-sm"
+            >
+              + Create{' '}
+              {categorySubTab === 'category' ? 'Category' : 'Sub-Category'}
+            </button>
+          </div>
+
+          <div className="space-y-3">
+            {(categorySubTab === 'category'
+              ? parentCategories
+              : subCategories
+            ).map((category) => (
+              <div
+                key={category.id}
+                className="flex flex-col gap-3 rounded-xl border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.3)] p-4 sm:flex-row sm:items-center sm:justify-between"
+              >
+                <div className="min-w-0">
+                  <h3 className="mb-1 text-base font-semibold break-words text-white">
+                    {category.name}
+                  </h3>
+                  <p className="text-sm break-words text-[#64748B]">
+                    Slug: {category.slug}
+                    {category.parent && (
+                      <span> • Parent: {category.parent.name}</span>
+                    )}
+                    {category._count && (
+                      <span> • Posts: {category._count.posts}</span>
+                    )}
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => openEditCategory(category)}
+                    className="flex-1 rounded-lg bg-[#3B82F6] px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-[#2563EB] sm:flex-none"
+                  >
+                    Edit
+                  </button>
+                  <button
+                    onClick={() => openDeleteCategory(category)}
+                    className="flex-1 rounded-lg bg-[#EF4444] px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-[#DC2626] sm:flex-none"
+                  >
+                    Delete
+                  </button>
+                </div>
+              </div>
+            ))}
+            {(categorySubTab === 'category' ? parentCategories : subCategories)
+              .length === 0 && (
+              <p className="py-8 text-center text-[#64748B]">
+                No{' '}
+                {categorySubTab === 'category'
+                  ? 'categories'
+                  : 'sub-categories'}{' '}
+                found. Create one to get started!
+              </p>
+            )}
+          </div>
+        </AdminGlassCard>
+      )}
+
+      {/* Author Pool Tab */}
+      {activeTab === 'author' && (
+        <AdminGlassCard>
+          <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <h2 className="text-xl font-semibold text-white">Manage Authors</h2>
+            <button
+              onClick={() => {
+                resetAuthorForm();
+                setIsCreateAuthorModalOpen(true);
+              }}
+              className="w-full rounded-lg bg-[#06B6D4] px-4 py-2 text-base font-medium whitespace-nowrap text-white transition-colors hover:bg-[#0891B2] sm:w-auto sm:text-sm"
+            >
+              + Create Author
+            </button>
+          </div>
+
+          <div className="space-y-3">
+            {authors.map((author) => (
+              <div
+                key={author.id}
+                className="flex flex-col gap-3 rounded-xl border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.3)] p-4 sm:flex-row sm:items-center sm:justify-between"
+              >
+                <div className="flex min-w-0 items-center gap-4">
+                  {author.avatar && (
+                    <img
+                      src={author.avatar}
+                      alt={author.name}
+                      className="h-12 w-12 shrink-0 rounded-full object-cover"
+                    />
+                  )}
+                  <div className="min-w-0">
+                    <h3 className="mb-1 text-base font-semibold break-words text-white">
+                      {author.name}
+                    </h3>
+                    <p className="text-sm break-words text-[#3B82F6]">
+                      {author.bio || 'No bio'}
+                    </p>
+                    {author._count && (
+                      <p className="text-xs text-[#64748B]">
+                        Posts: {author._count.posts}
+                      </p>
+                    )}
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => openEditAuthor(author)}
+                    className="flex-1 rounded-lg bg-[#3B82F6] px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-[#2563EB] sm:flex-none"
+                  >
+                    Edit
+                  </button>
+                  <button
+                    onClick={() => openDeleteAuthor(author)}
+                    className="flex-1 rounded-lg bg-[#EF4444] px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-[#DC2626] sm:flex-none"
+                  >
+                    Delete
+                  </button>
+                </div>
+              </div>
+            ))}
+            {authors.length === 0 && (
+              <p className="py-8 text-center text-[#64748B]">
+                No authors found. Create one to get started!
+              </p>
+            )}
+          </div>
+        </AdminGlassCard>
+      )}
+
+      {/* Image Auto Editor Tab */}
+      {activeTab === 'image' && (
+        <div className="space-y-6">
+          <div className="rounded-xl border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.3)] p-4 sm:p-6">
+            <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+              <h3 className="text-base font-semibold text-white">
+                Upload Images
+              </h3>
+              {pendingImageFiles.length > 0 && (
+                <button
+                  type="button"
+                  onClick={clearImageEditor}
+                  className="text-xs text-[#94A3B8] underline-offset-2 hover:text-white hover:underline"
+                >
+                  Clear all
+                </button>
+              )}
+            </div>
+            <input
+              ref={imageFileInputRef}
+              type="file"
+              accept="image/*"
+              multiple
+              hidden
+              onChange={(e) => {
+                handleImageFilesChosen(e.target.files);
+                if (e.target) e.target.value = '';
+              }}
+            />
+            <button
+              type="button"
+              onClick={() => imageFileInputRef.current?.click()}
+              className="flex w-full items-center justify-center gap-2 rounded-lg bg-[#06B6D4] px-6 py-3 text-base font-medium text-white transition-colors hover:bg-[#0891B2] sm:w-auto sm:text-sm"
+            >
+              <Upload className="h-5 w-5" />
+              Choose Images
+            </button>
+            {pendingImageFiles.length > 0 && (
+              <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
+                {pendingImageFiles.map((file, idx) => (
+                  <div
+                    key={`${file.name}-${idx}`}
+                    className="group relative overflow-hidden rounded-lg border border-[rgba(255,255,255,0.12)] bg-[rgba(255,255,255,0.04)]"
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={URL.createObjectURL(file)}
+                      alt={file.name}
+                      className="aspect-square w-full object-cover"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => removePendingImage(idx)}
+                      className="absolute top-1 right-1 rounded-full bg-black/60 p-1 text-white opacity-0 transition-opacity group-hover:opacity-100"
+                      aria-label="Remove"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                    <div className="truncate p-1 text-[10px] text-[#94A3B8]">
+                      {file.name}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div className="rounded-xl border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.3)] p-4 sm:p-6">
+            <h3 className="mb-4 text-base font-semibold text-white">
+              Search Name for Images
+            </h3>
+            <input
+              type="text"
+              value={imageConfig.searchName}
+              onChange={(e) =>
+                setImageConfig({ ...imageConfig, searchName: e.target.value })
+              }
+              placeholder="e.g., How to use IPTV in Bangladesh"
+              className="w-full rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(255,255,255,0.08)] px-4 py-3 text-base text-white placeholder:text-[#64748B] focus:ring-2 focus:ring-[#3B82F6] focus:outline-none sm:text-sm"
+            />
+          </div>
+
+          <div className="rounded-xl border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.3)] p-4 sm:p-6">
+            <h3 className="mb-4 text-base font-semibold text-white">
+              Processing Settings
+            </h3>
+            <div className="mb-4 grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-4">
+              <div>
+                <label className="mb-2 block text-sm font-medium text-white">
+                  Crop (%)
+                </label>
+                <div className="grid grid-cols-4 gap-1">
+                  {['crop1', 'crop2', 'crop3', 'crop4'].map((key) => (
+                    <input
+                      key={key}
+                      type="number"
+                      value={
+                        imageConfig[key as keyof typeof imageConfig] as string
+                      }
+                      onChange={(e) =>
+                        setImageConfig({
+                          ...imageConfig,
+                          [key]: e.target.value,
+                        })
+                      }
+                      className="w-full rounded border border-[rgba(255,255,255,0.18)] bg-[rgba(255,255,255,0.08)] px-2 py-2 text-center text-sm text-white"
+                    />
+                  ))}
+                </div>
+              </div>
+              <div>
+                <label className="mb-2 block text-sm font-medium text-white">
+                  Saturation (%)
+                </label>
+                <div className="grid grid-cols-2 gap-1">
+                  {['saturation1', 'saturation2'].map((key) => (
+                    <input
+                      key={key}
+                      type="number"
+                      value={
+                        imageConfig[key as keyof typeof imageConfig] as string
+                      }
+                      onChange={(e) =>
+                        setImageConfig({
+                          ...imageConfig,
+                          [key]: e.target.value,
+                        })
+                      }
+                      className="w-full rounded border border-[rgba(255,255,255,0.18)] bg-[rgba(255,255,255,0.08)] px-2 py-2 text-center text-sm text-white"
+                    />
+                  ))}
+                </div>
+              </div>
+              <div>
+                <label className="mb-2 block text-sm font-medium text-white">
+                  Brightness (%)
+                </label>
+                <div className="grid grid-cols-2 gap-1">
+                  {['brightness1', 'brightness2'].map((key) => (
+                    <input
+                      key={key}
+                      type="number"
+                      value={
+                        imageConfig[key as keyof typeof imageConfig] as string
+                      }
+                      onChange={(e) =>
+                        setImageConfig({
+                          ...imageConfig,
+                          [key]: e.target.value,
+                        })
+                      }
+                      className="w-full rounded border border-[rgba(255,255,255,0.18)] bg-[rgba(255,255,255,0.08)] px-2 py-2 text-center text-sm text-white"
+                    />
+                  ))}
+                </div>
+              </div>
+              <div>
+                <label className="mb-2 block text-sm font-medium text-white">
+                  Contrast (%)
+                </label>
+                <div className="grid grid-cols-2 gap-1">
+                  {['contrast1', 'contrast2'].map((key) => (
+                    <input
+                      key={key}
+                      type="number"
+                      value={
+                        imageConfig[key as keyof typeof imageConfig] as string
+                      }
+                      onChange={(e) =>
+                        setImageConfig({
+                          ...imageConfig,
+                          [key]: e.target.value,
+                        })
+                      }
+                      className="w-full rounded border border-[rgba(255,255,255,0.18)] bg-[rgba(255,255,255,0.08)] px-2 py-2 text-center text-sm text-white"
+                    />
+                  ))}
+                </div>
+              </div>
+            </div>
+            <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
+              <label className="flex items-center gap-2 text-sm whitespace-nowrap text-white">
+                <input
+                  type="checkbox"
+                  checked={imageConfig.convertWebP}
+                  onChange={(e) =>
+                    setImageConfig({
+                      ...imageConfig,
+                      convertWebP: e.target.checked,
+                    })
+                  }
+                  className="h-4 w-4 rounded"
+                />
+                Convert to WebP
+              </label>
+              <label className="flex items-center gap-2 text-sm whitespace-nowrap text-white">
+                <input
+                  type="checkbox"
+                  checked={imageConfig.stripEXIF}
+                  onChange={(e) =>
+                    setImageConfig({
+                      ...imageConfig,
+                      stripEXIF: e.target.checked,
+                    })
+                  }
+                  className="h-4 w-4 rounded"
+                />
+                Strip EXIF metadata
+              </label>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-3">
+            <button
+              type="button"
+              onClick={handleProcessImages}
+              disabled={isProcessingImages || pendingImageFiles.length === 0}
+              className="flex items-center gap-2 rounded-lg bg-[#06B6D4] px-8 py-3 text-sm font-medium text-white transition-colors hover:bg-[#0891B2] disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {isProcessingImages ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Processing…
+                </>
+              ) : (
+                <>
+                  <ImageIcon className="h-4 w-4" />
+                  Process Images
+                </>
+              )}
+            </button>
+            {processedImages.length > 0 && (
+              <button
+                type="button"
+                onClick={handleDownloadAllVariants}
+                className="flex items-center gap-2 rounded-lg border border-[rgba(255,255,255,0.18)] bg-transparent px-6 py-3 text-sm font-medium text-white transition-colors hover:bg-[rgba(255,255,255,0.08)]"
+              >
+                <Download className="h-4 w-4" />
+                Download all
+              </button>
+            )}
+          </div>
+
+          {processedImages.length > 0 && (
+            <div className="space-y-6">
+              {processedImages.map((processed, pIdx) => (
+                <div
+                  key={`${processed.sourceFile.name}-${pIdx}`}
+                  className="rounded-xl border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.3)] p-4 sm:p-6"
+                >
+                  <div className="mb-4 flex items-center justify-between gap-2">
+                    <h4 className="truncate text-sm font-semibold text-white">
+                      {processed.sourceFile.name}
+                    </h4>
+                    <span className="text-xs text-[#94A3B8]">
+                      {processed.variants.length} variant
+                      {processed.variants.length === 1 ? '' : 's'}
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
+                    {processed.variants.map((variant) => (
+                      <div
+                        key={variant.filename}
+                        className="overflow-hidden rounded-lg border border-[rgba(255,255,255,0.12)] bg-[rgba(255,255,255,0.04)]"
+                      >
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setPreviewImage({
+                              url: variant.previewUrl,
+                              filename: variant.filename,
+                            })
+                          }
+                          className="group relative block w-full"
+                          aria-label={`Preview ${variant.filename}`}
+                        >
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={variant.previewUrl}
+                            alt={variant.filename}
+                            className="aspect-square w-full object-cover"
+                          />
+                          <span className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 transition-opacity group-hover:opacity-100">
+                            <Eye className="h-5 w-5 text-white" />
+                          </span>
+                        </button>
+                        <div className="space-y-1 p-2">
+                          <div className="truncate text-xs text-white">
+                            {variant.filename}
+                          </div>
+                          <div className="text-[10px] text-[#94A3B8]">
+                            {variant.width}×{variant.height} ·{' '}
+                            {formatBytes(variant.size)}
+                          </div>
+                          <div className="text-[10px] text-[#64748B]">
+                            crop {variant.appliedCropPct}% · sat{' '}
+                            {variant.appliedSaturationPct}% · bri{' '}
+                            {variant.appliedBrightnessPct}% · con{' '}
+                            {variant.appliedContrastPct}%
+                          </div>
+                          <div className="mt-1 grid grid-cols-2 gap-1">
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setPreviewImage({
+                                  url: variant.previewUrl,
+                                  filename: variant.filename,
+                                })
+                              }
+                              className="flex items-center justify-center gap-1 rounded bg-[rgba(255,255,255,0.08)] px-2 py-1 text-[11px] text-white transition-colors hover:bg-[rgba(255,255,255,0.16)]"
+                            >
+                              <Eye className="h-3 w-3" />
+                              View
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() =>
+                                downloadBlob(variant.blob, variant.filename)
+                              }
+                              className="flex items-center justify-center gap-1 rounded bg-[rgba(255,255,255,0.08)] px-2 py-1 text-[11px] text-white transition-colors hover:bg-[rgba(255,255,255,0.16)]"
+                            >
+                              <Download className="h-3 w-3" />
+                              Download
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {previewImage && (
+            <div
+              className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 p-4"
+              onClick={() => setPreviewImage(null)}
+              role="dialog"
+              aria-modal="true"
+            >
+              <button
+                type="button"
+                onClick={() => setPreviewImage(null)}
+                className="absolute top-4 right-4 rounded-full bg-white/10 p-2 text-white transition-colors hover:bg-white/20"
+                aria-label="Close preview"
+              >
+                <X className="h-5 w-5" />
+              </button>
+              <div
+                className="flex max-h-full max-w-full flex-col items-center gap-3"
+                onClick={(e) => e.stopPropagation()}
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={previewImage.url}
+                  alt={previewImage.filename}
+                  className="max-h-[85vh] max-w-[90vw] rounded-lg object-contain"
+                />
+                <div className="text-sm text-white">
+                  {previewImage.filename}
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Create/Edit Blog Modal */}
+      <AdminModal
+        isOpen={isCreateBlogModalOpen || isEditBlogModalOpen}
+        onClose={() => {
+          setIsCreateBlogModalOpen(false);
+          setIsEditBlogModalOpen(false);
+          setSelectedBlog(null);
+        }}
+        title={isEditBlogModalOpen ? 'Edit Blog Post' : 'Create Blog Post'}
+        primaryAction={{
+          label: isEditBlogModalOpen ? 'Update' : 'Create',
+          onClick: isEditBlogModalOpen ? handleEditBlog : handleCreateBlog,
+          loading: isLoading,
+          variant: 'primary',
+        }}
+        secondaryAction={{
+          label: 'Cancel',
+          onClick: () => {
+            setIsCreateBlogModalOpen(false);
+            setIsEditBlogModalOpen(false);
+            setSelectedBlog(null);
+          },
+        }}
+      >
+        <div className="max-h-[60vh] space-y-4 overflow-y-auto">
+          <AdminFormInput
+            label="Title"
+            name="title"
+            required
+            value={blogForm.title}
+            onChange={(value) => setBlogForm({ ...blogForm, title: value })}
+            placeholder="Enter blog title"
+          />
+          <AdminFormInput
+            label="Slug"
+            name="slug"
+            value={blogForm.slug}
+            onChange={(value) => setBlogForm({ ...blogForm, slug: value })}
+            placeholder="auto-generated-if-empty"
+          />
+          <AdminFormInput
+            label="Excerpt"
+            name="excerpt"
+            value={blogForm.excerpt}
+            onChange={(value) => setBlogForm({ ...blogForm, excerpt: value })}
+            placeholder="Brief description"
+          />
+          <div>
+            <label className="mb-2 block text-sm font-medium text-white">
+              Content *
+            </label>
+            <textarea
+              value={blogForm.content}
+              onChange={(e) =>
+                setBlogForm({ ...blogForm, content: e.target.value })
+              }
+              rows={6}
+              placeholder="Write your blog content..."
+              className="w-full resize-none rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(255,255,255,0.08)] px-4 py-3 text-sm text-white focus:ring-2 focus:ring-[#3B82F6] focus:outline-none"
+            />
+          </div>
+          <AdminFormInput
+            label="Featured Image URL"
+            name="featuredImage"
+            value={blogForm.featuredImage}
+            onChange={(value) =>
+              setBlogForm({ ...blogForm, featuredImage: value })
+            }
+            placeholder="https://..."
+          />
+          <div>
+            <label className="mb-2 block text-sm font-medium text-white">
+              Category
+            </label>
+            <Select
+              value={blogForm.categoryId || '__placeholder__'}
+              onValueChange={(v) =>
+                setBlogForm({
+                  ...blogForm,
+                  categoryId: v === '__placeholder__' ? '' : v,
+                })
+              }
+            >
+              <SelectTrigger className="w-full rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(255,255,255,0.08)] px-4 py-3 text-base text-white focus-visible:ring-2 focus-visible:ring-[#3B82F6] focus-visible:outline-none data-[size=default]:h-auto data-[size=default]:min-h-12 lg:text-sm">
+                <SelectValue placeholder="Select category" />
+              </SelectTrigger>
+              <SelectContent className="max-h-72 border-[rgba(255,255,255,0.18)] bg-[#1E293B] text-white">
+                <SelectItem
+                  value="__placeholder__"
+                  className="text-white focus:bg-[rgba(59,130,246,0.15)] focus:text-white"
+                >
+                  Select category
+                </SelectItem>
+                {categories.map((cat) => (
+                  <SelectItem
+                    key={cat.id}
+                    value={cat.id}
+                    className="text-white focus:bg-[rgba(59,130,246,0.15)] focus:text-white"
+                  >
+                    {cat.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <label className="mb-2 block text-sm font-medium text-white">
+              Author
+            </label>
+            <Select
+              value={blogForm.authorId || '__placeholder__'}
+              onValueChange={(v) =>
+                setBlogForm({
+                  ...blogForm,
+                  authorId: v === '__placeholder__' ? '' : v,
+                })
+              }
+            >
+              <SelectTrigger className="w-full rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(255,255,255,0.08)] px-4 py-3 text-base text-white focus-visible:ring-2 focus-visible:ring-[#3B82F6] focus-visible:outline-none data-[size=default]:h-auto data-[size=default]:min-h-12 lg:text-sm">
+                <SelectValue placeholder="Select author" />
+              </SelectTrigger>
+              <SelectContent className="max-h-72 border-[rgba(255,255,255,0.18)] bg-[#1E293B] text-white">
+                <SelectItem
+                  value="__placeholder__"
+                  className="text-white focus:bg-[rgba(59,130,246,0.15)] focus:text-white"
+                >
+                  Select author
+                </SelectItem>
+                {authors.map((author) => (
+                  <SelectItem
+                    key={author.id}
+                    value={author.id}
+                    className="text-white focus:bg-[rgba(59,130,246,0.15)] focus:text-white"
+                  >
+                    {author.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <AdminFormInput
+            label="Tags"
+            name="tags"
+            value={blogForm.tags}
+            onChange={(value) => setBlogForm({ ...blogForm, tags: value })}
+            placeholder="tag1, tag2, tag3"
+          />
+          <div>
+            <label className="mb-2 block text-sm font-medium text-white">
+              Status
+            </label>
+            <Select
+              value={blogForm.status}
+              onValueChange={(v) =>
+                setBlogForm({ ...blogForm, status: v as any })
+              }
+            >
+              <SelectTrigger className="w-full rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(255,255,255,0.08)] px-4 py-3 text-base text-white focus-visible:ring-2 focus-visible:ring-[#3B82F6] focus-visible:outline-none data-[size=default]:h-auto data-[size=default]:min-h-12 lg:text-sm">
+                <SelectValue placeholder="Select status" />
+              </SelectTrigger>
+              <SelectContent className="max-h-72 border-[rgba(255,255,255,0.18)] bg-[#1E293B] text-white">
+                <SelectItem
+                  value="DRAFT"
+                  className="text-white focus:bg-[rgba(59,130,246,0.15)] focus:text-white"
+                >
+                  Draft
+                </SelectItem>
+                <SelectItem
+                  value="PUBLISHED"
+                  className="text-white focus:bg-[rgba(59,130,246,0.15)] focus:text-white"
+                >
+                  Published
+                </SelectItem>
+                <SelectItem
+                  value="ARCHIVED"
+                  className="text-white focus:bg-[rgba(59,130,246,0.15)] focus:text-white"
+                >
+                  Archived
+                </SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+      </AdminModal>
+
+      {/* Create/Edit Category Modal */}
+      <AdminModal
+        isOpen={isCreateCategoryModalOpen || isEditCategoryModalOpen}
+        onClose={() => {
+          setIsCreateCategoryModalOpen(false);
+          setIsEditCategoryModalOpen(false);
+          setSelectedCategory(null);
+        }}
+        title={isEditCategoryModalOpen ? 'Edit Category' : 'Create Category'}
+        primaryAction={{
+          label: isEditCategoryModalOpen ? 'Update' : 'Create',
+          onClick: isEditCategoryModalOpen
+            ? handleEditCategory
+            : handleCreateCategory,
+          loading: isLoading,
+          variant: 'primary',
+        }}
+        secondaryAction={{
+          label: 'Cancel',
+          onClick: () => {
+            setIsCreateCategoryModalOpen(false);
+            setIsEditCategoryModalOpen(false);
+            setSelectedCategory(null);
+          },
+        }}
+      >
+        <div className="space-y-4">
+          <AdminFormInput
+            label="Category Name"
+            name="categoryName"
+            required
+            value={categoryForm.name}
+            onChange={(value) =>
+              setCategoryForm({ ...categoryForm, name: value })
+            }
+            placeholder="Enter category name"
+          />
+          <AdminFormInput
+            label="Slug"
+            name="categorySlug"
+            value={categoryForm.slug}
+            onChange={(value) =>
+              setCategoryForm({ ...categoryForm, slug: value })
+            }
+            placeholder="auto-generated-if-empty"
+          />
+          <AdminFormInput
+            label="Description"
+            name="categoryDescription"
+            value={categoryForm.description}
+            onChange={(value) =>
+              setCategoryForm({ ...categoryForm, description: value })
+            }
+            placeholder="Category description"
+          />
+          {categorySubTab === 'subcategory' && (
+            <div>
+              <label className="mb-2 block text-sm font-medium text-white">
+                Parent Category
+              </label>
+              <Select
+                value={categoryForm.parentId || '__placeholder__'}
+                onValueChange={(v) =>
+                  setCategoryForm({
+                    ...categoryForm,
+                    parentId: v === '__placeholder__' ? '' : v,
+                  })
+                }
+              >
+                <SelectTrigger className="w-full rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(255,255,255,0.08)] px-4 py-3 text-base text-white focus-visible:ring-2 focus-visible:ring-[#3B82F6] focus-visible:outline-none data-[size=default]:h-auto data-[size=default]:min-h-12 lg:text-sm">
+                  <SelectValue placeholder="Select parent category" />
+                </SelectTrigger>
+                <SelectContent className="max-h-72 border-[rgba(255,255,255,0.18)] bg-[#1E293B] text-white">
+                  <SelectItem
+                    value="__placeholder__"
+                    className="text-white focus:bg-[rgba(59,130,246,0.15)] focus:text-white"
+                  >
+                    Select parent category
+                  </SelectItem>
+                  {parentCategories.map((cat) => (
+                    <SelectItem
+                      key={cat.id}
+                      value={cat.id}
+                      className="text-white focus:bg-[rgba(59,130,246,0.15)] focus:text-white"
+                    >
+                      {cat.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+        </div>
+      </AdminModal>
+
+      {/* Create/Edit Author Modal */}
+      <AdminModal
+        isOpen={isCreateAuthorModalOpen || isEditAuthorModalOpen}
+        onClose={() => {
+          setIsCreateAuthorModalOpen(false);
+          setIsEditAuthorModalOpen(false);
+          setSelectedAuthor(null);
+        }}
+        title={isEditAuthorModalOpen ? 'Edit Author' : 'Create Author'}
+        primaryAction={{
+          label: isEditAuthorModalOpen ? 'Update' : 'Create',
+          onClick: isEditAuthorModalOpen
+            ? handleEditAuthor
+            : handleCreateAuthor,
+          loading: isLoading,
+          variant: 'primary',
+        }}
+        secondaryAction={{
+          label: 'Cancel',
+          onClick: () => {
+            setIsCreateAuthorModalOpen(false);
+            setIsEditAuthorModalOpen(false);
+            setSelectedAuthor(null);
+          },
+        }}
+      >
+        <div className="space-y-4">
+          <AdminFormInput
+            label="Author Name"
+            name="authorName"
+            required
+            value={authorForm.name}
+            onChange={(value) => setAuthorForm({ ...authorForm, name: value })}
+            placeholder="Enter author name"
+          />
+          <AdminFormInput
+            label="Slug"
+            name="authorSlug"
+            value={authorForm.slug}
+            onChange={(value) => setAuthorForm({ ...authorForm, slug: value })}
+            placeholder="auto-generated-if-empty"
+          />
+          <AdminFormInput
+            label="Bio"
+            name="authorBio"
+            value={authorForm.bio}
+            onChange={(value) => setAuthorForm({ ...authorForm, bio: value })}
+            placeholder="Author bio/description"
+          />
+          <AdminFormInput
+            label="Avatar URL"
+            name="authorAvatar"
+            value={authorForm.avatar}
+            onChange={(value) =>
+              setAuthorForm({ ...authorForm, avatar: value })
+            }
+            placeholder="https://..."
+          />
+          <AdminFormInput
+            label="Email"
+            name="authorEmail"
+            value={authorForm.email}
+            onChange={(value) => setAuthorForm({ ...authorForm, email: value })}
+            placeholder="author@example.com"
+          />
+          <AdminFormInput
+            label="Website"
+            name="authorWebsite"
+            value={authorForm.website}
+            onChange={(value) =>
+              setAuthorForm({ ...authorForm, website: value })
+            }
+            placeholder="https://..."
+          />
+        </div>
+      </AdminModal>
+
+      {/* Delete Confirmation Modal */}
+      <AdminModal
+        isOpen={isDeleteModalOpen}
+        onClose={() => {
+          setIsDeleteModalOpen(false);
+          setSelectedBlog(null);
+          setSelectedCategory(null);
+          setSelectedAuthor(null);
+        }}
+        title="Confirm Delete"
+        primaryAction={{
+          label: 'Delete',
+          onClick: handleDelete,
+          loading: isLoading,
+          variant: 'danger',
+        }}
+        secondaryAction={{
+          label: 'Cancel',
+          onClick: () => {
+            setIsDeleteModalOpen(false);
+            setSelectedBlog(null);
+            setSelectedCategory(null);
+            setSelectedAuthor(null);
+          },
+        }}
+      >
+        <p className="text-[#94A3B8]">
+          Are you sure you want to delete{' '}
+          <span className="font-medium text-white">{getDeleteItemName()}</span>?
+          This action cannot be undone.
+        </p>
+      </AdminModal>
+    </div>
+  );
+}

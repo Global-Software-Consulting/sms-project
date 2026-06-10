@@ -65,3 +65,35 @@ export const hasTokens = (): boolean => {
   return !!tokens?.accessToken && !!tokens?.refreshToken;
 };
 
+/**
+ * Decode the `exp` claim from a JWT without verifying the signature.
+ * Returns the expiry as epoch milliseconds, or null if the token is
+ * malformed / has no `exp`.
+ */
+const getTokenExpiryMs = (token: string): number | null => {
+  try {
+    const payload = token.split('.')[1];
+    if (!payload) return null;
+    // Base64URL → Base64 → JSON
+    const base64 = payload.replace(/-/g, '+').replace(/_/g, '/');
+    const decoded = atob(base64);
+    const parsed = JSON.parse(decoded) as { exp?: number };
+    return typeof parsed.exp === 'number' ? parsed.exp * 1000 : null;
+  } catch {
+    return null;
+  }
+};
+
+/**
+ * True when the access token expires within `bufferSec` (default 30s).
+ * Lets the request interceptor refresh proactively so we never send a
+ * request that will 401 — which would otherwise show up as a noisy
+ * red request in the network panel before the silent retry succeeds.
+ */
+export const isAccessTokenExpiringSoon = (bufferSec = 30): boolean => {
+  const token = getAccessToken();
+  if (!token) return false;
+  const expMs = getTokenExpiryMs(token);
+  if (!expMs) return false;
+  return Date.now() + bufferSec * 1000 >= expMs;
+};

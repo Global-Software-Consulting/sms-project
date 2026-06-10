@@ -1,11 +1,25 @@
-import { apiClient } from './config';
+import { apiClient } from '@/config/api-client.config';
+import { API_ENDPOINTS } from '@/config/server.config';
 
 // ============================================
 // Enums matching backend
 // ============================================
 
-export type PaymentGateway = 'STRIPE' | 'PAYGATE' | 'PLISIO' | 'CRYPTOMUS' | 'NOWPAYMENTS' | 'VOLET' | 'BINANCE';
-export type PaymentStatus = 'PENDING' | 'COMPLETED' | 'FAILED' | 'CANCELLED' | 'EXPIRED' | 'REFUNDED';
+export type PaymentGateway =
+  | 'STRIPE'
+  | 'PAYGATE'
+  | 'PLISIO'
+  | 'CRYPTOMUS'
+  | 'NOWPAYMENTS'
+  | 'VOLET'
+  | 'BINANCE';
+export type PaymentStatus =
+  | 'PENDING'
+  | 'COMPLETED'
+  | 'FAILED'
+  | 'CANCELLED'
+  | 'EXPIRED'
+  | 'REFUNDED';
 
 // ============================================
 // Types matching backend DTOs
@@ -19,7 +33,7 @@ export interface Payment {
   userId: string;
   gateway: PaymentGateway;
   status: PaymentStatus;
-  amount: string;           // Decimal as string
+  amount: string; // Decimal as string
   currency: string;
   checkoutUrl?: string | null;
   stripeSessionId?: string;
@@ -53,7 +67,27 @@ export interface PaymentsListResponse {
 }
 
 /**
- * Available gateway info
+ * Backend gateway response structure
+ */
+interface BackendGatewayInfo {
+  id?: string;
+  gateway?: string;
+  name: string;
+  description?: string;
+  type?: string;
+  minAmount: number;
+  maxAmount: number;
+  currencies: string[];
+  icon?: string;
+  imageUrl?: string;
+  feeFixed?: number;
+  feePercent?: number;
+  feePassToUser?: boolean;
+  enabled?: boolean;
+}
+
+/**
+ * Available gateway info (normalized for frontend)
  */
 export interface GatewayInfo {
   gateway: PaymentGateway;
@@ -62,6 +96,10 @@ export interface GatewayInfo {
   minAmount: number;
   maxAmount: number;
   currencies: string[];
+  description?: string;
+  type?: string;
+  icon?: string;
+  imageUrl?: string;
 }
 
 /**
@@ -75,7 +113,13 @@ export interface GatewaysResponse {
 // PayGate.to Provider Types (like CheapStreamTV)
 // ============================================
 
-export type PaygateProvider = 'multi' | 'bitnovo' | 'mercuryo' | 'unlimit' | 'guardarian' | 'wert';
+export type PaygateProvider =
+  | 'multi'
+  | 'bitnovo'
+  | 'mercuryo'
+  | 'unlimit'
+  | 'guardarian'
+  | 'wert';
 
 export interface PaygateProviderConfig {
   id: PaygateProvider;
@@ -92,14 +136,16 @@ export const PAYGATE_PROVIDERS: PaygateProviderConfig[] = [
   {
     id: 'multi',
     name: 'Multi Provider',
-    description: 'Automatically selects the best payment provider for your region',
+    description:
+      'Automatically selects the best payment provider for your region',
     minAmount: 1,
     recommended: true,
   },
   {
     id: 'bitnovo',
     name: 'Bitnovo',
-    description: 'Credit/Debit Card - Europe, Latin America (Spain, Portugal, Italy, France, Mexico)',
+    description:
+      'Credit/Debit Card - Europe, Latin America (Spain, Portugal, Italy, France, Mexico)',
     minAmount: 10,
     regions: ['Europe', 'Latin America'],
   },
@@ -119,7 +165,8 @@ export const PAYGATE_PROVIDERS: PaygateProviderConfig[] = [
   {
     id: 'guardarian',
     name: 'Guardarian',
-    description: 'Credit/Debit Card - 170+ countries, 50+ payment methods, high limits',
+    description:
+      'Credit/Debit Card - 170+ countries, 50+ payment methods, high limits',
     minAmount: 20,
   },
   {
@@ -135,12 +182,30 @@ export const PAYGATE_PROVIDERS: PaygateProviderConfig[] = [
 // ============================================
 
 export interface CreatePaymentRequest {
-  amount: number;           // 3 - 100000 (per CLIENT_DECISIONS.md)
+  amount: number; // 3 - 100000 (per CLIENT_DECISIONS.md)
   gateway?: PaymentGateway; // Optional: specify gateway (default: STRIPE)
   successUrl?: string;
   cancelUrl?: string;
   // PayGate.to provider selection (like CheapStreamTV)
   paygateProvider?: PaygateProvider;
+  couponCode?: string;
+}
+
+/**
+ * Payment preview response with fee breakdown
+ */
+export interface PaymentPreviewResponse {
+  requestedAmount: number;
+  fee: number;
+  feePassToUser: boolean;
+  totalCharge: number;
+  amountCredited: number;
+  gatewayBonus?: number;
+  feeDetails: {
+    fixed: number;
+    percent: number;
+    description: string;
+  };
 }
 
 export interface PaymentQueryParams {
@@ -160,8 +225,28 @@ export interface PaymentQueryParams {
  * Initialize a new payment (Stripe Checkout)
  * POST /api/v1/payments
  */
-export const createPayment = async (data: CreatePaymentRequest): Promise<PaymentInitResponse> => {
-  const response = await apiClient.post<PaymentInitResponse>('/payments', data);
+export const createPayment = async (
+  data: CreatePaymentRequest,
+): Promise<PaymentInitResponse> => {
+  const response = await apiClient.post<PaymentInitResponse>(
+    API_ENDPOINTS.PAYMENTS.ROOT,
+    data,
+  );
+  return response.data;
+};
+
+/**
+ * Get payment preview with fee calculation
+ * GET /api/v1/payments/preview?amount=X&gateway=STRIPE
+ */
+export const getPaymentPreview = async (
+  amount: number,
+  gateway: PaymentGateway = 'STRIPE',
+): Promise<PaymentPreviewResponse> => {
+  const response = await apiClient.get<PaymentPreviewResponse>(
+    API_ENDPOINTS.PAYMENTS.PREVIEW,
+    { params: { amount, gateway } },
+  );
   return response.data;
 };
 
@@ -169,9 +254,36 @@ export const createPayment = async (data: CreatePaymentRequest): Promise<Payment
  * Get user's payment history
  * GET /api/v1/payments
  */
-export const getPayments = async (params?: PaymentQueryParams): Promise<PaymentsListResponse> => {
-  const response = await apiClient.get<PaymentsListResponse>('/payments', { params });
+export const getPayments = async (
+  params?: PaymentQueryParams,
+): Promise<PaymentsListResponse> => {
+  const response = await apiClient.get<PaymentsListResponse>(
+    API_ENDPOINTS.PAYMENTS.ROOT,
+    { params },
+  );
   return response.data;
+};
+
+/**
+ * Normalize backend gateway response to frontend format
+ */
+const normalizeGateway = (backendGateway: BackendGatewayInfo): GatewayInfo => {
+  // Backend uses 'id' field, but might also have 'gateway' field
+  const gatewayId = backendGateway.id || backendGateway.gateway || '';
+
+  return {
+    gateway: gatewayId as PaymentGateway,
+    name: backendGateway.name,
+    // Backend only returns enabled gateways, but check if enabled field exists
+    enabled: backendGateway.enabled !== false,
+    minAmount: backendGateway.minAmount || 0,
+    maxAmount: backendGateway.maxAmount || 100000,
+    currencies: backendGateway.currencies || ['USD'],
+    description: backendGateway.description,
+    type: backendGateway.type,
+    icon: backendGateway.icon,
+    imageUrl: backendGateway.imageUrl,
+  };
 };
 
 /**
@@ -179,8 +291,35 @@ export const getPayments = async (params?: PaymentQueryParams): Promise<Payments
  * GET /api/v1/payments/gateways
  */
 export const getGateways = async (): Promise<GatewayInfo[]> => {
-  const response = await apiClient.get<GatewaysResponse>('/payments/gateways');
-  return response.data.gateways || [];
+  const response = await apiClient.get<
+    | BackendGatewayInfo[]
+    | { gateways: BackendGatewayInfo[] }
+    | { data: BackendGatewayInfo[] }
+  >(API_ENDPOINTS.PAYMENTS.GATEWAYS);
+
+  let rawGateways: BackendGatewayInfo[] = [];
+
+  // Handle different response structures
+  if (Array.isArray(response.data)) {
+    rawGateways = response.data;
+  } else if (response.data && 'gateways' in response.data) {
+    rawGateways =
+      (response.data as { gateways: BackendGatewayInfo[] }).gateways || [];
+  } else if (response.data && 'data' in response.data) {
+    const data = (
+      response.data as {
+        data: BackendGatewayInfo[] | { gateways: BackendGatewayInfo[] };
+      }
+    ).data;
+    if (Array.isArray(data)) {
+      rawGateways = data;
+    } else if (data && 'gateways' in data) {
+      rawGateways = data.gateways || [];
+    }
+  }
+
+  // Normalize all gateways to frontend format
+  return rawGateways.map(normalizeGateway);
 };
 
 /**
@@ -188,7 +327,9 @@ export const getGateways = async (): Promise<GatewayInfo[]> => {
  * GET /api/v1/payments/:id
  */
 export const getPayment = async (id: string): Promise<Payment> => {
-  const response = await apiClient.get<Payment>(`/payments/${id}`);
+  const response = await apiClient.get<Payment>(
+    API_ENDPOINTS.PAYMENTS.DETAIL(id),
+  );
   return response.data;
 };
 
@@ -197,7 +338,9 @@ export const getPayment = async (id: string): Promise<Payment> => {
  * POST /api/v1/payments/:id/cancel
  */
 export const cancelPayment = async (id: string): Promise<Payment> => {
-  const response = await apiClient.post<Payment>(`/payments/${id}/cancel`);
+  const response = await apiClient.post<Payment>(
+    API_ENDPOINTS.PAYMENTS.CANCEL(id),
+  );
   return response.data;
 };
 
@@ -208,7 +351,10 @@ export const cancelPayment = async (id: string): Promise<Payment> => {
 /**
  * Format amount for display
  */
-export const formatAmount = (amount: string | number, currency: string = 'USD'): string => {
+export const formatAmount = (
+  amount: string | number,
+  currency: string = 'USD',
+): string => {
   const num = typeof amount === 'string' ? parseFloat(amount) : amount;
   return new Intl.NumberFormat('en-US', {
     style: 'currency',
@@ -219,7 +365,9 @@ export const formatAmount = (amount: string | number, currency: string = 'USD'):
 /**
  * Get status color for UI
  */
-export const getPaymentStatusColor = (status: PaymentStatus): { bg: string; text: string } => {
+export const getPaymentStatusColor = (
+  status: PaymentStatus,
+): { bg: string; text: string } => {
   const colors: Record<PaymentStatus, { bg: string; text: string }> = {
     PENDING: { bg: 'rgba(245, 158, 11, 0.1)', text: 'var(--warning)' },
     COMPLETED: { bg: 'rgba(34, 197, 94, 0.1)', text: 'var(--success)' },
@@ -290,3 +438,84 @@ export const isValidAmount = (amount: number): boolean => {
   return amount >= MIN_AMOUNT && amount <= MAX_AMOUNT;
 };
 
+// ============================================
+// Binance Internal Transfer API
+// ============================================
+
+/**
+ * Binance payment info response
+ */
+export interface BinancePaymentInfo {
+  payId: string | null;
+  qrCodeUrl: string;
+  isConfigured: boolean;
+  autoVerificationAvailable: boolean;
+  instructions: string;
+}
+
+/**
+ * Binance verification result
+ */
+export interface BinanceVerificationResult {
+  success: boolean;
+  status: 'PENDING' | 'VERIFIED' | 'FAILED' | 'EXPIRED';
+  message: string;
+}
+
+/**
+ * Get Binance payment info (Pay ID, QR code, instructions)
+ * GET /api/v1/payments/binance/info?amount=X
+ */
+export const getBinanceInfo = async (
+  amount: number,
+): Promise<BinancePaymentInfo> => {
+  const response = await apiClient.get<BinancePaymentInfo>(
+    `${API_ENDPOINTS.PAYMENTS.ROOT}/binance/info`,
+    { params: { amount } },
+  );
+  return response.data;
+};
+
+/**
+ * Verify Binance payment with Order ID
+ * POST /api/v1/payments/binance/verify
+ */
+export const verifyBinancePayment = async (
+  paymentId: string,
+  orderId: string,
+): Promise<BinanceVerificationResult> => {
+  const response = await apiClient.post<BinanceVerificationResult>(
+    `${API_ENDPOINTS.PAYMENTS.ROOT}/binance/verify`,
+    { paymentId, orderId },
+  );
+  return response.data;
+};
+
+/**
+ * Current user's pending/verified Binance verifications.
+ * Used to show "Resume verification" cards on wallet page.
+ * GET /api/v1/payments/binance/my-verifications
+ */
+export interface MyBinanceVerification {
+  id: string;
+  paymentId: string;
+  orderId: string | null;
+  amount: number;
+  currency: string;
+  status: 'PENDING' | 'VERIFIED' | 'FAILED' | 'EXPIRED';
+  attempts: number;
+  errorMessage: string | null;
+  createdAt: string;
+  verifiedAt: string | null;
+  paymentStatus: string | null;
+  expiresAt: string | null;
+}
+
+export const getMyBinanceVerifications = async (): Promise<
+  MyBinanceVerification[]
+> => {
+  const response = await apiClient.get<MyBinanceVerification[]>(
+    `${API_ENDPOINTS.PAYMENTS.ROOT}/binance/my-verifications`,
+  );
+  return response.data;
+};

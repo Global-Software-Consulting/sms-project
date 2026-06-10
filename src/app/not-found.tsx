@@ -1,122 +1,81 @@
-"use client";
+import Link from 'next/link';
+import { Button } from '@/components/ui/button';
+import { Home, ArrowLeft, Search } from 'lucide-react';
 
-import React from "react";
-import Link from "next/link";
-import { Button } from "@/components/ui/Button";
-import {
-  Home,
-  Search,
-  MessageSquare,
-  ArrowLeft,
-  HelpCircle,
-} from "lucide-react";
-
-export default function NotFoundPage() {
+export default function NotFound() {
   return (
-    <div className="min-h-screen bg-bg-primary flex items-center justify-center relative overflow-hidden">
-      {/* Background Effects */}
-      <div className="absolute inset-0 overflow-hidden">
-        <div className="absolute top-1/4 -left-32 w-96 h-96 bg-accent-gold/10 rounded-full blur-[128px]" />
-        <div className="absolute bottom-1/4 -right-32 w-96 h-96 bg-accent-gold/5 rounded-full blur-[128px]" />
-        
-        {/* Grid Pattern */}
-        <div 
-          className="absolute inset-0 opacity-[0.02]"
-          style={{
-            backgroundImage: `linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px),
-                             linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px)`,
-            backgroundSize: '64px 64px',
-          }}
-        />
+    <div className="from-background via-background to-muted/20 flex min-h-screen w-full items-center justify-center bg-gradient-to-br p-4">
+      {/* Background decoration */}
+      <div className="pointer-events-none absolute inset-0 overflow-hidden">
+        <div className="bg-primary/5 absolute top-1/4 left-1/4 h-96 w-96 rounded-full blur-[128px]" />
+        <div className="bg-accent/5 absolute right-1/4 bottom-1/4 h-96 w-96 rounded-full blur-[128px]" />
       </div>
 
-      <div className="container mx-auto px-6 lg:px-12 relative z-10">
-        <div className="max-w-2xl mx-auto text-center">
-          {/* 404 Number */}
-          <div className="relative mb-8">
-            <h1 className="text-[150px] sm:text-[200px] font-bold text-gold-gradient leading-none select-none">
-              404
-            </h1>
-            <div className="absolute inset-0 flex items-center justify-center">
-              <div className="w-32 h-32 rounded-full bg-bg-card border border-border-default flex items-center justify-center shadow-xl">
-                <MessageSquare className="w-16 h-16 text-accent-gold" />
-              </div>
+      <div className="relative w-full max-w-md space-y-8 text-center">
+        {/* 404 Illustration */}
+        <div className="relative">
+          <div className="text-primary/10 text-[100px] leading-none font-bold sm:text-[150px]">
+            404
+          </div>
+          <div className="absolute inset-0 flex items-center justify-center">
+            <div className="bg-muted/50 border-border flex h-24 w-24 items-center justify-center rounded-2xl border backdrop-blur-sm">
+              <Search className="text-muted-foreground h-12 w-12" />
             </div>
           </div>
+        </div>
 
-          {/* Message */}
-          <h2 className="text-2xl sm:text-3xl font-bold text-text-primary mb-4">
-            Page Not Found
-          </h2>
-          <p className="text-lg text-text-secondary mb-10 max-w-md mx-auto">
-            Oops! The page you&apos;re looking for doesn&apos;t exist or has been moved. 
-            Let&apos;s get you back on track.
+        {/* Content */}
+        <div className="space-y-4">
+          <h1 className="text-3xl font-bold">Page Not Found</h1>
+          <p className="text-muted-foreground">
+            The page you're looking for doesn't exist or has been moved.
           </p>
+        </div>
 
-          {/* Action Buttons */}
-          <div className="flex flex-col sm:flex-row gap-4 justify-center mb-12">
+        {/* Actions */}
+        <div className="flex flex-col justify-center gap-3 sm:flex-row">
+          <Button asChild size="lg">
             <Link href="/">
-              <Button variant="primary" size="lg" leftIcon={<Home className="w-5 h-5" />}>
-                Go to Homepage
-              </Button>
+              <Home className="mr-2 h-4 w-4" />
+              Back to Home
             </Link>
-            <Button
-              variant="secondary"
-              size="lg"
-              leftIcon={<ArrowLeft className="w-5 h-5" />}
-              onClick={() => window.history.back()}
+          </Button>
+          <Button asChild variant="outline" size="lg">
+            <Link href="/dashboard">
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Go to Dashboard
+            </Link>
+          </Button>
+        </div>
+
+        {/* Quick Links */}
+        <div className="pt-8">
+          <p className="text-muted-foreground mb-3 text-sm">Quick Links</p>
+          <div className="flex flex-wrap justify-center gap-2">
+            <Link
+              href="/features"
+              className="text-primary text-sm hover:underline"
             >
-              Go Back
-            </Button>
-          </div>
-
-          {/* Quick Links */}
-          <div className="border-t border-border-default pt-10">
-            <p className="text-text-muted mb-6">Or try one of these:</p>
-            <div className="grid sm:grid-cols-3 gap-4">
-              <Link
-                href="/activate"
-                className="flex items-center gap-3 p-4 rounded-xl bg-bg-card border border-border-default hover:border-accent-gold transition-colors duration-200 group"
-              >
-                <div className="w-10 h-10 rounded-lg bg-bg-secondary flex items-center justify-center group-hover:bg-accent-gold/10 transition-colors duration-200">
-                  <MessageSquare className="w-5 h-5 text-accent-gold" />
-                </div>
-                <div className="text-left">
-                  <div className="font-medium text-text-primary">SMS Activation</div>
-                  <div className="text-xs text-text-muted">Get virtual numbers</div>
-                </div>
-              </Link>
-
-              <Link
-                href="/faq"
-                className="flex items-center gap-3 p-4 rounded-xl bg-bg-card border border-border-default hover:border-accent-gold transition-colors duration-200 group"
-              >
-                <div className="w-10 h-10 rounded-lg bg-bg-secondary flex items-center justify-center group-hover:bg-accent-gold/10 transition-colors duration-200">
-                  <HelpCircle className="w-5 h-5 text-accent-gold" />
-                </div>
-                <div className="text-left">
-                  <div className="font-medium text-text-primary">FAQ</div>
-                  <div className="text-xs text-text-muted">Get answers</div>
-                </div>
-              </Link>
-
-              <Link
-                href="/contact"
-                className="flex items-center gap-3 p-4 rounded-xl bg-bg-card border border-border-default hover:border-accent-gold transition-colors duration-200 group"
-              >
-                <div className="w-10 h-10 rounded-lg bg-bg-secondary flex items-center justify-center group-hover:bg-accent-gold/10 transition-colors duration-200">
-                  <Search className="w-5 h-5 text-accent-gold" />
-                </div>
-                <div className="text-left">
-                  <div className="font-medium text-text-primary">Contact</div>
-                  <div className="text-xs text-text-muted">Get help</div>
-                </div>
-              </Link>
-            </div>
+              Features
+            </Link>
+            <span className="text-muted-foreground">•</span>
+            <Link href="/api" className="text-primary text-sm hover:underline">
+              API Docs
+            </Link>
+            <span className="text-muted-foreground">•</span>
+            <Link href="/help" className="text-primary text-sm hover:underline">
+              Help Center
+            </Link>
+            <span className="text-muted-foreground">•</span>
+            <Link
+              href="/contact"
+              className="text-primary text-sm hover:underline"
+            >
+              Contact Us
+            </Link>
           </div>
         </div>
       </div>
     </div>
   );
 }
-

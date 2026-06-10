@@ -1,4 +1,5 @@
-import { apiClient } from './config';
+import { apiClient } from '@/config/api-client.config';
+import { API_ENDPOINTS } from '@/config/server.config';
 
 // ============================================
 // Types matching backend DTOs
@@ -31,6 +32,7 @@ export interface UserProfile {
   phoneVerified: boolean;
   abuseScore: number;
   orderLimit: number | null;
+  apiRateLimit: number | null;
   lastLoginAt: string | null;
   loginCount: number;
   createdAt: string;
@@ -43,11 +45,11 @@ export interface UserProfile {
  * All fields are optional
  */
 export interface UpdateProfileRequest {
-  firstName?: string;    // 2-50 chars
-  lastName?: string;     // 2-50 chars
-  country?: string;      // max 100 chars
-  avatar?: string;       // valid URL
-  phone?: string;        // format: +1234567890
+  firstName?: string; // 2-50 chars
+  lastName?: string; // 2-50 chars
+  country?: string; // max 100 chars
+  avatar?: string; // valid URL
+  phone?: string; // format: +1234567890
 }
 
 /**
@@ -55,16 +57,13 @@ export interface UpdateProfileRequest {
  */
 export interface ChangePasswordRequest {
   currentPassword: string;
-  newPassword: string;   // min 8 chars, uppercase, lowercase, number
+  newPassword: string; // min 8 chars, uppercase, lowercase, number
 }
 
 /**
- * Generic message response
+ * Generic message response (re-use from authApi)
  */
-export interface MessageResponse {
-  message: string;
-  success: boolean;
-}
+import type { MessageResponse } from './authApi';
 
 // ============================================
 // API Functions
@@ -75,7 +74,9 @@ export interface MessageResponse {
  * GET /api/v1/users/profile
  */
 export const getUserProfile = async (): Promise<UserProfile> => {
-  const response = await apiClient.get<UserProfile>('/users/profile');
+  const response = await apiClient.get<UserProfile>(
+    API_ENDPOINTS.USERS.PROFILE,
+  );
   return response.data;
 };
 
@@ -83,8 +84,13 @@ export const getUserProfile = async (): Promise<UserProfile> => {
  * Update current user's profile
  * PATCH /api/v1/users/profile
  */
-export const updateUserProfile = async (data: UpdateProfileRequest): Promise<UserProfile> => {
-  const response = await apiClient.patch<UserProfile>('/users/profile', data);
+export const updateUserProfile = async (
+  data: UpdateProfileRequest,
+): Promise<UserProfile> => {
+  const response = await apiClient.patch<UserProfile>(
+    API_ENDPOINTS.USERS.PROFILE,
+    data,
+  );
   return response.data;
 };
 
@@ -92,8 +98,13 @@ export const updateUserProfile = async (data: UpdateProfileRequest): Promise<Use
  * Change current user's password
  * PATCH /api/v1/users/password
  */
-export const changePassword = async (data: ChangePasswordRequest): Promise<MessageResponse> => {
-  const response = await apiClient.patch<MessageResponse>('/users/password', data);
+export const changePassword = async (
+  data: ChangePasswordRequest,
+): Promise<MessageResponse> => {
+  const response = await apiClient.patch<MessageResponse>(
+    API_ENDPOINTS.USERS.PASSWORD,
+    data,
+  );
   return response.data;
 };
 
@@ -103,7 +114,9 @@ export const changePassword = async (data: ChangePasswordRequest): Promise<Messa
  * Note: Admins cannot delete their own accounts
  */
 export const deleteAccount = async (): Promise<MessageResponse> => {
-  const response = await apiClient.delete<MessageResponse>('/users/account');
+  const response = await apiClient.delete<MessageResponse>(
+    API_ENDPOINTS.USERS.ACCOUNT,
+  );
   return response.data;
 };
 
@@ -127,7 +140,10 @@ export const validatePassword = (password: string) => {
     hasUppercase: /[A-Z]/.test(password),
     hasLowercase: /[a-z]/.test(password),
     hasNumber: /[0-9]/.test(password),
-    isValid: password.length >= 8 && /[A-Z]/.test(password) && /[a-z]/.test(password) && /[0-9]/.test(password),
+    isValid:
+      password.length >= 8 &&
+      /[A-Z]/.test(password) &&
+      /[a-z]/.test(password) &&
+      /[0-9]/.test(password),
   };
 };
-

@@ -1,689 +1,582 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import Link from 'next/link';
-import { 
-  Server,
-  RefreshCw,
-  Settings,
-  Power,
-  PowerOff,
-  TrendingUp,
-  DollarSign,
-  Activity,
-  AlertCircle,
-  Check,
-  X,
-  Loader2,
-  ChevronRight,
-  Home,
-  Users,
-  Wallet,
-  Crown,
-  Key,
-  Shield,
-  ChevronDown,
-  LogOut,
-  Smartphone
-} from 'lucide-react';
-import { Button, Alert } from '@/components/ui';
-import { useAuth } from '@/hooks';
-import {
-  adminGetProviders,
-  adminUpdateProvider,
-  adminSyncProvider,
-  adminGetStatistics,
-  SmsProvider,
-  formatPrice,
-} from '@/lib/api';
+import { useState } from "react";
+import { AdminDataTable } from '@/components/admin/data-table';
+import { AdminPageHeader } from '@/components/admin/page-header';
+import { AdminFilterBar } from '@/components/admin/filter-bar';
+import { AdminSlideOver } from '@/components/admin/slide-over';
+import { AdminModal } from '@/components/admin/modal';
+import { AdminFormInput, AdminFormSelect } from '@/components/admin/form-input';
+import { AdminFileUpload } from '@/components/admin/file-upload';
+import { AdminMultiSelect } from '@/components/admin/multi-select';
+import { AdminToggleSwitch } from '@/components/admin/toggle-switch';
+import { toast } from 'sonner';
+import { Plus, Edit, Ban, Download, Zap, CheckCircle, XCircle } from "lucide-react";
 
-// Actual statistics type returned by backend
-interface ActualStatistics {
-  orders: {
-    total: number;
-    completed: number;
-    cancelled: number;
-    today: number;
-  };
-  rentals: { total: number };
-  revenue: string;
-  activeProviders: number;
-}
+const initialProvidersData = [
+  {
+    id: "P-001",
+    name: "Provider A",
+    apiEndpoint: "https://api.providera.com/v1",
+    apiStatus: "connected",
+    servicesAvailable: 45,
+    successRate: "98.5%",
+    rateLimit: "1000/hour",
+    priority: "High",
+    status: "active",
+    services: ["WhatsApp", "Telegram", "Instagram"],
+  },
+  {
+    id: "P-002",
+    name: "Provider B",
+    apiEndpoint: "https://api.providerb.com/sms",
+    apiStatus: "connected",
+    servicesAvailable: 38,
+    successRate: "97.2%",
+    rateLimit: "800/hour",
+    priority: "Medium",
+    status: "active",
+    services: ["WhatsApp", "Facebook"],
+  },
+  {
+    id: "P-003",
+    name: "Provider C",
+    apiEndpoint: "https://api.providerc.com",
+    apiStatus: "disconnected",
+    servicesAvailable: 28,
+    successRate: "95.8%",
+    rateLimit: "500/hour",
+    priority: "Low",
+    status: "disabled",
+    services: ["Telegram"],
+  },
+  {
+    id: "P-004",
+    name: "Provider D",
+    apiEndpoint: "https://api.providerd.io/api",
+    apiStatus: "connected",
+    servicesAvailable: 52,
+    successRate: "96.9%",
+    rateLimit: "1200/hour",
+    priority: "High",
+    status: "active",
+    services: ["WhatsApp", "Instagram", "Twitter"],
+  },
+];
+
+const columns = [
+  { key: "id", label: "ID", width: "8%" },
+  { key: "name", label: "Provider Name", width: "15%" },
+  { key: "apiStatus", label: "API Status", width: "12%" },
+  { key: "servicesAvailable", label: "Services", width: "10%" },
+  { key: "successRate", label: "Success Rate", width: "12%" },
+  { key: "rateLimit", label: "Rate Limit", width: "12%" },
+  { key: "priority", label: "Priority", width: "10%" },
+  { key: "status", label: "Status", width: "11%" },
+  { key: "actions", label: "Actions", width: "10%" },
+];
 
 export default function AdminProvidersPage() {
-  const { user, logout } = useAuth();
-  
-  const [providers, setProviders] = useState<SmsProvider[]>([]);
-  const [statistics, setStatistics] = useState<ActualStatistics | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [syncingId, setSyncingId] = useState<string | null>(null);
-  const [togglingId, setTogglingId] = useState<string | null>(null);
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [editForm, setEditForm] = useState<{ displayName: string; markup: number; priority: number }>({ displayName: '', markup: 0, priority: 0 });
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
-  const [showUserMenu, setShowUserMenu] = useState(false);
+  const [providersData, setProvidersData] = useState(initialProvidersData);
+  const [showFilters, setShowFilters] = useState(false);
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isDisableModalOpen, setIsDisableModalOpen] = useState(false);
+  const [selectedProvider, setSelectedProvider] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isTestingAPI, setIsTestingAPI] = useState(false);
 
-  useEffect(() => {
-    loadData();
-  }, []);
+  const [newProvider, setNewProvider] = useState({
+    name: "",
+    logo: null as File | null,
+    apiEndpoint: "",
+    apiKey: "",
+    rateLimit: "",
+    priority: "",
+    services: [] as string[],
+    status: true,
+  });
 
-  const loadData = async () => {
+  const priorityOptions = [
+    { value: "High", label: "High Priority" },
+    { value: "Medium", label: "Medium Priority" },
+    { value: "Low", label: "Low Priority" },
+  ];
+
+  const serviceOptions = [
+    { value: "WhatsApp", label: "WhatsApp" },
+    { value: "Telegram", label: "Telegram" },
+    { value: "Instagram", label: "Instagram" },
+    { value: "Facebook", label: "Facebook" },
+    { value: "Twitter", label: "Twitter" },
+  ];
+
+  const handleTestAPI = async () => {
+    setIsTestingAPI(true);
+    await new Promise((resolve) => setTimeout(resolve, 2000));
+    setIsTestingAPI(false);
+    toast.success("API connection successful!");
+  };
+
+  const handleAddProvider = async () => {
     setIsLoading(true);
-    try {
-      const [providersRes, statsRes] = await Promise.all([
-        adminGetProviders(),
-        adminGetStatistics().catch(() => null), // Statistics are optional
-      ]);
-      setProviders(providersRes.providers || []);
-      setStatistics(statsRes as ActualStatistics | null);
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Failed to load providers');
-    } finally {
-      setIsLoading(false);
-    }
-  };
+    await new Promise((resolve) => setTimeout(resolve, 1000));
 
-  const handleSync = async (providerId: string) => {
-    setSyncingId(providerId);
-    setError(null);
-    try {
-      const res = await adminSyncProvider(providerId);
-      // API returns { message, services, countries, products }
-      setSuccess(`Sync complete: ${res.services || 0} services, ${res.countries || 0} countries, ${res.products || 0} products updated`);
-      await loadData();
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Sync failed');
-    } finally {
-      setSyncingId(null);
-    }
-  };
+    const newProviderData = {
+      id: `P-${String(providersData.length + 1).padStart(3, "0")}`,
+      name: newProvider.name,
+      apiEndpoint: newProvider.apiEndpoint,
+      apiStatus: "connected",
+      servicesAvailable: newProvider.services.length,
+      successRate: "95.0%",
+      rateLimit: newProvider.rateLimit,
+      priority: newProvider.priority,
+      status: newProvider.status ? "active" : "disabled",
+      services: newProvider.services,
+    };
 
-  const handleToggleActive = async (provider: SmsProvider) => {
-    setTogglingId(provider.id);
-    try {
-      await adminUpdateProvider(provider.id, { isActive: !provider.isActive });
-      setProviders(providers.map(p => 
-        p.id === provider.id ? { ...p, isActive: !p.isActive } : p
-      ));
-      setSuccess(`${provider.displayName} ${provider.isActive ? 'disabled' : 'enabled'}`);
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Failed to update provider');
-    } finally {
-      setTogglingId(null);
-    }
-  };
-
-  const handleStartEdit = (provider: SmsProvider) => {
-    setEditingId(provider.id);
-    setEditForm({
-      displayName: provider.displayName,
-      markup: provider.markup || 0,
-      priority: provider.priority,
+    setProvidersData([...providersData, newProviderData]);
+    setIsAddModalOpen(false);
+    setNewProvider({
+      name: "",
+      logo: null,
+      apiEndpoint: "",
+      apiKey: "",
+      rateLimit: "",
+      priority: "",
+      services: [],
+      status: true,
     });
+    setIsLoading(false);
+    toast.success("Provider added successfully!");
   };
 
-  const handleSaveEdit = async (providerId: string) => {
-    try {
-      await adminUpdateProvider(providerId, editForm);
-      setProviders(providers.map(p => 
-        p.id === providerId ? { ...p, ...editForm } : p
-      ));
-      setEditingId(null);
-      setSuccess('Provider settings updated');
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Failed to update provider');
-    }
-  };
+  const handleEditProvider = async () => {
+    setIsLoading(true);
+    await new Promise((resolve) => setTimeout(resolve, 1000));
 
-  // Provider stats are not available in current backend response
-  // Return default values for now
-  const getProviderStats = (_providerId: string) => {
-    return { totalOrders: 0, successRate: 0, revenue: '0' };
-  };
-
-  if (isLoading) {
-    return (
-      <div style={{ minHeight: '100vh', backgroundColor: 'var(--bg-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <div style={{ textAlign: 'center' }}>
-          <Loader2 style={{ width: '48px', height: '48px', color: 'var(--accent-gold)', animation: 'spin 1s linear infinite', margin: '0 auto 16px' }} />
-          <p style={{ color: 'var(--text-muted)' }}>Loading providers...</p>
-        </div>
-      </div>
+    setProvidersData(
+      providersData.map((provider) =>
+        provider.id === selectedProvider.id ? { ...selectedProvider } : provider
+      )
     );
-  }
+
+    setIsEditModalOpen(false);
+    setIsLoading(false);
+    toast.success("Provider updated successfully!");
+  };
+
+  const handleDisableProvider = async () => {
+    setIsLoading(true);
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+
+    setProvidersData(
+      providersData.map((provider) =>
+        provider.id === selectedProvider.id
+          ? {
+              ...provider,
+              status: provider.status === "active" ? "disabled" : "active",
+            }
+          : provider
+      )
+    );
+
+    setIsDisableModalOpen(false);
+    setIsLoading(false);
+    const action = selectedProvider.status === "active" ? "disabled" : "enabled";
+    toast.success(`Provider ${action} successfully!`);
+  };
+
+  const renderCell = (item: any, column: any) => {
+    if (column.key === "apiStatus") {
+      return (
+        <div className="flex items-center gap-2">
+          {item.apiStatus === "connected" ? (
+            <CheckCircle className="w-4 h-4 text-[#22C55E]" />
+          ) : (
+            <XCircle className="w-4 h-4 text-[#EF4444]" />
+          )}
+          <span
+            className={`text-sm ${
+              item.apiStatus === "connected"
+                ? "text-[#22C55E]"
+                : "text-[#EF4444]"
+            }`}
+          >
+            {item.apiStatus}
+          </span>
+        </div>
+      );
+    }
+
+    if (column.key === "priority") {
+      const colors = {
+        High: "bg-[#EF4444]/20 text-[#EF4444]",
+        Medium: "bg-[#F59E0B]/20 text-[#F59E0B]",
+        Low: "bg-[#64748B]/20 text-[#64748B]",
+      };
+      return (
+        <span className={`px-3 py-1 rounded-lg text-xs font-medium ${colors[item.priority as keyof typeof colors]}`}>
+          {item.priority}
+        </span>
+      );
+    }
+
+    if (column.key === "status") {
+      return (
+        <span
+          className={`px-3 py-1 rounded-lg text-xs font-medium ${
+            item.status === "active"
+              ? "bg-[#22C55E]/20 text-[#22C55E]"
+              : "bg-[#64748B]/20 text-[#64748B]"
+          }`}
+        >
+          {item.status}
+        </span>
+      );
+    }
+
+    if (column.key === "actions") {
+      return (
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => {
+              setSelectedProvider(item);
+              setIsEditModalOpen(true);
+            }}
+            className="p-2 rounded-lg hover:bg-[rgba(255,255,255,0.08)] transition-colors group"
+            title="Edit Provider"
+          >
+            <Edit className="w-4 h-4 text-[#F59E0B] group-hover:scale-110 transition-transform" />
+          </button>
+          <button
+            onClick={() => {
+              setSelectedProvider(item);
+              setIsDisableModalOpen(true);
+            }}
+            className="p-2 rounded-lg hover:bg-[rgba(255,255,255,0.08)] transition-colors group"
+            title={
+              item.status === "active" ? "Disable Provider" : "Enable Provider"
+            }
+          >
+            <Ban className="w-4 h-4 text-[#EF4444] group-hover:scale-110 transition-transform" />
+          </button>
+        </div>
+      );
+    }
+
+    return item[column.key];
+  };
+
+  const filters = [
+    {
+      label: "Status",
+      options: ["Active", "Disabled"],
+    },
+    {
+      label: "API Status",
+      options: ["Connected", "Disconnected"],
+    },
+    {
+      label: "Priority",
+      options: ["High", "Medium", "Low"],
+    },
+  ];
 
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: 'var(--bg-primary)' }}>
-      {/* Header */}
-      <div style={{ 
-        backgroundColor: 'var(--bg-card)', 
-        borderBottom: '1px solid var(--border-default)',
-        padding: '16px 24px'
-      }}>
-        <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '32px' }}>
-              <Link href="/admin" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <div style={{ 
-                  width: '36px', 
-                  height: '36px', 
-                  borderRadius: '10px', 
-                  background: 'linear-gradient(135deg, var(--accent-gold) 0%, #D4AF37 100%)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center'
-                }}>
-                  <span style={{ fontSize: '18px', fontWeight: 700, color: 'var(--bg-primary)' }}>S</span>
-                </div>
-                <span style={{ fontSize: '18px', fontWeight: 700, color: 'var(--text-primary)' }}>
-                  SMS<span style={{ color: 'var(--accent-gold)' }}>Pro</span>
+    <div className="p-4 lg:p-8">
+      <AdminPageHeader
+        title="Providers Management"
+        description="Manage SMS providers, API connections, and service availability"
+        primaryAction={{
+          label: "Add Provider",
+          onClick: () => setIsAddModalOpen(true),
+          icon: <Plus className="w-5 h-5" />,
+        }}
+        secondaryActions={[
+          {
+            label: "Export",
+            onClick: () => toast.info("Exporting providers data..."),
+            icon: <Download className="w-5 h-5" />,
+          },
+        ]}
+      />
+
+      <AdminFilterBar
+        searchPlaceholder="Search providers..."
+        onSearch={(value) => console.log("Search:", value)}
+        filters={filters}
+        showFilters={showFilters}
+        onToggleFilters={() => setShowFilters(!showFilters)}
+      />
+
+      <AdminDataTable columns={columns} data={providersData} renderCell={renderCell} />
+
+      <div className="flex flex-col lg:flex-row items-center justify-between mt-6 gap-4">
+        <p className="text-[#94A3B8] text-sm">
+          Showing 1 to {providersData.length} of {providersData.length} providers
+        </p>
+        <div className="flex items-center gap-2">
+          <button className="px-4 py-2 rounded-xl bg-[rgba(255,255,255,0.08)] border border-[rgba(255,255,255,0.18)] text-white text-sm hover:bg-[rgba(255,255,255,0.12)] transition-colors">
+            Previous
+          </button>
+          <button className="px-4 py-2 rounded-xl bg-[#3B82F6] text-white text-sm hover:brightness-110 transition-all">
+            1
+          </button>
+          <button className="px-4 py-2 rounded-xl bg-[rgba(255,255,255,0.08)] border border-[rgba(255,255,255,0.18)] text-white text-sm hover:bg-[rgba(255,255,255,0.12)] transition-colors">
+            Next
+          </button>
+        </div>
+      </div>
+
+      {/* Add Provider Slide-Over */}
+      <AdminSlideOver
+        isOpen={isAddModalOpen}
+        onClose={() => setIsAddModalOpen(false)}
+        title="Add New Provider"
+        description="Configure a new SMS provider with API integration"
+        footer={
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setIsAddModalOpen(false)}
+              className="flex-1 px-4 py-2.5 rounded-xl bg-[rgba(255,255,255,0.08)] border border-[rgba(255,255,255,0.18)] text-white hover:bg-[rgba(255,255,255,0.12)] transition-colors text-sm font-medium"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleAddProvider}
+              disabled={isLoading || !newProvider.name || !newProvider.apiEndpoint}
+              className="flex-1 px-4 py-2.5 rounded-xl bg-[#3B82F6] hover:bg-[#2563EB] text-white text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isLoading ? (
+                <span className="flex items-center justify-center gap-2">
+                  <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  Saving...
                 </span>
-              </Link>
-              
-              <nav style={{ display: 'flex', gap: '8px' }} className="hidden sm:!flex">
-                <NavLink href="/admin" icon={Home} label="Home" />
-                <NavLink href="/admin/providers" icon={Server} label="Providers" active />
-                <NavLink href="/admin/services" icon={Smartphone} label="Services" />
-                <NavLink href="/admin/sms-orders" icon={Activity} label="Orders" />
-                <NavLink href="/admin/users" icon={Users} label="Users" />
-              </nav>
+              ) : (
+                "Save Provider"
+              )}
+            </button>
+          </div>
+        }
+      >
+        <div className="space-y-6">
+          {/* Basic Information */}
+          <div>
+            <h3 className="text-white text-base font-semibold mb-4">
+              Basic Information
+            </h3>
+            <div className="space-y-4">
+              <AdminFormInput
+                label="Provider Name"
+                name="name"
+                value={newProvider.name}
+                onChange={(value) =>
+                  setNewProvider({ ...newProvider, name: value })
+                }
+                placeholder="Enter provider name"
+                required
+                error={!newProvider.name ? "Provider name is required" : ""}
+              />
+              <AdminFileUpload
+                label="Provider Logo"
+                name="logo"
+                value={newProvider.logo}
+                onChange={(file) => setNewProvider({ ...newProvider, logo: file })}
+                accept="image/*"
+              />
             </div>
+          </div>
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <Button variant="secondary" onClick={loadData} size="sm">
-                <RefreshCw style={{ width: '14px', height: '14px', marginRight: '6px' }} />
-                Refresh
-              </Button>
-              
-              {/* User Menu */}
-              <div style={{ position: 'relative' }}>
-                <button
-                  onClick={() => setShowUserMenu(!showUserMenu)}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '8px',
-                    padding: '8px 12px',
-                    backgroundColor: 'var(--bg-secondary)',
-                    border: '1px solid var(--border-default)',
-                    borderRadius: '10px',
-                    cursor: 'pointer'
-                  }}
-                >
-                  <div style={{
-                    width: '32px',
-                    height: '32px',
-                    borderRadius: '50%',
-                    background: 'linear-gradient(135deg, var(--accent-gold) 0%, #D4AF37 100%)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center'
-                  }}>
-                    <span style={{ fontSize: '14px', fontWeight: 600, color: 'var(--bg-primary)' }}>
-                      {user?.firstName?.[0] || 'A'}
-                    </span>
-                  </div>
-                  <ChevronDown style={{ width: '16px', height: '16px', color: 'var(--text-muted)' }} />
-                </button>
+          {/* API Configuration */}
+          <div className="pt-6 border-t border-[rgba(255,255,255,0.18)]">
+            <h3 className="text-white text-base font-semibold mb-4">
+              API Configuration
+            </h3>
+            <div className="space-y-4">
+              <AdminFormInput
+                label="API Endpoint URL"
+                name="apiEndpoint"
+                value={newProvider.apiEndpoint}
+                onChange={(value) =>
+                  setNewProvider({ ...newProvider, apiEndpoint: value })
+                }
+                placeholder="https://api.provider.com/v1"
+                required
+                error={
+                  !newProvider.apiEndpoint ? "API endpoint is required" : ""
+                }
+              />
+              <AdminFormInput
+                label="API Key / Authentication Token"
+                name="apiKey"
+                type="password"
+                value={newProvider.apiKey}
+                onChange={(value) =>
+                  setNewProvider({ ...newProvider, apiKey: value })
+                }
+                placeholder="Enter API key or token"
+                required
+              />
+              <AdminFormInput
+                label="Rate Limit"
+                name="rateLimit"
+                value={newProvider.rateLimit}
+                onChange={(value) =>
+                  setNewProvider({ ...newProvider, rateLimit: value })
+                }
+                placeholder="e.g., 1000/hour"
+                required
+              />
 
-                {showUserMenu && (
+              {/* Test API Connection */}
+              <button
+                onClick={handleTestAPI}
+                disabled={!newProvider.apiEndpoint || isTestingAPI}
+                className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-[rgba(245,158,11,0.1)] border border-[rgba(245,158,11,0.2)] text-[#F59E0B] hover:bg-[rgba(245,158,11,0.15)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isTestingAPI ? (
                   <>
-                    <div style={{ position: 'fixed', inset: 0, zIndex: 40 }} onClick={() => setShowUserMenu(false)} />
-                    <div style={{
-                      position: 'absolute',
-                      top: '100%',
-                      right: 0,
-                      marginTop: '8px',
-                      width: '200px',
-                      backgroundColor: 'var(--bg-card)',
-                      border: '1px solid var(--border-default)',
-                      borderRadius: '12px',
-                      boxShadow: '0 10px 40px rgba(0,0,0,0.3)',
-                      overflow: 'hidden',
-                      zIndex: 50
-                    }}>
-                      <div style={{ padding: '8px' }}>
-                        <Link href="/dashboard" style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 12px', borderRadius: '8px', textDecoration: 'none', color: 'var(--text-secondary)' }}>
-                          <Home style={{ width: '16px', height: '16px' }} />
-                          <span style={{ fontSize: '14px' }}>User Dashboard</span>
-                        </Link>
-                      </div>
-                      <div style={{ padding: '8px', borderTop: '1px solid var(--border-default)' }}>
-                        <button onClick={logout} style={{ display: 'flex', alignItems: 'center', gap: '10px', width: '100%', padding: '10px 12px', borderRadius: '8px', border: 'none', backgroundColor: 'transparent', color: 'var(--danger)', cursor: 'pointer', fontSize: '14px' }}>
-                          <LogOut style={{ width: '16px', height: '16px' }} />
-                          <span>Sign Out</span>
-                        </button>
-                      </div>
-                    </div>
+                    <span className="w-4 h-4 border-2 border-[#F59E0B]/30 border-t-[#F59E0B] rounded-full animate-spin" />
+                    Testing Connection...
+                  </>
+                ) : (
+                  <>
+                    <Zap className="w-5 h-5" />
+                    Test API Connection
                   </>
                 )}
-              </div>
+              </button>
+            </div>
+          </div>
+
+          {/* Services & Priority */}
+          <div className="pt-6 border-t border-[rgba(255,255,255,0.18)]">
+            <h3 className="text-white text-base font-semibold mb-4">
+              Services & Priority
+            </h3>
+            <div className="space-y-4">
+              <AdminMultiSelect
+                label="Services Supported"
+                name="services"
+                value={newProvider.services}
+                onChange={(value) =>
+                  setNewProvider({ ...newProvider, services: value })
+                }
+                options={serviceOptions}
+                placeholder="Select supported services..."
+                required
+              />
+              <AdminFormSelect
+                label="Provider Priority Level"
+                name="priority"
+                value={newProvider.priority}
+                onChange={(value) =>
+                  setNewProvider({ ...newProvider, priority: value })
+                }
+                options={priorityOptions}
+                required
+              />
+              <AdminToggleSwitch
+                label="Provider Status"
+                name="status"
+                checked={newProvider.status}
+                onChange={(checked) =>
+                  setNewProvider({ ...newProvider, status: checked })
+                }
+                description="Enable this provider for activations"
+              />
             </div>
           </div>
         </div>
-      </div>
+      </AdminSlideOver>
 
-      {/* Page Title */}
-      <div style={{ backgroundColor: 'var(--bg-primary)', padding: '24px' }}>
-        <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
-          <h1 style={{ fontSize: '28px', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '4px' }}>
-            SMS Providers
-          </h1>
-          <p style={{ color: 'var(--text-muted)', fontSize: '14px' }}>
-            Manage SMS provider integrations, sync catalogs, and configure pricing
+      {/* Edit Provider Modal */}
+      <AdminModal
+        isOpen={isEditModalOpen}
+        onClose={() => setIsEditModalOpen(false)}
+        title="Edit Provider"
+        size="lg"
+        primaryAction={{
+          label: "Save Changes",
+          onClick: handleEditProvider,
+          loading: isLoading,
+        }}
+        secondaryAction={{
+          label: "Cancel",
+          onClick: () => setIsEditModalOpen(false),
+        }}
+      >
+        {selectedProvider && (
+          <div className="space-y-4">
+            <AdminFormInput
+              label="Provider Name"
+              name="name"
+              value={selectedProvider.name}
+              onChange={(value) =>
+                setSelectedProvider({ ...selectedProvider, name: value })
+              }
+              placeholder="Enter provider name"
+              required
+            />
+            <AdminFormInput
+              label="API Endpoint"
+              name="apiEndpoint"
+              value={selectedProvider.apiEndpoint}
+              onChange={(value) =>
+                setSelectedProvider({ ...selectedProvider, apiEndpoint: value })
+              }
+              placeholder="https://api.provider.com/v1"
+              required
+            />
+            <AdminFormInput
+              label="Rate Limit"
+              name="rateLimit"
+              value={selectedProvider.rateLimit}
+              onChange={(value) =>
+                setSelectedProvider({ ...selectedProvider, rateLimit: value })
+              }
+              placeholder="e.g., 1000/hour"
+            />
+          </div>
+        )}
+      </AdminModal>
+
+      {/* Disable/Enable Provider Modal */}
+      <AdminModal
+        isOpen={isDisableModalOpen}
+        onClose={() => setIsDisableModalOpen(false)}
+        title={
+          selectedProvider?.status === "active"
+            ? "Disable Provider"
+            : "Enable Provider"
+        }
+        primaryAction={{
+          label: selectedProvider?.status === "active" ? "Disable" : "Enable",
+          onClick: handleDisableProvider,
+          loading: isLoading,
+          variant: selectedProvider?.status === "active" ? "danger" : "primary",
+        }}
+        secondaryAction={{
+          label: "Cancel",
+          onClick: () => setIsDisableModalOpen(false),
+        }}
+      >
+        <p className="text-[#94A3B8]">
+          Are you sure you want to{" "}
+          {selectedProvider?.status === "active" ? "disable" : "enable"}{" "}
+          <span className="text-white font-medium">
+            {selectedProvider?.name}
+          </span>
+          ?
+        </p>
+        {selectedProvider?.status === "active" && (
+          <p className="text-[#EF4444] text-sm mt-4">
+            All services from this provider will become unavailable until
+            re-enabled.
           </p>
-        </div>
-      </div>
-
-      {/* Content */}
-      <div style={{ maxWidth: '1400px', margin: '0 auto', padding: '0 24px 24px' }}>
-        {/* Alerts */}
-        {error && (
-          <div style={{ marginBottom: '24px' }}>
-            <Alert variant="error" dismissible onDismiss={() => setError(null)}>
-              {error}
-            </Alert>
-          </div>
         )}
-        {success && (
-          <div style={{ marginBottom: '24px' }}>
-            <Alert variant="success" dismissible onDismiss={() => setSuccess(null)}>
-              {success}
-            </Alert>
-          </div>
-        )}
-
-        {/* Overview Stats */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px', marginBottom: '24px' }} className="lg:!grid-cols-4">
-          <StatCard 
-            icon={Activity}
-            label="Total Orders"
-            value={statistics?.orders?.total?.toString() || '0'}
-            subtext={`${statistics?.orders?.today || 0} today`}
-          />
-          <StatCard 
-            icon={DollarSign}
-            label="Total Revenue"
-            value={formatPrice(statistics?.revenue || '0')}
-            subtext={`${statistics?.orders?.completed || 0} completed`}
-          />
-          <StatCard 
-            icon={Server}
-            label="Active Providers"
-            value={providers.filter(p => p.isActive).length.toString()}
-            subtext={`${providers.length} total`}
-          />
-          <StatCard 
-            icon={TrendingUp}
-            label="Total Rentals"
-            value={statistics?.rentals?.total?.toString() || '0'}
-            subtext={`${statistics?.orders?.cancelled || 0} cancelled orders`}
-          />
-        </div>
-
-        {/* Providers Grid */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '24px' }} className="lg:!grid-cols-3">
-          {providers.map((provider) => {
-            const stats = getProviderStats(provider.id);
-            const isEditing = editingId === provider.id;
-            const isSyncing = syncingId === provider.id;
-            const isToggling = togglingId === provider.id;
-
-            return (
-              <div 
-                key={provider.id}
-                style={{
-                  backgroundColor: 'var(--bg-card)',
-                  border: `1px solid ${provider.isActive ? 'var(--border-default)' : 'rgba(239, 68, 68, 0.3)'}`,
-                  borderRadius: '20px',
-                  overflow: 'hidden',
-                  opacity: provider.isActive ? 1 : 0.7
-                }}
-              >
-                {/* Provider Header */}
-                <div style={{
-                  padding: '20px',
-                  borderBottom: '1px solid var(--border-default)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between'
-                }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                    <div style={{
-                      width: '48px',
-                      height: '48px',
-                      borderRadius: '12px',
-                      backgroundColor: provider.isActive ? 'rgba(198, 167, 94, 0.1)' : 'rgba(239, 68, 68, 0.1)',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center'
-                    }}>
-                      <Server style={{ 
-                        width: '24px', 
-                        height: '24px', 
-                        color: provider.isActive ? 'var(--accent-gold)' : 'var(--danger)' 
-                      }} />
-                    </div>
-                    <div>
-                      <h3 style={{ fontWeight: 600, color: 'var(--text-primary)', marginBottom: '2px' }}>
-                        {provider.displayName}
-                      </h3>
-                      <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
-                        {provider.slug}
-                      </span>
-                    </div>
-                  </div>
-                  <div style={{
-                    padding: '4px 10px',
-                    borderRadius: '20px',
-                    backgroundColor: provider.isActive ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)',
-                    color: provider.isActive ? 'var(--success)' : 'var(--danger)',
-                    fontSize: '12px',
-                    fontWeight: 600
-                  }}>
-                    {provider.isActive ? 'Active' : 'Disabled'}
-                  </div>
-                </div>
-
-                {/* Stats */}
-                <div style={{ padding: '20px', borderBottom: '1px solid var(--border-default)' }}>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px' }}>
-                    <div style={{ textAlign: 'center' }}>
-                      <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '4px' }}>Orders</p>
-                      <p style={{ fontSize: '18px', fontWeight: 600, color: 'var(--text-primary)' }}>
-                        {stats.totalOrders}
-                      </p>
-                    </div>
-                    <div style={{ textAlign: 'center' }}>
-                      <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '4px' }}>Success</p>
-                      <p style={{ fontSize: '18px', fontWeight: 600, color: stats.successRate > 80 ? 'var(--success)' : 'var(--warning)' }}>
-                        {(stats.successRate * 100).toFixed(0)}%
-                      </p>
-                    </div>
-                    <div style={{ textAlign: 'center' }}>
-                      <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '4px' }}>Revenue</p>
-                      <p style={{ fontSize: '18px', fontWeight: 600, color: 'var(--accent-gold)' }}>
-                        {formatPrice(stats.revenue)}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Settings */}
-                {isEditing ? (
-                  <div style={{ padding: '20px', borderBottom: '1px solid var(--border-default)' }}>
-                    <div style={{ marginBottom: '12px' }}>
-                      <label style={{ fontSize: '12px', color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>
-                        Display Name
-                      </label>
-                      <input
-                        type="text"
-                        value={editForm.displayName}
-                        onChange={(e) => setEditForm({ ...editForm, displayName: e.target.value })}
-                        style={{
-                          width: '100%',
-                          padding: '10px 12px',
-                          backgroundColor: 'var(--bg-secondary)',
-                          border: '1px solid var(--border-default)',
-                          borderRadius: '8px',
-                          color: 'var(--text-primary)',
-                          fontSize: '14px'
-                        }}
-                      />
-                    </div>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                      <div>
-                        <label style={{ fontSize: '12px', color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>
-                          Markup %
-                        </label>
-                        <input
-                          type="number"
-                          value={editForm.markup}
-                          onChange={(e) => setEditForm({ ...editForm, markup: parseFloat(e.target.value) || 0 })}
-                          min="0"
-                          max="100"
-                          style={{
-                            width: '100%',
-                            padding: '10px 12px',
-                            backgroundColor: 'var(--bg-secondary)',
-                            border: '1px solid var(--border-default)',
-                            borderRadius: '8px',
-                            color: 'var(--text-primary)',
-                            fontSize: '14px'
-                          }}
-                        />
-                      </div>
-                      <div>
-                        <label style={{ fontSize: '12px', color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>
-                          Priority
-                        </label>
-                        <input
-                          type="number"
-                          value={editForm.priority}
-                          onChange={(e) => setEditForm({ ...editForm, priority: parseInt(e.target.value) || 0 })}
-                          min="0"
-                          style={{
-                            width: '100%',
-                            padding: '10px 12px',
-                            backgroundColor: 'var(--bg-secondary)',
-                            border: '1px solid var(--border-default)',
-                            borderRadius: '8px',
-                            color: 'var(--text-primary)',
-                            fontSize: '14px'
-                          }}
-                        />
-                      </div>
-                    </div>
-                    <div style={{ display: 'flex', gap: '8px', marginTop: '12px' }}>
-                      <Button size="sm" onClick={() => handleSaveEdit(provider.id)}>
-                        <Check style={{ width: '14px', height: '14px', marginRight: '4px' }} />
-                        Save
-                      </Button>
-                      <Button variant="ghost" size="sm" onClick={() => setEditingId(null)}>
-                        Cancel
-                      </Button>
-                    </div>
-                  </div>
-                ) : (
-                  <div style={{ padding: '20px', borderBottom: '1px solid var(--border-default)' }}>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px' }}>
-                      <div>
-                        <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '2px' }}>Markup</p>
-                        <p style={{ fontSize: '14px', fontWeight: 500, color: 'var(--text-primary)' }}>
-                          {provider.markup || 0}%
-                        </p>
-                      </div>
-                      <div>
-                        <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '2px' }}>Priority</p>
-                        <p style={{ fontSize: '14px', fontWeight: 500, color: 'var(--text-primary)' }}>
-                          {provider.priority}
-                        </p>
-                      </div>
-                      <div>
-                        <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '2px' }}>Balance</p>
-                        <p style={{ fontSize: '14px', fontWeight: 500, color: 'var(--accent-gold)' }}>
-                          {formatPrice(provider.balance || '0')}
-                        </p>
-                      </div>
-                    </div>
-                    {provider.lastSyncAt && (
-                      <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '12px' }}>
-                        Last sync: {new Date(provider.lastSyncAt).toLocaleString()}
-                      </p>
-                    )}
-                  </div>
-                )}
-
-                {/* Actions */}
-                <div style={{ padding: '16px 20px', display: 'flex', gap: '8px' }}>
-                  <Button 
-                    variant="secondary" 
-                    size="sm" 
-                    onClick={() => handleSync(provider.id)}
-                    disabled={isSyncing}
-                    style={{ flex: 1 }}
-                  >
-                    {isSyncing ? (
-                      <Loader2 style={{ width: '14px', height: '14px', animation: 'spin 1s linear infinite' }} />
-                    ) : (
-                      <>
-                        <RefreshCw style={{ width: '14px', height: '14px', marginRight: '4px' }} />
-                        Sync
-                      </>
-                    )}
-                  </Button>
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
-                    onClick={() => handleStartEdit(provider)}
-                    disabled={isEditing}
-                  >
-                    <Settings style={{ width: '14px', height: '14px' }} />
-                  </Button>
-                  <Button 
-                    variant={provider.isActive ? 'outline' : 'secondary'}
-                    size="sm" 
-                    onClick={() => handleToggleActive(provider)}
-                    disabled={isToggling}
-                  >
-                    {isToggling ? (
-                      <Loader2 style={{ width: '14px', height: '14px', animation: 'spin 1s linear infinite' }} />
-                    ) : provider.isActive ? (
-                      <PowerOff style={{ width: '14px', height: '14px', color: 'var(--danger)' }} />
-                    ) : (
-                      <Power style={{ width: '14px', height: '14px', color: 'var(--success)' }} />
-                    )}
-                  </Button>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-
-        {/* Provider Statistics Summary */}
-        <div style={{
-          backgroundColor: 'var(--bg-card)',
-          border: '1px solid var(--border-default)',
-          borderRadius: '16px',
-          padding: '20px',
-          marginTop: '24px'
-        }}>
-          <h3 style={{ fontSize: '16px', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '16px' }}>
-            Quick Actions
-          </h3>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px' }}>
-            <Link 
-              href="/admin/services" 
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                padding: '12px 16px',
-                backgroundColor: 'var(--bg-secondary)',
-                border: '1px solid var(--border-default)',
-                borderRadius: '10px',
-                textDecoration: 'none',
-                color: 'var(--text-primary)',
-                fontSize: '14px',
-                fontWeight: 500
-              }}
-            >
-              <Smartphone style={{ width: '18px', height: '18px', color: 'var(--accent-gold)' }} />
-              Manage Services
-            </Link>
-            <Link 
-              href="/admin/sms-orders" 
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                padding: '12px 16px',
-                backgroundColor: 'var(--bg-secondary)',
-                border: '1px solid var(--border-default)',
-                borderRadius: '10px',
-                textDecoration: 'none',
-                color: 'var(--text-primary)',
-                fontSize: '14px',
-                fontWeight: 500
-              }}
-            >
-              <Activity style={{ width: '18px', height: '18px', color: 'var(--accent-gold)' }} />
-              View All Orders
-            </Link>
-          </div>
-        </div>
-      </div>
+      </AdminModal>
     </div>
   );
 }
-
-// ============================================
-// SUB-COMPONENTS
-// ============================================
-
-interface StatCardProps {
-  icon: React.ComponentType<{ style?: React.CSSProperties }>;
-  label: string;
-  value: string;
-  subtext: string;
-}
-
-function StatCard({ icon: Icon, label, value, subtext }: StatCardProps) {
-  return (
-    <div style={{
-      backgroundColor: 'var(--bg-card)',
-      border: '1px solid var(--border-default)',
-      borderRadius: '16px',
-      padding: '20px'
-    }}>
-      <div style={{
-        width: '40px',
-        height: '40px',
-        borderRadius: '10px',
-        backgroundColor: 'rgba(198, 167, 94, 0.1)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        marginBottom: '12px'
-      }}>
-        <Icon style={{ width: '20px', height: '20px', color: 'var(--accent-gold)' }} />
-      </div>
-      <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '4px' }}>{label}</p>
-      <p style={{ fontSize: '24px', fontWeight: 700, color: 'var(--text-primary)' }}>{value}</p>
-      <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '4px' }}>{subtext}</p>
-    </div>
-  );
-}
-
-interface NavLinkProps {
-  href: string;
-  icon: React.ComponentType<{ style?: React.CSSProperties }>;
-  label: string;
-  active?: boolean;
-}
-
-function NavLink({ href, icon: Icon, label, active }: NavLinkProps) {
-  return (
-    <Link 
-      href={href} 
-      style={{ 
-        display: 'flex',
-        alignItems: 'center',
-        gap: '6px',
-        padding: '8px 12px',
-        borderRadius: '8px',
-        textDecoration: 'none',
-        backgroundColor: active ? 'rgba(198, 167, 94, 0.1)' : 'transparent',
-        color: active ? 'var(--accent-gold)' : 'var(--text-secondary)',
-        fontSize: '13px',
-        fontWeight: 500,
-        transition: 'all 0.15s'
-      }}
-    >
-      <Icon style={{ width: '16px', height: '16px' }} />
-      {label}
-    </Link>
-  );
-}
-

@@ -1,30 +1,22 @@
-'use client';
+import { AdminShell } from '@/components/admin/admin-shell';
+import { NotificationProvider } from '@/contexts/NotificationContext';
 
-import { RouteGuard } from '@/components/auth/RouteGuard';
+// Admin pages are auth-gated and depend on runtime state (Redux session,
+// useSearchParams, etc). They should never be statically prerendered.
+// Without this, `next build` tries to prerender every /admin/* route and
+// fails on hooks like useSearchParams that require a Suspense boundary
+// at static time. Previously this was hidden because AdminShell returned
+// a Spinner at prerender time and the children never rendered.
+export const dynamic = 'force-dynamic';
 
-/**
- * Admin Layout - Wraps all admin routes with admin-only protection
- * 
- * Supports 6 admin-level roles (per CLIENT_DECISIONS.md):
- * - OWNER: Full access including system settings
- * - ADMIN: Full access except system settings
- * - MANAGER: Manage users, orders, providers, SEO
- * - FINANCE: Full access to payments/wallets/refunds
- * - SUPPORT: Read + limited update on users/orders
- * - VIEWER: Read-only admin access
- * 
- * All admin roles can access the admin panel.
- * Individual pages may have additional role requirements.
- */
 export default function AdminLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
   return (
-    <RouteGuard requireAdmin redirectTo="/dashboard">
-      {children}
-    </RouteGuard>
+    <NotificationProvider>
+      <AdminShell>{children}</AdminShell>
+    </NotificationProvider>
   );
 }
-

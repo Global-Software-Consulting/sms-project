@@ -1,7 +1,13 @@
-"use client";
+'use client';
 
-import React, { createContext, useContext, useCallback, useState, ReactNode } from "react";
-import { ToastContainer, ToastData } from "@/components/ui/Toast";
+import React, {
+  createContext,
+  useContext,
+  useCallback,
+  useState,
+  ReactNode,
+} from 'react';
+import { ToastContainer, ToastData } from '@/components/ui/Toast';
 
 // ============================================
 // Toast Context Types
@@ -9,7 +15,7 @@ import { ToastContainer, ToastData } from "@/components/ui/Toast";
 
 interface ToastContextValue {
   /** Add a toast notification */
-  addToast: (toast: Omit<ToastData, "id">) => string;
+  addToast: (toast: Omit<ToastData, 'id'>) => string;
   /** Remove a specific toast */
   removeToast: (id: string) => void;
   /** Clear all toasts */
@@ -38,29 +44,38 @@ let toastIdCounter = 0;
 
 interface ToastProviderProps {
   children: ReactNode;
-  position?: "top-right" | "top-left" | "bottom-right" | "bottom-left" | "top-center" | "bottom-center";
+  position?:
+    | 'top-right'
+    | 'top-left'
+    | 'bottom-right'
+    | 'bottom-left'
+    | 'top-center'
+    | 'bottom-center';
   maxToasts?: number;
 }
 
-export function ToastProvider({ 
-  children, 
-  position = "top-right",
+export function ToastProvider({
+  children,
+  position = 'top-right',
   maxToasts = 5,
 }: ToastProviderProps) {
   const [toasts, setToasts] = useState<ToastData[]>([]);
 
-  const addToast = useCallback((toast: Omit<ToastData, "id">) => {
-    const id = `toast-${++toastIdCounter}-${Date.now()}`;
-    setToasts((prev) => {
-      const newToasts = [...prev, { ...toast, id }];
-      // Limit number of toasts
-      if (newToasts.length > maxToasts) {
-        return newToasts.slice(-maxToasts);
-      }
-      return newToasts;
-    });
-    return id;
-  }, [maxToasts]);
+  const addToast = useCallback(
+    (toast: Omit<ToastData, 'id'>) => {
+      const id = `toast-${++toastIdCounter}-${Date.now()}`;
+      setToasts((prev) => {
+        const newToasts = [...prev, { ...toast, id }];
+        // Limit number of toasts
+        if (newToasts.length > maxToasts) {
+          return newToasts.slice(-maxToasts);
+        }
+        return newToasts;
+      });
+      return id;
+    },
+    [maxToasts],
+  );
 
   const removeToast = useCallback((id: string) => {
     setToasts((prev) => prev.filter((t) => t.id !== id));
@@ -73,50 +88,50 @@ export function ToastProvider({
   // Convenience methods
   const success = useCallback(
     (message: string, title?: string) => {
-      return addToast({ 
-        type: "success", 
-        message, 
+      return addToast({
+        type: 'success',
+        message,
         title,
         duration: 4000,
       });
     },
-    [addToast]
+    [addToast],
   );
 
   const error = useCallback(
     (message: string, title?: string) => {
-      return addToast({ 
-        type: "error", 
-        message, 
-        title: title || "Error",
+      return addToast({
+        type: 'error',
+        message,
+        title: title || 'Error',
         duration: 7000, // Errors stay longer
       });
     },
-    [addToast]
+    [addToast],
   );
 
   const warning = useCallback(
     (message: string, title?: string) => {
-      return addToast({ 
-        type: "warning", 
-        message, 
+      return addToast({
+        type: 'warning',
+        message,
         title,
         duration: 5000,
       });
     },
-    [addToast]
+    [addToast],
   );
 
   const info = useCallback(
     (message: string, title?: string) => {
-      return addToast({ 
-        type: "info", 
-        message, 
+      return addToast({
+        type: 'info',
+        message,
         title,
         duration: 4000,
       });
     },
-    [addToast]
+    [addToast],
   );
 
   const value: ToastContextValue = {
@@ -132,9 +147,9 @@ export function ToastProvider({
   return (
     <ToastContext.Provider value={value}>
       {children}
-      <ToastContainer 
-        toasts={toasts} 
-        onDismiss={removeToast} 
+      <ToastContainer
+        toasts={toasts}
+        onDismiss={removeToast}
         position={position}
       />
     </ToastContext.Provider>
@@ -148,10 +163,9 @@ export function ToastProvider({
 export function useToast(): ToastContextValue {
   const context = useContext(ToastContext);
   if (!context) {
-    throw new Error("useToast must be used within a ToastProvider");
+    throw new Error('useToast must be used within a ToastProvider');
   }
   return context;
 }
 
 export default ToastContext;
-
