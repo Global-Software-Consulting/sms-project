@@ -12,8 +12,21 @@ services:
     env_file:
       - .env
     # Force NODE_ENV=production and PORT=3001 regardless of what's in
-    # .env — see the equivalent block in docker-compose.dev.yml for the
-    # full context on why both pins are required.
+    # the .env sourced from the ENV_PROD CI secret. Background:
+    #   - The image is built with `next build`, but historically the
+    #     .env supplied at deploy contained NODE_ENV=development, which
+    #     overrode the Dockerfile's ENV NODE_ENV=production and caused
+    #     `next start` to behave in development mode (including the
+    #     first-click route transitions never committing on the
+    #     production domain).
+    #   - The .env also historically contained PORT=3000, which
+    #     overrode the Dockerfile's ENV PORT=3001 once we switched from
+    #     the CLI flag `next start -p 3001` (env-immune) to the custom
+    #     server.js (reads process.env.PORT). Without this pin the
+    #     server boots on 3000 while compose maps and health-checks
+    #     3001 — health check fails and the deploy rolls back.
+    # Setting both here under `environment:` takes precedence over the
+    # env_file values, neutralising stale .env content.
     environment:
       NODE_ENV: production
       PORT: 3001
