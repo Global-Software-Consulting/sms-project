@@ -116,6 +116,18 @@ jobs:
             echo "$ENV_PROD" > /dev/shm/sms-frontend/.env
             chmod 600 /dev/shm/sms-frontend/.env
 
+            # One-time cutover guard: if the legacy sms_frontend_dev container
+            # is still running on this host (from the old dev.yml workflow that
+            # used to deploy to the production domain), stop and remove it
+            # before bringing up the prod compose. Both compose files bind
+            # host port 3001, so a leftover dev container would block the
+            # prod container from binding the port and the deploy would fail.
+            # Safe to leave permanently — no-ops once the dev container is gone.
+            if docker ps -a --format '{{.Names}}' | grep -q '^sms_frontend_dev$'; then
+              echo "Found legacy sms_frontend_dev container — stopping and removing"
+              docker compose -f docker-compose.dev.yml down 2>/dev/null || docker rm -f sms_frontend_dev
+            fi
+
             # Pull and restart
             echo "$GHCR_TOKEN" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
             docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:prod
