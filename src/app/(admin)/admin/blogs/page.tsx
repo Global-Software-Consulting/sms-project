@@ -22,6 +22,8 @@ import {
   processImage,
   downloadBlob,
   formatBytes,
+  MAX_FILE_BYTES,
+  MAX_BATCH_FILES,
   type ProcessedImage,
 } from '@/lib/blog-image-editor';
 import {
@@ -172,12 +174,36 @@ export default function AdminBlogsPage() {
 
   const handleImageFilesChosen = (files: FileList | null): void => {
     if (!files || files.length === 0) return;
-    const next = Array.from(files).filter((f) => f.type.startsWith('image/'));
-    if (next.length === 0) {
+    const incoming = Array.from(files).filter((f) =>
+      f.type.startsWith('image/'),
+    );
+    if (incoming.length === 0) {
       toast.error('Please select image files only');
       return;
     }
-    setPendingImageFiles((prev) => [...prev, ...next]);
+    const oversize = incoming.filter((f) => f.size > MAX_FILE_BYTES);
+    const next = incoming.filter((f) => f.size <= MAX_FILE_BYTES);
+    if (oversize.length > 0) {
+      toast.error(
+        `Skipped ${oversize.length} file${oversize.length === 1 ? '' : 's'} over ${formatBytes(MAX_FILE_BYTES)}`,
+      );
+    }
+    if (next.length === 0) return;
+
+    setPendingImageFiles((prev) => {
+      const room = MAX_BATCH_FILES - prev.length;
+      if (room <= 0) {
+        toast.error(`Batch limit is ${MAX_BATCH_FILES} files`);
+        return prev;
+      }
+      if (next.length > room) {
+        toast.error(
+          `Only the first ${room} file${room === 1 ? '' : 's'} added — batch limit is ${MAX_BATCH_FILES}`,
+        );
+        return [...prev, ...next.slice(0, room)];
+      }
+      return [...prev, ...next];
+    });
     setProcessedImages([]);
   };
 
