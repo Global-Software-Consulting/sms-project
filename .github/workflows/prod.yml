@@ -93,9 +93,36 @@ jobs:
           key: ${{ secrets.SERVER_SSH_KEY }}
           port: ${{ secrets.SERVER_PORT }}
           command_timeout: 5m
-          envs: ENV_PROD,GHCR_TOKEN
+          # Sourcing ENV_DEV here (not ENV_PROD) because the previous
+          # dev.yml workflow already populated ENV_DEV with the values
+          # that serve the production domain. Switch to ENV_PROD once
+          # that secret has been populated separately. The downstream
+          # script uses APP_ENV regardless of which GH secret backs it.
+          envs: ENV_DEV,GHCR_TOKEN
           script: |
             set -e
+            APP_ENV="$ENV_DEV"
+
+            # Fail-fast env validation. Frontend has no fatal-on-missing
+            # runtime keys today (NEXT_PUBLIC_API_URL is baked in at build,
+            # NODE_ENV + PORT are pinned in docker-compose.prod.yml). The
+            # check below is a scaffold for future additions — extend
+            # REQUIRED_KEYS when the app starts depending on runtime
+            # secrets that crash startup if absent. Mirrors sms-api PR #38.
+            REQUIRED_KEYS=()
+            MISSING=()
+            for key in "${REQUIRED_KEYS[@]}"; do
+              if ! printf '%s\n' "$APP_ENV" | grep -q "^${key}="; then
+                MISSING+=("$key")
+              fi
+            done
+            if [ ${#MISSING[@]} -gt 0 ]; then
+              echo "::error::Secret is missing required keys: ${MISSING[*]}"
+              echo "::error::Update the ENV_DEV (or ENV_PROD) GitHub Actions secret and re-run the deploy."
+              echo "::error::No container changes have been made; the previous deploy remains active."
+              exit 1
+            fi
+            echo "::notice::env validation passed (${#REQUIRED_KEYS[@]} required keys checked)"
 
             # Disk usage check
             DISK_USAGE=$(df / --output=pcent | tail -1 | tr -d ' %')
@@ -113,7 +140,7 @@ jobs:
 
             # Env to tmpfs (RAM only)
             mkdir -p /dev/shm/sms-frontend
-            echo "$ENV_PROD" > /dev/shm/sms-frontend/.env
+            printf '%s\n' "$APP_ENV" > /dev/shm/sms-frontend/.env
             chmod 600 /dev/shm/sms-frontend/.env
 
             # One-time cutover guard: if the legacy sms_frontend_dev container
@@ -182,5 +209,9 @@ jobs:
 
             docker image prune -f
         env:
-          ENV_PROD: ${{ secrets.ENV_PROD }}
+          # ENV_DEV is the production env secret today (see the comment
+          # on the `envs:` field above for context). When ENV_PROD becomes
+          # the source of truth, swap this line + the envs: line + the
+          # APP_ENV assignment in the script.
+          ENV_DEV: ${{ secrets.ENV_DEV }}
           GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
