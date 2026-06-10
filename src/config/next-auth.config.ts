@@ -75,27 +75,22 @@ export const authOptions: NextAuthOptions = {
         password: { label: 'Password', type: 'password' },
       },
       async authorize(credentials) {
-        // Validate credentials
-        const validatedFields = credentialsSchema.safeParse(credentials);
-
-        if (!validatedFields.success) {
-          return null;
-        }
-
-        const { email, password } = validatedFields.data;
-
-        // TODO: Replace with actual database lookup
-        // Placeholder for demo - REMOVE IN PRODUCTION
-        if (email === 'demo@example.com' && password === 'Demo@123') {
-          return {
-            id: '1',
-            name: 'Demo User',
-            email: 'demo@example.com',
-            role: 'user',
-            emailVerified: new Date(),
-          };
-        }
-
+        // Shape validation only — this provider is intentionally a no-op.
+        //
+        // Real authentication for this project flows through `apiClient` +
+        // `tokenStorage` against the sms-api backend, not NextAuth. This
+        // entire file is dormant scaffolding kept in case the project ever
+        // migrates to a NextAuth-backed login. Until then this authorize
+        // callback MUST NEVER return a User — doing so would create a
+        // backdoor that bypasses the real auth server.
+        //
+        // A previous version of this file accepted the literal credentials
+        // `demo@example.com` / `Demo@123` and returned a fake user. That
+        // backdoor is removed here. If you wire NextAuth in the future,
+        // replace this body with a real database lookup AND a real password
+        // hash check (bcrypt/argon2). Do not re-introduce literal-string
+        // matching.
+        credentialsSchema.safeParse(credentials);
         return null;
       },
     }),

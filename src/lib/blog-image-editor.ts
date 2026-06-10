@@ -9,6 +9,13 @@
  * Pure browser code — no backend dependency.
  */
 
+/** Per-file size cap (10 MB). Browser canvas decoding of larger images is
+ *  unreliable and trivially OOMs the tab. */
+export const MAX_FILE_BYTES = 10 * 1024 * 1024;
+/** Per-batch file count cap. Each file produces up to 4 variants, so the
+ *  upper bound here is also the per-batch processing time ceiling. */
+export const MAX_BATCH_FILES = 20;
+
 export interface ImageEditorRanges {
   /** four discrete crop percentages — one variant per value */
   cropValues: number[];
@@ -128,9 +135,15 @@ export const processImage = async (
   baseName: string,
 ): Promise<ProcessedImage> => {
   const img = await loadImage(file);
-  const outputMime = ranges.convertWebP ? 'image/webp' : file.type || 'image/jpeg';
-  const extension = ranges.convertWebP ? 'webp' : file.name.split('.').pop() ?? 'jpg';
-  const safeBase = sanitizeFilename(baseName || file.name.replace(/\.[^.]+$/, ''));
+  const outputMime = ranges.convertWebP
+    ? 'image/webp'
+    : file.type || 'image/jpeg';
+  const extension = ranges.convertWebP
+    ? 'webp'
+    : (file.name.split('.').pop() ?? 'jpg');
+  const safeBase = sanitizeFilename(
+    baseName || file.name.replace(/\.[^.]+$/, ''),
+  );
 
   const variants: VariantResult[] = [];
   for (let i = 0; i < ranges.cropValues.length; i++) {
