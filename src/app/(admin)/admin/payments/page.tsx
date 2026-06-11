@@ -73,6 +73,7 @@ import {
   BinanceFailedVerification,
 } from '@/lib/api/adminModulesApi';
 import { uploadFile } from '@/lib/api/storageApi';
+import { GatewayWebhookUrls } from '@/components/admin/gateway-webhook-urls';
 
 export default function AdminPaymentsPage() {
   const [activeTab, setActiveTab] = useState<
@@ -2257,6 +2258,9 @@ export default function AdminPaymentsPage() {
                   />
                 </div>
               </div>
+
+              {/* Webhook + Redirect URLs (read-only, copy buttons) */}
+              <GatewayWebhookUrls gateway={selectedMethod.gateway} />
 
               {/* Gateway API Configuration - Stripe */}
               {selectedMethod.gateway === 'STRIPE' && (
