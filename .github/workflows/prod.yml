@@ -171,17 +171,20 @@ jobs:
             # Cleanup: remove symlink and tmpfs env after container reads it
             rm -f ~/sms-frontend/.env /dev/shm/sms-frontend/.env
 
-            # Health check with retries
-            echo "Waiting for container to be healthy..."
+            # Health check with retries — rollback only fires after ALL 5
+            # attempts fail (≈50s wait + curl time). Visible attempt counter
+            # so the GH Actions log makes it obvious how many tries happened
+            # before any rollback decision.
+            echo "Waiting for container to be healthy (max 5 attempts, ~50s)..."
             for i in 1 2 3 4 5; do
               sleep 10
               if curl -sf http://localhost:3001/ > /dev/null 2>&1; then
-                echo "Health check passed on attempt $i"
+                echo "::notice::✓ Health check passed on attempt $i/5"
                 break
               fi
-              echo "Health check attempt $i failed, retrying..."
+              echo "  Health check attempt $i/5 failed, retrying in 10s..."
               if [ $i -eq 5 ]; then
-                echo "Health check failed after 5 attempts"
+                echo "::error::Health check failed after 5/5 attempts — preparing rollback"
                 docker logs sms_frontend_prod --tail 50
                 
                 # Rollback to previous image
