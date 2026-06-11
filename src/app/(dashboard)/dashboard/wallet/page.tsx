@@ -305,6 +305,39 @@ export default function WalletPage() {
     fetchPendingBinance();
   }, [fetchWalletData, fetchPendingBinance]);
 
+  // Handle payment-return query string. The gateway redirects the user
+  // back to `/dashboard/wallet?payment=success` or `?payment=cancelled`
+  // after they finish (or cancel) checkout on the gateway's hosted page.
+  // The actual wallet credit happens server-side when the gateway fires
+  // its webhook, not from this redirect — but the redirect is what tells
+  // the user "you're done, look at your balance". We surface a toast and
+  // refetch the wallet so any newly-credited balance shows immediately
+  // without the user having to refresh manually. Query is stripped after
+  // handling so refreshing the page doesn't re-fire the toast.
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const url = new URL(window.location.href);
+    const status = url.searchParams.get('payment');
+    if (status !== 'success' && status !== 'cancelled') return;
+
+    if (status === 'success') {
+      toast.success('Payment received', {
+        description:
+          'Your wallet will update once the gateway confirms (usually within a few seconds).',
+      });
+      // Pull fresh balance + transactions silently; the server-side
+      // webhook may have already credited.
+      fetchWalletData({ silent: true });
+    } else {
+      toast.info('Payment cancelled', {
+        description: 'No charge was made.',
+      });
+    }
+
+    url.searchParams.delete('payment');
+    window.history.replaceState({}, '', url.toString());
+  }, [fetchWalletData]);
+
   // Auto-refresh on relevant WS notifications.
   // PAYMENT_SUCCESS = admin verified Binance → wallet credited.
   // SYSTEM with data.type=BINANCE_RESET = admin reset failed verification → user can retry.
