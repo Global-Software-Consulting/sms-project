@@ -74,6 +74,7 @@ import {
 } from '@/lib/api/adminModulesApi';
 import { uploadFile } from '@/lib/api/storageApi';
 import { GatewayWebhookUrls } from '@/components/admin/gateway-webhook-urls';
+import { WebhookStatusBadge } from '@/components/admin/webhook-status-badge';
 
 export default function AdminPaymentsPage() {
   const [activeTab, setActiveTab] = useState<
@@ -875,20 +876,29 @@ export default function AdminPaymentsPage() {
                       <h3 className="mb-2 line-clamp-2 text-sm font-semibold text-white">
                         {method.displayName}
                       </h3>
-                      <span
-                        className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium ${
-                          method.isEnabled
-                            ? 'bg-[#22C55E]/20 text-[#22C55E]'
-                            : 'bg-[#64748B]/20 text-[#64748B]'
-                        }`}
-                      >
+                      <div className="flex flex-wrap items-center gap-1.5">
                         <span
-                          className={`h-1.5 w-1.5 rounded-full ${
-                            method.isEnabled ? 'bg-[#22C55E]' : 'bg-[#64748B]'
+                          className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium ${
+                            method.isEnabled
+                              ? 'bg-[#22C55E]/20 text-[#22C55E]'
+                              : 'bg-[#64748B]/20 text-[#64748B]'
                           }`}
-                        />
-                        {method.isEnabled ? 'Active' : 'Inactive'}
-                      </span>
+                        >
+                          <span
+                            className={`h-1.5 w-1.5 rounded-full ${
+                              method.isEnabled ? 'bg-[#22C55E]' : 'bg-[#64748B]'
+                            }`}
+                          />
+                          {method.isEnabled ? 'Active' : 'Inactive'}
+                        </span>
+                        {method.isEnabled && (
+                          <WebhookStatusBadge
+                            lastWebhookAt={method.lastWebhookAt}
+                            lastWebhookStatus={method.lastWebhookStatus}
+                            compact
+                          />
+                        )}
+                      </div>
                     </div>
                   </div>
 
@@ -2261,6 +2271,26 @@ export default function AdminPaymentsPage() {
 
               {/* Webhook + Redirect URLs (read-only, copy buttons) */}
               <GatewayWebhookUrls gateway={selectedMethod.gateway} />
+
+              {/* Webhook health — surfaces whether the client has wired the
+                  URL on their dashboard side. Built from lastWebhookAt /
+                  lastWebhookStatus stamped by the backend on every hit
+                  (sms-api PR #39). */}
+              <div className="flex items-center justify-between rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.3)] px-4 py-3">
+                <div>
+                  <p className="text-sm font-medium text-white">
+                    Webhook status
+                  </p>
+                  <p className="mt-0.5 text-xs text-[#94A3B8]">
+                    Updates automatically each time the gateway calls our
+                    webhook URL above.
+                  </p>
+                </div>
+                <WebhookStatusBadge
+                  lastWebhookAt={selectedMethod.lastWebhookAt}
+                  lastWebhookStatus={selectedMethod.lastWebhookStatus}
+                />
+              </div>
 
               {/* Gateway API Configuration - Stripe */}
               {selectedMethod.gateway === 'STRIPE' && (

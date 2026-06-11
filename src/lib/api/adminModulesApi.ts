@@ -1447,6 +1447,11 @@ export interface PaymentGatewayConfig {
   isConfigured?: boolean;
   configuredFields?: string[];
   isVirtual?: boolean;
+  /** ISO timestamp of the most recent webhook hit for this gateway, or
+   *  null when the gateway has never called our /webhooks/<slug> endpoint. */
+  lastWebhookAt?: string | null;
+  /** Outcome of the most recent webhook hit. Null = never received. */
+  lastWebhookStatus?: 'connected' | 'invalid_signature' | 'error' | null;
 }
 
 export interface UpdateGatewayConfigRequest {
