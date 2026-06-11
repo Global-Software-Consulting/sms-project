@@ -797,17 +797,32 @@ export default function WalletPage() {
         </CardHeader>
         <CardContent className="p-0 sm:p-6">
           {(() => {
-            const visibleBinance =
+            // PENDING Binance verifications stay pinned at the top because
+            // they need user action (resume the order). FAILED ones now
+            // flow inline with regular transactions, sorted by date, so
+            // they don't visually outrank newer activity (see the merged
+            // rows below).
+            const visiblePending =
               typeFilter === 'all' || typeFilter === 'DEPOSIT'
                 ? pendingBinance.filter((v) => {
+                    if (v.status !== 'PENDING') return false;
                     if (statusFilter === 'all') return true;
-                    if (statusFilter === 'PENDING')
-                      return v.status === 'PENDING';
-                    if (statusFilter === 'FAILED') return v.status === 'FAILED';
-                    return false;
+                    return statusFilter === 'PENDING';
                   }).length
                 : 0;
-            return transactions.length === 0 && visibleBinance === 0;
+            const visibleFailedBinance =
+              typeFilter === 'all' || typeFilter === 'DEPOSIT'
+                ? pendingBinance.filter((v) => {
+                    if (v.status !== 'FAILED') return false;
+                    if (statusFilter === 'all') return true;
+                    return statusFilter === 'FAILED';
+                  }).length
+                : 0;
+            return (
+              transactions.length === 0 &&
+              visiblePending === 0 &&
+              visibleFailedBinance === 0
+            );
           })() ? (
             <div className="py-12 text-center">
               <WalletIcon className="text-muted-foreground mx-auto mb-4 h-12 w-12" />
@@ -838,17 +853,19 @@ export default function WalletPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {/* Inline Binance rows: PENDING (resumable, amber) + FAILED
-                        (rate-limited, red). Synced with type/status filters. */}
+                    {/* Pinned-on-top: only PENDING Binance verifications.
+                        These need user action (resume the order via the
+                        modal), so they stay above all other rows. FAILED
+                        verifications used to live here too but were
+                        outranking newer normal transactions purely because
+                        they were in this block — now they flow inline with
+                        regular transactions below, sorted by date. */}
                     {(typeFilter === 'all' || typeFilter === 'DEPOSIT') &&
                       pendingBinance
                         .filter((v) => {
+                          if (v.status !== 'PENDING') return false;
                           if (statusFilter === 'all') return true;
-                          if (statusFilter === 'PENDING')
-                            return v.status === 'PENDING';
-                          if (statusFilter === 'FAILED')
-                            return v.status === 'FAILED';
-                          return false;
+                          return statusFilter === 'PENDING';
                         })
                         .map((v) => {
                           const isFailed = v.status === 'FAILED';
@@ -936,69 +953,164 @@ export default function WalletPage() {
                             </TableRow>
                           );
                         })}
-                    {transactions.map((txn) => (
-                      <TableRow key={txn.id}>
-                        <TableCell>
-                          <div className="flex items-center space-x-2">
-                            {getTransactionIcon(txn.type)}
-                            <div className="min-w-0">
-                              <p className="truncate font-medium">
-                                {getTransactionTypeLabel(txn.type)}
-                              </p>
-                              <p className="text-muted-foreground truncate text-xs">
-                                {txn.id.slice(0, 8)}...
-                              </p>
-                              <p className="text-muted-foreground mt-0.5 text-xs sm:hidden">
-                                {formatDate(txn.createdAt)}
-                              </p>
-                            </div>
-                          </div>
-                        </TableCell>
-                        <TableCell className="table-hide-mobile">
-                          <p className="max-w-[200px] truncate text-sm">
-                            {txn.description || '-'}
-                          </p>
-                        </TableCell>
-                        <TableCell className="text-muted-foreground table-hide-tablet text-sm">
-                          {formatDate(txn.createdAt)}
-                        </TableCell>
-                        <TableCell className="table-hide-mobile">
-                          <Badge
-                            variant="secondary"
-                            className="capitalize"
-                            style={{
-                              backgroundColor: `color-mix(in srgb, ${getTransactionStatusColor(txn.status)} 15%, transparent)`,
-                              color: getTransactionStatusColor(txn.status),
+                    {/* Merged + sorted-by-date: regular wallet transactions
+                        interleaved with FAILED Binance verifications. PENDING
+                        Binance rows are rendered in the pinned block above
+                        and excluded here. Apply the same type/status filters
+                        the user picked. */}
+                    {(() => {
+                      const failedBinanceRows =
+                        typeFilter === 'all' || typeFilter === 'DEPOSIT'
+                          ? pendingBinance
+                              .filter((v) => {
+                                if (v.status !== 'FAILED') return false;
+                                if (statusFilter === 'all') return true;
+                                return statusFilter === 'FAILED';
+                              })
+                              .map((v) => ({
+                                kind: 'binance-failed' as const,
+                                dateMs: new Date(v.createdAt).getTime(),
+                                data: v,
+                              }))
+                          : [];
+                      const txRows = transactions.map((t) => ({
+                        kind: 'tx' as const,
+                        dateMs: new Date(t.createdAt).getTime(),
+                        data: t,
+                      }));
+                      return [...txRows, ...failedBinanceRows].sort(
+                        (a, b) => b.dateMs - a.dateMs,
+                      );
+                    })().map((row) => {
+                      if (row.kind === 'binance-failed') {
+                        const v = row.data;
+                        return (
+                          <TableRow
+                            key={`binance-${v.id}`}
+                            className="cursor-pointer bg-red-500/5 hover:bg-red-500/10"
+                            onClick={() => {
+                              toast.info(
+                                v.errorMessage
+                                  ? `${v.errorMessage} — please contact support.`
+                                  : 'Verification failed — please contact support.',
+                              );
                             }}
                           >
-                            {txn.status.toLowerCase()}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex flex-col items-end gap-1">
-                            <span
-                              className={`font-semibold ${
-                                isPositiveTransaction(txn.type)
-                                  ? 'text-success'
-                                  : 'text-foreground'
-                              }`}
-                            >
-                              {isPositiveTransaction(txn.type) ? '+' : '-'}
-                              {formatBalance(
-                                Math.abs(parseFloat(txn.amount)).toString(),
-                                'USD',
-                              )}
-                            </span>
+                            <TableCell>
+                              <div className="flex items-center space-x-2">
+                                <span className="text-lg">🔶</span>
+                                <div className="min-w-0">
+                                  <p className="truncate font-medium">
+                                    Binance Deposit
+                                  </p>
+                                  <p className="text-muted-foreground truncate text-xs">
+                                    {v.orderId
+                                      ? `Order: ${v.orderId.slice(0, 12)}…`
+                                      : 'No Order ID yet'}
+                                  </p>
+                                  <p className="text-muted-foreground mt-0.5 text-xs sm:hidden">
+                                    {formatDate(v.createdAt)}
+                                  </p>
+                                </div>
+                              </div>
+                            </TableCell>
+                            <TableCell className="table-hide-mobile">
+                              <p className="max-w-[200px] truncate text-sm">
+                                {`${v.errorMessage ?? 'Failed'} — contact support`}
+                              </p>
+                            </TableCell>
+                            <TableCell className="text-muted-foreground table-hide-tablet text-sm">
+                              {formatDate(v.createdAt)}
+                            </TableCell>
+                            <TableCell className="table-hide-mobile">
+                              <Badge
+                                variant="secondary"
+                                className="bg-red-500/15 text-red-500 capitalize"
+                              >
+                                failed
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <div className="flex flex-col items-end gap-1">
+                                <span className="text-foreground font-semibold">
+                                  +{formatBalance(v.amount.toString(), 'USD')}
+                                </span>
+                                <Badge
+                                  variant="secondary"
+                                  className="bg-red-500/15 text-xs text-red-500 capitalize sm:hidden"
+                                >
+                                  failed
+                                </Badge>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      }
+                      const txn = row.data;
+                      return (
+                        <TableRow key={txn.id}>
+                          <TableCell>
+                            <div className="flex items-center space-x-2">
+                              {getTransactionIcon(txn.type)}
+                              <div className="min-w-0">
+                                <p className="truncate font-medium">
+                                  {getTransactionTypeLabel(txn.type)}
+                                </p>
+                                <p className="text-muted-foreground truncate text-xs">
+                                  {txn.id.slice(0, 8)}...
+                                </p>
+                                <p className="text-muted-foreground mt-0.5 text-xs sm:hidden">
+                                  {formatDate(txn.createdAt)}
+                                </p>
+                              </div>
+                            </div>
+                          </TableCell>
+                          <TableCell className="table-hide-mobile">
+                            <p className="max-w-[200px] truncate text-sm">
+                              {txn.description || '-'}
+                            </p>
+                          </TableCell>
+                          <TableCell className="text-muted-foreground table-hide-tablet text-sm">
+                            {formatDate(txn.createdAt)}
+                          </TableCell>
+                          <TableCell className="table-hide-mobile">
                             <Badge
                               variant="secondary"
-                              className="text-xs capitalize sm:hidden"
+                              className="capitalize"
+                              style={{
+                                backgroundColor: `color-mix(in srgb, ${getTransactionStatusColor(txn.status)} 15%, transparent)`,
+                                color: getTransactionStatusColor(txn.status),
+                              }}
                             >
                               {txn.status.toLowerCase()}
                             </Badge>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <div className="flex flex-col items-end gap-1">
+                              <span
+                                className={`font-semibold ${
+                                  isPositiveTransaction(txn.type)
+                                    ? 'text-success'
+                                    : 'text-foreground'
+                                }`}
+                              >
+                                {isPositiveTransaction(txn.type) ? '+' : '-'}
+                                {formatBalance(
+                                  Math.abs(parseFloat(txn.amount)).toString(),
+                                  'USD',
+                                )}
+                              </span>
+                              <Badge
+                                variant="secondary"
+                                className="text-xs capitalize sm:hidden"
+                              >
+                                {txn.status.toLowerCase()}
+                              </Badge>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
                   </TableBody>
                 </Table>
               </div>
