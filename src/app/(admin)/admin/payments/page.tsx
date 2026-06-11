@@ -94,6 +94,20 @@ export default function AdminPaymentsPage() {
     useState<PaymentGatewayConfig | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
+
+  // Snapshot of the masked credential values as they came back from the
+  // GET /admin/payment-gateways call when the edit modal was opened.
+  // Used at save-time to detect whether the admin actually changed each
+  // sensitive field; if not, we drop it from the payload so the masked
+  // display string never round-trips back to the backend (which would
+  // overwrite the real DB credential).
+  //
+  // Keys are the field names; values are whatever the backend sent
+  // (masked or empty string). Must stay in sync with the backend's
+  // sensitiveSettingsKeys list (sms-api PR #40).
+  const [originalSensitiveValues, setOriginalSensitiveValues] = useState<
+    Record<string, string>
+  >({});
   const [bonusRules, setBonusRules] = useState<
     { minAmount: number; bonusPercent: number }[]
   >([]);
@@ -485,6 +499,34 @@ export default function AdminPaymentsPage() {
     );
     setImagePreview(method.imageUrl || null);
 
+    // Capture the original sensitive-field values as they came from the
+    // backend (the GET returns them masked: 'sk_test_...GRar'). Inputs
+    // are pre-populated with these masked strings so the admin can SEE
+    // that something is configured. On save we compare each sensitive
+    // field's current form value against this snapshot — if it hasn't
+    // changed, we drop it from the payload, so the backend never sees
+    // the masked string round-tripped (which would overwrite the real
+    // DB value). Backend hardening in sms-api PR #40 covers the masked
+    // case too; this is the cleaner frontend-side complement.
+    const originalCreds: Record<string, string> = {
+      stripeSecretKey: (settings.stripeSecretKey as string) || '',
+      stripePublishableKey: (settings.stripePublishableKey as string) || '',
+      stripeWebhookSecret: (settings.stripeWebhookSecret as string) || '',
+      plisioApiKey: (settings.plisioApiKey as string) || '',
+      plisioApiSecret:
+        ((settings as Record<string, unknown>).plisioApiSecret as string) || '',
+      cryptomusMerchantId: (settings.cryptomusMerchantId as string) || '',
+      cryptomusApiKey: (settings.cryptomusApiKey as string) || '',
+      nowpaymentsApiKey: (settings.nowpaymentsApiKey as string) || '',
+      nowpaymentsIpnSecret: (settings.nowpaymentsIpnSecret as string) || '',
+      paygateApiKey: (settings.paygateApiKey as string) || '',
+      voletApiKey: (settings.voletApiKey as string) || '',
+      voletSecretKey: (settings.voletSecretKey as string) || '',
+      binanceApiKey: (settings.binanceApiKey as string) || '',
+      binanceSecretKey: (settings.binanceSecretKey as string) || '',
+    };
+    setOriginalSensitiveValues(originalCreds);
+
     setMethodFormData({
       displayName: method.displayName,
       description: method.description || '',
@@ -536,13 +578,29 @@ export default function AdminPaymentsPage() {
 
     setIsLoading(true);
     try {
-      // Build settings object with only non-empty values
+      // Build settings object with only non-empty values. Sensitive
+      // credential fields get one extra check: if the value is
+      // identical to what the GET returned (i.e. the admin did not
+      // retype it), drop it from the payload so the backend's merge
+      // helper preserves the existing DB value. This is what stops
+      // the masked display string ('sk_test_...GRar') from round-
+      // tripping back and overwriting the real credential.
       const cleanSettings: Record<string, unknown> = {};
       const settingsKeys = Object.keys(
         methodFormData.settings,
       ) as (keyof typeof methodFormData.settings)[];
       for (const key of settingsKeys) {
         const value = methodFormData.settings[key];
+
+        if (
+          typeof value === 'string' &&
+          key in originalSensitiveValues &&
+          value === originalSensitiveValues[key as string]
+        ) {
+          // Sensitive field, unchanged since load — backend keeps existing.
+          continue;
+        }
+
         if (
           value &&
           (typeof value === 'string'
