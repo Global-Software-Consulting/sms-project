@@ -220,6 +220,15 @@ export default function AdminPaymentsPage() {
       const response = await getPaymentGateways();
       setPaymentMethods(response.data);
 
+      // Keep selectedMethod in sync with the refreshed list so the edit
+      // modal's webhook status badge reflects the latest stamp without
+      // the admin having to close and reopen the modal.
+      setSelectedMethod((prev) =>
+        prev
+          ? (response.data.find((g) => g.gateway === prev.gateway) ?? prev)
+          : prev,
+      );
+
       // Set card payment enabled and config based on STRIPE gateway
       const stripeGateway = response.data.find((g) => g.gateway === 'STRIPE');
       if (stripeGateway) {
@@ -896,6 +905,7 @@ export default function AdminPaymentsPage() {
                             lastWebhookAt={method.lastWebhookAt}
                             lastWebhookStatus={method.lastWebhookStatus}
                             compact
+                            onRefresh={fetchPaymentGateways}
                           />
                         )}
                       </div>
@@ -2289,6 +2299,7 @@ export default function AdminPaymentsPage() {
                 <WebhookStatusBadge
                   lastWebhookAt={selectedMethod.lastWebhookAt}
                   lastWebhookStatus={selectedMethod.lastWebhookStatus}
+                  onRefresh={fetchPaymentGateways}
                 />
               </div>
 

@@ -1,6 +1,13 @@
 'use client';
 
-import { CheckCircle2, AlertTriangle, XCircle, CircleDashed } from 'lucide-react';
+import { useState } from 'react';
+import {
+  CheckCircle2,
+  AlertTriangle,
+  XCircle,
+  CircleDashed,
+  RefreshCw,
+} from 'lucide-react';
 
 /**
  * Visual indicator of whether the gateway's webhook URL has been wired
@@ -28,6 +35,13 @@ interface WebhookStatusBadgeProps {
   lastWebhookStatus?: 'connected' | 'invalid_signature' | 'error' | null;
   /** Compact = icon + short label, no timestamp. Full = icon + label + when. */
   compact?: boolean;
+  /**
+   * If provided, renders a small refresh icon next to the badge that
+   * re-fetches the gateway list. Lets admin pull the latest webhook
+   * status without reloading the page after telling the client to
+   * "send a test event". Setup-time UX — no background polling.
+   */
+  onRefresh?: () => Promise<void> | void;
 }
 
 interface BadgeMeta {
@@ -105,7 +119,9 @@ export function WebhookStatusBadge({
   lastWebhookAt,
   lastWebhookStatus,
   compact = false,
+  onRefresh,
 }: WebhookStatusBadgeProps): React.ReactElement {
+  const [refreshing, setRefreshing] = useState(false);
   const receivedAt = lastWebhookAt ? new Date(lastWebhookAt) : null;
   const meta = resolveMeta(lastWebhookStatus, receivedAt);
   const Icon = meta.Icon;
@@ -113,17 +129,46 @@ export function WebhookStatusBadge({
     ? `${meta.help}\n\nLast received: ${receivedAt.toLocaleString()} (${formatRelative(receivedAt)})`
     : meta.help;
 
+  const handleRefresh = async (
+    e: React.MouseEvent<HTMLButtonElement>,
+  ): Promise<void> => {
+    e.stopPropagation();
+    if (!onRefresh || refreshing) return;
+    setRefreshing(true);
+    try {
+      await onRefresh();
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
   return (
-    <span
-      title={tooltip}
-      className={`inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-[11px] font-medium ${meta.className}`}
-    >
-      <Icon className="h-3 w-3" />
-      {meta.label}
-      {!compact && receivedAt && (
-        <span className="text-[10px] opacity-75">
-          · {formatRelative(receivedAt)}
-        </span>
+    <span className="inline-flex items-center gap-1">
+      <span
+        title={tooltip}
+        className={`inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-[11px] font-medium ${meta.className}`}
+      >
+        <Icon className="h-3 w-3" />
+        {meta.label}
+        {!compact && receivedAt && (
+          <span className="text-[10px] opacity-75">
+            · {formatRelative(receivedAt)}
+          </span>
+        )}
+      </span>
+      {onRefresh && (
+        <button
+          type="button"
+          onClick={handleRefresh}
+          disabled={refreshing}
+          title="Refresh webhook status"
+          aria-label="Refresh webhook status"
+          className="rounded-full p-1 text-[#94A3B8] transition-colors hover:bg-[rgba(255,255,255,0.06)] hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          <RefreshCw
+            className={`h-3 w-3 ${refreshing ? 'animate-spin' : ''}`}
+          />
+        </button>
       )}
     </span>
   );
