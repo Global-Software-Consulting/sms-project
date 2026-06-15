@@ -449,13 +449,11 @@ print(response.json())`}</code>
             {providersLoaded && hasTier('V1') && (
               <Card>
                 <CardHeader>
-                  <Badge className="mb-2 w-fit bg-blue-500">
-                    💰 V1 Standard
-                  </Badge>
-                  <CardTitle className="text-lg">Standard Tier</CardTitle>
+                  <Badge className="mb-2 w-fit bg-blue-500">💰 V1 Basic</Badge>
+                  <CardTitle className="text-lg">Basic Tier</CardTitle>
                   <CardDescription>
-                    Standard services - best price. Suitable for customers
-                    looking for basic and affordable options.
+                    Basic services - best price. Suitable for customers looking
+                    for affordable options.
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -490,8 +488,10 @@ print(response.json())`}</code>
             {providersLoaded && hasTier('V2') && (
               <Card className="border-primary border-2">
                 <CardHeader>
-                  <Badge className="bg-primary mb-2 w-fit">💎 V2 Premium</Badge>
-                  <CardTitle className="text-lg">Premium Tier</CardTitle>
+                  <Badge className="bg-primary mb-2 w-fit">
+                    💎 V2 Standard
+                  </Badge>
+                  <CardTitle className="text-lg">Standard Tier</CardTitle>
                   <CardDescription>
                     Faster delivery and higher success rate. Ideal for customers
                     looking for more reliable results and quicker processing.
@@ -512,7 +512,7 @@ print(response.json())`}</code>
                     </li>
                     <li className="flex items-start space-x-2 text-sm">
                       <CheckCircle2 className="text-primary mt-0.5 h-4 w-4" />
-                      <span>Premium providers only</span>
+                      <span>Standard providers</span>
                     </li>
                     <li className="flex items-start space-x-2 text-sm">
                       <CheckCircle2 className="text-primary mt-0.5 h-4 w-4" />
@@ -530,9 +530,9 @@ print(response.json())`}</code>
               <Card className="border-warning border-2">
                 <CardHeader>
                   <Badge className="bg-warning text-warning-foreground mb-2 w-fit">
-                    👑 V3 Elite
+                    👑 V3 Premium
                   </Badge>
-                  <CardTitle className="text-lg">Elite Tier</CardTitle>
+                  <CardTitle className="text-lg">Premium Tier</CardTitle>
                   <CardDescription>
                     The highest quality service with priority routing and 99.9%
                     success rate. Best for customers who demand the absolute
@@ -554,7 +554,7 @@ print(response.json())`}</code>
                     </li>
                     <li className="flex items-start space-x-2 text-sm">
                       <CheckCircle2 className="text-warning mt-0.5 h-4 w-4" />
-                      <span>Basic providers only</span>
+                      <span>Premium providers only</span>
                     </li>
                     <li className="flex items-start space-x-2 text-sm">
                       <CheckCircle2 className="text-warning mt-0.5 h-4 w-4" />

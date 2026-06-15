@@ -86,8 +86,8 @@ export default function PricingClient({
   const defaultProviderTiers = [
     {
       id: 'v1',
-      name: 'Standard V1',
-      badge: '💰 Standard services - best price',
+      name: 'V1 - Basic',
+      badge: '💰 Basic services - best price',
       tagline:
         'Suitable for customers looking for basic and affordable options.',
       priceRange: 'From $1.50',
@@ -101,7 +101,7 @@ export default function PricingClient({
     },
     {
       id: 'v2',
-      name: 'Premium V2',
+      name: 'V2 - Standard',
       badge: '💎 Most Popular',
       tagline:
         'Faster delivery and higher success rate. Ideal for customers looking for more reliable results and quicker processing.',
@@ -109,7 +109,7 @@ export default function PricingClient({
       features: [
         'Lightning-fast delivery',
         'Higher success rate',
-        'Premium providers only',
+        'Standard providers',
         'VIP priority routing',
       ],
       color: 'primary',
@@ -117,7 +117,7 @@ export default function PricingClient({
     },
     {
       id: 'v3',
-      name: 'Elite V3',
+      name: 'V3 - Premium',
       badge: '👑 Ultimate',
       tagline:
         'The highest quality service with priority routing and 99.9% success rate. Best for customers who demand the absolute best with premium providers and priority support.',
@@ -125,7 +125,7 @@ export default function PricingClient({
       features: [
         'Instant guaranteed delivery',
         '99.9% success rate',
-        'Basic providers only',
+        'Premium providers only',
         'Maximum priority + support',
       ],
       color: 'warning',
@@ -565,7 +565,7 @@ export default function PricingClient({
                     Example Service
                   </p>
                   <h3 className="text-xl font-semibold">
-                    WhatsApp (US) - Premium V2
+                    WhatsApp (US) - V2 Standard
                   </h3>
                 </div>
 

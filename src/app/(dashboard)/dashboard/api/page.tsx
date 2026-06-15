@@ -238,14 +238,14 @@ export default function APIAccess() {
   // Provider info
   const providerInfo = {
     v1: {
-      name: 'Standard V1',
+      name: 'V1 - Basic',
       icon: '💰',
-      description: 'Cost-effective API access with standard performance',
+      description: 'Cost-effective API access with basic performance',
       features: ['Standard rate limits', 'Basic support', '99%+ uptime SLA'],
       endpoint: 'https://api.bestsmshq.com/api/v1',
     },
     v2: {
-      name: 'Premium V2',
+      name: 'V2 - Standard',
       icon: '💎',
       description: 'Enhanced API access with priority routing',
       features: [
@@ -257,9 +257,9 @@ export default function APIAccess() {
       endpoint: 'https://api.bestsmshq.com/api/v1',
     },
     v3: {
-      name: 'Basic V3',
+      name: 'V3 - Premium',
       icon: '👑',
-      description: 'Budget-friendly API access',
+      description: 'Premium API access with maximum priority',
       features: [
         'Unlimited rate limits',
         'Dedicated support',
@@ -418,8 +418,8 @@ export default function APIAccess() {
                   className="space-x-1 text-xs sm:space-x-2 sm:text-sm"
                 >
                   <span>💰</span>
-                  <span className="hidden sm:inline">V1 Standard</span>
-                  <span className="sm:hidden">Standard</span>
+                  <span className="hidden sm:inline">V1 Basic</span>
+                  <span className="sm:hidden">Basic</span>
                 </TabsTrigger>
               )}
               {availableTiers.includes('v2') && (
@@ -428,8 +428,8 @@ export default function APIAccess() {
                   className="space-x-1 text-xs sm:space-x-2 sm:text-sm"
                 >
                   <span>💎</span>
-                  <span className="hidden sm:inline">V2 Premium</span>
-                  <span className="sm:hidden">Premium</span>
+                  <span className="hidden sm:inline">V2 Standard</span>
+                  <span className="sm:hidden">Standard</span>
                 </TabsTrigger>
               )}
               {availableTiers.includes('v3') && (
@@ -438,8 +438,8 @@ export default function APIAccess() {
                   className="space-x-1 text-xs sm:space-x-2 sm:text-sm"
                 >
                   <span>👑</span>
-                  <span className="hidden sm:inline">V3 Basic</span>
-                  <span className="sm:hidden">Basic</span>
+                  <span className="hidden sm:inline">V3 Premium</span>
+                  <span className="sm:hidden">Premium</span>
                 </TabsTrigger>
               )}
             </TabsList>

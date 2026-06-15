@@ -222,7 +222,7 @@ export default function HomeClient({
       icon: Globe,
       title: 'Multiple Providers',
       description:
-        'Choose from V1 Standard, V2 Premium, or V3 Basic providers based on your needs',
+        'Choose from V1 Basic, V2 Standard, or V3 Premium providers based on your needs',
     },
     {
       icon: Sparkles,
@@ -345,15 +345,15 @@ export default function HomeClient({
                   : 'grid gap-6 md:grid-cols-3';
             return (
               <div className={gridClass}>
-                {/* Standard V1 */}
+                {/* V1 - Basic */}
                 {providersLoaded && hasTier('V1') && (
                   <Card className="border-2">
                     <CardHeader>
                       <Badge className="mb-2 w-fit bg-blue-500">
-                        💰 Standard V1
+                        💰 V1 - Basic
                       </Badge>
                       <CardTitle className="text-xl">
-                        Standard Activation
+                        Basic Activation
                       </CardTitle>
                       <CardDescription>
                         Standard services - best price. Suitable for customers
@@ -393,7 +393,7 @@ export default function HomeClient({
                   </Card>
                 )}
 
-                {/* Premium V2 */}
+                {/* V2 - Standard */}
                 {providersLoaded && hasTier('V2') && (
                   <Card className="border-primary relative overflow-hidden border-2">
                     <div className="bg-primary text-primary-foreground absolute top-0 right-0 px-3 py-1 text-xs font-semibold">
@@ -401,10 +401,10 @@ export default function HomeClient({
                     </div>
                     <CardHeader>
                       <Badge className="from-primary to-accent mb-2 w-fit bg-gradient-to-r">
-                        💎 Premium V2
+                        💎 V2 - Standard
                       </Badge>
                       <CardTitle className="text-xl">
-                        Premium Activation
+                        Standard Activation
                       </CardTitle>
                       <CardDescription>
                         Faster delivery and higher success rate. Ideal for
@@ -429,7 +429,7 @@ export default function HomeClient({
                         <div className="flex items-center space-x-2">
                           <CheckCircle2 className="text-primary h-5 w-5" />
                           <span className="text-sm font-medium">
-                            Premium providers only
+                            Standard providers
                           </span>
                         </div>
                         <div className="flex items-center space-x-2">
@@ -451,7 +451,7 @@ export default function HomeClient({
                   </Card>
                 )}
 
-                {/* Elite V3 */}
+                {/* V3 - Premium */}
                 {providersLoaded && hasTier('V3') && (
                   <Card className="border-warning relative overflow-hidden border-2">
                     <div className="bg-warning text-warning-foreground absolute top-0 right-0 px-3 py-1 text-xs font-semibold">
@@ -459,10 +459,10 @@ export default function HomeClient({
                     </div>
                     <CardHeader>
                       <Badge className="from-warning mb-2 w-fit bg-gradient-to-r to-amber-500">
-                        👑 Elite V3
+                        👑 V3 - Premium
                       </Badge>
                       <CardTitle className="text-xl">
-                        Elite Activation
+                        Premium Activation
                       </CardTitle>
                       <CardDescription>
                         The highest quality service with priority routing and
@@ -488,7 +488,7 @@ export default function HomeClient({
                         <div className="flex items-center space-x-2">
                           <CheckCircle2 className="text-warning h-5 w-5" />
                           <span className="text-sm font-semibold">
-                            Basic providers only
+                            Premium providers only
                           </span>
                         </div>
                         <div className="flex items-center space-x-2">
