@@ -324,7 +324,7 @@ export default function AdminSmsServicesPage() {
   const [unifiedServicesTotal, setUnifiedServicesTotal] = useState(0);
   const unifiedServicesRequestId = useRef(0);
   const unifiedLoadMoreSentinelRef = useRef<HTMLDivElement | null>(null);
-  const UNIFIED_PAGE_SIZE = 50;
+  const UNIFIED_PAGE_SIZE = 100;
   const [selectedUnifiedService, setSelectedUnifiedService] =
     useState<UnifiedService | null>(null);
   const [unifiedServiceCountries, setUnifiedServiceCountries] = useState<
