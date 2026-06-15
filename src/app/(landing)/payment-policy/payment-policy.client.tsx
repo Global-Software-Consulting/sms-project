@@ -5,7 +5,9 @@ export default function PaymentPolicyClient() {
   return (
     <div className="container max-w-4xl space-y-8 px-4 py-12">
       <div className="space-y-4">
-        <h1 className="text-2xl font-bold sm:text-3xl md:text-4xl">Payment & Refund Policy</h1>
+        <h1 className="text-2xl font-bold sm:text-3xl md:text-4xl">
+          Payment & Refund Policy
+        </h1>
         <p className="text-muted-foreground text-sm sm:text-lg">
           Last updated: February 25, 2026
         </p>
@@ -62,15 +64,15 @@ export default function PaymentPolicyClient() {
           <p>Our services are charged per use:</p>
           <ul className="ml-4 list-inside list-disc space-y-2">
             <li>
-              <strong>V1 Standard:</strong> $0.45 - $0.95 per SMS (varies by
+              <strong>V1 Basic:</strong> $0.45 - $0.95 per SMS (varies by
               service and country)
             </li>
             <li>
-              <strong>V2 Premium:</strong> $1.35 - $2.95 per SMS (varies by
+              <strong>V2 Standard:</strong> $1.35 - $2.95 per SMS (varies by
               service and country)
             </li>
             <li>
-              <strong>V3 Basic:</strong> $2.25 - $4.95 per SMS (varies by
+              <strong>V3 Premium:</strong> $2.25 - $4.95 per SMS (varies by
               service and country)
             </li>
             <li>

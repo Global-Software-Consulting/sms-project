@@ -74,7 +74,7 @@ export default async function Features() {
       icon: Star,
       title: 'Premium Providers',
       description:
-        'Choose between standard and premium providers based on your needs. Get the fastest delivery with V2 Premium.',
+        'Choose between basic, standard and premium providers based on your needs. Get the fastest delivery with V3 Premium.',
     },
     {
       icon: TrendingUp,

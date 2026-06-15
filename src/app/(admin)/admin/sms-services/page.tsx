@@ -3352,7 +3352,7 @@ export default function AdminSmsServicesPage() {
                         value="V1_STANDARD"
                         className="text-white focus:bg-[rgba(59,130,246,0.15)] focus:text-white"
                       >
-                        V1 - Premium
+                        V1 - Basic
                       </SelectItem>
                       <SelectItem
                         value="V2"
@@ -3364,7 +3364,7 @@ export default function AdminSmsServicesPage() {
                         value="V3"
                         className="text-white focus:bg-[rgba(59,130,246,0.15)] focus:text-white"
                       >
-                        V3 - Basic
+                        V3 - Premium
                       </SelectItem>
                       <SelectItem
                         value="V4"

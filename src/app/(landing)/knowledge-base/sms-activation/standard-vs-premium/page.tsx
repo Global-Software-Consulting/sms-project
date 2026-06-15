@@ -62,14 +62,16 @@ export default function StandardVsPremium() {
       <div className="mx-auto max-w-4xl">
         {/* Breadcrumb */}
         <div className="text-muted-foreground mb-8 flex items-center gap-2 text-sm">
-          <Link prefetch={false}
+          <Link
+            prefetch={false}
             href="/knowledge-base"
             className="hover:text-primary transition-colors"
           >
             Knowledge Base
           </Link>
           <ArrowRight className="h-4 w-4" />
-          <Link prefetch={false}
+          <Link
+            prefetch={false}
             href="/knowledge-base/sms-activation"
             className="hover:text-primary transition-colors"
           >
@@ -97,10 +99,10 @@ export default function StandardVsPremium() {
               {/* Introduction */}
               <div>
                 <p className="mb-4 text-lg leading-relaxed">
-                  Our platform offers three provider tiers: V1 Standard, V2
-                  Premium, and V3 Basic. Each tier is designed for different use
-                  cases and offers varying levels of performance, reliability,
-                  and support.
+                  Our platform offers three provider tiers: V1 Basic, V2
+                  Standard, and V3 Premium. Each tier is designed for different
+                  use cases and offers varying levels of performance,
+                  reliability, and support.
                 </p>
                 <p className="text-muted-foreground leading-relaxed">
                   Understanding the differences will help you choose the right
@@ -108,13 +110,13 @@ export default function StandardVsPremium() {
                 </p>
               </div>
 
-              {/* V1 Standard Provider */}
+              {/* V1 Basic Provider */}
               <div>
                 <h2 className="mb-4 flex items-center gap-2 text-2xl font-semibold">
-                  <span className="text-2xl">💰</span> V1 Standard Provider
+                  <span className="text-2xl">💰</span> V1 Basic Provider
                 </h2>
                 <p className="text-muted-foreground mb-4 leading-relaxed">
-                  V1 Standard providers offer cost-efficient SMS activation with
+                  V1 Basic providers offer cost-efficient SMS activation with
                   reliable delivery. Perfect for testing, development, or
                   budget-conscious users who don't need instant delivery.
                 </p>
@@ -140,13 +142,13 @@ export default function StandardVsPremium() {
                 </ul>
               </div>
 
-              {/* V2 Premium Provider */}
+              {/* V2 Standard Provider */}
               <div>
                 <h2 className="mb-4 flex items-center gap-2 text-2xl font-semibold">
-                  <span className="text-2xl">💎</span> V2 Premium Provider
+                  <span className="text-2xl">💎</span> V2 Standard Provider
                 </h2>
                 <p className="text-muted-foreground mb-4 leading-relaxed">
-                  V2 Premium providers deliver priority routing with
+                  V2 Standard providers deliver priority routing with
                   significantly higher success rates and faster delivery. The
                   go-to choice for production environments and business use.
                 </p>
@@ -182,13 +184,13 @@ export default function StandardVsPremium() {
                 </ul>
               </div>
 
-              {/* V3 Basic Provider */}
+              {/* V3 Premium Provider */}
               <div>
                 <h2 className="mb-4 flex items-center gap-2 text-2xl font-semibold">
-                  <span className="text-2xl">👑</span> V3 Basic Provider
+                  <span className="text-2xl">👑</span> V3 Premium Provider
                 </h2>
                 <p className="text-muted-foreground mb-4 leading-relaxed">
-                  V3 Basic is our premium tier offering guaranteed instant
+                  V3 Premium is our top tier offering guaranteed instant
                   delivery with the highest success rates and dedicated support.
                   Built for mission-critical applications and enterprise
                   customers.
@@ -242,13 +244,13 @@ export default function StandardVsPremium() {
                             Feature
                           </th>
                           <th className="p-4 text-left font-semibold">
-                            💰 V1 Standard
+                            💰 V1 Basic
                           </th>
                           <th className="p-4 text-left font-semibold">
-                            💎 V2 Premium
+                            💎 V2 Standard
                           </th>
                           <th className="p-4 text-left font-semibold">
-                            👑 V3 Basic
+                            👑 V3 Premium
                           </th>
                         </tr>
                       </thead>
@@ -382,14 +384,16 @@ export default function StandardVsPremium() {
 
           {/* Navigation */}
           <div className="flex items-center justify-between gap-4">
-            <Link prefetch={false}
+            <Link
+              prefetch={false}
               href="/knowledge-base/sms-activation/how-it-works"
               className="text-muted-foreground hover:text-primary inline-flex items-center transition-colors"
             >
               <ArrowLeft className="mr-2 h-4 w-4" />
               Previous: How It Works
             </Link>
-            <Link prefetch={false}
+            <Link
+              prefetch={false}
               href="/knowledge-base/sms-activation"
               className="text-primary inline-flex items-center transition-colors hover:underline"
             >
