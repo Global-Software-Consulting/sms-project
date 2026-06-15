@@ -22,6 +22,7 @@ import {
   websiteSchema,
 } from '@/lib/seo/structured-data';
 import './globals.css';
+import { ForceFullNavigation } from '@/components/force-full-navigation';
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
@@ -197,6 +198,7 @@ export default function RootLayout({
       </head>
       <body suppressHydrationWarning>
         <FaroInit />
+        <ForceFullNavigation />
         <StoreProvider>
           <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
             <BrandingProvider>
