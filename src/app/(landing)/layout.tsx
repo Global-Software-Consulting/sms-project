@@ -1,6 +1,6 @@
 import { Header } from '@/components/header';
 import { Footer, type FooterContent } from '@/components/footer';
-import { ForceFullNavigation } from '@/components/force-full-navigation';
+// import { ForceFullNavigation } from '@/components/force-full-navigation';
 import { fetchPageContent, pick } from '@/lib/page-content';
 
 export default async function LandingLayout({
@@ -25,14 +25,18 @@ export default async function LandingLayout({
   return (
     <div className="flex min-h-screen flex-col">
       {/*
-        Full-page (MPA) navigation is scoped to the public landing area
-        only — these marketing pages are where the React 19 client-nav
-        crash surfaces and where SEO/Lighthouse matter most. The
-        authenticated app (dashboard/admin) keeps fast SPA navigation,
-        with NavCrashRecovery (mounted globally in the root layout) as
-        its safety net.
+        Full-page (MPA) navigation guard temporarily disabled while we
+        test a Next.js / React upgrade against the Contabo origin. If
+        the underlying React 19 commit-phase race is gone in the new
+        version, this stays off and we get SPA navigation back on
+        landing routes. If the race comes back, uncomment the import +
+        the <ForceFullNavigation /> mount below and the workaround
+        resumes.
+
+        NavCrashRecovery (mounted globally in the root layout) stays in
+        place either way as the last-resort self-heal.
       */}
-      <ForceFullNavigation />
+      {/* <ForceFullNavigation /> */}
       <Header />
       <main className="w-full flex-1">{children}</main>
       <Footer content={footerContent} />
