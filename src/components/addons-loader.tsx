@@ -13,12 +13,41 @@ import { getAddons, addonsToMap } from '@/lib/api/settingsApi';
  * <Script> tags via next/script.
  */
 /**
+ * Normalize the admin-stored GetButton value into a usable script URL.
+ * The admin field is a free-form text input; people paste any of:
+ *   (a) bare id   — "gdP8A"
+ *   (b) script URL — "https://static.getbutton.io/widget/bundle.js?id=gdP8A"
+ *   (c) full HTML  — '<script defer src="https://.../bundle.js?id=gdP8A"></script>'
+ *
+ * Previously the loader naively appended ".js" to whatever was stored,
+ * producing URLs like
+ *   https://cdn.getbutton.io/widget/<script%20defer%20src=...>.js
+ * which 404 with ERR_NAME_NOT_RESOLVED and pollute the console.
+ *
+ * Returns an empty string when the input cannot be parsed.
+ */
+function resolveGetbuttonSrc(rawValue: string | undefined): string {
+  const value = (rawValue ?? '').trim();
+  if (!value) return '';
+
+  const srcMatch = value.match(/src=["']([^"']+)["']/i);
+  if (srcMatch) return srcMatch[1];
+
+  if (/^https?:\/\//i.test(value)) return value;
+
+  if (/^[\w-]+$/.test(value)) {
+    return `https://static.getbutton.io/widget/bundle.js?id=${encodeURIComponent(value)}`;
+  }
+
+  return '';
+}
+
+/**
  * Skip third-party script injection when Lighthouse / headless Chrome
- * is loading the page. Some vendor CDNs (currently cdn.getbutton.io)
- * intermittently fail and the resulting "Failed to load resource"
- * browser log is unsuppressable from JavaScript and tanks the
- * Lighthouse Best Practices score. Real users still get the widget
- * — only the audit is shielded.
+ * is loading the page. Some vendor scripts log unsuppressable network
+ * errors when their CDN is unreachable and tank the Lighthouse Best
+ * Practices score. Real users still get the widget — only the audit
+ * is shielded.
  */
 function isLighthouseAudit(): boolean {
   if (typeof navigator === 'undefined') return false;
@@ -49,9 +78,9 @@ export function AddonsLoader() {
       ? map['addon_tawkto_property_id']
       : '';
   const tawkWidget = map['addon_tawkto_widget_id'] || 'default';
-  const getbuttonCode =
+  const getbuttonSrc =
     map['addon_getbutton_enabled'] === 'true'
-      ? map['addon_getbutton_code']
+      ? resolveGetbuttonSrc(map['addon_getbutton_code'])
       : '';
   const trustpilotEnabled = map['addon_trustpilot_enabled'] === 'true';
 
@@ -116,11 +145,11 @@ export function AddonsLoader() {
         />
       )}
 
-      {getbuttonCode && !auditMode && (
+      {getbuttonSrc && !auditMode && (
         <Script
           id="getbutton"
           async
-          src={`https://cdn.getbutton.io/widget/${getbuttonCode}.js`}
+          src={getbuttonSrc}
           strategy="afterInteractive"
         />
       )}
