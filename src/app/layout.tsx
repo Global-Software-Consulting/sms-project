@@ -5,7 +5,7 @@ import { BrandingProvider } from '@/contexts/BrandingContext';
 import { MaintenanceGuard } from '@/components/providers/MaintenanceGuard';
 import { Toaster } from '@/components/ui/sonner';
 import { GoogleTranslate } from '@/components/google-translate';
-import { AddonsLoader } from '@/components/addons-loader';
+// import { AddonsLoader } from '@/components/addons-loader';
 // import { NavCrashRecovery } from '@/components/nav-crash-recovery';
 import { FaroInit } from '@/components/faro-init';
 // import SwCleanup from './sw-cleanup';
@@ -203,12 +203,12 @@ export default function RootLayout({
         <StoreProvider>
           <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
             <BrandingProvider>
-              <MaintenanceGuard>
-                {children}
-                <Toaster />
-                {/* <GoogleTranslate /> */}
-                {/* <AddonsLoader /> */}
-              </MaintenanceGuard>
+              {/* <MaintenanceGuard> */}
+              {children}
+              <Toaster />
+              {/* <GoogleTranslate /> */}
+              {/* <AddonsLoader /> */}
+              {/* </MaintenanceGuard> */}
             </BrandingProvider>
           </ThemeProvider>
         </StoreProvider>
