@@ -9,6 +9,13 @@ COPY . .
 
 ARG NEXT_PUBLIC_API_URL
 ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
+
+# Set to "true" on Contabo to enable the ForceFullNavigation
+# workaround for the React 19 commit-phase race. Leave unset on
+# Vercel / other fast-origin deploys.
+ARG NEXT_PUBLIC_FORCE_FULL_NAV
+ENV NEXT_PUBLIC_FORCE_FULL_NAV=$NEXT_PUBLIC_FORCE_FULL_NAV
+
 ENV NODE_ENV=production
 
 RUN npm run build
