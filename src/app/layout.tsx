@@ -198,7 +198,21 @@ export default function RootLayout({
       </head>
       <body suppressHydrationWarning>
         <FaroInit />
-        <ForceFullNavigation />
+        {/*
+          ForceFullNavigation converts every SPA click into a full page
+          reload. On Contabo it's needed to dodge the React 19 commit-
+          phase race that crashes navigation. On Vercel (and any fast-
+          origin deploy) the race window doesn't open, so the workaround
+          would only cost performance — full reloads lose Redux state,
+          scroll position, JS parse cache, etc.
+
+          Gate on NEXT_PUBLIC_FORCE_FULL_NAV. Set it to "true" only on
+          Contabo deploys. Other targets leave it unset and get normal
+          Next.js SPA navigation.
+        */}
+        {process.env.NEXT_PUBLIC_FORCE_FULL_NAV === 'true' && (
+          <ForceFullNavigation />
+        )}
         <StoreProvider>
           <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
             <BrandingProvider>
