@@ -51,7 +51,10 @@ export function ForceFullNavigation() {
 
       // Skip links explicitly opened elsewhere or downloads.
       const linkTarget = anchor.getAttribute('target');
-      if ((linkTarget && linkTarget !== '_self') || anchor.hasAttribute('download')) {
+      if (
+        (linkTarget && linkTarget !== '_self') ||
+        anchor.hasAttribute('download')
+      ) {
         return;
       }
 
@@ -68,7 +71,11 @@ export function ForceFullNavigation() {
       if (url.protocol !== 'http:' && url.protocol !== 'https:') return;
 
       // In-page anchor (same path, only hash differs) — leave to the browser.
-      if (url.pathname === window.location.pathname && url.search === window.location.search && url.hash) {
+      if (
+        url.pathname === window.location.pathname &&
+        url.search === window.location.search &&
+        url.hash
+      ) {
         return;
       }
 

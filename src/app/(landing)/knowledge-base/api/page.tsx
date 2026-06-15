@@ -3,7 +3,6 @@ import { Badge } from '@/components/ui/badge';
 import { ArrowLeft, ChevronDown } from 'lucide-react';
 import Link from 'next/link';
 import { buildMetadata } from '@/lib/seo/metadata';
-import { RateLimitsTable } from '@/components/rate-limits-table';
 
 export const metadata = buildMetadata({
   title: 'API Knowledge Base',
@@ -75,7 +74,7 @@ export default function APIArticle() {
   return (
     <div className="container mx-auto px-4 py-12 sm:py-16 md:py-20">
       <div className="mx-auto max-w-4xl space-y-10">
-        <Link prefetch={false}
+        <Link
           href="/knowledge-base"
           className="text-muted-foreground hover:text-primary inline-flex items-center transition-colors"
         >
@@ -126,7 +125,7 @@ export default function APIArticle() {
             <li>Sign up and verify your email.</li>
             <li>
               Open{' '}
-              <Link prefetch={false}
+              <Link
                 href="/dashboard/api"
                 className="text-primary hover:underline"
               >
@@ -149,7 +148,7 @@ export default function APIArticle() {
             Every request must include an <code>Authorization</code> header with
             your secret API key. Keys are scoped to your account; revoke and
             rotate them anytime from{' '}
-            <Link prefetch={false}
+            <Link
               href="/dashboard/api"
               className="text-primary hover:underline"
             >
@@ -231,7 +230,6 @@ export default function APIArticle() {
             Limits are applied per API key and configured per plan tier. Current
             values:
           </p>
-          <RateLimitsTable />
           <p className="text-muted-foreground">Every response includes:</p>
           {codeBlock(
             `X-RateLimit-Limit: <your tier limit>\nX-RateLimit-Remaining: 27\nX-RateLimit-Reset: 1717406400`,

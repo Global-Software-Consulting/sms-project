@@ -5,10 +5,8 @@ import { BrandingProvider } from '@/contexts/BrandingContext';
 import { MaintenanceGuard } from '@/components/providers/MaintenanceGuard';
 import { Toaster } from '@/components/ui/sonner';
 import { GoogleTranslate } from '@/components/google-translate';
-// import { AddonsLoader } from '@/components/addons-loader';
-// import { NavCrashRecovery } from '@/components/nav-crash-recovery';
+import { AddonsLoader } from '@/components/addons-loader';
 import { FaroInit } from '@/components/faro-init';
-// import SwCleanup from './sw-cleanup';
 import {
   SITE_URL,
   SITE_NAME,
@@ -190,25 +188,24 @@ export default function RootLayout({
           script is doing the detachment and either guard it or
           remove it. Until then this prevents the commit abort.
         */}
-        {/* <script
+        <script
           // eslint-disable-next-line react/no-danger
           dangerouslySetInnerHTML={{
             __html: `(function(){if(typeof Node==='undefined')return;var o=Node.prototype.removeChild;Node.prototype.removeChild=function(c){if(c&&c.parentNode===null)return c;return o.apply(this,arguments);};})();`,
           }}
-        /> */}
+        />
       </head>
       <body suppressHydrationWarning>
-        {/* <NavCrashRecovery /> */}
         <FaroInit />
         <StoreProvider>
           <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
             <BrandingProvider>
-              {/* <MaintenanceGuard> */}
-              {children}
-              <Toaster />
-              {/* <GoogleTranslate /> */}
-              {/* <AddonsLoader /> */}
-              {/* </MaintenanceGuard> */}
+              <MaintenanceGuard>
+                {children}
+                <Toaster />
+                <GoogleTranslate />
+                <AddonsLoader />
+              </MaintenanceGuard>
             </BrandingProvider>
           </ThemeProvider>
         </StoreProvider>
