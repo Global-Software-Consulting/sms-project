@@ -307,7 +307,15 @@ export default function PricingClient({
               <Loader2 className="text-primary h-8 w-8 animate-spin" />
             </div>
           ) : (
-            <div className="grid gap-6 md:grid-cols-3">
+            <div
+              className={
+                providerTiers.length === 1
+                  ? 'mx-auto grid max-w-sm gap-6 md:grid-cols-1'
+                  : providerTiers.length === 2
+                    ? 'mx-auto grid max-w-3xl gap-6 md:grid-cols-2'
+                    : 'grid gap-6 md:grid-cols-3'
+              }
+            >
               {providerTiers.map((tier) => (
                 <Card
                   key={tier.id}
