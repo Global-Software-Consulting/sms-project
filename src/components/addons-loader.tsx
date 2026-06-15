@@ -43,6 +43,42 @@ function resolveGetbuttonSrc(rawValue: string | undefined): string {
 }
 
 /**
+ * GetButton renders its trigger as an <a> tag without an href attribute.
+ * Lighthouse's accessibility audit ("Elements use prohibited ARIA
+ * attributes") then fails because an <a> without href has implicit
+ * role "generic", and aria-label is not permitted on generic roles.
+ *
+ * We can't change GetButton's HTML, but we can patch it after mount.
+ * Adding role="button" gives the element an explicit role that allows
+ * aria-label, which makes the audit pass.
+ *
+ * Observer disconnects once the element is patched (or after 30s
+ * timeout) to avoid running forever.
+ */
+function patchGetbuttonAccessibility(): void {
+  if (typeof window === 'undefined') return;
+
+  const SELECTOR = 'a[data-component-name="BaseButtonActivator"]';
+
+  const tryPatch = (): boolean => {
+    const el = document.querySelector<HTMLAnchorElement>(SELECTOR);
+    if (!el) return false;
+    if (!el.hasAttribute('role')) el.setAttribute('role', 'button');
+    if (!el.hasAttribute('tabindex')) el.setAttribute('tabindex', '0');
+    return true;
+  };
+
+  if (tryPatch()) return;
+
+  const observer = new MutationObserver(() => {
+    if (tryPatch()) observer.disconnect();
+  });
+  observer.observe(document.body, { childList: true, subtree: true });
+
+  window.setTimeout(() => observer.disconnect(), 30_000);
+}
+
+/**
  * Skip third-party script injection when Lighthouse / headless Chrome
  * is loading the page. Some vendor scripts log unsuppressable network
  * errors when their CDN is unreachable and tank the Lighthouse Best
@@ -151,6 +187,7 @@ export function AddonsLoader() {
           async
           src={getbuttonSrc}
           strategy="afterInteractive"
+          onReady={patchGetbuttonAccessibility}
         />
       )}
 
