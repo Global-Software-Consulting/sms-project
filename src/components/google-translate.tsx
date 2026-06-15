@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState, useRef } from 'react';
+import Script from 'next/script';
 import { getActiveLanguages } from '@/lib/api/languagesApi';
 
 declare global {
@@ -33,76 +34,8 @@ const FALLBACK_LANGUAGES: LanguageOption[] = [
 //       dispatches a "gt:activate" window event)
 //   (b) a `googtrans` cookie is already present from a prior session
 // First-page-load visitors who never use the picker pay zero cost.
-const GOOGLE_TRANSLATE_STYLE_ID = 'google-translate-overrides';
-const GOOGLE_TRANSLATE_STYLE_CSS = `
-  .goog-te-banner-frame { display: none !important; }
-  .skiptranslate { display: none !important; }
-  body { top: 0 !important; position: static !important; }
-  #goog-gt-tt, .goog-te-balloon-frame { display: none !important; }
-  .goog-text-highlight { background: none !important; box-shadow: none !important; }
-`;
-const GOOGLE_TRANSLATE_SCRIPT_ID = 'google-translate-loader';
-const GOOGLE_TRANSLATE_SRC =
-  'https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit';
-
-/**
- * Inject Google Translate script and CSS imperatively into document.head.
- * Kept out of the React tree so React 19 doesn't try to unmount the
- * <script>/<style> on navigation (would race with Google's own DOM
- * mutations and crash commit-phase with a removeChild null error).
- */
-function ensureGoogleTranslateStyleInjected(): void {
-  if (typeof document === 'undefined') return;
-  if (document.getElementById(GOOGLE_TRANSLATE_STYLE_ID)) return;
-  const style = document.createElement('style');
-  style.id = GOOGLE_TRANSLATE_STYLE_ID;
-  style.textContent = GOOGLE_TRANSLATE_STYLE_CSS;
-  document.head.appendChild(style);
-}
-
-function ensureGoogleTranslateScriptInjected(): void {
-  if (typeof document === 'undefined') return;
-  if (document.getElementById(GOOGLE_TRANSLATE_SCRIPT_ID)) return;
-
-  if (!window.googleTranslateElementInit) {
-    window.googleTranslateElementInit = () => {
-      if (typeof window.google?.translate?.TranslateElement === 'function') {
-        new window.google.translate.TranslateElement(
-          { pageLanguage: 'en', autoDisplay: false },
-          'google_translate_element',
-        );
-      }
-    };
-  }
-
-  const s = document.createElement('script');
-  s.id = GOOGLE_TRANSLATE_SCRIPT_ID;
-  s.async = true;
-  s.src = GOOGLE_TRANSLATE_SRC;
-  s.onload = () => {
-    let tries = 0;
-    const intv = setInterval(() => {
-      if (typeof window.google?.translate?.TranslateElement === 'function') {
-        clearInterval(intv);
-        try {
-          window.googleTranslateElementInit?.();
-        } catch {
-          /* ignore — best effort */
-        }
-      } else if (++tries > 40) {
-        clearInterval(intv);
-      }
-    }, 100);
-  };
-  document.head.appendChild(s);
-}
-
 export function GoogleTranslate() {
   const [shouldLoad, setShouldLoad] = useState(false);
-
-  useEffect(() => {
-    ensureGoogleTranslateStyleInjected();
-  }, []);
 
   useEffect(() => {
     if (
@@ -117,20 +50,82 @@ export function GoogleTranslate() {
     return () => window.removeEventListener('gt:activate', activate);
   }, []);
 
-  useEffect(() => {
-    if (shouldLoad) ensureGoogleTranslateScriptInjected();
-  }, [shouldLoad]);
-
   return (
-    <div
-      id="google_translate_element"
-      style={{
-        position: 'absolute',
-        top: '-9999px',
-        left: '-9999px',
-        opacity: 0,
-      }}
-    />
+    <>
+      <div
+        id="google_translate_element"
+        style={{
+          position: 'absolute',
+          top: '-9999px',
+          left: '-9999px',
+          opacity: 0,
+        }}
+      />
+      {shouldLoad && (
+        <Script
+          src="https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"
+          strategy="afterInteractive"
+          onReady={() => {
+            // Google's script (?cb=googleTranslateElementInit) calls
+            // window.googleTranslateElementInit as soon as it loads.
+            // Defining the callback inside onLoad raced with Google's
+            // own call, leaving TranslateElement undefined and throwing
+            // "TranslateElement is not a constructor" in the console.
+            //
+            // Define the callback if missing, then poll briefly until
+            // TranslateElement is actually attached before constructing.
+            if (!window.googleTranslateElementInit) {
+              window.googleTranslateElementInit = () => {
+                if (
+                  typeof window.google?.translate?.TranslateElement ===
+                  'function'
+                ) {
+                  new window.google.translate.TranslateElement(
+                    { pageLanguage: 'en', autoDisplay: false },
+                    'google_translate_element',
+                  );
+                }
+              };
+            }
+            let tries = 0;
+            const intv = setInterval(() => {
+              if (
+                typeof window.google?.translate?.TranslateElement === 'function'
+              ) {
+                clearInterval(intv);
+                try {
+                  window.googleTranslateElementInit?.();
+                } catch {
+                  /* ignore — best effort */
+                }
+              } else if (++tries > 40) {
+                clearInterval(intv); // give up after ~4s
+              }
+            }, 100);
+          }}
+        />
+      )}
+      <style jsx global>{`
+        .goog-te-banner-frame {
+          display: none !important;
+        }
+        .skiptranslate {
+          display: none !important;
+        }
+        body {
+          top: 0 !important;
+          position: static !important;
+        }
+        #goog-gt-tt,
+        .goog-te-balloon-frame {
+          display: none !important;
+        }
+        .goog-text-highlight {
+          background: none !important;
+          box-shadow: none !important;
+        }
+      `}</style>
+    </>
   );
 }
 
