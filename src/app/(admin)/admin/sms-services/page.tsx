@@ -91,12 +91,6 @@ interface Provider {
   supportsRental?: boolean;
 }
 
-interface VIPCategory {
-  id: string;
-  name: string;
-  services: Service[];
-}
-
 interface PricingProduct {
   id: string;
   service: { id: string; name: string; slug: string };
@@ -234,7 +228,6 @@ export default function AdminSmsServicesPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedServices, setSelectedServices] = useState<string[]>([]);
-  const [selectedVIPCategory, setSelectedVIPCategory] = useState<string>('v1');
 
   // Pricing State
   const [globalMarkup, setGlobalMarkup] = useState<number>(0);
@@ -1015,12 +1008,6 @@ export default function AdminSmsServicesPage() {
     lastSyncAt: p.lastSyncAt,
     supportsRental: p.supportsRental,
   }));
-
-  const vipCategories: VIPCategory[] = [
-    { id: 'v1', name: 'V1 - Premium', services: [] },
-    { id: 'v2', name: 'V2 - Standard', services: [] },
-    { id: 'v3', name: 'V3 - Basic', services: [] },
-  ];
 
   const [providerFormData, setProviderFormData] = useState({
     name: '',
