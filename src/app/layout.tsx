@@ -206,9 +206,8 @@ export default function RootLayout({
               <MaintenanceGuard>
                 {children}
                 <Toaster />
-                <GoogleTranslate />
-                <AddonsLoader />
-                {/* <SwCleanup /> */}
+                {/* <GoogleTranslate /> */}
+                {/* <AddonsLoader /> */}
               </MaintenanceGuard>
             </BrandingProvider>
           </ThemeProvider>
