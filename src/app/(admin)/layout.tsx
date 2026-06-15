@@ -1,14 +1,23 @@
+import { Suspense } from 'react';
 import { AdminShell } from '@/components/admin/admin-shell';
 import { NotificationProvider } from '@/contexts/NotificationContext';
 
-// Admin pages are auth-gated and depend on runtime state (Redux session,
-// useSearchParams, etc). They should never be statically prerendered.
-// Without this, `next build` tries to prerender every /admin/* route and
-// fails on hooks like useSearchParams that require a Suspense boundary
-// at static time. Previously this was hidden because AdminShell returned
-// a Spinner at prerender time and the children never rendered.
-export const dynamic = 'force-dynamic';
-
+/**
+ * Admin layout is a Server Component shell. Previously this file
+ * declared `export const dynamic = 'force-dynamic'` to opt the
+ * entire /admin/* tree out of static prerendering, because pages
+ * deep inside the tree call `useSearchParams()` without a Suspense
+ * boundary and that throws during `next build` prerender.
+ *
+ * That approach forced every admin navigation to recompute the
+ * layout RSC payload on the origin, which compounded the slow-nav
+ * problem the user was hitting. By wrapping {children} in
+ * <Suspense> here, the layout itself becomes prerenderable (and its
+ * RSC payload cacheable at nginx), while pages that use
+ * useSearchParams stay deferred behind the boundary and resolve at
+ * request time as before — no breakage, but the shell is no longer
+ * a per-nav bottleneck.
+ */
 export default function AdminLayout({
   children,
 }: {
@@ -16,7 +25,9 @@ export default function AdminLayout({
 }) {
   return (
     <NotificationProvider>
-      <AdminShell>{children}</AdminShell>
+      <AdminShell>
+        <Suspense fallback={null}>{children}</Suspense>
+      </AdminShell>
     </NotificationProvider>
   );
 }
