@@ -1,6 +1,6 @@
 import { Header } from '@/components/header';
 import { Footer, type FooterContent } from '@/components/footer';
-// import { ForceFullNavigation } from '@/components/force-full-navigation';
+import { ForceFullNavigation } from '@/components/force-full-navigation';
 import { fetchPageContent, pick } from '@/lib/page-content';
 
 export default async function LandingLayout({
@@ -36,7 +36,7 @@ export default async function LandingLayout({
         NavCrashRecovery (mounted globally in the root layout) stays in
         place either way as the last-resort self-heal.
       */}
-      {/* <ForceFullNavigation /> */}
+      <ForceFullNavigation />
       <Header />
       <main className="w-full flex-1">{children}</main>
       <Footer content={footerContent} />
