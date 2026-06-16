@@ -3097,17 +3097,18 @@ www.cheapstreamtv.com`,
 
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-start sm:gap-4">
             <button
-              onClick={handleRefresh}
-              className="flex w-full items-center justify-center rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(255,255,255,0.08)] px-6 py-3 text-sm font-medium text-white transition-colors hover:bg-[rgba(255,255,255,0.12)] sm:w-auto sm:justify-start"
-            >
-              Refresh
-            </button>
-            <button
               onClick={() => handleSave('Addons')}
               disabled={isLoading}
               className="flex w-full items-center justify-center rounded-lg bg-[#3B82F6] px-6 py-3 text-sm font-medium text-white transition-colors hover:bg-[#2563EB] disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto sm:justify-start"
             >
-              {isLoading ? 'Updating...' : 'Update Addons'}
+              {isLoading ? 'Saving...' : 'Save Addons'}
+            </button>
+            <button
+              onClick={handleRefresh}
+              title="Discard unsaved changes and reload values from the server"
+              className="flex w-full items-center justify-center rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(255,255,255,0.08)] px-6 py-3 text-sm font-medium text-white transition-colors hover:bg-[rgba(255,255,255,0.12)] sm:w-auto sm:justify-start"
+            >
+              Discard Changes
             </button>
           </div>
         </div>
