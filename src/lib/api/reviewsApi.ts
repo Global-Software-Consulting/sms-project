@@ -31,11 +31,13 @@ export interface PublicReview {
   rating: number;
   title: string | null;
   text: string;
-  displayName: string;
   isAnonymous: boolean;
-  isVerifiedPurchase: boolean;
-  isFeatured: boolean;
   createdAt: string;
+  user?: {
+    firstName: string;
+    lastName: string | null;
+    avatar: string | null;
+  };
 }
 
 export interface UserReview {
@@ -58,10 +60,12 @@ export interface AverageRating {
 
 export interface PaginatedReviews {
   data: PublicReview[];
-  total: number;
-  page: number;
-  limit: number;
-  totalPages: number;
+  meta: {
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  };
 }
 
 export interface ReviewQueryParams {
@@ -268,4 +272,3 @@ export const formatRelativeTime = (dateString: string): string => {
 export const renderStars = (rating: number): string => {
   return '★'.repeat(rating) + '☆'.repeat(5 - rating);
 };
-
