@@ -870,9 +870,10 @@ export default function Activation() {
                               {order.service?.name || 'Service'}
                             </span>
                             <span className="text-base">
-                              {order.country?.code
-                                ? getCountryFlag(order.country.code)
-                                : '🌍'}
+                              {getCountryFlag(
+                                order.country?.code ?? '',
+                                order.country?.name,
+                              )}
                             </span>
                             <span className="text-muted-foreground text-xs">
                               {order.country?.name || 'Country'}
@@ -1391,7 +1392,7 @@ export default function Activation() {
 
                             {/* Flag */}
                             <span className="w-8 shrink-0 text-center text-xl">
-                              {getCountryFlag(country.code)}
+                              {getCountryFlag(country.code, country.name)}
                             </span>
 
                             {/* Name + count */}
