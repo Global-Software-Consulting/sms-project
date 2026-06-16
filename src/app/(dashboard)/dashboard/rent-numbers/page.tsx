@@ -140,12 +140,19 @@ export default function RentNumbersPage() {
   const [rentalKind, setRentalKind] = useState<RentalKind>('full');
   const [unit, setUnit] = useState<RentDurationUnit>('day');
   const [amount, setAmount] = useState<number>(DEFAULT_AMOUNT_BY_UNIT.day);
+  // Debounced copy of `amount` used for the actual /options fetch.
+  // Without this, typing "12" fires /options for "1" then again for
+  // "12" — each call probes SMS-Man and is wasteful. 300ms is enough
+  // to wait for typing to settle without feeling sluggish.
+  const [debouncedAmount, setDebouncedAmount] = useState<number>(amount);
 
   // Per-app rental: service picker
   const [services, setServices] = useState<SmsService[]>([]);
   const [serviceSearch, setServiceSearch] = useState('');
   const [debouncedServiceSearch, setDebouncedServiceSearch] = useState('');
-  const [selectedService, setSelectedService] = useState<SmsService | null>(null);
+  const [selectedService, setSelectedService] = useState<SmsService | null>(
+    null,
+  );
   const [isServicesLoading, setIsServicesLoading] = useState(false);
 
   // Country list with live availability + price
@@ -159,7 +166,9 @@ export default function RentNumbersPage() {
   const [buyingCountryId, setBuyingCountryId] = useState<string | null>(null);
 
   // Extend dialog
-  const [extendingRental, setExtendingRental] = useState<SmsRental | null>(null);
+  const [extendingRental, setExtendingRental] = useState<SmsRental | null>(
+    null,
+  );
   const [extendUnit, setExtendUnit] = useState<RentDurationUnit>('day');
   const [extendAmount, setExtendAmount] = useState<number>(1);
   const [isExtending, setIsExtending] = useState(false);
@@ -174,8 +183,12 @@ export default function RentNumbersPage() {
         getRentalHistory({ status: 'ACTIVE', limit: 50 }),
         getRentalHistory({ limit: 20 }),
       ]);
-      setActiveRentals((active.data || []).filter((r) => r.status === 'ACTIVE'));
-      setRentalHistory((history.data || []).filter((r) => r.status !== 'ACTIVE'));
+      setActiveRentals(
+        (active.data || []).filter((r) => r.status === 'ACTIVE'),
+      );
+      setRentalHistory(
+        (history.data || []).filter((r) => r.status !== 'ACTIVE'),
+      );
     } catch (err) {
       console.error('Failed to fetch rentals:', err);
     }
@@ -225,7 +238,10 @@ export default function RentNumbersPage() {
 
   // ----- Service search (only fires in per-app mode) -----
   useEffect(() => {
-    const id = setTimeout(() => setDebouncedServiceSearch(serviceSearch.trim()), 250);
+    const id = setTimeout(
+      () => setDebouncedServiceSearch(serviceSearch.trim()),
+      250,
+    );
     return () => clearTimeout(id);
   }, [serviceSearch]);
 
@@ -233,7 +249,10 @@ export default function RentNumbersPage() {
     if (rentalKind !== 'app') return;
     let cancelled = false;
     setIsServicesLoading(true);
-    getServices({ limit: 100, ...(debouncedServiceSearch ? { search: debouncedServiceSearch } : {}) })
+    getServices({
+      limit: 100,
+      ...(debouncedServiceSearch ? { search: debouncedServiceSearch } : {}),
+    })
       .then((res) => {
         if (cancelled) return;
         setServices(res.data || []);
@@ -259,9 +278,17 @@ export default function RentNumbersPage() {
     });
   }, [services]);
 
+  // Debounce raw `amount` -> `debouncedAmount`. Typing a multi-digit
+  // value or rapidly clicking suggestion chips no longer fans out a
+  // /options request per keystroke.
+  useEffect(() => {
+    const id = setTimeout(() => setDebouncedAmount(amount), 300);
+    return () => clearTimeout(id);
+  }, [amount]);
+
   // ----- Country options: fetch whenever the duration combo changes -----
   const fetchOptions = useCallback(async () => {
-    if (amount < 1) return;
+    if (debouncedAmount < 1) return;
     if (rentalKind === 'app' && !selectedService) {
       // Per-app mode needs a service before we can fetch options
       setOptions([]);
@@ -274,10 +301,12 @@ export default function RentNumbersPage() {
     setOptionsError(null);
     try {
       const res = await getRentalOptions({
-        duration: amount,
+        duration: debouncedAmount,
         unit,
         applicationId:
-          rentalKind === 'app' && selectedService ? selectedService.id : undefined,
+          rentalKind === 'app' && selectedService
+            ? selectedService.id
+            : undefined,
       });
       if (isStale()) return;
       setOptions(res.data || []);
@@ -291,7 +320,7 @@ export default function RentNumbersPage() {
     } finally {
       if (!isStale()) setIsOptionsLoading(false);
     }
-  }, [amount, unit, rentalKind, selectedService]);
+  }, [debouncedAmount, unit, rentalKind, selectedService]);
 
   useEffect(() => {
     fetchOptions();
@@ -318,7 +347,9 @@ export default function RentNumbersPage() {
         duration: amount,
         unit,
         applicationId:
-          rentalKind === 'app' && selectedService ? selectedService.id : undefined,
+          rentalKind === 'app' && selectedService
+            ? selectedService.id
+            : undefined,
       });
       const rental = (res.rental ?? res) as SmsRental;
       setActiveRentals((prev) => [rental, ...prev]);
@@ -339,7 +370,8 @@ export default function RentNumbersPage() {
 
   // ----- Cancel rental -----
   const handleCancel = async (rental: SmsRental) => {
-    if (!confirm('Cancel this rental? Refund depends on remaining time.')) return;
+    if (!confirm('Cancel this rental? Refund depends on remaining time.'))
+      return;
     try {
       const res = await cancelRental(rental.id);
       setActiveRentals((prev) => prev.filter((r) => r.id !== rental.id));
@@ -394,11 +426,12 @@ export default function RentNumbersPage() {
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Rent Numbers</h1>
           <p className="text-muted-foreground text-sm">
-            Rent a phone number to receive SMS for hours, days, weeks, or months.
+            Rent a phone number to receive SMS for hours, days, weeks, or
+            months.
           </p>
         </div>
         <div className="text-right">
-          <p className="text-muted-foreground text-xs uppercase tracking-wide">
+          <p className="text-muted-foreground text-xs tracking-wide uppercase">
             Wallet balance
           </p>
           <p className="text-xl font-semibold">${walletBalance}</p>
@@ -408,7 +441,7 @@ export default function RentNumbersPage() {
       {/* Active rentals (only if any) */}
       {activeRentals.length > 0 && (
         <section>
-          <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+          <h2 className="text-muted-foreground mb-3 text-sm font-semibold tracking-wide uppercase">
             Active rentals ({activeRentals.length})
           </h2>
           <div className="grid gap-3 sm:grid-cols-2">
@@ -448,7 +481,7 @@ export default function RentNumbersPage() {
                   </span>
                   <span className="inline-flex items-center gap-1">
                     <MessageSquare className="h-3.5 w-3.5" />
-                    {(r.messages?.length ?? 0)} SMS
+                    {r.messages?.length ?? 0} SMS
                   </span>
                 </div>
 
@@ -485,7 +518,7 @@ export default function RentNumbersPage() {
 
       {/* Rental Type toggle */}
       <section className="space-y-3">
-        <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+        <h2 className="text-muted-foreground text-sm font-semibold tracking-wide uppercase">
           1. Choose rental type
         </h2>
         <div className="grid grid-cols-2 gap-2">
@@ -498,7 +531,7 @@ export default function RentNumbersPage() {
             className={cn(
               'rounded-xl border p-4 text-left transition',
               rentalKind === 'full'
-                ? 'border-primary bg-primary/5 ring-2 ring-primary/30'
+                ? 'border-primary bg-primary/5 ring-primary/30 ring-2'
                 : 'border-[rgba(255,255,255,0.1)] hover:border-[rgba(255,255,255,0.25)]',
             )}
           >
@@ -516,7 +549,7 @@ export default function RentNumbersPage() {
             className={cn(
               'rounded-xl border p-4 text-left transition',
               rentalKind === 'app'
-                ? 'border-primary bg-primary/5 ring-2 ring-primary/30'
+                ? 'border-primary bg-primary/5 ring-primary/30 ring-2'
                 : 'border-[rgba(255,255,255,0.1)] hover:border-[rgba(255,255,255,0.25)]',
             )}
           >
@@ -534,11 +567,11 @@ export default function RentNumbersPage() {
       {/* Per-app: service picker */}
       {rentalKind === 'app' && (
         <section className="space-y-3">
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+          <h2 className="text-muted-foreground text-sm font-semibold tracking-wide uppercase">
             2. Choose service
           </h2>
           <div className="relative">
-            <Search className="text-muted-foreground absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2" />
+            <Search className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
             <Input
               value={serviceSearch}
               onChange={(e) => setServiceSearch(e.target.value)}
@@ -547,7 +580,7 @@ export default function RentNumbersPage() {
             />
           </div>
           {selectedService && (
-            <div className="flex items-center justify-between rounded-xl border border-primary/30 bg-primary/5 px-3 py-2">
+            <div className="border-primary/30 bg-primary/5 flex items-center justify-between rounded-xl border px-3 py-2">
               <span className="text-sm">
                 Selected: <strong>{selectedService.name}</strong>
               </span>
@@ -575,7 +608,7 @@ export default function RentNumbersPage() {
                   <button
                     key={svc.id}
                     onClick={() => setSelectedService(svc)}
-                    className="flex items-center gap-2 rounded-lg border border-transparent px-2 py-2 text-left text-sm transition hover:border-primary/30 hover:bg-primary/5"
+                    className="hover:border-primary/30 hover:bg-primary/5 flex items-center gap-2 rounded-lg border border-transparent px-2 py-2 text-left text-sm transition"
                   >
                     {svc.iconUrl ? (
                       // eslint-disable-next-line @next/next/no-img-element
@@ -601,7 +634,7 @@ export default function RentNumbersPage() {
 
       {/* Duration */}
       <section className="space-y-3">
-        <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+        <h2 className="text-muted-foreground text-sm font-semibold tracking-wide uppercase">
           {rentalKind === 'app' ? '3.' : '2.'} Choose duration
         </h2>
         <div className="grid grid-cols-4 gap-2">
@@ -615,7 +648,7 @@ export default function RentNumbersPage() {
               className={cn(
                 'rounded-xl border py-3 text-sm font-medium transition',
                 unit === u.unit
-                  ? 'border-primary bg-primary/5 ring-2 ring-primary/30'
+                  ? 'border-primary bg-primary/5 ring-primary/30 ring-2'
                   : 'border-[rgba(255,255,255,0.1)] hover:border-[rgba(255,255,255,0.25)]',
               )}
             >
@@ -661,7 +694,7 @@ export default function RentNumbersPage() {
       {/* Countries */}
       <section className="space-y-3">
         <div className="flex items-center justify-between gap-2">
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+          <h2 className="text-muted-foreground text-sm font-semibold tracking-wide uppercase">
             {rentalKind === 'app' ? '4.' : '3.'} Pick a country
           </h2>
           <Button
@@ -677,7 +710,7 @@ export default function RentNumbersPage() {
         </div>
 
         <div className="relative">
-          <Search className="text-muted-foreground absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2" />
+          <Search className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
           <Input
             value={countrySearch}
             onChange={(e) => setCountrySearch(e.target.value)}
@@ -691,8 +724,28 @@ export default function RentNumbersPage() {
             Pick a service above to see available countries.
           </div>
         ) : isOptionsLoading ? (
-          <div className="flex items-center justify-center py-10">
-            <Loader2 className="text-muted-foreground h-5 w-5 animate-spin" />
+          // Shimmer skeletons matching the country row layout. Better
+          // than a centered spinner because the user can see the
+          // shape of what's about to load and doesn't lose context.
+          <div className="grid gap-2 sm:grid-cols-2">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div
+                key={i}
+                className="flex items-center justify-between gap-3 rounded-xl border border-[rgba(255,255,255,0.06)] p-3"
+              >
+                <div className="flex min-w-0 items-center gap-3">
+                  <div className="bg-muted/60 h-7 w-7 flex-shrink-0 animate-pulse rounded" />
+                  <div className="min-w-0 space-y-1.5">
+                    <div className="bg-muted/60 h-3 w-24 animate-pulse rounded" />
+                    <div className="bg-muted/40 h-2.5 w-16 animate-pulse rounded" />
+                  </div>
+                </div>
+                <div className="space-y-1.5 text-right">
+                  <div className="bg-muted/60 h-3 w-12 animate-pulse rounded" />
+                  <div className="bg-muted/40 h-2.5 w-10 animate-pulse rounded" />
+                </div>
+              </div>
+            ))}
           </div>
         ) : optionsError ? (
           <div className="flex items-center justify-center gap-2 rounded-xl border border-amber-500/30 bg-amber-500/5 py-6 text-sm">
@@ -715,9 +768,11 @@ export default function RentNumbersPage() {
                   disabled={busy || !!buyingCountryId}
                   className={cn(
                     'group flex items-center justify-between gap-3 rounded-xl border p-3 text-left transition',
-                    'border-[rgba(255,255,255,0.08)] hover:border-primary/40 hover:bg-primary/5',
+                    'hover:border-primary/40 hover:bg-primary/5 border-[rgba(255,255,255,0.08)]',
                     busy && 'opacity-50',
-                    !!buyingCountryId && !busy && 'cursor-not-allowed opacity-40',
+                    !!buyingCountryId &&
+                      !busy &&
+                      'cursor-not-allowed opacity-40',
                   )}
                 >
                   <div className="flex min-w-0 items-center gap-3">
@@ -731,7 +786,9 @@ export default function RentNumbersPage() {
                       <p className="text-muted-foreground text-xs">
                         {o.available.toLocaleString()} available
                         {lowStock && (
-                          <span className="ml-1 text-amber-500">· low stock</span>
+                          <span className="ml-1 text-amber-500">
+                            · low stock
+                          </span>
                         )}
                       </p>
                     </div>
@@ -762,7 +819,7 @@ export default function RentNumbersPage() {
       {!isInitialLoading && rentalHistory.length > 0 && (
         <section>
           <details className="rounded-xl border border-[rgba(255,255,255,0.08)] bg-[rgba(15,23,42,0.4)] p-4">
-            <summary className="cursor-pointer text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+            <summary className="text-muted-foreground cursor-pointer text-sm font-semibold tracking-wide uppercase">
               History ({rentalHistory.length})
             </summary>
             <div className="mt-3 space-y-2">
@@ -774,7 +831,8 @@ export default function RentNumbersPage() {
                   <div className="min-w-0">
                     <p className="truncate font-mono">{r.phoneNumber || '—'}</p>
                     <p className="text-muted-foreground text-xs">
-                      {r.service?.name ?? 'Full number'} · {r.country?.name ?? '—'}
+                      {r.service?.name ?? 'Full number'} ·{' '}
+                      {r.country?.name ?? '—'}
                     </p>
                   </div>
                   <Badge variant="outline">{r.status}</Badge>
@@ -848,7 +906,7 @@ export default function RentNumbersPage() {
                   className={cn(
                     'rounded-xl border py-2 text-sm font-medium transition',
                     extendUnit === u.unit
-                      ? 'border-primary bg-primary/5 ring-2 ring-primary/30'
+                      ? 'border-primary bg-primary/5 ring-primary/30 ring-2'
                       : 'border-[rgba(255,255,255,0.1)]',
                   )}
                 >
@@ -869,7 +927,10 @@ export default function RentNumbersPage() {
                 className="w-28"
               />
               <span className="text-muted-foreground text-sm">
-                × {UNIT_CHOICES.find((u) => u.unit === extendUnit)?.label.toLowerCase()}
+                ×{' '}
+                {UNIT_CHOICES.find(
+                  (u) => u.unit === extendUnit,
+                )?.label.toLowerCase()}
                 {extendAmount > 1 ? 's' : ''}
               </span>
             </div>
