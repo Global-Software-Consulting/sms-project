@@ -1,23 +1,42 @@
 'use client';
-import { useState, useEffect, useCallback, useMemo } from 'react';
+
+/**
+ * Rent Numbers — redesigned June 2026 to mirror SMS-Man's simplicity.
+ *
+ * Flow:
+ *   1. Pick rental TYPE  — Full Number  /  Per App
+ *   2. Pick DURATION     — Hour / Day / Week / Month + amount
+ *   3. (Per-App only) pick a SERVICE
+ *   4. Pick a COUNTRY    — list shows live availability + price
+ *   5. Done — number appears in Active Rentals
+ *
+ * Backend powers steps 1-4 via the new `GET /sms/rent/options` endpoint
+ * (one call returns every country slot with stock + USD price for the
+ * current duration). Active rentals stay polled for incoming SMS
+ * exactly as before.
+ *
+ * Mobile-first layout (single column on mobile, side-by-side on
+ * desktop). No multi-step modal: everything visible on one page so a
+ * new user can complete a rental in a handful of taps.
+ */
+
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-} from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+  Clock,
+  Globe,
+  Loader2,
+  X,
+  Copy,
+  CheckCircle2,
+  RefreshCw,
+  AlertCircle,
+  MessageSquare,
+  Search,
+  Plus,
+  ChevronRight,
+} from 'lucide-react';
+import { toast } from 'sonner';
+import { cn } from '@/components/ui/utils';
 import {
   Dialog,
   DialogContent,
@@ -25,785 +44,852 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
 import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover';
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from '@/components/ui/command';
-import {
-  Clock,
-  RefreshCw,
-  X,
-  Copy,
-  Loader2,
-  AlertCircle,
-  MessageSquare,
-  Phone,
-  Check,
-  ChevronsUpDown,
-  Search,
-} from 'lucide-react';
-import { toast } from 'sonner';
-import { cn } from '@/components/ui/utils';
-import {
-  getProviders,
-  getServices,
-  getCountries,
-  rentNumber,
-  getRentalHistory,
-  checkRentalStatus,
   cancelRental,
-  SmsProvider,
-  SmsService,
-  SmsCountry,
+  checkRentalStatus,
+  extendRental,
+  getRentalHistory,
+  getRentalOptions,
+  getServices,
+  rentNumber,
+  RentalOption,
+  RentDurationUnit,
   SmsRental,
-  getRentalStatusLabel,
-  getRentalStatusColor,
-  getCountryFlag,
-  canCancelRental,
-  formatDuration,
-  RENTAL_DURATIONS,
+  SmsService,
 } from '@/lib/api/smsApi';
-import { getWalletBalance, formatBalance } from '@/lib/api/walletApi';
+import { getWalletBalance } from '@/lib/api/walletApi';
 
-export default function RentNumbers() {
-  // Data state
-  const [providers, setProviders] = useState<SmsProvider[]>([]);
-  const [services, setServices] = useState<SmsService[]>([]);
-  const [countries, setCountries] = useState<SmsCountry[]>([]);
+type RentalKind = 'full' | 'app';
+
+interface UnitChoice {
+  unit: RentDurationUnit;
+  label: string;
+  short: string;
+  /** Suggested amounts shown as quick-pick chips. */
+  suggestions: number[];
+}
+
+const UNIT_CHOICES: UnitChoice[] = [
+  { unit: 'hour', label: 'Hour', short: 'h', suggestions: [1, 4, 12] },
+  { unit: 'day', label: 'Day', short: 'd', suggestions: [1, 3, 7] },
+  { unit: 'week', label: 'Week', short: 'w', suggestions: [1, 2, 4] },
+  { unit: 'month', label: 'Month', short: 'mo', suggestions: [1, 3, 6] },
+];
+
+const DEFAULT_AMOUNT_BY_UNIT: Record<RentDurationUnit, number> = {
+  hour: 4,
+  day: 1,
+  week: 1,
+  month: 1,
+};
+
+// Used by the per-app service picker to bubble familiar names to the top.
+const POPULAR_APPS = new Set([
+  'whatsapp',
+  'telegram',
+  'facebook',
+  'instagram',
+  'twitter',
+  'x',
+  'tiktok',
+  'google',
+  'gmail',
+  'discord',
+  'tinder',
+  'snapchat',
+  'linkedin',
+  'youtube',
+  'apple',
+  'microsoft',
+]);
+
+function flagEmoji(code: string): string {
+  // Convert ISO-3166 alpha-2 to flag emoji. Fallback to globe.
+  if (!code || code.length !== 2) return '🌐';
+  const A = 0x1f1e6;
+  return String.fromCodePoint(
+    A + code.toUpperCase().charCodeAt(0) - 65,
+    A + code.toUpperCase().charCodeAt(1) - 65,
+  );
+}
+
+function formatRemaining(expiresAt: string | null | undefined): string {
+  if (!expiresAt) return '—';
+  const ms = new Date(expiresAt).getTime() - Date.now();
+  if (ms <= 0) return 'Expired';
+  const totalMin = Math.floor(ms / 60_000);
+  const d = Math.floor(totalMin / (60 * 24));
+  const h = Math.floor((totalMin % (60 * 24)) / 60);
+  const m = totalMin % 60;
+  if (d > 0) return `${d}d ${h}h`;
+  if (h > 0) return `${h}h ${m}m`;
+  return `${m}m`;
+}
+
+export default function RentNumbersPage() {
+  // ----- Static / session-level state -----
+  const [walletBalance, setWalletBalance] = useState<string>('0');
   const [activeRentals, setActiveRentals] = useState<SmsRental[]>([]);
   const [rentalHistory, setRentalHistory] = useState<SmsRental[]>([]);
-  const [walletBalance, setWalletBalance] = useState<string>('0');
+  const [isInitialLoading, setIsInitialLoading] = useState(true);
 
-  // Loading states
-  const [isLoading, setIsLoading] = useState(true);
-  const [isRenting, setIsRenting] = useState(false);
-  const [isCancelling, setIsCancelling] = useState<string | null>(null);
+  // ----- Rental form state -----
+  const [rentalKind, setRentalKind] = useState<RentalKind>('full');
+  const [unit, setUnit] = useState<RentDurationUnit>('day');
+  const [amount, setAmount] = useState<number>(DEFAULT_AMOUNT_BY_UNIT.day);
 
-  // Form state
-  const [selectedProvider, setSelectedProvider] = useState<string>('');
-  const [selectedService, setSelectedService] = useState<string>('');
-  const [selectedCountry, setSelectedCountry] = useState<string>('');
-  const [selectedDuration, setSelectedDuration] = useState<string>('4');
-  const [serviceSearchOpen, setServiceSearchOpen] = useState(false);
-  const [serviceSearchQuery, setServiceSearchQuery] = useState('');
+  // Per-app rental: service picker
+  const [services, setServices] = useState<SmsService[]>([]);
+  const [serviceSearch, setServiceSearch] = useState('');
+  const [debouncedServiceSearch, setDebouncedServiceSearch] = useState('');
+  const [selectedService, setSelectedService] = useState<SmsService | null>(null);
+  const [isServicesLoading, setIsServicesLoading] = useState(false);
+
+  // Country list with live availability + price
+  const [options, setOptions] = useState<RentalOption[]>([]);
+  const [isOptionsLoading, setIsOptionsLoading] = useState(false);
+  const [countrySearch, setCountrySearch] = useState('');
+  const [optionsError, setOptionsError] = useState<string | null>(null);
+  const optionsRequestId = useRef(0);
+
+  // Buying state — which countryId we're currently submitting
+  const [buyingCountryId, setBuyingCountryId] = useState<string | null>(null);
+
+  // Extend dialog
+  const [extendingRental, setExtendingRental] = useState<SmsRental | null>(null);
+  const [extendUnit, setExtendUnit] = useState<RentDurationUnit>('day');
+  const [extendAmount, setExtendAmount] = useState<number>(1);
+  const [isExtending, setIsExtending] = useState(false);
 
   // Messages dialog
-  const [showMessagesDialog, setShowMessagesDialog] = useState(false);
-  const [selectedRental, setSelectedRental] = useState<SmsRental | null>(null);
+  const [viewingRental, setViewingRental] = useState<SmsRental | null>(null);
 
-  // Popular service names to prioritize (case-insensitive matching)
-  const POPULAR_SERVICE_NAMES = [
-    'whatsapp', 'telegram', 'facebook', 'instagram', 'twitter', 'tiktok',
-    'google', 'discord', 'steam', 'paypal', 'amazon', 'netflix', 'spotify',
-    'uber', 'binance', 'coinbase', 'tinder', 'snapchat', 'linkedin', 'youtube',
-    'gmail', 'microsoft', 'apple', 'yahoo', 'outlook', 'signal', 'viber',
-  ];
-
-  // Filter and sort services - popular first, then alphabetically
-  const filteredServices = useMemo(() => {
-    let filtered = services;
-    
-    // Filter by search query
-    if (serviceSearchQuery) {
-      const query = serviceSearchQuery.toLowerCase();
-      filtered = services.filter(s => 
-        s.name.toLowerCase().includes(query) ||
-        s.slug?.toLowerCase().includes(query)
-      );
-    }
-    
-    // Sort: popular services first, then alphabetically
-    return filtered.sort((a, b) => {
-      const aName = a.name.toLowerCase();
-      const bName = b.name.toLowerCase();
-      const aIsPopular = POPULAR_SERVICE_NAMES.some(p => aName.includes(p));
-      const bIsPopular = POPULAR_SERVICE_NAMES.some(p => bName.includes(p));
-      
-      if (aIsPopular && !bIsPopular) return -1;
-      if (!aIsPopular && bIsPopular) return 1;
-      return a.name.localeCompare(b.name);
-    });
-  }, [services, serviceSearchQuery]);
-
-  // Get selected service name for display
-  const selectedServiceName = useMemo(() => {
-    const service = services.find(s => s.id === selectedService);
-    return service?.name || '';
-  }, [services, selectedService]);
-
-  // Fetch initial data - optimized to load essential data first
-  const fetchInitialData = useCallback(async () => {
+  // ----- Initial load: wallet + active rentals + history -----
+  const refreshActiveAndHistory = useCallback(async () => {
     try {
-      setIsLoading(true);
-
-      // Load providers and balance first
-      const [providersRes, balanceRes] =
-        await Promise.allSettled([
-          getProviders(),
-          getWalletBalance(),
-        ]);
-
-      let rentalProviderId = '';
-      if (providersRes.status === 'fulfilled') {
-        const rentalProviders = providersRes.value.providers?.filter(
-          p => p.isActive && p.supportsRental
-        ) || [];
-        setProviders(rentalProviders);
-        if (rentalProviders.length > 0) {
-          rentalProviderId = rentalProviders[0].id;
-          setSelectedProvider(rentalProviderId);
-        }
-      }
-
-      if (balanceRes.status === 'fulfilled') {
-        setWalletBalance(balanceRes.value.balance);
-      }
-
-      // Load services and countries for the rental provider with pagination
-      if (rentalProviderId) {
-        // Fetch all services with pagination
-        const fetchAllServices = async (): Promise<SmsService[]> => {
-          let allServices: SmsService[] = [];
-          let page = 1;
-          const limit = 200;
-          let hasMore = true;
-          
-          while (hasMore) {
-            const response = await getServices({ providerId: rentalProviderId, limit, page });
-            const services = response.data || [];
-            allServices = [...allServices, ...services];
-            
-            if (services.length < limit) {
-              hasMore = false;
-            } else {
-              page++;
-            }
-          }
-          return allServices;
-        };
-        
-        // Fetch all countries with pagination
-        const fetchAllCountries = async (): Promise<SmsCountry[]> => {
-          let allCountries: SmsCountry[] = [];
-          let page = 1;
-          const limit = 200;
-          let hasMore = true;
-          
-          while (hasMore) {
-            const response = await getCountries({ providerId: rentalProviderId, limit, page });
-            const countries = response.data || [];
-            allCountries = [...allCountries, ...countries];
-            
-            if (countries.length < limit) {
-              hasMore = false;
-            } else {
-              page++;
-            }
-          }
-          return allCountries;
-        };
-
-        const [servicesRes, countriesRes] = await Promise.allSettled([
-          fetchAllServices(),
-          fetchAllCountries(),
-        ]);
-
-        if (servicesRes.status === 'fulfilled') {
-          setServices(servicesRes.value);
-        }
-        if (countriesRes.status === 'fulfilled') {
-          setCountries(countriesRes.value);
-        }
-      }
-
-      // Load rental history in background
-      Promise.allSettled([
+      const [active, history] = await Promise.all([
         getRentalHistory({ status: 'ACTIVE', limit: 50 }),
         getRentalHistory({ limit: 20 }),
-      ]).then(([activeRes, historyRes]) => {
-        if (activeRes.status === 'fulfilled') {
-          setActiveRentals((activeRes.value.data || []).filter(r => r.status === 'ACTIVE'));
-        }
-        if (historyRes.status === 'fulfilled') {
-          setRentalHistory(
-            (historyRes.value.data || []).filter(r => r.status !== 'ACTIVE')
-          );
-        }
-      });
+      ]);
+      setActiveRentals((active.data || []).filter((r) => r.status === 'ACTIVE'));
+      setRentalHistory((history.data || []).filter((r) => r.status !== 'ACTIVE'));
     } catch (err) {
-      console.error('Failed to fetch data:', err);
-    } finally {
-      setIsLoading(false);
+      console.error('Failed to fetch rentals:', err);
     }
   }, []);
 
-  // Initial load
   useEffect(() => {
-    fetchInitialData();
-  }, [fetchInitialData]);
+    (async () => {
+      try {
+        const balance = await getWalletBalance();
+        setWalletBalance(balance.balance);
+      } catch {
+        /* keep default */
+      }
+      await refreshActiveAndHistory();
+      setIsInitialLoading(false);
+    })();
+  }, [refreshActiveAndHistory]);
 
-  // Poll active rentals for messages
+  // ----- Poll active rentals for incoming SMS -----
   useEffect(() => {
     if (activeRentals.length === 0) return;
-
-    const pollInterval = setInterval(async () => {
+    const poll = setInterval(async () => {
       for (const rental of activeRentals) {
         try {
-          const response = await checkRentalStatus(rental.id);
-          setActiveRentals(prev =>
-            prev.map(r => (r.id === rental.id ? response.rental : r))
-          );
-
-          // Check for new messages
-          const newMsgCount = response.rental?.messages?.length || 0;
-          const oldMsgCount = rental.messages?.length || 0;
-          if (newMsgCount > oldMsgCount) {
-            const newMessages = (response.rental?.messages || []).slice(oldMsgCount);
-            newMessages.forEach(msg => {
-              toast.success('New SMS received!', {
-                description: msg.text.slice(0, 50) + (msg.text.length > 50 ? '...' : ''),
-              });
-            });
+          const res = await checkRentalStatus(rental.id);
+          const newMsgs = res.rental?.messages?.length ?? 0;
+          const oldMsgs = rental.messages?.length ?? 0;
+          if (newMsgs > oldMsgs) {
+            const incoming = (res.rental?.messages ?? []).slice(oldMsgs);
+            incoming.forEach((m) =>
+              toast.success('New SMS received', {
+                description:
+                  m.text.length > 60 ? m.text.slice(0, 60) + '...' : m.text,
+              }),
+            );
           }
-        } catch (err) {
-          console.error('Failed to check rental status:', err);
+          setActiveRentals((prev) =>
+            prev.map((r) => (r.id === rental.id ? res.rental : r)),
+          );
+        } catch {
+          /* ignore poll errors */
         }
       }
-    }, 10000);
-
-    return () => clearInterval(pollInterval);
+    }, 10_000);
+    return () => clearInterval(poll);
   }, [activeRentals]);
 
-  // Handle rent number
-  const handleRentNumber = async () => {
-    if (!selectedService || !selectedCountry || !selectedDuration) {
-      toast.error('Please fill in all fields');
+  // ----- Service search (only fires in per-app mode) -----
+  useEffect(() => {
+    const id = setTimeout(() => setDebouncedServiceSearch(serviceSearch.trim()), 250);
+    return () => clearTimeout(id);
+  }, [serviceSearch]);
+
+  useEffect(() => {
+    if (rentalKind !== 'app') return;
+    let cancelled = false;
+    setIsServicesLoading(true);
+    getServices({ limit: 100, ...(debouncedServiceSearch ? { search: debouncedServiceSearch } : {}) })
+      .then((res) => {
+        if (cancelled) return;
+        setServices(res.data || []);
+      })
+      .catch(() => {
+        if (!cancelled) setServices([]);
+      })
+      .finally(() => {
+        if (!cancelled) setIsServicesLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [rentalKind, debouncedServiceSearch]);
+
+  // ----- Sort: popular apps first -----
+  const sortedServices = useMemo(() => {
+    return [...services].sort((a, b) => {
+      const aPop = POPULAR_APPS.has(a.slug?.toLowerCase() ?? '') ? 0 : 1;
+      const bPop = POPULAR_APPS.has(b.slug?.toLowerCase() ?? '') ? 0 : 1;
+      if (aPop !== bPop) return aPop - bPop;
+      return a.name.localeCompare(b.name);
+    });
+  }, [services]);
+
+  // ----- Country options: fetch whenever the duration combo changes -----
+  const fetchOptions = useCallback(async () => {
+    if (amount < 1) return;
+    if (rentalKind === 'app' && !selectedService) {
+      // Per-app mode needs a service before we can fetch options
+      setOptions([]);
+      setOptionsError(null);
       return;
     }
-
+    const requestId = ++optionsRequestId.current;
+    const isStale = () => requestId !== optionsRequestId.current;
+    setIsOptionsLoading(true);
+    setOptionsError(null);
     try {
-      setIsRenting(true);
-      const duration = parseInt(selectedDuration) as 1 | 4 | 12 | 24 | 48 | 72;
-      const response = await rentNumber(selectedService, selectedCountry, duration);
-
-      // Handle both response formats: { rental: ... } or direct rental object
-      const rental = response.rental || response;
-
-      setActiveRentals(prev => [rental as SmsRental, ...prev]);
-      setWalletBalance(prev =>
-        (parseFloat(prev) - parseFloat(rental.finalCost || '0')).toFixed(2)
-      );
-
-      toast.success('Number rented successfully!', {
-        description: `${rental.phoneNumber || 'Number assigned'} - ${formatDuration(duration)}`,
+      const res = await getRentalOptions({
+        duration: amount,
+        unit,
+        applicationId:
+          rentalKind === 'app' && selectedService ? selectedService.id : undefined,
       });
-
-      // Reset form
-      setSelectedService('');
-      setSelectedCountry('');
-    } catch (err: any) {
-      console.error('Rent error:', err);
-      const errorMessage = err.response?.data?.message || '';
-      
-      // Provide user-friendly error messages
-      let description = 'Please try again.';
-      if (errorMessage.includes('No numbers') || errorMessage.includes('not available')) {
-        description = 'No numbers available for this service/country combination. Try a different country or service.';
-      } else if (errorMessage.includes('Insufficient')) {
-        description = 'Insufficient wallet balance. Please add funds to continue.';
-      } else if (errorMessage.includes('Service not found')) {
-        description = 'This service is not available for rental. Please select a different service.';
-      } else if (errorMessage.includes('Country not found')) {
-        description = 'This country is not available. Please select a different country.';
-      } else if (errorMessage) {
-        description = errorMessage;
-      }
-      
-      toast.error('Failed to rent number', { description });
+      if (isStale()) return;
+      setOptions(res.data || []);
+    } catch (err) {
+      if (isStale()) return;
+      console.error('Failed to fetch rental options:', err);
+      setOptions([]);
+      setOptionsError(
+        'Could not load rental options right now. Please try again.',
+      );
     } finally {
-      setIsRenting(false);
+      if (!isStale()) setIsOptionsLoading(false);
     }
-  };
+  }, [amount, unit, rentalKind, selectedService]);
 
-  // Handle cancel rental
-  const handleCancelRental = async (rentalId: string) => {
+  useEffect(() => {
+    fetchOptions();
+  }, [fetchOptions]);
+
+  // ----- Filter country rows by search box -----
+  const visibleOptions = useMemo(() => {
+    const q = countrySearch.trim().toLowerCase();
+    if (!q) return options;
+    return options.filter(
+      (o) =>
+        o.country.name.toLowerCase().includes(q) ||
+        o.country.code.toLowerCase().includes(q),
+    );
+  }, [options, countrySearch]);
+
+  // ----- Rent a number -----
+  const handleRent = async (option: RentalOption) => {
+    if (buyingCountryId) return;
+    setBuyingCountryId(option.country.id);
     try {
-      setIsCancelling(rentalId);
-      const response = await cancelRental(rentalId);
-
-      setActiveRentals(prev => prev.filter(r => r.id !== rentalId));
-      setRentalHistory(prev => [response.order as unknown as SmsRental, ...prev]);
-      setWalletBalance(prev =>
-        (parseFloat(prev) + parseFloat(response.refundAmount)).toFixed(2)
-      );
-
-      toast.success('Rental cancelled', {
-        description: `Refunded: $${parseFloat(response.refundAmount).toFixed(2)}`,
+      const res = await rentNumber({
+        countryId: option.country.id,
+        duration: amount,
+        unit,
+        applicationId:
+          rentalKind === 'app' && selectedService ? selectedService.id : undefined,
+      });
+      const rental = (res.rental ?? res) as SmsRental;
+      setActiveRentals((prev) => [rental, ...prev]);
+      const refreshed = await getWalletBalance().catch(() => null);
+      if (refreshed) setWalletBalance(refreshed.balance);
+      toast.success('Number rented', {
+        description: `${rental.phoneNumber ?? 'Number assigned'} · ${option.country.name}`,
       });
     } catch (err: any) {
-      toast.error('Failed to cancel rental', {
-        description: err.response?.data?.message || 'Please try again.',
+      const msg = err?.response?.data?.message || '';
+      toast.error('Could not rent number', {
+        description: msg || 'Please try a different country or duration.',
       });
     } finally {
-      setIsCancelling(null);
+      setBuyingCountryId(null);
     }
   };
 
-  // Copy to clipboard
-  const copyNumber = (number: string) => {
-    navigator.clipboard.writeText(number);
-    toast.success('Number copied to clipboard!');
-  };
-
-  // Format time remaining
-  const formatTimeRemaining = (expiresAt: string): string => {
-    const expires = new Date(expiresAt);
-    const now = new Date();
-    const diffMs = expires.getTime() - now.getTime();
-
-    if (diffMs <= 0) return 'Expired';
-
-    const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
-    const diffMins = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
-    const diffDays = Math.floor(diffHours / 24);
-    const remainingHours = diffHours % 24;
-
-    if (diffDays > 0) {
-      return `${diffDays}d ${remainingHours}h`;
+  // ----- Cancel rental -----
+  const handleCancel = async (rental: SmsRental) => {
+    if (!confirm('Cancel this rental? Refund depends on remaining time.')) return;
+    try {
+      const res = await cancelRental(rental.id);
+      setActiveRentals((prev) => prev.filter((r) => r.id !== rental.id));
+      const refreshed = await getWalletBalance().catch(() => null);
+      if (refreshed) setWalletBalance(refreshed.balance);
+      toast.success('Rental cancelled', { description: (res as any)?.message });
+      refreshActiveAndHistory();
+    } catch (err: any) {
+      toast.error('Could not cancel rental', {
+        description: err?.response?.data?.message || 'Please try again.',
+      });
     }
-    if (diffHours > 0) {
-      return `${diffHours}h ${diffMins}m`;
+  };
+
+  // ----- Extend rental -----
+  const handleOpenExtend = (rental: SmsRental) => {
+    setExtendingRental(rental);
+    setExtendUnit('day');
+    setExtendAmount(1);
+  };
+
+  const handleConfirmExtend = async () => {
+    if (!extendingRental) return;
+    setIsExtending(true);
+    try {
+      const res = await extendRental(extendingRental.id, {
+        duration: extendAmount,
+        unit: extendUnit,
+      });
+      setActiveRentals((prev) =>
+        prev.map((r) => (r.id === extendingRental.id ? res.rental : r)),
+      );
+      const refreshed = await getWalletBalance().catch(() => null);
+      if (refreshed) setWalletBalance(refreshed.balance);
+      toast.success(res.message || 'Rental extended');
+      setExtendingRental(null);
+    } catch (err: any) {
+      toast.error('Could not extend rental', {
+        description:
+          err?.response?.data?.message || 'Please try again in a few seconds.',
+      });
+    } finally {
+      setIsExtending(false);
     }
-    return `${diffMins}m`;
   };
 
-  // View messages
-  const viewMessages = (rental: SmsRental) => {
-    setSelectedRental(rental);
-    setShowMessagesDialog(true);
-  };
-
-  // Loading state
-  if (isLoading) {
-    return (
-      <div className="flex min-h-[400px] items-center justify-center">
-        <div className="text-center">
-          <Loader2 className="text-primary mx-auto mb-4 h-8 w-8 animate-spin" />
-          <p className="text-muted-foreground">Loading rentals...</p>
-        </div>
-      </div>
-    );
-  }
-
-  // No rental providers available
-  if (providers.length === 0) {
-    return (
-      <div className="space-y-6">
-        <div>
-          <h1 className="text-2xl font-bold sm:text-3xl">Rent Numbers</h1>
-          <p className="text-muted-foreground mt-1">
-            Rent phone numbers for extended periods
-          </p>
-        </div>
-        <Card>
-          <CardContent className="py-12 text-center">
-            <AlertCircle className="text-muted-foreground mx-auto mb-4 h-12 w-12" />
-            <p className="text-muted-foreground">
-              Number rental is not available at the moment.
-            </p>
-            <p className="text-muted-foreground mt-1 text-sm">
-              Please check back later or use SMS activation instead.
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
+  // ----- UI -----
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-6 p-4 sm:p-6">
+      {/* Header */}
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold sm:text-3xl">Rent Numbers</h1>
-          <p className="text-muted-foreground mt-1">
-            Rent phone numbers for extended periods
+          <h1 className="text-2xl font-bold tracking-tight">Rent Numbers</h1>
+          <p className="text-muted-foreground text-sm">
+            Rent a phone number to receive SMS for hours, days, weeks, or months.
           </p>
         </div>
-        <Badge variant="outline" className="text-sm">
-          Balance: {formatBalance(walletBalance, 'USD')}
-        </Badge>
+        <div className="text-right">
+          <p className="text-muted-foreground text-xs uppercase tracking-wide">
+            Wallet balance
+          </p>
+          <p className="text-xl font-semibold">${walletBalance}</p>
+        </div>
       </div>
 
-      {/* Rent New Number */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Rent a New Number</CardTitle>
-          <CardDescription>
-            Select your preferences to rent a phone number
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-            {/* Provider */}
-            {providers.length > 1 && (
-              <div className="space-y-2">
-                <Label>Provider</Label>
-                <Select
-                  value={selectedProvider}
-                  onValueChange={setSelectedProvider}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select provider" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {providers.map(provider => (
-                      <SelectItem key={provider.id} value={provider.id}>
-                        {provider.displayName}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
-
-            {/* Service - Searchable Combobox */}
-            <div className="space-y-2">
-              <Label>Service</Label>
-              <Popover open={serviceSearchOpen} onOpenChange={setServiceSearchOpen}>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    role="combobox"
-                    aria-expanded={serviceSearchOpen}
-                    className="w-full justify-between font-normal"
-                  >
-                    {selectedServiceName || "Search services..."}
-                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-[300px] p-0" align="start">
-                  <Command shouldFilter={false}>
-                    <CommandInput 
-                      placeholder="Search WhatsApp, Telegram, etc..." 
-                      value={serviceSearchQuery}
-                      onValueChange={setServiceSearchQuery}
-                    />
-                    <CommandList>
-                      <CommandEmpty>No service found.</CommandEmpty>
-                      <CommandGroup heading="Popular Services">
-                        {filteredServices.slice(0, 50).map(service => (
-                          <CommandItem
-                            key={service.id}
-                            value={service.id}
-                            onSelect={() => {
-                              setSelectedService(service.id);
-                              setServiceSearchOpen(false);
-                              setServiceSearchQuery('');
-                            }}
-                          >
-                            <Check
-                              className={cn(
-                                "mr-2 h-4 w-4",
-                                selectedService === service.id ? "opacity-100" : "opacity-0"
-                              )}
-                            />
-                            <span className="truncate">{service.name}</span>
-                            {service.iconUrl && (
-                              <img 
-                                src={service.iconUrl} 
-                                alt="" 
-                                className="ml-auto h-4 w-4"
-                                onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
-                              />
-                            )}
-                          </CommandItem>
-                        ))}
-                      </CommandGroup>
-                      {filteredServices.length > 50 && (
-                        <p className="text-muted-foreground px-2 py-2 text-xs text-center">
-                          Type to search {filteredServices.length - 50} more services...
-                        </p>
-                      )}
-                    </CommandList>
-                  </Command>
-                </PopoverContent>
-              </Popover>
-            </div>
-
-            {/* Country */}
-            <div className="space-y-2">
-              <Label>Country</Label>
-              <Select
-                value={selectedCountry}
-                onValueChange={setSelectedCountry}
+      {/* Active rentals (only if any) */}
+      {activeRentals.length > 0 && (
+        <section>
+          <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+            Active rentals ({activeRentals.length})
+          </h2>
+          <div className="grid gap-3 sm:grid-cols-2">
+            {activeRentals.map((r) => (
+              <div
+                key={r.id}
+                className="rounded-2xl border border-[rgba(255,255,255,0.08)] bg-[rgba(15,23,42,0.6)] p-4 backdrop-blur"
               >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select country" />
-                </SelectTrigger>
-                <SelectContent>
-                  {countries.map(country => (
-                    <SelectItem key={country.id} value={country.id}>
-                      <span className="flex items-center gap-2">
-                        <span>{getCountryFlag(country.code)}</span>
-                        <span>{country.name}</span>
-                      </span>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Duration */}
-            <div className="space-y-2">
-              <Label>Duration</Label>
-              <Select
-                value={selectedDuration}
-                onValueChange={setSelectedDuration}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {RENTAL_DURATIONS.map(duration => (
-                    <SelectItem
-                      key={duration.value}
-                      value={duration.value.toString()}
-                    >
-                      {duration.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <Button
-              size="lg"
-              className="w-full sm:w-auto"
-              onClick={handleRentNumber}
-              disabled={isRenting || !selectedService || !selectedCountry}
-            >
-              {isRenting ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Renting...
-                </>
-              ) : (
-                'Rent Number Now'
-              )}
-            </Button>
-            <p className="text-muted-foreground text-xs">
-              Number availability varies by service and country. If unavailable, try a different combination.
-            </p>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Active Rentals */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Active Rentals ({activeRentals.length})</CardTitle>
-          <CardDescription>Your currently rented phone numbers</CardDescription>
-        </CardHeader>
-        <CardContent>
-          {activeRentals.length === 0 ? (
-            <div className="py-12 text-center">
-              <Phone className="text-muted-foreground mx-auto mb-4 h-12 w-12" />
-              <p className="text-muted-foreground">No active rentals</p>
-              <p className="text-muted-foreground mt-1 text-sm">
-                Rent a number above to get started
-              </p>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {activeRentals.map(rental => (
-                <div
-                  key={rental.id}
-                  className="border-border bg-card rounded-lg border p-4 transition-shadow hover:shadow-md"
-                >
-                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                    <div className="flex items-start space-x-3">
-                      <span className="flex-shrink-0 text-2xl sm:text-3xl">
-                        📱
-                      </span>
-                      <div className="min-w-0 flex-1">
-                        <div className="mb-1 flex flex-wrap items-center gap-2">
-                          <h3 className="truncate font-mono text-sm font-semibold sm:text-base">
-                            {rental.phoneNumber || 'Pending...'}
-                          </h3>
-                          {rental.phoneNumber && (
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-6 w-6 flex-shrink-0"
-                              onClick={() => copyNumber(rental.phoneNumber!)}
-                            >
-                              <Copy className="h-3 w-3" />
-                            </Button>
-                          )}
-                        </div>
-                        <div className="text-muted-foreground flex flex-wrap gap-x-2 gap-y-1 text-xs sm:text-sm">
-                          <span>{rental.provider?.displayName || rental.provider?.name}</span>
-                          <span>•</span>
-                          <span>{formatDuration(rental.rentalDuration)}</span>
-                        </div>
-                        <div className="mt-2 flex flex-wrap items-center gap-2">
-                          <Badge variant="secondary" className="text-xs">
-                            <Clock className="mr-1 h-3 w-3" />
-                            {formatTimeRemaining(rental.expiresAt)} remaining
-                          </Badge>
-                          {(rental.messages?.length || 0) > 0 && (
-                            <Badge variant="default" className="text-xs">
-                              <MessageSquare className="mr-1 h-3 w-3" />
-                              {rental.messages?.length || 0} messages
-                            </Badge>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center justify-between gap-2 sm:flex-col sm:items-end">
-                      <span className="text-base font-bold sm:text-lg">
-                        ${parseFloat(rental.finalCost).toFixed(2)}
-                      </span>
-                      <div className="flex gap-2">
-                        {(rental.messages?.length || 0) > 0 && (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => viewMessages(rental)}
-                          >
-                            Messages
-                          </Button>
-                        )}
-                        {canCancelRental(rental.status) && (
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            className="text-destructive hover:text-destructive"
-                            onClick={() => handleCancelRental(rental.id)}
-                            disabled={isCancelling === rental.id}
-                          >
-                            {isCancelling === rental.id ? (
-                              <Loader2 className="h-4 w-4 animate-spin" />
-                            ) : (
-                              <X className="h-4 w-4" />
-                            )}
-                          </Button>
-                        )}
-                      </div>
-                    </div>
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="font-mono text-lg font-semibold tracking-tight">
+                      {r.phoneNumber || '—'}
+                    </p>
+                    <p className="text-muted-foreground mt-0.5 text-xs">
+                      {r.service?.name ?? 'Full number'} ·{' '}
+                      {r.country?.name ?? '—'}
+                    </p>
                   </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Rental History */}
-      {rentalHistory.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Rental History</CardTitle>
-            <CardDescription>Previously rented numbers</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              {rentalHistory.map(rental => (
-                <div
-                  key={rental.id}
-                  className="border-border flex items-center justify-between rounded-lg border p-3"
-                >
-                  <div className="flex items-center space-x-3">
-                    <span className="text-xl">📱</span>
-                    <div>
-                      <p className="font-mono text-sm">
-                        {rental.phoneNumber || 'N/A'}
-                      </p>
-                      <p className="text-muted-foreground text-xs">
-                        {rental.provider?.displayName || rental.provider?.name} •{' '}
-                        {formatDuration(rental.rentalDuration)} •{' '}
-                        {rental.messages?.length || 0} messages
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-medium">
-                      ${parseFloat(rental.finalCost).toFixed(2)}
-                    </span>
-                    <Badge
-                      variant="secondary"
-                      style={{
-                        backgroundColor: `color-mix(in srgb, ${getRentalStatusColor(rental.status)} 15%, transparent)`,
-                        color: getRentalStatusColor(rental.status),
+                  {r.phoneNumber && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        navigator.clipboard.writeText(r.phoneNumber!);
+                        toast.success('Copied');
                       }}
                     >
-                      {getRentalStatusLabel(rental.status)}
-                    </Badge>
-                  </div>
+                      <Copy className="h-4 w-4" />
+                    </Button>
+                  )}
                 </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
 
-      {/* Messages Dialog */}
-      <Dialog open={showMessagesDialog} onOpenChange={setShowMessagesDialog}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle>Messages</DialogTitle>
-            <DialogDescription>
-              {selectedRental?.phoneNumber} •{' '}
-              {selectedRental?.messages.length || 0} messages received
-            </DialogDescription>
-          </DialogHeader>
-          <div className="max-h-[400px] space-y-3 overflow-y-auto">
-            {selectedRental?.messages.length === 0 ? (
-              <p className="text-muted-foreground py-8 text-center text-sm">
-                No messages received yet
-              </p>
-            ) : (
-              selectedRental?.messages.map((msg, idx) => (
-                <div
-                  key={idx}
-                  className="bg-muted/50 border-border rounded-lg border p-3"
-                >
-                  <div className="mb-1 flex items-center justify-between">
-                    <span className="text-muted-foreground text-xs">
-                      From: {msg.sender}
-                    </span>
-                    <span className="text-muted-foreground text-xs">
-                      {new Date(msg.receivedAt).toLocaleString()}
-                    </span>
-                  </div>
-                  <p className="text-sm">{msg.text}</p>
+                <div className="mt-3 flex items-center gap-4 text-xs">
+                  <span className="inline-flex items-center gap-1">
+                    <Clock className="h-3.5 w-3.5" />
+                    {formatRemaining(r.expiresAt)}
+                  </span>
+                  <span className="inline-flex items-center gap-1">
+                    <MessageSquare className="h-3.5 w-3.5" />
+                    {(r.messages?.length ?? 0)} SMS
+                  </span>
+                </div>
+
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setViewingRental(r)}
+                  >
+                    View SMS
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleOpenExtend(r)}
+                  >
+                    <Plus className="mr-1 h-3.5 w-3.5" />
+                    Extend
+                  </Button>
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="mt-2 h-7 text-xs"
-                    onClick={() => {
-                      navigator.clipboard.writeText(msg.text);
-                      toast.success('Message copied!');
-                    }}
+                    onClick={() => handleCancel(r)}
                   >
-                    <Copy className="mr-1 h-3 w-3" />
-                    Copy
+                    <X className="mr-1 h-3.5 w-3.5" />
+                    Cancel
                   </Button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* Rental Type toggle */}
+      <section className="space-y-3">
+        <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+          1. Choose rental type
+        </h2>
+        <div className="grid grid-cols-2 gap-2">
+          <button
+            type="button"
+            onClick={() => {
+              setRentalKind('full');
+              setSelectedService(null);
+            }}
+            className={cn(
+              'rounded-xl border p-4 text-left transition',
+              rentalKind === 'full'
+                ? 'border-primary bg-primary/5 ring-2 ring-primary/30'
+                : 'border-[rgba(255,255,255,0.1)] hover:border-[rgba(255,255,255,0.25)]',
+            )}
+          >
+            <div className="flex items-center gap-2">
+              <Globe className="h-4 w-4" />
+              <span className="font-medium">Full Number</span>
+            </div>
+            <p className="text-muted-foreground mt-1 text-xs">
+              Receive all SMS sent to the line.
+            </p>
+          </button>
+          <button
+            type="button"
+            onClick={() => setRentalKind('app')}
+            className={cn(
+              'rounded-xl border p-4 text-left transition',
+              rentalKind === 'app'
+                ? 'border-primary bg-primary/5 ring-2 ring-primary/30'
+                : 'border-[rgba(255,255,255,0.1)] hover:border-[rgba(255,255,255,0.25)]',
+            )}
+          >
+            <div className="flex items-center gap-2">
+              <MessageSquare className="h-4 w-4" />
+              <span className="font-medium">Per App</span>
+            </div>
+            <p className="text-muted-foreground mt-1 text-xs">
+              Receive SMS for one specific service only.
+            </p>
+          </button>
+        </div>
+      </section>
+
+      {/* Per-app: service picker */}
+      {rentalKind === 'app' && (
+        <section className="space-y-3">
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+            2. Choose service
+          </h2>
+          <div className="relative">
+            <Search className="text-muted-foreground absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2" />
+            <Input
+              value={serviceSearch}
+              onChange={(e) => setServiceSearch(e.target.value)}
+              placeholder="Search services (WhatsApp, Telegram, Google...)"
+              className="pl-9"
+            />
+          </div>
+          {selectedService && (
+            <div className="flex items-center justify-between rounded-xl border border-primary/30 bg-primary/5 px-3 py-2">
+              <span className="text-sm">
+                Selected: <strong>{selectedService.name}</strong>
+              </span>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setSelectedService(null)}
+              >
+                <X className="h-3.5 w-3.5" />
+              </Button>
+            </div>
+          )}
+          {!selectedService && (
+            <div className="grid max-h-60 grid-cols-2 gap-2 overflow-y-auto rounded-xl border border-[rgba(255,255,255,0.06)] bg-[rgba(15,23,42,0.4)] p-2 sm:grid-cols-3 md:grid-cols-4">
+              {isServicesLoading ? (
+                <div className="col-span-full flex items-center justify-center py-6">
+                  <Loader2 className="text-muted-foreground h-4 w-4 animate-spin" />
+                </div>
+              ) : sortedServices.length === 0 ? (
+                <div className="text-muted-foreground col-span-full py-6 text-center text-sm">
+                  No services found.
+                </div>
+              ) : (
+                sortedServices.map((svc) => (
+                  <button
+                    key={svc.id}
+                    onClick={() => setSelectedService(svc)}
+                    className="flex items-center gap-2 rounded-lg border border-transparent px-2 py-2 text-left text-sm transition hover:border-primary/30 hover:bg-primary/5"
+                  >
+                    {svc.iconUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={svc.iconUrl}
+                        alt=""
+                        className="h-5 w-5 flex-shrink-0"
+                        loading="lazy"
+                      />
+                    ) : (
+                      <span className="bg-muted flex h-5 w-5 flex-shrink-0 items-center justify-center rounded text-[10px]">
+                        📱
+                      </span>
+                    )}
+                    <span className="truncate">{svc.name}</span>
+                  </button>
+                ))
+              )}
+            </div>
+          )}
+        </section>
+      )}
+
+      {/* Duration */}
+      <section className="space-y-3">
+        <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+          {rentalKind === 'app' ? '3.' : '2.'} Choose duration
+        </h2>
+        <div className="grid grid-cols-4 gap-2">
+          {UNIT_CHOICES.map((u) => (
+            <button
+              key={u.unit}
+              onClick={() => {
+                setUnit(u.unit);
+                setAmount(DEFAULT_AMOUNT_BY_UNIT[u.unit]);
+              }}
+              className={cn(
+                'rounded-xl border py-3 text-sm font-medium transition',
+                unit === u.unit
+                  ? 'border-primary bg-primary/5 ring-2 ring-primary/30'
+                  : 'border-[rgba(255,255,255,0.1)] hover:border-[rgba(255,255,255,0.25)]',
+              )}
+            >
+              {u.label}
+            </button>
+          ))}
+        </div>
+        <div className="flex items-center gap-3">
+          <Input
+            type="number"
+            min={1}
+            max={720}
+            value={amount}
+            onChange={(e) => {
+              const v = parseInt(e.target.value);
+              if (Number.isFinite(v) && v > 0) setAmount(v);
+            }}
+            className="w-28"
+          />
+          <span className="text-muted-foreground text-sm">
+            × {UNIT_CHOICES.find((u) => u.unit === unit)?.label.toLowerCase()}
+            {amount > 1 ? 's' : ''}
+          </span>
+          <div className="ml-auto flex flex-wrap gap-1">
+            {UNIT_CHOICES.find((u) => u.unit === unit)?.suggestions.map((s) => (
+              <button
+                key={s}
+                onClick={() => setAmount(s)}
+                className={cn(
+                  'rounded-full border px-3 py-1 text-xs transition',
+                  amount === s
+                    ? 'border-primary bg-primary/10'
+                    : 'border-[rgba(255,255,255,0.1)] hover:border-[rgba(255,255,255,0.25)]',
+                )}
+              >
+                {s}
+              </button>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Countries */}
+      <section className="space-y-3">
+        <div className="flex items-center justify-between gap-2">
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+            {rentalKind === 'app' ? '4.' : '3.'} Pick a country
+          </h2>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={fetchOptions}
+            disabled={isOptionsLoading}
+          >
+            <RefreshCw
+              className={cn('h-3.5 w-3.5', isOptionsLoading && 'animate-spin')}
+            />
+          </Button>
+        </div>
+
+        <div className="relative">
+          <Search className="text-muted-foreground absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2" />
+          <Input
+            value={countrySearch}
+            onChange={(e) => setCountrySearch(e.target.value)}
+            placeholder="Search country"
+            className="pl-9"
+          />
+        </div>
+
+        {rentalKind === 'app' && !selectedService ? (
+          <div className="text-muted-foreground rounded-xl border border-dashed border-[rgba(255,255,255,0.1)] py-10 text-center text-sm">
+            Pick a service above to see available countries.
+          </div>
+        ) : isOptionsLoading ? (
+          <div className="flex items-center justify-center py-10">
+            <Loader2 className="text-muted-foreground h-5 w-5 animate-spin" />
+          </div>
+        ) : optionsError ? (
+          <div className="flex items-center justify-center gap-2 rounded-xl border border-amber-500/30 bg-amber-500/5 py-6 text-sm">
+            <AlertCircle className="h-4 w-4 text-amber-500" />
+            {optionsError}
+          </div>
+        ) : visibleOptions.length === 0 ? (
+          <div className="text-muted-foreground rounded-xl border border-dashed border-[rgba(255,255,255,0.1)] py-10 text-center text-sm">
+            No countries available for this duration. Try a different unit.
+          </div>
+        ) : (
+          <div className="grid gap-2 sm:grid-cols-2">
+            {visibleOptions.map((o) => {
+              const busy = buyingCountryId === o.country.id;
+              const lowStock = o.available > 0 && o.available <= 5;
+              return (
+                <button
+                  key={o.country.id}
+                  onClick={() => handleRent(o)}
+                  disabled={busy || !!buyingCountryId}
+                  className={cn(
+                    'group flex items-center justify-between gap-3 rounded-xl border p-3 text-left transition',
+                    'border-[rgba(255,255,255,0.08)] hover:border-primary/40 hover:bg-primary/5',
+                    busy && 'opacity-50',
+                    !!buyingCountryId && !busy && 'cursor-not-allowed opacity-40',
+                  )}
+                >
+                  <div className="flex min-w-0 items-center gap-3">
+                    <span className="text-2xl leading-none">
+                      {flagEmoji(o.country.code)}
+                    </span>
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-medium">
+                        {o.country.name}
+                      </p>
+                      <p className="text-muted-foreground text-xs">
+                        {o.available.toLocaleString()} available
+                        {lowStock && (
+                          <span className="ml-1 text-amber-500">· low stock</span>
+                        )}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-sm font-semibold">${o.price}</p>
+                    <p className="text-muted-foreground text-xs">
+                      {busy ? (
+                        <span className="inline-flex items-center gap-1">
+                          <Loader2 className="h-3 w-3 animate-spin" />
+                          Renting…
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1">
+                          Rent <ChevronRight className="h-3 w-3" />
+                        </span>
+                      )}
+                    </p>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        )}
+      </section>
+
+      {/* History (collapsed by default) */}
+      {!isInitialLoading && rentalHistory.length > 0 && (
+        <section>
+          <details className="rounded-xl border border-[rgba(255,255,255,0.08)] bg-[rgba(15,23,42,0.4)] p-4">
+            <summary className="cursor-pointer text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+              History ({rentalHistory.length})
+            </summary>
+            <div className="mt-3 space-y-2">
+              {rentalHistory.slice(0, 20).map((r) => (
+                <div
+                  key={r.id}
+                  className="flex items-center justify-between rounded-lg border border-[rgba(255,255,255,0.05)] px-3 py-2 text-sm"
+                >
+                  <div className="min-w-0">
+                    <p className="truncate font-mono">{r.phoneNumber || '—'}</p>
+                    <p className="text-muted-foreground text-xs">
+                      {r.service?.name ?? 'Full number'} · {r.country?.name ?? '—'}
+                    </p>
+                  </div>
+                  <Badge variant="outline">{r.status}</Badge>
+                </div>
+              ))}
+            </div>
+          </details>
+        </section>
+      )}
+
+      {/* SMS dialog */}
+      <Dialog
+        open={viewingRental != null}
+        onOpenChange={(o) => !o && setViewingRental(null)}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              SMS messages — {viewingRental?.phoneNumber || '—'}
+            </DialogTitle>
+            <DialogDescription>
+              {viewingRental?.country?.name ?? '—'} ·{' '}
+              {viewingRental?.service?.name ?? 'Full number'}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="max-h-[60vh] space-y-2 overflow-y-auto">
+            {(viewingRental?.messages?.length ?? 0) === 0 ? (
+              <p className="text-muted-foreground py-6 text-center text-sm">
+                No SMS received yet. We'll notify you when one arrives.
+              </p>
+            ) : (
+              viewingRental?.messages?.map((m, i) => (
+                <div
+                  key={i}
+                  className="rounded-lg border border-[rgba(255,255,255,0.06)] bg-[rgba(15,23,42,0.4)] p-3 text-sm"
+                >
+                  <p className="text-muted-foreground mb-1 text-xs">
+                    {m.from || 'unknown'} ·{' '}
+                    {new Date(m.receivedAt).toLocaleTimeString()}
+                  </p>
+                  <p>{m.text}</p>
                 </div>
               ))
             )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Extend dialog */}
+      <Dialog
+        open={extendingRental != null}
+        onOpenChange={(o) => !o && setExtendingRental(null)}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Extend rental</DialogTitle>
+            <DialogDescription>
+              Add more time to {extendingRental?.phoneNumber || 'this number'}.
+              You'll be charged at the current rate.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="grid grid-cols-4 gap-2">
+              {UNIT_CHOICES.map((u) => (
+                <button
+                  key={u.unit}
+                  onClick={() => {
+                    setExtendUnit(u.unit);
+                    setExtendAmount(DEFAULT_AMOUNT_BY_UNIT[u.unit]);
+                  }}
+                  className={cn(
+                    'rounded-xl border py-2 text-sm font-medium transition',
+                    extendUnit === u.unit
+                      ? 'border-primary bg-primary/5 ring-2 ring-primary/30'
+                      : 'border-[rgba(255,255,255,0.1)]',
+                  )}
+                >
+                  {u.label}
+                </button>
+              ))}
+            </div>
+            <div className="flex items-center gap-3">
+              <Input
+                type="number"
+                min={1}
+                max={720}
+                value={extendAmount}
+                onChange={(e) => {
+                  const v = parseInt(e.target.value);
+                  if (Number.isFinite(v) && v > 0) setExtendAmount(v);
+                }}
+                className="w-28"
+              />
+              <span className="text-muted-foreground text-sm">
+                × {UNIT_CHOICES.find((u) => u.unit === extendUnit)?.label.toLowerCase()}
+                {extendAmount > 1 ? 's' : ''}
+              </span>
+            </div>
+            <Button
+              className="w-full"
+              onClick={handleConfirmExtend}
+              disabled={isExtending}
+            >
+              {isExtending ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Extending…
+                </>
+              ) : (
+                <>
+                  <CheckCircle2 className="mr-2 h-4 w-4" />
+                  Confirm extension
+                </>
+              )}
+            </Button>
           </div>
         </DialogContent>
       </Dialog>

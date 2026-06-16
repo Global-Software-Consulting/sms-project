@@ -192,6 +192,8 @@ export {
   cancelOrder,
   getOrderHistory,
   rentNumber,
+  getRentalOptions,
+  extendRental,
   checkRentalStatus,
   cancelRental,
   getRentalHistory,
