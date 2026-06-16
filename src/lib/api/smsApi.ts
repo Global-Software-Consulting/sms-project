@@ -1615,11 +1615,18 @@ export const getCountryFlag = (code: string): string => {
 export const getProviderBadge = (
   slug: string,
 ): { label: string; color: string; icon: string } => {
+  // Backend now returns anonymized tier slugs (v1/v2/v3) from user-
+  // facing endpoints so the real provider slugs (fivesim/smsman/
+  // herosms) never reach the browser. The legacy entries are kept
+  // for compatibility with admin endpoints that still emit real slugs.
   const badges: Record<string, { label: string; color: string; icon: string }> =
     {
-      fivesim: { label: 'V1', color: '#C6A75E', icon: '💰' },
-      smsman: { label: 'V2', color: '#00D4FF', icon: '💎' },
-      herosms: { label: 'V3', color: '#10B981', icon: '🛡️' },
+      v1: { label: 'V1 - Basic', color: '#C6A75E', icon: '💰' },
+      v2: { label: 'V2 - Standard', color: '#00D4FF', icon: '💎' },
+      v3: { label: 'V3 - Premium', color: '#10B981', icon: '🛡️' },
+      fivesim: { label: 'V1 - Basic', color: '#C6A75E', icon: '💰' },
+      smsman: { label: 'V2 - Standard', color: '#00D4FF', icon: '💎' },
+      herosms: { label: 'V3 - Premium', color: '#10B981', icon: '🛡️' },
     };
   return badges[slug] || { label: 'V?', color: '#666', icon: '📱' };
 };
