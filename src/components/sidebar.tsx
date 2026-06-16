@@ -37,6 +37,7 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
     { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
     { name: 'Activation', href: '/dashboard/activation', icon: Smartphone },
     { name: 'Rent Numbers', href: '/dashboard/rent-numbers', icon: Phone },
+    { name: 'Favorites', href: '/dashboard/favorites', icon: Star },
     { name: 'Orders', href: '/dashboard/orders', icon: ShoppingBag },
     { name: 'Wallet', href: '/dashboard/wallet', icon: Wallet },
     { name: 'Membership', href: '/dashboard/membership', icon: Crown },

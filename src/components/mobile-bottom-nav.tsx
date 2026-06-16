@@ -14,6 +14,7 @@ import {
   Code,
   LifeBuoy,
   Settings,
+  Star,
   X,
 } from 'lucide-react';
 import { cn } from './ui/utils';
@@ -29,6 +30,7 @@ const primaryNav = [
 
 const moreNav = [
   { name: 'Rent Numbers', href: '/dashboard/rent-numbers', icon: Phone },
+  { name: 'Favorites', href: '/dashboard/favorites', icon: Star },
   { name: 'Orders', href: '/dashboard/orders', icon: ShoppingBag },
   { name: 'Membership', href: '/dashboard/membership', icon: Crown },
   { name: 'Reviews', href: '/dashboard/reviews', icon: MessageSquare },
@@ -78,7 +80,8 @@ export function MobileBottomNav() {
               const Icon = item.icon;
               const active = isActive(item.href);
               return (
-                <Link prefetch={false}
+                <Link
+                  prefetch={false}
                   key={item.name}
                   href={item.href}
                   onClick={() => setShowMore(false)}
@@ -152,7 +155,8 @@ export function MobileBottomNav() {
             }
 
             return (
-              <Link prefetch={false}
+              <Link
+                prefetch={false}
                 key={item.name}
                 href={item.href}
                 className="flex flex-col items-center justify-center gap-0 overflow-hidden pt-1"

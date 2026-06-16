@@ -229,6 +229,15 @@ export interface SmsFavorite {
     displayName: string;
     slug: string;
   } | null;
+  // Live pricing + stock for this favorite. Null when the product is
+  // unavailable (out of catalog, inactive, etc.).
+  product: {
+    price: string;
+    yourPrice: string;
+    discount: string;
+    discountPercent: number;
+    availableCount: number;
+  } | null;
   createdAt: string;
 }
 
