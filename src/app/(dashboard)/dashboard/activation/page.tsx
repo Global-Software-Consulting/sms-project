@@ -560,17 +560,30 @@ export default function Activation() {
       list = list.filter((item) => item.country.name.toLowerCase().includes(q));
     }
 
-    // Favorites filter. Defensive nulls: if a favorite has a missing
-    // country relation (e.g. legacy data before cascade was enforced),
-    // skip it instead of crashing the whole render. This was the
-    // source of the "click favorites and it crashes" bug.
+    // Favorites filter. Scope by the currently selected service +
+    // provider so favorites from OTHER services don't bleed into the
+    // current view. Without this scope, favoriting (WhatsApp, US) then
+    // switching to Telegram would surface US under Telegram with an
+    // empty star — the source of "random items show as favorites" and
+    // "star icon not always displayed correctly".
     if (countryFilter === 'favorites') {
-      const favoriteCountryIds = new Set(
-        favorites
-          .map((f) => f.country?.id)
-          .filter((id): id is string => typeof id === 'string'),
-      );
-      list = list.filter((item) => favoriteCountryIds.has(item.country.id));
+      const currentServiceId = selectedService?.id;
+      const currentProviderId = selectedProvider?.id;
+      if (!currentServiceId || !currentProviderId) {
+        list = [];
+      } else {
+        const favoriteCountryIds = new Set(
+          favorites
+            .filter(
+              (f) =>
+                f.service?.id === currentServiceId &&
+                f.provider?.id === currentProviderId,
+            )
+            .map((f) => f.country?.id)
+            .filter((id): id is string => typeof id === 'string'),
+        );
+        list = list.filter((item) => favoriteCountryIds.has(item.country.id));
+      }
     }
 
     // Available filter
@@ -586,7 +599,15 @@ export default function Activation() {
     }
 
     return list;
-  }, [productsByCountry, countrySearch, countryFilter, priceSort, favorites]);
+  }, [
+    productsByCountry,
+    countrySearch,
+    countryFilter,
+    priceSort,
+    favorites,
+    selectedService?.id,
+    selectedProvider?.id,
+  ]);
 
   // Handle service selection
   const handleSelectService = (service: SmsService) => {
@@ -1090,7 +1111,6 @@ export default function Activation() {
 
                 return filtered.map((svc) => {
                   const isSelected = selectedService?.id === svc.id;
-                  const isVip = vipServiceSlugs.has(svc.slug.toLowerCase());
                   return (
                     <button
                       key={svc.id}
@@ -1144,13 +1164,6 @@ export default function Activation() {
                           {svc.name}
                         </span>
                       </div>
-
-                      {isVip && (
-                        <span className="inline-flex shrink-0 items-center gap-1 rounded-full border border-amber-500/40 bg-amber-500/10 px-2 py-0.5 text-[10px] font-semibold tracking-wide text-amber-500 uppercase">
-                          <Star className="h-2.5 w-2.5 fill-current" />
-                          VIP
-                        </span>
-                      )}
 
                       {isSelected && (
                         <ChevronRight className="text-primary h-4 w-4 shrink-0" />
@@ -1393,30 +1406,10 @@ export default function Activation() {
                               </span>
                             </div>
 
-                            {/* Price with discount indicator — strike-through
-                                stacks above on mobile so the row doesn't get
-                                so wide that it overlaps the country name. */}
                             <div className="flex shrink-0 flex-col items-end text-right">
-                              {bestProduct.discountPercent &&
-                              bestProduct.discountPercent > 0 ? (
-                                <>
-                                  <span className="text-muted-foreground text-xs line-through">
-                                    {formatPrice(bestProduct.price)}
-                                  </span>
-                                  <div className="flex items-center gap-1">
-                                    <span className="text-sm font-bold text-green-600 tabular-nums dark:text-green-400">
-                                      {formatPrice(bestProduct.yourPrice)}
-                                    </span>
-                                    <span className="text-xs font-medium text-green-600 dark:text-green-400">
-                                      -{bestProduct.discountPercent}%
-                                    </span>
-                                  </div>
-                                </>
-                              ) : (
-                                <span className="text-sm font-bold tabular-nums">
-                                  {formatPrice(bestProduct.yourPrice)}
-                                </span>
-                              )}
+                              <span className="text-sm font-bold tabular-nums">
+                                {formatPrice(bestProduct.yourPrice)}
+                              </span>
                             </div>
                           </div>
 
