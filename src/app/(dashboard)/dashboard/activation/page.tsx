@@ -1090,7 +1090,6 @@ export default function Activation() {
 
                 return filtered.map((svc) => {
                   const isSelected = selectedService?.id === svc.id;
-                  const isVip = vipServiceSlugs.has(svc.slug.toLowerCase());
                   return (
                     <button
                       key={svc.id}
@@ -1144,13 +1143,6 @@ export default function Activation() {
                           {svc.name}
                         </span>
                       </div>
-
-                      {isVip && (
-                        <span className="inline-flex shrink-0 items-center gap-1 rounded-full border border-amber-500/40 bg-amber-500/10 px-2 py-0.5 text-[10px] font-semibold tracking-wide text-amber-500 uppercase">
-                          <Star className="h-2.5 w-2.5 fill-current" />
-                          VIP
-                        </span>
-                      )}
 
                       {isSelected && (
                         <ChevronRight className="text-primary h-4 w-4 shrink-0" />
