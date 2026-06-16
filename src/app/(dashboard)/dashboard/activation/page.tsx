@@ -209,6 +209,52 @@ export default function Activation() {
   // latest response is allowed to write.
   const productsRequestId = useRef(0);
 
+  // Hover-prefetch bookkeeping. We fire getProductsRealtime on mouse-enter
+  // (debounced 200ms) so when the user actually clicks a service, the
+  // backend's 60s price cache is already warm and fetchProducts() comes
+  // back in tens of ms instead of 1-5s spent talking to the upstream
+  // provider API.
+  //
+  // - prefetchedServicesRef: services we've already fired a prefetch for
+  //   in the current provider scope. Avoids repeat fires when the user
+  //   scrubs over the same service multiple times.
+  // - hoverDebounceRef: pending setTimeout so leaving the row before
+  //   200ms cancels the prefetch (no wasted call on accidental brushes).
+  const prefetchedServicesRef = useRef<Set<string>>(new Set());
+  const hoverDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const prefetchService = useCallback(
+    (svc: SmsService) => {
+      if (!selectedProvider) return;
+      if (selectedService?.id === svc.id) return; // already loaded
+      if (prefetchedServicesRef.current.has(svc.id)) return;
+
+      if (hoverDebounceRef.current) clearTimeout(hoverDebounceRef.current);
+      hoverDebounceRef.current = setTimeout(() => {
+        prefetchedServicesRef.current.add(svc.id);
+        // Fire and forget — we just want the backend's price cache warm.
+        // Errors swallowed: the real fetch on click will surface them.
+        getProductsRealtime(selectedProvider.id, svc.id).catch(() => {});
+      }, 200);
+    },
+    [selectedProvider, selectedService],
+  );
+
+  const cancelPrefetch = useCallback(() => {
+    if (hoverDebounceRef.current) {
+      clearTimeout(hoverDebounceRef.current);
+      hoverDebounceRef.current = null;
+    }
+  }, []);
+
+  // Clear the prefetched set whenever the provider changes — prefetch
+  // results are keyed by provider on the backend, and switching providers
+  // makes the previous warm cache irrelevant.
+  useEffect(() => {
+    prefetchedServicesRef.current = new Set();
+    cancelPrefetch();
+  }, [selectedProvider, cancelPrefetch]);
+
   const fetchProducts = useCallback(async () => {
     if (!selectedService || !selectedProvider) return;
 
@@ -1049,6 +1095,10 @@ export default function Activation() {
                     <button
                       key={svc.id}
                       onClick={() => handleSelectService(svc)}
+                      onMouseEnter={() => prefetchService(svc)}
+                      onMouseLeave={cancelPrefetch}
+                      onFocus={() => prefetchService(svc)}
+                      onBlur={cancelPrefetch}
                       className={cn(
                         'group flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-all',
                         isSelected
