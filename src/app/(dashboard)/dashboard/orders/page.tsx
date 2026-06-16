@@ -320,9 +320,10 @@ export default function Orders() {
                           </p>
                           <p className="flex flex-wrap items-center gap-1">
                             <span>
-                              {order.country?.code
-                                ? getCountryFlag(order.country.code)
-                                : '🌍'}{' '}
+                              {getCountryFlag(
+                                order.country?.code ?? '',
+                                order.country?.name,
+                              )}{' '}
                               {formatCountryName(order.country?.name)}
                             </span>
                             <span>•</span>
@@ -453,9 +454,10 @@ export default function Orders() {
               <div className="flex items-center justify-between">
                 <span className="text-muted-foreground text-sm">Country</span>
                 <span className="font-medium">
-                  {selectedOrder.country?.code
-                    ? getCountryFlag(selectedOrder.country.code)
-                    : '🌍'}{' '}
+                  {getCountryFlag(
+                    selectedOrder.country?.code ?? '',
+                    selectedOrder.country?.name,
+                  )}{' '}
                   {formatCountryName(selectedOrder.country?.name)}
                 </span>
               </div>

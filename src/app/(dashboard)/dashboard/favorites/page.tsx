@@ -178,7 +178,12 @@ export default function FavoritesPage() {
                     </span>
                     <span className="text-muted-foreground text-xs">·</span>
                     <span className="flex items-center gap-1 text-xs">
-                      <span>{getCountryFlag(fav.country?.code ?? '')}</span>
+                      <span>
+                        {getCountryFlag(
+                          fav.country?.code ?? '',
+                          fav.country?.name,
+                        )}
+                      </span>
                       <span className="capitalize">
                         {fav.country?.name ?? '—'}
                       </span>
