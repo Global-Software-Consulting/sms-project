@@ -574,20 +574,94 @@ export const getOrderHistory = async (
 
 // --- Rental ---
 
+export type RentDurationUnit = 'hour' | 'day' | 'week' | 'month';
+
 /**
- * Rent a number (sms-man only)
+ * One country slot returned by `/sms/rent/options`. The backend has
+ * already converted provider currency -> USD and applied markup, so
+ * `price` is what the user pays. `available` is the upstream stock
+ * count (subject to fluctuation between fetch and buy).
+ */
+export interface RentalOption {
+  country: {
+    id: string;
+    name: string;
+    code: string;
+    iconUrl: string | null;
+  };
+  duration: number;
+  unit: RentDurationUnit;
+  hours: number;
+  /** USD, already includes markup. */
+  price: string;
+  /** Raw provider price (informational only). */
+  providerPrice: string;
+  providerCurrency: string;
+  available: number;
+}
+
+export interface RentalOptionsResponse {
+  data: RentalOption[];
+  unit: RentDurationUnit;
+  duration: number;
+}
+
+/**
+ * Rent a number. Backwards compatible:
+ *  - Pass only countryId + duration for a full-number rental in hours
+ *  - Pass `unit` for Day/Week/Month
+ *  - Pass `applicationId` for a per-app rental
+ *
  * POST /api/v1/sms/rent
  */
-export const rentNumber = async (
-  serviceId: string,
-  countryId: string,
-  duration: 1 | 4 | 12 | 24 | 48 | 72,
-): Promise<RentResponse> => {
-  const response = await apiClient.post<RentResponse>(API_ENDPOINTS.SMS.RENT, {
-    serviceId,
-    countryId,
-    duration,
-  });
+export const rentNumber = async (params: {
+  countryId: string;
+  duration: number;
+  unit?: RentDurationUnit;
+  applicationId?: string;
+  /** Legacy alias for applicationId — older callers still send this. */
+  serviceId?: string;
+}): Promise<RentResponse> => {
+  const response = await apiClient.post<RentResponse>(
+    API_ENDPOINTS.SMS.RENT,
+    params,
+  );
+  return response.data;
+};
+
+/**
+ * Fetch per-country rental options for the requested (duration, unit,
+ * [applicationId]). One bulk call powers the country picker on the
+ * Rent Numbers page.
+ *
+ * GET /api/v1/sms/rent/options
+ */
+export const getRentalOptions = async (params: {
+  duration: number;
+  unit?: RentDurationUnit;
+  applicationId?: string;
+}): Promise<RentalOptionsResponse> => {
+  const response = await apiClient.get<RentalOptionsResponse>(
+    API_ENDPOINTS.SMS.RENT_OPTIONS,
+    {
+      params,
+    },
+  );
+  return response.data;
+};
+
+/**
+ * Extend an active rental.
+ * POST /api/v1/sms/rent/:rentalId/extend
+ */
+export const extendRental = async (
+  rentalId: string,
+  params: { duration: number; unit?: RentDurationUnit },
+): Promise<{ rental: SmsRental; message: string }> => {
+  const response = await apiClient.post<{ rental: SmsRental; message: string }>(
+    API_ENDPOINTS.SMS.RENT_EXTEND(rentalId),
+    params,
+  );
   return response.data;
 };
 
