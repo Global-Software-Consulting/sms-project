@@ -69,6 +69,7 @@ export interface UserRank {
   badge: string;
   color: string;
   discountPercent: number;
+  minSpending: number;
 }
 
 export interface User {
@@ -340,19 +341,30 @@ export const getTwitterOAuthUrl = (): string => {
 export const preflightOAuth = async (
   provider: 'google' | 'github' | 'twitter' | 'telegram',
 ): Promise<{ ok: true } | { ok: false; status: number; message: string }> => {
-  const path = API_ENDPOINTS.AUTH[provider.toUpperCase() as 'GOOGLE' | 'GITHUB' | 'TWITTER' | 'TELEGRAM'];
+  const path =
+    API_ENDPOINTS.AUTH[
+      provider.toUpperCase() as 'GOOGLE' | 'GITHUB' | 'TWITTER' | 'TELEGRAM'
+    ];
   const url = `${apiClient.defaults.baseURL}${path}`;
   try {
-    const res = await fetch(url, { method: 'GET', redirect: 'manual', credentials: 'omit' });
+    const res = await fetch(url, {
+      method: 'GET',
+      redirect: 'manual',
+      credentials: 'omit',
+    });
     // `opaqueredirect` (status 0) = the server is redirecting us to the provider — good.
     // 2xx is also fine (some flows return a JSON with a redirect URL).
-    if (res.type === 'opaqueredirect' || (res.status >= 200 && res.status < 400)) {
+    if (
+      res.type === 'opaqueredirect' ||
+      (res.status >= 200 && res.status < 400)
+    ) {
       return { ok: true };
     }
     let message = `${provider.charAt(0).toUpperCase() + provider.slice(1)} login is unavailable`;
     try {
       const data = await res.json();
-      if (data?.message && typeof data.message === 'string') message = data.message;
+      if (data?.message && typeof data.message === 'string')
+        message = data.message;
     } catch {
       // body wasn't JSON — keep the default message
     }

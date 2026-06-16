@@ -19,14 +19,17 @@ import {
   MessageSquare,
   Loader2,
   AlertCircle,
+  Trophy,
 } from 'lucide-react';
 import Link from 'next/link';
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { Progress } from '@/components/ui/progress';
 import {
-  getWalletBalance,
+  getWallet,
   formatBalance,
-  WalletBalance,
+  Wallet as WalletInfo,
 } from '@/lib/api/walletApi';
+import { getPublicRanks, Rank } from '@/lib/api/ranksApi';
 import { useNotifications } from '@/contexts/NotificationContext';
 import {
   getCurrentMembership,
@@ -47,12 +50,13 @@ import { useAuth } from '@/hooks';
 
 // Dashboard data interface
 interface DashboardData {
-  wallet: WalletBalance | null;
+  wallet: WalletInfo | null;
   membership: CurrentMembershipResponse | null;
   recentOrders: SmsOrder[];
   activeRentals: SmsRental[];
   services: SmsService[];
   countries: SmsCountry[];
+  ranks: Rank[];
   stats: {
     activeNumbers: number;
     successRate: string;
@@ -71,6 +75,7 @@ export default function Dashboard() {
     activeRentals: [],
     services: [],
     countries: [],
+    ranks: [],
     stats: {
       activeNumbers: 0,
       successRate: '--',
@@ -96,13 +101,15 @@ export default function Dashboard() {
           rentalsRes,
           servicesRes,
           countriesRes,
+          ranksRes,
         ] = await Promise.allSettled([
-          getWalletBalance(),
+          getWallet(),
           getCurrentMembership(),
           getOrderHistory({ limit: 5 }),
           getRentalHistory({ status: 'ACTIVE', limit: 10 }),
           getServices({ limit: 100 }),
           getCountries({ limit: 100 }),
+          getPublicRanks(),
         ]);
 
         // Process wallet
@@ -128,6 +135,9 @@ export default function Dashboard() {
         // Process countries
         const countries =
           countriesRes.status === 'fulfilled' ? countriesRes.value.data : [];
+
+        // Process ranks (used to render the My Rank progress card)
+        const ranks = ranksRes.status === 'fulfilled' ? ranksRes.value : [];
 
         // Calculate stats
         const activeNumbers =
@@ -155,6 +165,7 @@ export default function Dashboard() {
           activeRentals: rentals,
           services,
           countries,
+          ranks,
           stats: {
             activeNumbers,
             successRate,
@@ -355,6 +366,104 @@ export default function Dashboard() {
           </Badge>
         )}
       </div>
+
+      {/* My Rank — total spending + progression to next tier */}
+      {data.wallet &&
+        (() => {
+          const totalSpent = parseFloat(data.wallet.totalSpent) || 0;
+          const ranksAsc = [...data.ranks].sort(
+            (a, b) => Number(a.minSpending) - Number(b.minSpending),
+          );
+          const currentRank =
+            user?.rank ??
+            [...ranksAsc]
+              .reverse()
+              .find((r) => totalSpent >= Number(r.minSpending)) ??
+            null;
+          const currentMin = currentRank ? Number(currentRank.minSpending) : 0;
+          const nextRank = ranksAsc.find(
+            (r) => Number(r.minSpending) > totalSpent,
+          );
+          const remaining = nextRank
+            ? Math.max(0, Number(nextRank.minSpending) - totalSpent)
+            : 0;
+          const progressPct = nextRank
+            ? Math.min(
+                100,
+                Math.max(
+                  0,
+                  ((totalSpent - currentMin) /
+                    (Number(nextRank.minSpending) - currentMin)) *
+                    100,
+                ),
+              )
+            : 100;
+          return (
+            <Card className="card-hover-lift">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <div>
+                  <CardTitle className="flex items-center gap-2 text-sm font-medium">
+                    <Trophy className="h-4 w-4" />
+                    My Rank
+                  </CardTitle>
+                  <CardDescription className="mt-1">
+                    Total spending &amp; current rank progress
+                  </CardDescription>
+                </div>
+                {currentRank && (
+                  <Badge
+                    className="px-2.5 py-1 text-xs"
+                    style={{
+                      backgroundColor: `${currentRank.color}20`,
+                      color: currentRank.color,
+                      borderColor: `${currentRank.color}40`,
+                    }}
+                    variant="outline"
+                  >
+                    {currentRank.name}
+                  </Badge>
+                )}
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="flex items-baseline justify-between">
+                  <span className="text-muted-foreground text-xs">
+                    Total spent
+                  </span>
+                  <span className="text-xl font-bold tabular-nums">
+                    {formatBalance(
+                      data.wallet.totalSpent,
+                      data.wallet.currency,
+                    )}
+                  </span>
+                </div>
+                {nextRank ? (
+                  <>
+                    <Progress value={progressPct} />
+                    <div className="text-muted-foreground flex items-center justify-between text-xs">
+                      <span>
+                        {currentRank?.name ?? 'No rank'} →{' '}
+                        <span style={{ color: nextRank.color }}>
+                          {nextRank.name}
+                        </span>
+                      </span>
+                      <span className="tabular-nums">
+                        {formatBalance(
+                          remaining.toFixed(2),
+                          data.wallet.currency,
+                        )}{' '}
+                        to go
+                      </span>
+                    </div>
+                  </>
+                ) : (
+                  <div className="text-muted-foreground text-xs">
+                    You&apos;re at the highest rank available.
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          );
+        })()}
 
       {/* Summary Cards */}
       <div className="stagger-fade-in grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
