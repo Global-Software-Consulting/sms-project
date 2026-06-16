@@ -898,6 +898,9 @@ export const adminUpdateProvider = async (
   id: string,
   data: {
     displayName?: string;
+    // null clears the override so the backend falls back to the tier
+    // label (V1 - Basic / V2 - Standard / V3 - Premium).
+    publicLabel?: string | null;
     isActive?: boolean;
     priority?: number;
     markup?: number;

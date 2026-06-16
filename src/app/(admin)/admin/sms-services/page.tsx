@@ -78,6 +78,7 @@ interface Service {
 interface Provider {
   id: string;
   name: string;
+  publicLabel?: string | null;
   version: string;
   countries: string[];
   services: Service[];
@@ -1011,6 +1012,7 @@ export default function AdminSmsServicesPage() {
 
   const [providerFormData, setProviderFormData] = useState({
     name: '',
+    publicLabel: '',
     version: 'V1_STANDARD',
     priority: 100,
     markup: 0,
@@ -1021,6 +1023,7 @@ export default function AdminSmsServicesPage() {
     setSelectedProvider(provider);
     setProviderFormData({
       name: provider.name,
+      publicLabel: provider.publicLabel ?? '',
       version: provider.version || 'V1_STANDARD',
       priority: provider.priority || 100,
       markup: provider.markup || 0,
@@ -1127,6 +1130,11 @@ export default function AdminSmsServicesPage() {
       // backend has computed.
       await adminUpdateProvider(selectedProvider.id, {
         displayName: providerFormData.name,
+        // Send the trimmed public label, or null to clear the override
+        // so the backend falls back to the tier label (V1 - Basic etc.).
+        publicLabel: providerFormData.publicLabel.trim()
+          ? providerFormData.publicLabel.trim()
+          : null,
         version: providerFormData.version,
         markup: providerFormData.markup,
         isActive: providerFormData.isActive,
@@ -3328,6 +3336,34 @@ export default function AdminSmsServicesPage() {
                   className="w-full rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.4)] px-4 py-3 text-sm text-white focus:ring-2 focus:ring-[#3B82F6] focus:outline-none"
                   placeholder="Enter provider name"
                 />
+                <p className="mt-1 text-xs text-[#94A3B8]">
+                  Internal admin name. Never shown to users.
+                </p>
+              </div>
+
+              <div>
+                <label className="mb-2 block text-sm font-medium text-white">
+                  Public Label{' '}
+                  <span className="text-[#94A3B8]">(optional)</span>
+                </label>
+                <input
+                  type="text"
+                  value={providerFormData.publicLabel}
+                  onChange={(e) =>
+                    setProviderFormData({
+                      ...providerFormData,
+                      publicLabel: e.target.value,
+                    })
+                  }
+                  className="w-full rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.4)] px-4 py-3 text-sm text-white focus:ring-2 focus:ring-[#3B82F6] focus:outline-none"
+                  placeholder="e.g. Quick Service, Premium Network"
+                  maxLength={60}
+                />
+                <p className="mt-1 text-xs text-[#94A3B8]">
+                  What end users see in service / country lists. Leave blank to
+                  use the tier label (V1 - Basic, V2 - Standard, V3 - Premium).
+                  Must not reference any upstream provider name.
+                </p>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
