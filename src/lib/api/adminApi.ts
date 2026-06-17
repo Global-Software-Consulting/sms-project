@@ -1354,6 +1354,40 @@ export const markPaymentCompleted = async (
   return response.data;
 };
 
+/**
+ * Reconcile a Stripe payment against Stripe's API (admin).
+ * Used to unstick PENDING Stripe rows after a webhook signature mismatch.
+ * POST /api/v1/admin/payments/:id/sync
+ */
+export const syncStripePayment = async (
+  id: string,
+): Promise<{
+  status: 'completed' | 'expired' | 'pending';
+  message: string;
+}> => {
+  const response = await apiClient.post(API_ENDPOINTS.ADMIN.PAYMENTS.SYNC(id));
+  return response.data;
+};
+
+/**
+ * Bulk-reconcile every PENDING Stripe payment with a stripeSessionId
+ * (admin). One-shot recovery after fixing a misconfigured webhook
+ * signing secret.
+ * POST /api/v1/admin/payments/stripe/sync-stuck
+ */
+export const syncStuckStripePayments = async (): Promise<{
+  scanned: number;
+  completed: number;
+  expired: number;
+  stillPending: number;
+  errored: number;
+}> => {
+  const response = await apiClient.post(
+    API_ENDPOINTS.ADMIN.PAYMENTS.SYNC_STUCK_STRIPE,
+  );
+  return response.data;
+};
+
 // ============================================
 // Admin Payments Helper Functions
 // ============================================

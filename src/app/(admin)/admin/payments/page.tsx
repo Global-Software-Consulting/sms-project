@@ -72,6 +72,7 @@ import {
   BinanceAuditLog,
   BinanceFailedVerification,
 } from '@/lib/api/adminModulesApi';
+import { syncStuckStripePayments } from '@/lib/api/adminApi';
 import { uploadFile } from '@/lib/api/storageApi';
 import { GatewayWebhookUrls } from '@/components/admin/gateway-webhook-urls';
 import { WebhookStatusBadge } from '@/components/admin/webhook-status-badge';
@@ -2360,6 +2361,55 @@ export default function AdminPaymentsPage() {
                   onRefresh={fetchPaymentGateways}
                 />
               </div>
+
+              {/* Stripe recovery — bulk-reconcile stuck PENDING rows.
+                  Surfaces only for STRIPE. Use this after fixing a
+                  webhook signing-secret mismatch; it asks Stripe directly
+                  about every PENDING session and credits any that the
+                  customer actually paid. */}
+              {selectedMethod.gateway === 'STRIPE' && (
+                <div className="flex items-start justify-between gap-3 rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.3)] px-4 py-3">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-medium text-white">
+                      Reconcile stuck Stripe payments
+                    </p>
+                    <p className="mt-0.5 text-xs text-[#94A3B8]">
+                      Asks Stripe directly about every PENDING checkout and
+                      credits any that the customer actually paid. Run after
+                      changing the Webhook Secret to recover orders that piled
+                      up while the signature was wrong.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      try {
+                        const result = await syncStuckStripePayments();
+                        if (result.scanned === 0) {
+                          toast.info('No stuck Stripe payments found.');
+                        } else {
+                          toast.success(
+                            `Synced ${result.scanned}: ${result.completed} completed, ${result.expired} expired, ${result.stillPending} still pending, ${result.errored} errored.`,
+                          );
+                        }
+                        await fetchPaymentGateways();
+                      } catch (err) {
+                        toast.error(
+                          (
+                            err as {
+                              response?: { data?: { message?: string } };
+                            }
+                          )?.response?.data?.message ||
+                            'Failed to reconcile Stripe payments',
+                        );
+                      }
+                    }}
+                    className="shrink-0 rounded-lg border border-[#3B82F6] bg-[rgba(59,130,246,0.2)] px-4 py-2 text-xs font-medium text-white hover:bg-[rgba(59,130,246,0.3)]"
+                  >
+                    Reconcile now
+                  </button>
+                </div>
+              )}
 
               {/* Gateway API Configuration - Stripe */}
               {selectedMethod.gateway === 'STRIPE' && (

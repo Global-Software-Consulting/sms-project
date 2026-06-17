@@ -289,6 +289,8 @@ export const API_ENDPOINTS = {
       DETAIL: (id: string) => `/admin/payments/${id}`,
       REFUND: (id: string) => `/admin/payments/${id}/refund`,
       MARK_COMPLETED: (id: string) => `/admin/payments/${id}/mark-completed`,
+      SYNC: (id: string) => `/admin/payments/${id}/sync`,
+      SYNC_STUCK_STRIPE: '/admin/payments/stripe/sync-stuck',
     },
 
     // Admin Payment Gateways
