@@ -21,7 +21,7 @@ import {
   ArrowRight,
   Copy,
 } from 'lucide-react';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import { getProviders, type SmsProvider } from '@/lib/api/smsApi';
 import { getRateLimits, type RateLimits } from '@/lib/api/rateLimitsApi';
@@ -70,10 +70,42 @@ export default function ApiClient({
       .catch(() => {});
   }, []);
 
+  // Map every active provider to exactly one tier slot (V1/V2/V3). Honors
+  // explicit version where set, fills empty slots by priority desc so N
+  // active providers (N <= 3) always render N cards.
+  const tierProvider = useMemo(() => {
+    const slots: Record<'V1' | 'V2' | 'V3', SmsProvider | undefined> = {
+      V1: undefined,
+      V2: undefined,
+      V3: undefined,
+    };
+    const claimed = new Set<string>();
+    for (const p of providers) {
+      const v = (p.version || '').toUpperCase().trim();
+      if (v.startsWith('V1') && !slots.V1) {
+        slots.V1 = p;
+        claimed.add(p.id);
+      } else if (v.startsWith('V2') && !slots.V2) {
+        slots.V2 = p;
+        claimed.add(p.id);
+      } else if (v.startsWith('V3') && !slots.V3) {
+        slots.V3 = p;
+        claimed.add(p.id);
+      }
+    }
+    const remaining = providers
+      .filter((p) => !claimed.has(p.id))
+      .sort((a, b) => (b.priority ?? 0) - (a.priority ?? 0));
+    (['V3', 'V2', 'V1'] as const).forEach((slot) => {
+      if (!slots[slot] && remaining.length) slots[slot] = remaining.shift();
+    });
+    return slots;
+  }, [providers]);
+
   const hasTier = useCallback(
     (versionPrefix: 'V1' | 'V2' | 'V3'): boolean =>
-      providers.some((p) => (p.version || '').startsWith(versionPrefix)),
-    [providers],
+      Boolean(tierProvider[versionPrefix]),
+    [tierProvider],
   );
 
   const copyCode = (code: string) => {
