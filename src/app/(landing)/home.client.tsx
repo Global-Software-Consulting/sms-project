@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import {
@@ -173,29 +173,57 @@ export default function HomeClient({
     fetchProviders();
   }, [fetchPlans, fetchReviews, fetchProviders]);
 
-  // Resolve a "From $X.XX" string for a given provider version (V1, V2, V3).
-  // Falls back to the legacy hardcoded value if no matching provider has a
-  // computed fromPrice yet (e.g., empty product table on a fresh install).
+  // Map every active provider to exactly one tier slot (V1/V2/V3).
+  //   1. Honor provider.version when set (handles "V1", "v1", "V1_STANDARD").
+  //   2. Any provider without a recognized version is auto-assigned to a
+  //      remaining slot by priority desc (highest priority claims the top
+  //      empty slot). This guarantees: N active providers (N ≤ 3) render
+  //      N cards, even if admin forgot to label one.
+  const tierProvider = useMemo(() => {
+    const slots: Record<'V1' | 'V2' | 'V3', SmsProvider | undefined> = {
+      V1: undefined,
+      V2: undefined,
+      V3: undefined,
+    };
+    const claimed = new Set<string>();
+    for (const p of providers) {
+      const v = (p.version || '').toUpperCase().trim();
+      if (v.startsWith('V1') && !slots.V1) {
+        slots.V1 = p;
+        claimed.add(p.id);
+      } else if (v.startsWith('V2') && !slots.V2) {
+        slots.V2 = p;
+        claimed.add(p.id);
+      } else if (v.startsWith('V3') && !slots.V3) {
+        slots.V3 = p;
+        claimed.add(p.id);
+      }
+    }
+    // Fill any empty slot with the next highest-priority unclaimed provider.
+    const remaining = providers
+      .filter((p) => !claimed.has(p.id))
+      .sort((a, b) => (b.priority ?? 0) - (a.priority ?? 0));
+    (['V3', 'V2', 'V1'] as const).forEach((slot) => {
+      if (!slots[slot] && remaining.length) slots[slot] = remaining.shift();
+    });
+    return slots;
+  }, [providers]);
+
   const fromPriceFor = useCallback(
     (versionPrefix: 'V1' | 'V2' | 'V3', fallback: string): string => {
-      const match = providers.find(
-        (p) =>
-          (p.version || '').startsWith(versionPrefix) &&
-          p.fromPrice != null &&
-          p.fromPrice > 0,
-      );
-      return match ? `From $${match.fromPrice!.toFixed(2)}` : fallback;
+      const match = tierProvider[versionPrefix];
+      if (match && match.fromPrice != null && match.fromPrice > 0) {
+        return `From $${match.fromPrice.toFixed(2)}`;
+      }
+      return fallback;
     },
-    [providers],
+    [tierProvider],
   );
 
-  // Whether any active provider matches a given version. Hide the
-  // corresponding tier card when an admin has disabled all providers of
-  // that tier.
   const hasTier = useCallback(
     (versionPrefix: 'V1' | 'V2' | 'V3'): boolean =>
-      providers.some((p) => (p.version || '').startsWith(versionPrefix)),
-    [providers],
+      Boolean(tierProvider[versionPrefix]),
+    [tierProvider],
   );
 
   const stats = [

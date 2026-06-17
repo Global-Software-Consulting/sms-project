@@ -122,6 +122,8 @@ export {
   getAdminPayment,
   refundPayment,
   markPaymentCompleted,
+  syncStripePayment,
+  syncStuckStripePayments,
   getGatewayInfo,
   formatPaymentAmount,
   formatPaymentDate,

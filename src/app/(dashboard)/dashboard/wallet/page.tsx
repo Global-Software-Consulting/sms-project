@@ -1481,6 +1481,30 @@ export default function WalletPage() {
                     </div>
                   </div>
 
+                  {/* Crypto-gateway processing-fee disclosure. Plisio,
+                      Cryptomus, NOWPayments and (in some configurations)
+                      PayGate add a small invoice-side processing fee on
+                      top of the deposit amount — that's why a $3 Plisio
+                      invoice can show 3.5 USDT. Our backend sends the
+                      exact deposit amount; the extra is the gateway's
+                      own fee, not ours. Surface this up front so users
+                      don't think we silently added it. */}
+                  {(
+                    ['PLISIO', 'CRYPTOMUS', 'NOWPAYMENTS', 'PAYGATE'] as const
+                  ).includes(
+                    selectedGateway as
+                      | 'PLISIO'
+                      | 'CRYPTOMUS'
+                      | 'NOWPAYMENTS'
+                      | 'PAYGATE',
+                  ) && (
+                    <p className="text-muted-foreground text-xs">
+                      Note: the gateway may add a small processing fee on the
+                      invoice page. We send the exact deposit amount shown above
+                      — the gateway's fee is not added by us.
+                    </p>
+                  )}
+
                   {/* Confirm Button */}
                   <Button
                     className="mt-2 h-12 w-full text-base font-semibold"
