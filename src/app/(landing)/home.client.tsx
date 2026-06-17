@@ -461,7 +461,7 @@ export default function HomeClient({
                 {/* V2 - Standard */}
                 {hasTier('V2') && (
                   <Card className="border-primary relative overflow-hidden border-2">
-                    <div className="bg-primary text-primary-foreground absolute top-0 right-0 px-3 py-1 text-xs font-semibold">
+                    <div className="bg-primary text-primary-foreground absolute top-0 right-0 rounded-bl-xl px-3 py-1 text-xs font-semibold">
                       POPULAR
                     </div>
                     <CardHeader>
@@ -519,7 +519,7 @@ export default function HomeClient({
                 {/* V3 - Premium */}
                 {hasTier('V3') && (
                   <Card className="border-warning relative overflow-hidden border-2">
-                    <div className="bg-warning text-warning-foreground absolute top-0 right-0 px-3 py-1 text-xs font-semibold">
+                    <div className="bg-warning text-warning-foreground absolute top-0 right-0 rounded-bl-xl px-3 py-1 text-xs font-semibold">
                       BEST
                     </div>
                     <CardHeader>
@@ -689,12 +689,12 @@ export default function HomeClient({
                   key={plan.id}
                   className={
                     plan.isPopular
-                      ? 'border-primary relative border-2'
-                      : 'border-2'
+                      ? 'border-primary relative overflow-hidden border-2'
+                      : 'relative overflow-hidden border-2'
                   }
                 >
                   {plan.isPopular && (
-                    <div className="bg-primary text-primary-foreground absolute top-0 right-0 rounded-bl-lg px-3 py-1 text-xs font-semibold">
+                    <div className="bg-primary text-primary-foreground absolute top-0 right-0 rounded-bl-xl px-3 py-1 text-xs font-semibold">
                       Popular
                     </div>
                   )}

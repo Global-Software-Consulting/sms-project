@@ -48,7 +48,11 @@ export function Footer({
   return (
     <footer className="border-border bg-card border-t">
       <div className="container mx-auto px-4 py-10 sm:py-12">
-        <div className="grid grid-cols-2 gap-6 sm:grid-cols-2 sm:gap-8 md:grid-cols-4 lg:grid-cols-5">
+        <div
+          className={`grid grid-cols-2 gap-6 sm:grid-cols-2 sm:gap-8 md:grid-cols-4 ${
+            ads.length > 0 ? 'lg:grid-cols-5' : ''
+          }`}
+        >
           {/* Brand — full width on smallest, half on sm */}
           <div className="col-span-2 space-y-4 sm:col-span-2 md:col-span-1">
             <div className="flex items-center space-x-2">
@@ -237,7 +241,10 @@ export function Footer({
             </ul>
           </div>
 
-          {/* Our Websites (Ads) */}
+          {/* Our Websites (Ads) — only rendered when admin has set up
+              active ad rows. Grid expands to 5 columns on lg in that
+              case (see wrapper className above); otherwise the layout
+              stays as the 4-column Figma reference. */}
           {ads.length > 0 && (
             <div className="col-span-2 sm:col-span-2 md:col-span-4 lg:col-span-1">
               <h3 className="mb-3 text-sm font-semibold sm:mb-4 sm:text-base">
@@ -259,7 +266,6 @@ export function Footer({
                     )}
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-sm font-medium">{ad.title}</p>
-                      {/* Description hidden on hover, replaced by "View Details" */}
                       {ad.description && (
                         <p className="text-muted-foreground truncate text-xs transition-opacity group-hover:opacity-0">
                           {ad.description}
@@ -319,7 +325,6 @@ export function Footer({
           </div>
         </div>
       </div>
-
       {/* Ad details dialog */}
       <Dialog
         open={!!selectedAd}
