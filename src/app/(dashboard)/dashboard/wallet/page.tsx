@@ -454,11 +454,25 @@ export default function WalletPage() {
     setCouponValidation(null);
   };
 
-  // Open deposit modal
+  // Open deposit modal (fresh — clears any prior selection)
   const openDepositModal = () => {
     resetDepositModal();
     setShowDepositModal(true);
   };
+
+  // Open deposit modal carrying over the amount + gateway picked on
+  // the inline Add Funds card so the user doesn't re-enter them. PayGate
+  // still needs sub-provider selection — switch the modal into that step
+  // up front.
+  const continueDeposit = () => {
+    if (selectedGateway === 'PAYGATE') {
+      setShowPaygateProviders(true);
+    }
+    setShowDepositModal(true);
+  };
+
+  // Quick amount presets, matching Figma reference (June 2026 redesign).
+  const QUICK_AMOUNTS = [10, 25, 50, 100] as const;
 
   // Close deposit modal
   const closeDepositModal = () => {
@@ -662,84 +676,164 @@ export default function WalletPage() {
         </div>
       </div>
 
-      {/* Balance and Quick Actions */}
-      <div className="grid gap-6 md:grid-cols-3">
-        {/* Balance Card */}
-        <Card className="from-primary/10 via-background to-background border-primary/20 bg-gradient-to-br md:col-span-2">
-          <CardContent className="p-6">
-            <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
-              <div>
-                <p className="text-muted-foreground mb-1 text-sm font-medium">
-                  Available Balance
-                </p>
-                <p className="text-primary text-4xl font-bold md:text-5xl">
-                  {wallet
-                    ? formatBalance(wallet.balance, wallet.currency)
-                    : '$0.00'}
-                </p>
-                {wallet?.isLocked && (
-                  <p className="text-destructive mt-2 flex items-center gap-1 text-sm">
-                    <Lock className="h-3 w-3" />
-                    Wallet locked: {wallet.lockedReason}
-                  </p>
-                )}
+      {/* Add Funds (left) + Current Balance (right) — Figma layout */}
+      <div className="grid gap-6 md:grid-cols-2">
+        {/* Add Funds — inline form. Continues into the deposit modal so
+            coupons, PayGate sub-providers, payment preview and Binance
+            verify still live in the one source-of-truth flow. */}
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle>Add Funds</CardTitle>
+            <CardDescription>Top up your wallet balance</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <label className="text-muted-foreground text-sm font-medium">
+                Amount (USD)
+              </label>
+              <div className="relative">
+                <span className="text-muted-foreground absolute top-1/2 left-3 -translate-y-1/2 text-sm">
+                  $
+                </span>
+                <Input
+                  type="number"
+                  inputMode="decimal"
+                  placeholder="0.00"
+                  value={amount}
+                  onChange={(e) => setAmount(e.target.value)}
+                  disabled={wallet?.isLocked}
+                  className="pl-7"
+                  min={MIN_AMOUNT}
+                  max={MAX_AMOUNT}
+                />
               </div>
-              <Button
-                size="lg"
-                onClick={openDepositModal}
-                disabled={wallet?.isLocked}
-                className="h-14 px-8 text-lg font-semibold"
-              >
-                <Plus className="mr-2 h-5 w-5" />
-                Add Funds
-              </Button>
+              <div className="flex flex-wrap gap-2 pt-1">
+                {QUICK_AMOUNTS.map((q) => (
+                  <button
+                    key={q}
+                    type="button"
+                    onClick={() => setAmount(String(q))}
+                    disabled={wallet?.isLocked}
+                    className="border-border hover:border-primary/50 hover:bg-muted/30 text-foreground rounded-full border px-3 py-1 text-xs transition disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    ${q}
+                  </button>
+                ))}
+              </div>
             </div>
+
+            <div className="space-y-2">
+              <label className="text-muted-foreground text-sm font-medium">
+                Payment Method
+              </label>
+              <Select
+                value={selectedGateway ?? ''}
+                onValueChange={(v) => {
+                  setSelectedGateway(v as PaymentGateway);
+                  setSelectedPaygateProvider(null);
+                  setShowPaygateProviders(false);
+                }}
+                disabled={wallet?.isLocked}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Select payment method" />
+                </SelectTrigger>
+                <SelectContent>
+                  {gateways
+                    .filter((g) => g.enabled)
+                    .map((g) => (
+                      <SelectItem key={g.gateway} value={g.gateway}>
+                        {g.name || getGatewayName(g.gateway)}
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <Button
+              size="lg"
+              className="h-12 w-full text-base font-semibold"
+              onClick={continueDeposit}
+              disabled={
+                wallet?.isLocked ||
+                !selectedGateway ||
+                !amount ||
+                !isValidAmount(parseFloat(amount))
+              }
+            >
+              <Plus className="mr-2 h-5 w-5" />
+              Add Funds
+            </Button>
+
+            {wallet?.isLocked && (
+              <p className="text-destructive flex items-center gap-1 text-sm">
+                <Lock className="h-3 w-3" />
+                Wallet locked: {wallet.lockedReason}
+              </p>
+            )}
           </CardContent>
         </Card>
 
-        {/* Stats Card */}
+        {/* Current Balance — Figma summary card */}
         <Card>
-          <CardContent className="space-y-4 p-6">
-            <div className="flex items-center justify-between">
-              <span className="text-muted-foreground text-sm">
-                Total Deposited
-              </span>
-              <span className="text-success font-semibold">
+          <CardHeader className="pb-3">
+            <CardTitle>Current Balance</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div>
+              <p className="text-primary text-4xl font-bold md:text-5xl">
                 {wallet
-                  ? formatBalance(wallet.totalDeposited, wallet.currency)
+                  ? formatBalance(wallet.balance, wallet.currency)
                   : '$0.00'}
-              </span>
+              </p>
+              <p className="text-muted-foreground mt-1 text-xs">
+                Available balance
+              </p>
             </div>
-            <div className="flex items-center justify-between">
-              <span className="text-muted-foreground text-sm">Total Spent</span>
-              <span className="font-semibold">
-                {wallet
-                  ? formatBalance(wallet.totalSpent, wallet.currency)
-                  : '$0.00'}
-              </span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-muted-foreground text-sm">
-                Total Refunded
-              </span>
-              <span className="font-semibold">
-                {wallet
-                  ? formatBalance(wallet.totalRefunded, wallet.currency)
-                  : '$0.00'}
-              </span>
-            </div>
-            {membership?.currentPlan && membership.discount > 0 && (
-              <div className="flex items-center justify-between border-t pt-2">
+            <div className="space-y-3 border-t pt-4">
+              <div className="flex items-center justify-between">
                 <span className="text-muted-foreground text-sm">
-                  {membership.currentPlan.name} Savings
+                  Total Spent
                 </span>
-                <span className="text-success font-semibold">
+                <span className="font-semibold">
                   {wallet
-                    ? formatBalance(wallet.totalBonus, wallet.currency)
+                    ? formatBalance(wallet.totalSpent, wallet.currency)
                     : '$0.00'}
                 </span>
               </div>
-            )}
+              <div className="flex items-center justify-between">
+                <span className="text-muted-foreground text-sm">
+                  Total Deposited
+                </span>
+                <span className="text-success font-semibold">
+                  {wallet
+                    ? formatBalance(wallet.totalDeposited, wallet.currency)
+                    : '$0.00'}
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-muted-foreground text-sm">
+                  Total Refunded
+                </span>
+                <span className="font-semibold">
+                  {wallet
+                    ? formatBalance(wallet.totalRefunded, wallet.currency)
+                    : '$0.00'}
+                </span>
+              </div>
+              {membership?.currentPlan && membership.discount > 0 && (
+                <div className="flex items-center justify-between">
+                  <span className="text-muted-foreground text-sm">
+                    {membership.currentPlan.name} Savings
+                  </span>
+                  <span className="text-success font-semibold">
+                    {wallet
+                      ? formatBalance(wallet.totalBonus, wallet.currency)
+                      : '$0.00'}
+                  </span>
+                </div>
+              )}
+            </div>
           </CardContent>
         </Card>
       </div>
