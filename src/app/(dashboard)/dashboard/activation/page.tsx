@@ -1296,7 +1296,7 @@ export default function Activation() {
                   </div>
 
                   {/* Price Sort */}
-                  <div className="ml-auto flex gap-1.5">
+                  <div className="flex gap-1.5">
                     <Button
                       variant={priceSort === 'low-high' ? 'default' : 'outline'}
                       size="sm"
