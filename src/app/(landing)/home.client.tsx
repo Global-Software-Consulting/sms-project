@@ -362,8 +362,45 @@ export default function HomeClient({
             the cards do not float on the left of a 3-column track.
           */}
           {(() => {
-            const visibleCount = (['V1', 'V2', 'V3'] as const).filter(
-              (v) => providersLoaded && hasTier(v),
+            // Shimmer skeleton while the providers list is still in
+            // flight. Renders three placeholder cards in the same
+            // 3-column grid so the section reserves its final size
+            // and the page does not jump when the cards swap in.
+            if (!providersLoaded) {
+              return (
+                <div className="grid gap-6 md:grid-cols-3">
+                  {[0, 1, 2].map((i) => (
+                    <Card key={i} className="border-2" aria-hidden="true">
+                      <CardHeader>
+                        <div className="bg-muted/60 mb-3 h-5 w-28 animate-pulse rounded-full" />
+                        <div className="bg-muted/60 h-6 w-40 animate-pulse rounded" />
+                        <div className="bg-muted/40 mt-2 h-3 w-full animate-pulse rounded" />
+                        <div className="bg-muted/40 mt-2 h-3 w-3/4 animate-pulse rounded" />
+                      </CardHeader>
+                      <CardContent className="space-y-4">
+                        <div className="space-y-3">
+                          {[0, 1, 2, 3].map((j) => (
+                            <div
+                              key={j}
+                              className="flex items-center space-x-2"
+                            >
+                              <div className="bg-muted/60 h-4 w-4 animate-pulse rounded-full" />
+                              <div className="bg-muted/40 h-3 w-32 animate-pulse rounded" />
+                            </div>
+                          ))}
+                        </div>
+                        <div className="pt-4">
+                          <div className="bg-muted/60 h-7 w-24 animate-pulse rounded" />
+                          <div className="bg-muted/40 mt-2 h-3 w-20 animate-pulse rounded" />
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              );
+            }
+            const visibleCount = (['V1', 'V2', 'V3'] as const).filter((v) =>
+              hasTier(v),
             ).length;
             const gridClass =
               visibleCount === 1
@@ -374,11 +411,11 @@ export default function HomeClient({
             return (
               <div className={gridClass}>
                 {/* V1 - Basic */}
-                {providersLoaded && hasTier('V1') && (
+                {hasTier('V1') && (
                   <Card className="border-2">
                     <CardHeader>
                       <Badge className="mb-2 w-fit bg-blue-500">
-                        💰 V1 - Basic
+                        💰 {tierProvider.V1?.displayName ?? 'V1 - Basic'}
                       </Badge>
                       <CardTitle className="text-xl">
                         Basic Activation
@@ -422,14 +459,14 @@ export default function HomeClient({
                 )}
 
                 {/* V2 - Standard */}
-                {providersLoaded && hasTier('V2') && (
+                {hasTier('V2') && (
                   <Card className="border-primary relative overflow-hidden border-2">
                     <div className="bg-primary text-primary-foreground absolute top-0 right-0 px-3 py-1 text-xs font-semibold">
                       POPULAR
                     </div>
                     <CardHeader>
                       <Badge className="from-primary to-accent mb-2 w-fit bg-gradient-to-r">
-                        💎 V2 - Standard
+                        💎 {tierProvider.V2?.displayName ?? 'V2 - Standard'}
                       </Badge>
                       <CardTitle className="text-xl">
                         Standard Activation
@@ -480,14 +517,14 @@ export default function HomeClient({
                 )}
 
                 {/* V3 - Premium */}
-                {providersLoaded && hasTier('V3') && (
+                {hasTier('V3') && (
                   <Card className="border-warning relative overflow-hidden border-2">
                     <div className="bg-warning text-warning-foreground absolute top-0 right-0 px-3 py-1 text-xs font-semibold">
                       BEST
                     </div>
                     <CardHeader>
                       <Badge className="from-warning mb-2 w-fit bg-gradient-to-r to-amber-500">
-                        👑 V3 - Premium
+                        👑 {tierProvider.V3?.displayName ?? 'V3 - Premium'}
                       </Badge>
                       <CardTitle className="text-xl">
                         Premium Activation

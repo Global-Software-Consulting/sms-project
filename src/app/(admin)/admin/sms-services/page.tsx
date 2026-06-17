@@ -997,6 +997,7 @@ export default function AdminSmsServicesPage() {
   const providers: Provider[] = apiProviders.map((p) => ({
     id: p.id,
     name: p.displayName || p.name,
+    publicLabel: (p as any).publicLabel ?? null,
     version: (p as any).version || 'V1_STANDARD',
     countries: [],
     services: [],
@@ -3337,14 +3338,14 @@ export default function AdminSmsServicesPage() {
                   placeholder="Enter provider name"
                 />
                 <p className="mt-1 text-xs text-[#94A3B8]">
-                  Internal admin name. Never shown to users.
+                  Shown to users when Public Label is empty.
                 </p>
               </div>
 
               <div>
                 <label className="mb-2 block text-sm font-medium text-white">
                   Public Label{' '}
-                  <span className="text-[#94A3B8]">(optional)</span>
+                  <span className="text-[#94A3B8]">(optional override)</span>
                 </label>
                 <input
                   type="text"
@@ -3356,13 +3357,13 @@ export default function AdminSmsServicesPage() {
                     })
                   }
                   className="w-full rounded-lg border border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.4)] px-4 py-3 text-sm text-white focus:ring-2 focus:ring-[#3B82F6] focus:outline-none"
-                  placeholder="e.g. Quick Service, Premium Network"
+                  placeholder="Leave blank to use Provider Name"
                   maxLength={60}
                 />
                 <p className="mt-1 text-xs text-[#94A3B8]">
-                  What end users see in service / country lists. Leave blank to
-                  use the tier label (V1 - Basic, V2 - Standard, V3 - Premium).
-                  Must not reference any upstream provider name.
+                  Optional. Leave blank to show the Provider Name above to
+                  users. Set a value here only if you want a different label
+                  displayed in user-facing service / country lists.
                 </p>
               </div>
 
