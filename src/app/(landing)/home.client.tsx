@@ -683,7 +683,17 @@ export default function HomeClient({
               <Loader2 className="text-primary h-8 w-8 animate-spin" />
             </div>
           ) : plans.length > 0 ? (
-            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+            <div
+              className={`mx-auto grid max-w-6xl gap-6 md:grid-cols-2 ${
+                plans.length >= 5
+                  ? 'lg:grid-cols-5'
+                  : plans.length === 4
+                    ? 'lg:grid-cols-4'
+                    : plans.length === 3
+                      ? 'lg:grid-cols-3'
+                      : 'lg:grid-cols-2'
+              }`}
+            >
               {plans.map((plan) => (
                 <Card
                   key={plan.id}
