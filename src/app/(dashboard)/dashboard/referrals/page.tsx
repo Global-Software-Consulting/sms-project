@@ -1025,86 +1025,92 @@ export default function ReferralDashboard() {
         </Card>
       )}
 
-      {/* ===== WALLET & EARNINGS SECTION (Like CheapStreamTV) ===== */}
+      {/* ===== WALLET & EARNINGS SECTION ===== */}
       <Card className="border-primary/30">
-        <CardHeader>
+        <CardHeader className="pb-4">
           <CardTitle className="text-muted-foreground text-xs font-semibold tracking-[0.2em]">
             WALLET & EARNINGS
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
-          {/* Balance Display - Like CheapStreamTV */}
-          <div className="space-y-4">
-            <div>
-              <p className="text-muted-foreground mb-2 text-sm">
-                Total Withdrawable Funds:
+          {/* Balance display — two stat cards, side-by-side on md+.
+              Subtle muted background instead of solid yellow blocks so
+              the primary action buttons stay the loudest element. */}
+          <div className="grid gap-3 md:grid-cols-2">
+            <div className="border-border bg-muted/30 rounded-xl border p-4">
+              <p className="text-muted-foreground text-xs tracking-wide uppercase">
+                Total Withdrawable
               </p>
-              <div className="bg-primary rounded-lg px-4 py-3 text-center">
-                <p className="text-primary-foreground text-2xl font-bold">
-                  {formatAmount(availableBalance)}
-                </p>
-              </div>
+              <p className="text-primary mt-1 text-3xl font-bold tabular-nums">
+                {formatAmount(availableBalance)}
+              </p>
             </div>
-            <div>
-              <p className="text-muted-foreground mb-2 text-sm">
-                Total Referral Earnings:
+            <div className="border-border bg-muted/30 rounded-xl border p-4">
+              <p className="text-muted-foreground text-xs tracking-wide uppercase">
+                Total Referral Earnings
               </p>
-              <div className="bg-primary rounded-lg px-4 py-3 text-center">
-                <p className="text-primary-foreground text-2xl font-bold">
-                  {formatAmount(totalEarnings)}
-                </p>
-              </div>
+              <p className="mt-1 text-3xl font-bold tabular-nums">
+                {formatAmount(totalEarnings)}
+              </p>
             </div>
           </div>
 
-          {/* Action Buttons - Like CheapStreamTV */}
-          <div className="space-y-3">
+          {/* Action buttons — Withdraw is primary, Add Funds is outline.
+              Help text sits between as a single supporting line. */}
+          <div className="grid gap-3 sm:grid-cols-2">
             <Button
               onClick={() => setWithdrawModal(true)}
-              className="bg-primary hover:bg-primary/90 w-full"
+              className="w-full"
               disabled={availableBalance < 5}
             >
+              <ArrowDownToLine className="mr-2 h-4 w-4" />
               Withdraw Funds
             </Button>
             <Button
               onClick={() => setAddBalanceModal(true)}
               variant="outline"
-              className="border-primary text-primary hover:bg-primary/10 w-full"
+              className="w-full"
               disabled={availableBalance <= 0}
             >
               Add Funds to Main Balance
             </Button>
           </div>
-
-          {/* Info Text */}
-          <p className="text-muted-foreground text-center text-xs">
-            *You can use your main balance to buy plans or withdraw referral
-            earnings to your preferred payment method.
+          <p className="text-muted-foreground -mt-2 text-xs">
+            Use your main balance to buy plans, or withdraw earnings to your
+            preferred payment method.
           </p>
 
-          {/* Balance Summary Grid */}
-          <div className="border-border grid grid-cols-3 gap-2 border-t pt-4">
-            <div className="text-center">
-              <p className="text-muted-foreground text-xs">Available</p>
-              <p className="text-success text-sm font-semibold">
+          {/* Compact summary row: Available / Pending / Min Withdraw */}
+          <div className="border-border bg-muted/20 divide-border/60 grid grid-cols-3 divide-x overflow-hidden rounded-xl border">
+            <div className="p-3 text-center">
+              <p className="text-muted-foreground text-[11px] tracking-wide uppercase">
+                Available
+              </p>
+              <p className="text-success mt-1 text-sm font-semibold tabular-nums">
                 {formatAmount(availableBalance)}
               </p>
             </div>
-            <div className="text-center">
-              <p className="text-muted-foreground text-xs">Pending</p>
-              <p className="text-warning text-sm font-semibold">
+            <div className="p-3 text-center">
+              <p className="text-muted-foreground text-[11px] tracking-wide uppercase">
+                Pending
+              </p>
+              <p className="text-warning mt-1 text-sm font-semibold tabular-nums">
                 {formatAmount(pendingEarnings)}
               </p>
             </div>
-            <div className="text-center">
-              <p className="text-muted-foreground text-xs">Min Withdraw</p>
-              <p className="text-sm font-semibold">$5.00</p>
+            <div className="p-3 text-center">
+              <p className="text-muted-foreground text-[11px] tracking-wide uppercase">
+                Min Withdraw
+              </p>
+              <p className="mt-1 text-sm font-semibold tabular-nums">$5.00</p>
             </div>
           </div>
 
           {/* Withdrawal History Table */}
           <div>
-            <h4 className="mb-3 font-semibold">Withdrawal History</h4>
+            <h4 className="text-muted-foreground mb-3 text-xs font-semibold tracking-wide uppercase">
+              Withdrawal History
+            </h4>
             {payouts.length > 0 ? (
               <div className="border-border overflow-hidden rounded-lg border">
                 <div className="overflow-x-auto">
