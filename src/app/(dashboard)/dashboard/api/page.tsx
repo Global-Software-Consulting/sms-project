@@ -50,7 +50,11 @@ import {
   formatUsageCount,
   copyToClipboard as copyKey,
 } from '@/lib/api/apiKeysApi';
-import { getProviders, type SmsProvider } from '@/lib/api/smsApi';
+import {
+  getProviders,
+  safeProviderLabel,
+  type SmsProvider,
+} from '@/lib/api/smsApi';
 
 type ProviderType = 'v1' | 'v2' | 'v3';
 
@@ -102,6 +106,14 @@ export default function APIAccess() {
           setAvailableTiers(tiers);
           if (!tiers.includes(activeTab)) setActiveTab(tiers[0]);
         }
+        // Pre-filter raw displayName through safeProviderLabel so the
+        // page never leaks forbidden upstream names (5sim / sms-man /
+        // hero-sms) in tab labels, card titles, or endpoint copy.
+        const tierFallback: Record<ProviderType, string> = {
+          v1: 'V1 Basic',
+          v2: 'V2 Standard',
+          v3: 'V3 Premium',
+        };
         const names: Record<ProviderType, string | null> = {
           v1: null,
           v2: null,
@@ -111,7 +123,9 @@ export default function APIAccess() {
           const match = active.find((p) =>
             (p.version || '').toLowerCase().startsWith(t),
           );
-          if (match?.displayName) names[t] = match.displayName;
+          if (match?.displayName) {
+            names[t] = safeProviderLabel(match.displayName, tierFallback[t]);
+          }
         });
         setTierNames(names);
       })
