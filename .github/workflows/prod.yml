@@ -93,7 +93,11 @@ jobs:
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SERVER_SSH_KEY }}
           port: ${{ secrets.SERVER_PORT }}
-          command_timeout: 5m
+          # Bumped from 5m. On slow image-pull days the prior 5m budget
+          # was killing the script mid-recreate (before the in-script
+          # health check + rollback logic could run), leaving prod in
+          # an unverified state and no rollback.
+          command_timeout: 15m
           # Sourcing ENV_DEV here (not ENV_PROD) because the previous
           # dev.yml workflow already populated ENV_DEV with the values
           # that serve the production domain. Switch to ENV_PROD once
