@@ -1025,86 +1025,80 @@ export default function ReferralDashboard() {
         </Card>
       )}
 
-      {/* ===== WALLET & EARNINGS SECTION ===== */}
+      {/* ===== WITHDRAW REFERRAL EARNINGS SECTION ===== */}
       <Card className="border-primary/30">
         <CardHeader className="pb-4">
-          <CardTitle className="text-muted-foreground text-xs font-semibold tracking-[0.2em]">
-            WALLET & EARNINGS
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          {/* Balance display — two stat cards, side-by-side on md+.
-              Subtle muted background instead of solid yellow blocks so
-              the primary action buttons stay the loudest element. */}
-          <div className="grid gap-3 md:grid-cols-2">
-            <div className="border-border bg-muted/30 rounded-xl border p-4">
-              <p className="text-muted-foreground text-xs tracking-wide uppercase">
-                Total Withdrawable
-              </p>
-              <p className="text-primary mt-1 text-3xl font-bold tabular-nums">
-                {formatAmount(availableBalance)}
-              </p>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div className="flex items-start gap-3">
+              <div className="bg-success/10 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg">
+                <ArrowDownToLine className="text-success h-4 w-4" />
+              </div>
+              <div>
+                <CardTitle className="text-base">
+                  Withdraw Referral Earnings
+                </CardTitle>
+                <p className="text-muted-foreground mt-1 text-sm">
+                  Transfer your referral balance to your wallet or external
+                  payment method
+                </p>
+              </div>
             </div>
-            <div className="border-border bg-muted/30 rounded-xl border p-4">
-              <p className="text-muted-foreground text-xs tracking-wide uppercase">
-                Total Referral Earnings
-              </p>
-              <p className="mt-1 text-3xl font-bold tabular-nums">
-                {formatAmount(totalEarnings)}
-              </p>
-            </div>
-          </div>
-
-          {/* Action buttons — Withdraw is primary, Add Funds is outline.
-              Help text sits between as a single supporting line. */}
-          <div className="grid gap-3 sm:grid-cols-2">
             <Button
               onClick={() => setWithdrawModal(true)}
-              className="w-full"
               disabled={availableBalance < 5}
+              className="shrink-0"
             >
               <ArrowDownToLine className="mr-2 h-4 w-4" />
               Withdraw Funds
             </Button>
-            <Button
-              onClick={() => setAddBalanceModal(true)}
-              variant="outline"
-              className="w-full"
-              disabled={availableBalance <= 0}
-            >
-              Add Funds to Main Balance
-            </Button>
           </div>
-          <p className="text-muted-foreground -mt-2 text-xs">
-            Use your main balance to buy plans, or withdraw earnings to your
-            preferred payment method.
-          </p>
-
-          {/* Compact summary row: Available / Pending / Min Withdraw */}
-          <div className="border-border bg-muted/20 divide-border/60 grid grid-cols-3 divide-x overflow-hidden rounded-xl border">
-            <div className="p-3 text-center">
-              <p className="text-muted-foreground text-[11px] tracking-wide uppercase">
-                Available
+        </CardHeader>
+        <CardContent className="space-y-6">
+          {/* 3-stat row — Available / Pending / Minimum. Single source of
+              truth for amounts; the old big Total Withdrawable / Total
+              Referral Earnings cards used to live above this and just
+              duplicated the same numbers. */}
+          <div className="grid gap-3 sm:grid-cols-3">
+            <div className="border-border bg-muted/30 rounded-xl border p-4 text-center">
+              <p className="text-muted-foreground text-xs tracking-wide uppercase">
+                Available to Withdraw
               </p>
-              <p className="text-success mt-1 text-sm font-semibold tabular-nums">
+              <p className="text-success mt-2 text-2xl font-bold tabular-nums">
                 {formatAmount(availableBalance)}
               </p>
             </div>
-            <div className="p-3 text-center">
-              <p className="text-muted-foreground text-[11px] tracking-wide uppercase">
-                Pending
+            <div className="border-border bg-muted/30 rounded-xl border p-4 text-center">
+              <p className="text-muted-foreground text-xs tracking-wide uppercase">
+                Pending (not withdrawable)
               </p>
-              <p className="text-warning mt-1 text-sm font-semibold tabular-nums">
+              <p className="text-warning mt-2 text-2xl font-bold tabular-nums">
                 {formatAmount(pendingEarnings)}
               </p>
             </div>
-            <div className="p-3 text-center">
-              <p className="text-muted-foreground text-[11px] tracking-wide uppercase">
-                Min Withdraw
+            <div className="border-border bg-muted/30 rounded-xl border p-4 text-center">
+              <p className="text-muted-foreground text-xs tracking-wide uppercase">
+                Minimum Withdrawal
               </p>
-              <p className="mt-1 text-sm font-semibold tabular-nums">$5.00</p>
+              <p className="mt-2 text-2xl font-bold tabular-nums">$5.00</p>
             </div>
           </div>
+
+          {/* Secondary action — Add Funds to Main Balance is kept as a
+              small inline link so the feature stays accessible without
+              competing with the primary Withdraw CTA in the header. */}
+          {availableBalance > 0 && (
+            <div className="text-muted-foreground -mt-2 text-center text-xs">
+              Or{' '}
+              <button
+                type="button"
+                onClick={() => setAddBalanceModal(true)}
+                className="text-primary hover:underline"
+              >
+                add funds to main balance
+              </button>{' '}
+              to spend them on plans.
+            </div>
+          )}
 
           {/* Withdrawal History Table */}
           <div>
