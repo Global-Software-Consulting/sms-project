@@ -112,20 +112,12 @@ export default function FavoritesPage() {
   }
 
   return (
-    <div className="mx-auto w-full max-w-3xl space-y-6 px-4 py-6 md:px-6">
-      <div className="flex items-end justify-between gap-4">
+    <div className="space-y-6">
+      <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Favorites</h1>
+          <h1 className="text-2xl font-bold sm:text-3xl">Favorites</h1>
           <p className="text-muted-foreground mt-1 text-sm">
             Your saved service + country combos. Tap Buy to activate one.
-          </p>
-        </div>
-        <div className="text-right">
-          <p className="text-muted-foreground text-xs tracking-wide uppercase">
-            Wallet Balance
-          </p>
-          <p className="text-lg font-bold tabular-nums">
-            {formatBalance(walletBalance, 'USD')}
           </p>
         </div>
       </div>
