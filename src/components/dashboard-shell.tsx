@@ -8,7 +8,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   return (
-    <div className="relative flex min-h-screen overflow-x-hidden">
+    <div className="relative flex h-screen overflow-x-clip">
       {/* Subtle background glow */}
       <div className="pointer-events-none fixed inset-0 overflow-hidden">
         <div className="bg-primary/5 dark:bg-primary/8 absolute top-1/4 left-1/2 h-[800px] w-[800px] -translate-x-1/2 rounded-full blur-[120px]" />

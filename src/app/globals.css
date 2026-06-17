@@ -191,11 +191,15 @@
       BlinkMacSystemFont,
       'Segoe UI',
       sans-serif;
-    overflow-x: hidden;
+    /* clip (not hidden) so document-wide horizontal scroll is still
+       suppressed but `position: sticky` on landing + dashboard headers
+       continues to work. `hidden` creates a scroll container which
+       breaks sticky for every descendant. */
+    overflow-x: clip;
   }
 
   html {
-    overflow-x: hidden;
+    overflow-x: clip;
   }
 
   html {

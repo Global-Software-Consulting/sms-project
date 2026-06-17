@@ -50,7 +50,11 @@ import {
   formatUsageCount,
   copyToClipboard as copyKey,
 } from '@/lib/api/apiKeysApi';
-import { getProviders, type SmsProvider } from '@/lib/api/smsApi';
+import {
+  getProviders,
+  safeProviderLabel,
+  type SmsProvider,
+} from '@/lib/api/smsApi';
 
 type ProviderType = 'v1' | 'v2' | 'v3';
 
@@ -93,25 +97,67 @@ export default function APIAccess() {
         const active = (res?.providers || []).filter(
           (p: SmsProvider) => p.isActive !== false,
         );
+
+        // Same tier-slot algorithm as home.client.tsx so providers
+        // without a recognized `version` still land in a tier instead
+        // of disappearing from the tab list:
+        //   1. Honor provider.version when it starts with v1/v2/v3.
+        //   2. Any provider without a recognized version is auto-
+        //      assigned to a remaining slot by priority desc.
+        const slots: Record<ProviderType, SmsProvider | null> = {
+          v1: null,
+          v2: null,
+          v3: null,
+        };
+        const claimed = new Set<string>();
+        for (const p of active) {
+          const v = (p.version || '').toLowerCase().trim();
+          if (v.startsWith('v1') && !slots.v1) {
+            slots.v1 = p;
+            claimed.add(p.id);
+          } else if (v.startsWith('v2') && !slots.v2) {
+            slots.v2 = p;
+            claimed.add(p.id);
+          } else if (v.startsWith('v3') && !slots.v3) {
+            slots.v3 = p;
+            claimed.add(p.id);
+          }
+        }
+        const remaining = active
+          .filter((p) => !claimed.has(p.id))
+          .sort((a, b) => (b.priority ?? 0) - (a.priority ?? 0));
+        (['v1', 'v2', 'v3'] as ProviderType[]).forEach((slot) => {
+          if (!slots[slot] && remaining.length) {
+            slots[slot] = remaining.shift() ?? null;
+          }
+        });
+
         const tiers: ProviderType[] = (
           ['v1', 'v2', 'v3'] as ProviderType[]
-        ).filter((t) =>
-          active.some((p) => (p.version || '').toLowerCase().startsWith(t)),
-        );
+        ).filter((t) => slots[t] !== null);
         if (tiers.length > 0) {
           setAvailableTiers(tiers);
           if (!tiers.includes(activeTab)) setActiveTab(tiers[0]);
         }
+
+        // Pre-filter raw displayName through safeProviderLabel so the
+        // page never leaks forbidden upstream names (5sim / sms-man /
+        // hero-sms) in tab labels, card titles, or endpoint copy.
+        const tierFallback: Record<ProviderType, string> = {
+          v1: 'V1 Basic',
+          v2: 'V2 Standard',
+          v3: 'V3 Premium',
+        };
         const names: Record<ProviderType, string | null> = {
           v1: null,
           v2: null,
           v3: null,
         };
         (['v1', 'v2', 'v3'] as ProviderType[]).forEach((t) => {
-          const match = active.find((p) =>
-            (p.version || '').toLowerCase().startsWith(t),
-          );
-          if (match?.displayName) names[t] = match.displayName;
+          const match = slots[t];
+          if (match?.displayName) {
+            names[t] = safeProviderLabel(match.displayName, tierFallback[t]);
+          }
         });
         setTierNames(names);
       })

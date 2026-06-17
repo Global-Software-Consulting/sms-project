@@ -499,7 +499,7 @@ print(response.json())`}</code>
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="w-fit overflow-x-auto rounded-full border border-blue-500/30 px-4 py-2 font-mono text-xs">
+                  <div className="w-full overflow-x-auto rounded-full bg-white/5 px-4 py-2 font-mono text-xs">
                     <code className="text-blue-500">"provider": "v1"</code>
                   </div>
                   <ul className="mt-4 space-y-2">
@@ -544,7 +544,7 @@ print(response.json())`}</code>
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="border-primary/30 w-fit overflow-x-auto rounded-full border px-4 py-2 font-mono text-xs">
+                  <div className="w-full overflow-x-auto rounded-full bg-white/5 px-4 py-2 font-mono text-xs">
                     <code className="text-primary">"provider": "v2"</code>
                   </div>
                   <ul className="mt-4 space-y-2">
@@ -590,7 +590,7 @@ print(response.json())`}</code>
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="border-warning/30 w-fit overflow-x-auto rounded-full border px-4 py-2 font-mono text-xs">
+                  <div className="w-full overflow-x-auto rounded-full bg-white/5 px-4 py-2 font-mono text-xs">
                     <code className="text-warning">"provider": "v3"</code>
                   </div>
                   <ul className="mt-4 space-y-2">

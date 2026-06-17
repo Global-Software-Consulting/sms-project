@@ -263,6 +263,7 @@ export default function Login() {
                     onCheckedChange={(checked) =>
                       setRememberMe(checked as boolean)
                     }
+                    className="border-white/30 bg-transparent"
                   />
                   <Label
                     htmlFor="remember"

@@ -605,7 +605,7 @@ export default function MembershipClient({
                 step="50"
                 value={monthlySpend}
                 onChange={(e) => setMonthlySpend(Number(e.target.value))}
-                className="bg-muted h-2 w-full cursor-pointer appearance-none rounded-lg"
+                className="accent-primary h-2 w-full cursor-pointer"
               />
               <div className="text-muted-foreground mt-2 flex justify-between text-xs">
                 <span>$100</span>
@@ -619,46 +619,64 @@ export default function MembershipClient({
               </div>
             ) : (
               <>
-                <div className="grid gap-4 md:grid-cols-4">
-                  {plans.map((plan) => {
-                    const isBest =
-                      plan.slug === bestPlanSlug &&
-                      plan.slug !== 'basic' &&
-                      plan.slug !== 'free';
-                    const isHighTier = plan.routingPriority >= 2;
-                    const planSavings = savings[plan.slug] ?? monthlySpend;
-                    const saved = monthlySpend - planSavings;
+                {/* Skip the Free tier — it never produces a saving so the
+                    "$0 saved" card is noise, and dropping it gives us a
+                    clean 4-card row that matches the Figma reference. */}
+                {(() => {
+                  const calculatorPlans = plans.filter(
+                    (p) => p.slug !== 'free',
+                  );
+                  return (
+                    <div
+                      className={`grid gap-4 ${
+                        calculatorPlans.length >= 4
+                          ? 'md:grid-cols-2 lg:grid-cols-4'
+                          : calculatorPlans.length === 3
+                            ? 'md:grid-cols-3'
+                            : 'md:grid-cols-2'
+                      }`}
+                    >
+                      {calculatorPlans.map((plan) => {
+                        const isBest =
+                          plan.slug === bestPlanSlug &&
+                          plan.slug !== 'basic' &&
+                          plan.slug !== 'free';
+                        const isHighTier = plan.routingPriority >= 2;
+                        const planSavings = savings[plan.slug] ?? monthlySpend;
+                        const saved = monthlySpend - planSavings;
 
-                    return (
-                      <div
-                        key={plan.slug}
-                        className={
-                          isBest
-                            ? 'bg-primary/10 border-primary/20 rounded-lg border p-6'
-                            : isHighTier
-                              ? 'bg-success/10 border-success/20 rounded-lg border p-6'
-                              : 'rounded-lg p-6 [background:var(--glass-secondary)] [border:1px_solid_var(--glass-border)]'
-                        }
-                      >
-                        <h4 className="mb-3 font-semibold">{plan.name}</h4>
-                        <p className="mb-1 text-2xl font-bold">
-                          ${planSavings.toFixed(2)}
-                        </p>
-                        {saved > 0 ? (
-                          <p
-                            className={`text-sm ${isBest ? 'text-primary font-semibold' : isHighTier ? 'text-success font-semibold' : 'text-success'}`}
+                        return (
+                          <div
+                            key={plan.slug}
+                            className={
+                              isBest
+                                ? 'bg-primary/10 border-primary/20 rounded-lg border p-6'
+                                : isHighTier
+                                  ? 'bg-success/10 border-success/20 rounded-lg border p-6'
+                                  : 'rounded-lg p-6 [background:var(--glass-secondary)] [border:1px_solid_var(--glass-border)]'
+                            }
                           >
-                            Save ${saved.toFixed(2)}
-                          </p>
-                        ) : (
-                          <p className="text-muted-foreground text-sm">
-                            $0 saved
-                          </p>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
+                            <h4 className="mb-3 font-semibold">{plan.name}</h4>
+                            <p className="mb-1 text-2xl font-bold">
+                              ${planSavings.toFixed(2)}
+                            </p>
+                            {saved > 0 ? (
+                              <p
+                                className={`text-sm ${isBest ? 'text-primary font-semibold' : isHighTier ? 'text-success font-semibold' : 'text-success'}`}
+                              >
+                                Save ${saved.toFixed(2)}
+                              </p>
+                            ) : (
+                              <p className="text-muted-foreground text-sm">
+                                Baseline pricing
+                              </p>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  );
+                })()}
 
                 {recommendedPlan && (
                   <div className="bg-primary/10 border-primary/20 rounded-lg border p-6 text-center">

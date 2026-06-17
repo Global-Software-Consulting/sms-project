@@ -60,7 +60,6 @@ import {
   SmsRental,
   SmsService,
 } from '@/lib/api/smsApi';
-import { getWalletBalance } from '@/lib/api/walletApi';
 
 type RentalKind = 'full' | 'app';
 
@@ -131,7 +130,6 @@ function formatRemaining(expiresAt: string | null | undefined): string {
 
 export default function RentNumbersPage() {
   // ----- Static / session-level state -----
-  const [walletBalance, setWalletBalance] = useState<string>('0');
   const [activeRentals, setActiveRentals] = useState<SmsRental[]>([]);
   const [rentalHistory, setRentalHistory] = useState<SmsRental[]>([]);
   const [isInitialLoading, setIsInitialLoading] = useState(true);
@@ -196,12 +194,6 @@ export default function RentNumbersPage() {
 
   useEffect(() => {
     (async () => {
-      try {
-        const balance = await getWalletBalance();
-        setWalletBalance(balance.balance);
-      } catch {
-        /* keep default */
-      }
       await refreshActiveAndHistory();
       setIsInitialLoading(false);
     })();
@@ -353,8 +345,6 @@ export default function RentNumbersPage() {
       });
       const rental = (res.rental ?? res) as SmsRental;
       setActiveRentals((prev) => [rental, ...prev]);
-      const refreshed = await getWalletBalance().catch(() => null);
-      if (refreshed) setWalletBalance(refreshed.balance);
       toast.success('Number rented', {
         description: `${rental.phoneNumber ?? 'Number assigned'} · ${option.country.name}`,
       });
@@ -375,8 +365,6 @@ export default function RentNumbersPage() {
     try {
       const res = await cancelRental(rental.id);
       setActiveRentals((prev) => prev.filter((r) => r.id !== rental.id));
-      const refreshed = await getWalletBalance().catch(() => null);
-      if (refreshed) setWalletBalance(refreshed.balance);
       toast.success('Rental cancelled', { description: (res as any)?.message });
       refreshActiveAndHistory();
     } catch (err: any) {
@@ -404,8 +392,6 @@ export default function RentNumbersPage() {
       setActiveRentals((prev) =>
         prev.map((r) => (r.id === extendingRental.id ? res.rental : r)),
       );
-      const refreshed = await getWalletBalance().catch(() => null);
-      if (refreshed) setWalletBalance(refreshed.balance);
       toast.success(res.message || 'Rental extended');
       setExtendingRental(null);
     } catch (err: any) {
@@ -420,21 +406,15 @@ export default function RentNumbersPage() {
 
   // ----- UI -----
   return (
-    <div className="space-y-6 p-4 sm:p-6">
+    <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Rent Numbers</h1>
-          <p className="text-muted-foreground text-sm">
+          <h1 className="text-2xl font-bold sm:text-3xl">Rent Numbers</h1>
+          <p className="text-muted-foreground mt-1 text-sm">
             Rent a phone number to receive SMS for hours, days, weeks, or
             months.
           </p>
-        </div>
-        <div className="text-right">
-          <p className="text-muted-foreground text-xs tracking-wide uppercase">
-            Wallet balance
-          </p>
-          <p className="text-xl font-semibold">${walletBalance}</p>
         </div>
       </div>
 

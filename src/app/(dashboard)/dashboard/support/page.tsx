@@ -5,7 +5,22 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
-import { Upload, MessageSquare, Loader2, Send, Clock, X } from 'lucide-react';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
+  Upload,
+  MessageSquare,
+  Loader2,
+  Send,
+  Clock,
+  X,
+  Crown,
+} from 'lucide-react';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   getTickets,
@@ -14,8 +29,12 @@ import {
   sendTicketMessage,
   Ticket,
   TicketMessage,
+  TicketPriority,
   getTicketStatusLabel,
+  getTicketPriorityVariant,
 } from '@/lib/api/ticketsApi';
+import { getCurrentMembership } from '@/lib/api/membershipApi';
+import type { CurrentMembershipResponse } from '@/lib/api/membershipApi';
 
 const MAX_OPEN_TICKETS = 3;
 const MAX_IMAGE_SIZE = 5 * 1024 * 1024; // 5MB
@@ -24,6 +43,7 @@ const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 export default function Support() {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
+  const [priority, setPriority] = useState<TicketPriority>('NORMAL');
   const [image, setImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -35,6 +55,16 @@ export default function Support() {
   const [isLoading, setIsLoading] = useState(true);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+
+  // Membership — drives the Pro Member banner. Fetched silently;
+  // failure leaves the banner hidden so it never blocks ticket actions.
+  const [membership, setMembership] =
+    useState<CurrentMembershipResponse | null>(null);
+  useEffect(() => {
+    getCurrentMembership()
+      .then(setMembership)
+      .catch(() => setMembership(null));
+  }, []);
 
   // Inline chat state — keyed by ticket ID
   const [openChatId, setOpenChatId] = useState<string | null>(null);
@@ -140,13 +170,14 @@ export default function Support() {
       await createTicket(
         {
           subject: title.charAt(0).toUpperCase() + title.slice(1),
-          priority: 'NORMAL',
+          priority,
           message: description,
         },
         image ? [image] : undefined,
       );
       setTitle('');
       setDescription('');
+      setPriority('NORMAL');
       removeImage();
       setPage(1);
       await fetchTickets(1);
@@ -280,6 +311,37 @@ export default function Support() {
         </p>
       </div>
 
+      {/* Paid-tier perk banner. Purely informational — surfaces the
+          plan name and a short SLA hint to paying users. Hidden when
+          membership API call fails or returns no active plan, so it
+          can never block the underlying create-ticket flow. */}
+      {membership?.hasActiveSubscription && membership.currentPlan && (
+        <Card className="border-primary/40 bg-primary/5">
+          <CardContent className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-start gap-3">
+              <div className="bg-primary/15 text-primary flex h-9 w-9 shrink-0 items-center justify-center rounded-lg">
+                <Crown className="h-4 w-4" />
+              </div>
+              <div>
+                <p className="text-foreground font-semibold">
+                  {membership.currentPlan.name} Member Support
+                </p>
+                <p className="text-muted-foreground mt-0.5 text-sm">
+                  As a {membership.currentPlan.name} member, your tickets get
+                  priority handling from our team.
+                </p>
+              </div>
+            </div>
+            <Badge
+              variant="default"
+              className="shrink-0 self-start sm:self-auto"
+            >
+              {membership.currentPlan.name} Priority
+            </Badge>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Create Support Ticket */}
       <Card>
         <CardHeader>
@@ -298,6 +360,23 @@ export default function Support() {
             onChange={(e) => setDescription(e.target.value)}
             rows={5}
           />
+
+          <div>
+            <p className="text-muted-foreground mb-2 text-sm">Priority</p>
+            <Select
+              value={priority}
+              onValueChange={(v) => setPriority(v as TicketPriority)}
+            >
+              <SelectTrigger className="w-full sm:w-48">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="LOW">Low</SelectItem>
+                <SelectItem value="NORMAL">Normal</SelectItem>
+                <SelectItem value="HIGH">High</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
 
           {/* Image attachment */}
           <div>
@@ -388,10 +467,10 @@ export default function Support() {
                   {/* Ticket header row */}
                   <div className="flex flex-col gap-3 p-3 sm:flex-row sm:items-center sm:justify-between sm:p-4">
                     <div className="min-w-0 flex-1">
-                      <h4 className="text-base font-semibold break-words">
-                        {ticket.subject}
-                      </h4>
-                      <div className="text-muted-foreground mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs sm:text-sm">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <h4 className="text-base font-semibold break-words">
+                          {ticket.subject}
+                        </h4>
                         <Badge
                           variant={
                             ticket.status === 'OPEN' ? 'default' : 'outline'
@@ -401,6 +480,24 @@ export default function Support() {
                           <Clock className="mr-1 h-3 w-3" />
                           {getTicketStatusLabel(ticket.status)}
                         </Badge>
+                        {/* Priority pill — only when not the default
+                            NORMAL value so the row doesn't get cluttered
+                            for the common case. */}
+                        {ticket.priority && ticket.priority !== 'NORMAL' && (
+                          <Badge
+                            variant={getTicketPriorityVariant(ticket.priority)}
+                            className="text-xs capitalize"
+                          >
+                            {ticket.priority.toLowerCase()}
+                          </Badge>
+                        )}
+                      </div>
+                      <div className="text-muted-foreground mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs sm:text-sm">
+                        {ticket.ticketNumber && (
+                          <span className="font-mono">
+                            TICKET-{ticket.ticketNumber}
+                          </span>
+                        )}
                         <span>{formatDateTime(ticket.createdAt)}</span>
                         <span className="flex items-center">
                           <MessageSquare className="mr-1 h-3 w-3" />
