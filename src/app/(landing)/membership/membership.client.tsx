@@ -271,7 +271,17 @@ export default function MembershipClient({
             </span>
           </div>
         ) : (
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+          <div
+            className={`mx-auto grid max-w-6xl gap-6 md:grid-cols-2 ${
+              plans.length >= 5
+                ? 'lg:grid-cols-5'
+                : plans.length === 4
+                  ? 'lg:grid-cols-4'
+                  : plans.length === 3
+                    ? 'lg:grid-cols-3'
+                    : 'lg:grid-cols-2'
+            }`}
+          >
             {plans.map((plan) => {
               const isBest =
                 plan.slug === bestPlanSlug &&

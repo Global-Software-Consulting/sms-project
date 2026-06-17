@@ -24,7 +24,11 @@ import {
   Loader2,
 } from 'lucide-react';
 import { getPlans, MembershipPlan } from '@/lib/api/membershipApi';
-import { getProviders, type SmsProvider } from '@/lib/api/smsApi';
+import {
+  getProviders,
+  safeProviderLabel,
+  type SmsProvider,
+} from '@/lib/api/smsApi';
 import { apiClient } from '@/config/api-client.config';
 import { API_ENDPOINTS } from '@/config/server.config';
 import { useAuth } from '@/hooks/useAuth';
@@ -415,7 +419,11 @@ export default function HomeClient({
                   <Card className="border-2">
                     <CardHeader>
                       <Badge className="mb-2 w-fit bg-blue-500">
-                        💰 {tierProvider.V1?.displayName ?? 'V1 - Basic'}
+                        💰{' '}
+                        {safeProviderLabel(
+                          tierProvider.V1?.displayName,
+                          'V1 - Basic',
+                        )}
                       </Badge>
                       <CardTitle className="text-xl">
                         Basic Activation
@@ -466,7 +474,11 @@ export default function HomeClient({
                     </div>
                     <CardHeader>
                       <Badge className="from-primary to-accent mb-2 w-fit bg-gradient-to-r">
-                        💎 {tierProvider.V2?.displayName ?? 'V2 - Standard'}
+                        💎{' '}
+                        {safeProviderLabel(
+                          tierProvider.V2?.displayName,
+                          'V2 - Standard',
+                        )}
                       </Badge>
                       <CardTitle className="text-xl">
                         Standard Activation
@@ -524,7 +536,11 @@ export default function HomeClient({
                     </div>
                     <CardHeader>
                       <Badge className="from-warning mb-2 w-fit bg-gradient-to-r to-amber-500">
-                        👑 {tierProvider.V3?.displayName ?? 'V3 - Premium'}
+                        👑{' '}
+                        {safeProviderLabel(
+                          tierProvider.V3?.displayName,
+                          'V3 - Premium',
+                        )}
                       </Badge>
                       <CardTitle className="text-xl">
                         Premium Activation
