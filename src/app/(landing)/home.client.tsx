@@ -461,7 +461,7 @@ export default function HomeClient({
                 {/* V2 - Standard */}
                 {hasTier('V2') && (
                   <Card className="border-primary relative overflow-hidden border-2">
-                    <div className="bg-primary text-primary-foreground absolute top-0 right-0 px-3 py-1 text-xs font-semibold">
+                    <div className="bg-primary text-primary-foreground absolute top-0 right-0 rounded-bl-xl px-3 py-1 text-xs font-semibold">
                       POPULAR
                     </div>
                     <CardHeader>
@@ -519,7 +519,7 @@ export default function HomeClient({
                 {/* V3 - Premium */}
                 {hasTier('V3') && (
                   <Card className="border-warning relative overflow-hidden border-2">
-                    <div className="bg-warning text-warning-foreground absolute top-0 right-0 px-3 py-1 text-xs font-semibold">
+                    <div className="bg-warning text-warning-foreground absolute top-0 right-0 rounded-bl-xl px-3 py-1 text-xs font-semibold">
                       BEST
                     </div>
                     <CardHeader>
@@ -683,18 +683,28 @@ export default function HomeClient({
               <Loader2 className="text-primary h-8 w-8 animate-spin" />
             </div>
           ) : plans.length > 0 ? (
-            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+            <div
+              className={`mx-auto grid max-w-6xl gap-6 md:grid-cols-2 ${
+                plans.length >= 5
+                  ? 'lg:grid-cols-5'
+                  : plans.length === 4
+                    ? 'lg:grid-cols-4'
+                    : plans.length === 3
+                      ? 'lg:grid-cols-3'
+                      : 'lg:grid-cols-2'
+              }`}
+            >
               {plans.map((plan) => (
                 <Card
                   key={plan.id}
                   className={
                     plan.isPopular
-                      ? 'border-primary relative border-2'
-                      : 'border-2'
+                      ? 'border-primary relative overflow-hidden border-2'
+                      : 'relative overflow-hidden border-2'
                   }
                 >
                   {plan.isPopular && (
-                    <div className="bg-primary text-primary-foreground absolute top-0 right-0 rounded-bl-lg px-3 py-1 text-xs font-semibold">
+                    <div className="bg-primary text-primary-foreground absolute top-0 right-0 rounded-bl-xl px-3 py-1 text-xs font-semibold">
                       Popular
                     </div>
                   )}
@@ -708,7 +718,11 @@ export default function HomeClient({
                     </div>
                     <Badge
                       variant={plan.isPopular ? 'default' : 'secondary'}
-                      className="mt-2 w-fit"
+                      className={`mt-2 w-fit rounded-full px-3 py-1 ${
+                        plan.isPopular
+                          ? ''
+                          : 'text-foreground bg-white/10 hover:bg-white/15'
+                      }`}
                     >
                       {plan.discount}% Discount
                     </Badge>
@@ -727,7 +741,8 @@ export default function HomeClient({
                     </ul>
                     <Button
                       asChild
-                      className="mt-6 w-full"
+                      size="lg"
+                      className="mt-6 h-12 w-full rounded-full text-base"
                       variant={plan.isPopular ? 'default' : 'outline'}
                     >
                       <Link prefetch={false} href="/dashboard/membership">

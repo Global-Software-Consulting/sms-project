@@ -24,7 +24,7 @@ import {
   formatPrice,
   getPlanColor,
 } from '@/lib/api/membershipApi';
-import { getProviders, SmsProvider, getProviderBadge } from '@/lib/api/smsApi';
+import { getProviders, SmsProvider } from '@/lib/api/smsApi';
 
 export interface PricingContent {
   heroHeading: string;
@@ -133,16 +133,68 @@ export default function PricingClient({
     },
   ];
 
-  // Map providers to display format. The "From $X.XX" price is fetched live
-  // from the backend (cheapest active product × global markup), per client
-  // requirement that pricing reflects provider data automatically.
+  // Map providers to display format.
+  //
+  // Three guard-rails baked into this mapping, matching the home page card
+  // design that the client signed off on:
+  //   1. NEVER surface the provider's raw displayName / slug — those leak
+  //      upstream brand names (5sim, sms-man, hero-sms) and the public
+  //      catalog endpoint anonymises slugs to v1/v2/v3, so a slug-based
+  //      lookup against getProviderBadge() returns "V?" anyway.
+  //   2. Position-based tier metadata (Basic Activation / Standard
+  //      Activation / Premium Activation) is the curated copy the
+  //      marketing pages already use — keeps the home and pricing pages
+  //      in lock-step.
+  //   3. Live `fromPrice` from the backend is preserved so the daily
+  //      cron-driven "From $X.XX" number still drives the card.
+  const tierMeta = [
+    {
+      badge: '💰 Basic',
+      name: 'Basic Activation',
+      tagline:
+        'Standard services - best price. Suitable for customers looking for basic and affordable options.',
+      features: [
+        'Affordable pricing',
+        'Standard delivery speed',
+        'Wide service coverage',
+        'Regular priority',
+      ],
+      color: 'blue' as const,
+    },
+    {
+      badge: '💎 Standard',
+      name: 'Standard Activation',
+      tagline:
+        'Faster delivery and higher success rate. Ideal for customers looking for more reliable results and quicker processing.',
+      features: [
+        'Lightning-fast delivery',
+        'Higher success rate',
+        'Standard providers',
+        'VIP priority routing',
+      ],
+      color: 'primary' as const,
+    },
+    {
+      badge: '👑 Premium',
+      name: 'Premium Activation',
+      tagline:
+        'The highest quality service with priority routing and 99.9% success rate. Best for customers who demand the absolute best with premium providers and priority support.',
+      features: [
+        'Instant guaranteed delivery',
+        '99.9% success rate',
+        'Premium providers only',
+        'Maximum priority + support',
+      ],
+      color: 'warning' as const,
+    },
+  ];
+
   const providerTiers =
     providers.length > 0
-      ? providers.map((provider, index) => {
-          const badge = getProviderBadge(provider.slug);
+      ? providers.slice(0, 3).map((provider, index) => {
+          const meta = tierMeta[index] ?? tierMeta[tierMeta.length - 1];
           const isPopular = index === 1;
-          const isElite =
-            index === providers.length - 1 && providers.length > 2;
+          const isElite = index === 2;
           const priceRange =
             provider.fromPrice != null && provider.fromPrice > 0
               ? `From $${provider.fromPrice.toFixed(2)}`
@@ -150,18 +202,12 @@ export default function PricingClient({
 
           return {
             id: provider.id,
-            name: provider.displayName,
-            badge: `${badge.icon} ${badge.label}`,
-            tagline:
-              (provider as any).description || 'SMS verification service',
+            name: meta.name,
+            badge: meta.badge,
+            tagline: meta.tagline,
             priceRange,
-            features: (provider as any).features || [
-              'SMS verification',
-              'Multiple countries',
-              'Fast delivery',
-              'Reliable service',
-            ],
-            color: isElite ? 'warning' : isPopular ? 'primary' : 'blue',
+            features: meta.features,
+            color: meta.color,
             popular: isPopular,
             elite: isElite,
           };
@@ -401,7 +447,7 @@ export default function PricingClient({
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead>
-                  <tr className="border-border border-b">
+                  <tr className="border-b border-white/10">
                     <th className="p-4 text-left font-semibold">Service</th>
                     <th className="p-4 text-left font-semibold">Country</th>
                     <th className="p-4 text-center font-semibold">
@@ -434,7 +480,7 @@ export default function PricingClient({
                   {samplePricing.map((item, i) => (
                     <tr
                       key={i}
-                      className="border-border hover:bg-muted/50 border-b transition-colors"
+                      className="hover:bg-muted/50 border-b border-white/10 transition-colors"
                     >
                       <td className="p-4 font-medium">{item.service}</td>
                       <td className="text-muted-foreground p-4 text-sm">
@@ -487,7 +533,17 @@ export default function PricingClient({
               <Loader2 className="text-primary h-8 w-8 animate-spin" />
             </div>
           ) : (
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <div
+              className={`mx-auto grid max-w-6xl gap-4 sm:grid-cols-2 ${
+                membershipBenefits.length >= 5
+                  ? 'lg:grid-cols-5'
+                  : membershipBenefits.length === 4
+                    ? 'lg:grid-cols-4'
+                    : membershipBenefits.length === 3
+                      ? 'lg:grid-cols-3'
+                      : 'lg:grid-cols-2'
+              }`}
+            >
               {membershipBenefits.map((membership, i) => (
                 <Card
                   key={i}
@@ -560,12 +616,12 @@ export default function PricingClient({
           <Card className="border-2">
             <CardContent className="p-8">
               <div className="space-y-6">
-                <div className="border-border border-b pb-4 text-center">
+                <div className="border-b border-white/10 pb-4 text-center">
                   <p className="text-muted-foreground mb-2 text-sm">
                     Example Service
                   </p>
                   <h3 className="text-xl font-semibold">
-                    WhatsApp (US) - V2 Standard
+                    WhatsApp (US) - Standard V2
                   </h3>
                 </div>
 
@@ -588,7 +644,7 @@ export default function PricingClient({
                   </div>
                 </div>
 
-                <div className="border-border border-t pt-4">
+                <div className="border-t border-white/10 pt-4">
                   <div className="flex items-center justify-between text-sm">
                     <span className="text-muted-foreground">
                       Monthly savings (100 activations)
