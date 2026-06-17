@@ -378,7 +378,7 @@ export default function HomeClient({
                   <Card className="border-2">
                     <CardHeader>
                       <Badge className="mb-2 w-fit bg-blue-500">
-                        💰 V1 - Basic
+                        💰 {tierProvider.V1?.displayName ?? 'V1 - Basic'}
                       </Badge>
                       <CardTitle className="text-xl">
                         Basic Activation
@@ -429,7 +429,7 @@ export default function HomeClient({
                     </div>
                     <CardHeader>
                       <Badge className="from-primary to-accent mb-2 w-fit bg-gradient-to-r">
-                        💎 V2 - Standard
+                        💎 {tierProvider.V2?.displayName ?? 'V2 - Standard'}
                       </Badge>
                       <CardTitle className="text-xl">
                         Standard Activation
@@ -487,7 +487,7 @@ export default function HomeClient({
                     </div>
                     <CardHeader>
                       <Badge className="from-warning mb-2 w-fit bg-gradient-to-r to-amber-500">
-                        👑 V3 - Premium
+                        👑 {tierProvider.V3?.displayName ?? 'V3 - Premium'}
                       </Badge>
                       <CardTitle className="text-xl">
                         Premium Activation

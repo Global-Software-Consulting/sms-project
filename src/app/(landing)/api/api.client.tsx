@@ -481,7 +481,9 @@ print(response.json())`}</code>
             {providersLoaded && hasTier('V1') && (
               <Card>
                 <CardHeader>
-                  <Badge className="mb-2 w-fit bg-blue-500">💰 V1 Basic</Badge>
+                  <Badge className="mb-2 w-fit bg-blue-500">
+                    💰 {tierProvider.V1?.displayName ?? 'V1 Basic'}
+                  </Badge>
                   <CardTitle className="text-lg">Basic Tier</CardTitle>
                   <CardDescription>
                     Basic services - best price. Suitable for customers looking
@@ -521,7 +523,7 @@ print(response.json())`}</code>
               <Card className="border-primary border-2">
                 <CardHeader>
                   <Badge className="bg-primary mb-2 w-fit">
-                    💎 V2 Standard
+                    💎 {tierProvider.V2?.displayName ?? 'V2 Standard'}
                   </Badge>
                   <CardTitle className="text-lg">Standard Tier</CardTitle>
                   <CardDescription>
@@ -562,7 +564,7 @@ print(response.json())`}</code>
               <Card className="border-warning border-2">
                 <CardHeader>
                   <Badge className="bg-warning text-warning-foreground mb-2 w-fit">
-                    👑 V3 Premium
+                    👑 {tierProvider.V3?.displayName ?? 'V3 Premium'}
                   </Badge>
                   <CardTitle className="text-lg">Premium Tier</CardTitle>
                   <CardDescription>

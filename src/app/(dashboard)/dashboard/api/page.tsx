@@ -75,6 +75,17 @@ export default function APIAccess() {
     'v2',
     'v3',
   ]);
+  // Real provider displayName per tier — populated from getProviders.
+  // Used to override the static `providerInfo[tier].name` so the page
+  // shows the admin-set names (e.g. "Standard SMS", "Premium SMS") to
+  // users, with the legacy "V1 - Basic" label as the fallback.
+  const [tierNames, setTierNames] = useState<
+    Record<ProviderType, string | null>
+  >({
+    v1: null,
+    v2: null,
+    v3: null,
+  });
 
   useEffect(() => {
     getProviders()
@@ -91,6 +102,18 @@ export default function APIAccess() {
           setAvailableTiers(tiers);
           if (!tiers.includes(activeTab)) setActiveTab(tiers[0]);
         }
+        const names: Record<ProviderType, string | null> = {
+          v1: null,
+          v2: null,
+          v3: null,
+        };
+        (['v1', 'v2', 'v3'] as ProviderType[]).forEach((t) => {
+          const match = active.find((p) =>
+            (p.version || '').toLowerCase().startsWith(t),
+          );
+          if (match?.displayName) names[t] = match.displayName;
+        });
+        setTierNames(names);
       })
       .catch(() => {
         /* keep defaults */
@@ -418,8 +441,10 @@ export default function APIAccess() {
                   className="space-x-1 text-xs sm:space-x-2 sm:text-sm"
                 >
                   <span>💰</span>
-                  <span className="hidden sm:inline">V1 Basic</span>
-                  <span className="sm:hidden">Basic</span>
+                  <span className="hidden sm:inline">
+                    {tierNames.v1 ?? 'V1 Basic'}
+                  </span>
+                  <span className="sm:hidden">{tierNames.v1 ?? 'Basic'}</span>
                 </TabsTrigger>
               )}
               {availableTiers.includes('v2') && (
@@ -428,8 +453,12 @@ export default function APIAccess() {
                   className="space-x-1 text-xs sm:space-x-2 sm:text-sm"
                 >
                   <span>💎</span>
-                  <span className="hidden sm:inline">V2 Standard</span>
-                  <span className="sm:hidden">Standard</span>
+                  <span className="hidden sm:inline">
+                    {tierNames.v2 ?? 'V2 Standard'}
+                  </span>
+                  <span className="sm:hidden">
+                    {tierNames.v2 ?? 'Standard'}
+                  </span>
                 </TabsTrigger>
               )}
               {availableTiers.includes('v3') && (
@@ -438,8 +467,10 @@ export default function APIAccess() {
                   className="space-x-1 text-xs sm:space-x-2 sm:text-sm"
                 >
                   <span>👑</span>
-                  <span className="hidden sm:inline">V3 Premium</span>
-                  <span className="sm:hidden">Premium</span>
+                  <span className="hidden sm:inline">
+                    {tierNames.v3 ?? 'V3 Premium'}
+                  </span>
+                  <span className="sm:hidden">{tierNames.v3 ?? 'Premium'}</span>
                 </TabsTrigger>
               )}
             </TabsList>
@@ -455,7 +486,8 @@ export default function APIAccess() {
                       </div>
                       <div className="flex-1">
                         <h4 className="mb-1 font-semibold">
-                          {providerInfo[provider].name} API
+                          {tierNames[provider] ?? providerInfo[provider].name}{' '}
+                          API
                         </h4>
                         <p className="text-muted-foreground mb-3 text-sm">
                           {providerInfo[provider].description}
@@ -480,7 +512,9 @@ export default function APIAccess() {
                     <CardHeader className="px-3 sm:px-6">
                       <CardTitle>API Endpoint</CardTitle>
                       <CardDescription>
-                        Base URL for {providerInfo[provider].name} API requests
+                        Base URL for{' '}
+                        {tierNames[provider] ?? providerInfo[provider].name} API
+                        requests
                       </CardDescription>
                     </CardHeader>
                     <CardContent className="px-3 sm:px-6">
@@ -521,7 +555,8 @@ export default function APIAccess() {
                     <CardHeader className="px-3 sm:px-6">
                       <CardTitle>Quick Start Guide</CardTitle>
                       <CardDescription>
-                        Get started with the {providerInfo[provider].name} API
+                        Get started with the{' '}
+                        {tierNames[provider] ?? providerInfo[provider].name} API
                       </CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-4 px-3 sm:px-6">
