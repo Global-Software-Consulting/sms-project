@@ -447,7 +447,7 @@ export default function PricingClient({
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead>
-                  <tr className="border-border border-b">
+                  <tr className="border-b border-white/10">
                     <th className="p-4 text-left font-semibold">Service</th>
                     <th className="p-4 text-left font-semibold">Country</th>
                     <th className="p-4 text-center font-semibold">
@@ -480,7 +480,7 @@ export default function PricingClient({
                   {samplePricing.map((item, i) => (
                     <tr
                       key={i}
-                      className="border-border hover:bg-muted/50 border-b transition-colors"
+                      className="hover:bg-muted/50 border-b border-white/10 transition-colors"
                     >
                       <td className="p-4 font-medium">{item.service}</td>
                       <td className="text-muted-foreground p-4 text-sm">
@@ -616,12 +616,12 @@ export default function PricingClient({
           <Card className="border-2">
             <CardContent className="p-8">
               <div className="space-y-6">
-                <div className="border-border border-b pb-4 text-center">
+                <div className="border-b border-white/10 pb-4 text-center">
                   <p className="text-muted-foreground mb-2 text-sm">
                     Example Service
                   </p>
                   <h3 className="text-xl font-semibold">
-                    WhatsApp (US) - V2 Standard
+                    WhatsApp (US) - Standard V2
                   </h3>
                 </div>
 
@@ -644,7 +644,7 @@ export default function PricingClient({
                   </div>
                 </div>
 
-                <div className="border-border border-t pt-4">
+                <div className="border-t border-white/10 pt-4">
                   <div className="flex items-center justify-between text-sm">
                     <span className="text-muted-foreground">
                       Monthly savings (100 activations)

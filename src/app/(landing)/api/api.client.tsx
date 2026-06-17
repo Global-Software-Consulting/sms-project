@@ -670,13 +670,13 @@ print(response.json())`}</code>
                 <CardTitle>Rate Limits</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
-                <div className="border-border flex items-center justify-between border-b py-2">
+                <div className="flex items-center justify-between border-b border-white/10 py-2">
                   <span className="text-muted-foreground text-sm">
                     Basic tier
                   </span>
                   <Badge variant="secondary">{rateLimits.basic} req/min</Badge>
                 </div>
-                <div className="border-border flex items-center justify-between border-b py-2">
+                <div className="flex items-center justify-between border-b border-white/10 py-2">
                   <span className="text-muted-foreground text-sm">
                     Pro tier
                   </span>
@@ -697,13 +697,13 @@ print(response.json())`}</code>
                 <CardTitle>API Access</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
-                <div className="border-border flex items-center justify-between border-b py-2">
+                <div className="flex items-center justify-between border-b border-white/10 py-2">
                   <span className="text-muted-foreground text-sm">
                     Free API key
                   </span>
                   <CheckCircle2 className="text-success h-5 w-5" />
                 </div>
-                <div className="border-border flex items-center justify-between border-b py-2">
+                <div className="flex items-center justify-between border-b border-white/10 py-2">
                   <span className="text-muted-foreground text-sm">
                     Usage-based pricing
                   </span>
