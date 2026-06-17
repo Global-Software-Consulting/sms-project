@@ -20,6 +20,9 @@ import {
   Globe,
   Loader2,
   RefreshCw,
+  Coins,
+  Gem,
+  Crown,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/components/ui/utils';
@@ -48,6 +51,7 @@ import {
   getOrderStatusColor,
   getCountryFlag,
   getProviderBadge,
+  safeProviderLabel,
   getServiceTypeLabel,
   canCancelOrder,
   getTimeRemaining,
@@ -787,8 +791,33 @@ export default function Activation() {
               left: `calc(${(providers.findIndex((p) => p.id === selectedProvider?.id) * 100) / providers.length}% + 0.25rem)`,
             }}
           />
-          {providers.map((provider) => {
-            const tabLabel = provider.displayName;
+          {providers.map((provider, idx) => {
+            const v = (provider.version || '').toUpperCase().trim();
+            const slot = v.startsWith('V1')
+              ? 'V1'
+              : v.startsWith('V2')
+                ? 'V2'
+                : v.startsWith('V3')
+                  ? 'V3'
+                  : ((['V1', 'V2', 'V3'] as const)[idx] ?? 'V1');
+            const TierIcon =
+              slot === 'V1' ? Coins : slot === 'V2' ? Gem : Crown;
+            const tierFallback =
+              slot === 'V1'
+                ? 'Standard V1'
+                : slot === 'V2'
+                  ? 'Premium V2'
+                  : 'Elite V3';
+            const tabLabel = safeProviderLabel(
+              provider.displayName,
+              tierFallback,
+            );
+            const iconClass =
+              slot === 'V1'
+                ? 'text-warning'
+                : slot === 'V2'
+                  ? 'text-info'
+                  : 'text-primary';
             return (
               <button
                 key={provider.id}
@@ -800,6 +829,7 @@ export default function Activation() {
                     : 'text-muted-foreground hover:text-foreground',
                 )}
               >
+                <TierIcon className={cn('h-3.5 w-3.5 shrink-0', iconClass)} />
                 {tabLabel}
               </button>
             );
