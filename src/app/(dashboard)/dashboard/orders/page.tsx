@@ -83,8 +83,8 @@ const getServiceType = (provider?: {
 export default function Orders() {
   // Data state
   const [orders, setOrders] = useState<SmsOrder[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [isInitialLoading, setIsInitialLoading] = useState(true);
+  const [isRefetching, setIsRefetching] = useState(false);
 
   // Pagination
   const [page, setPage] = useState(1);
@@ -114,11 +114,7 @@ export default function Orders() {
   const fetchOrders = useCallback(
     async (pageNum: number) => {
       try {
-        if (pageNum === 1) {
-          setIsLoading(true);
-        } else {
-          setIsLoadingMore(true);
-        }
+        setIsRefetching(true);
 
         const params: any = {
           page: pageNum,
@@ -143,8 +139,8 @@ export default function Orders() {
         console.error('Failed to fetch orders:', err);
         toast.error('Failed to load orders');
       } finally {
-        setIsLoading(false);
-        setIsLoadingMore(false);
+        setIsInitialLoading(false);
+        setIsRefetching(false);
       }
     },
     [statusFilter, debouncedSearch],
@@ -162,7 +158,7 @@ export default function Orders() {
         return <CheckCircle2 className="text-success h-5 w-5" />;
       case 'CANCELLED':
       case 'EXPIRED':
-      case 'FAILED':
+      case 'REFUNDED':
         return <XCircle className="text-destructive h-5 w-5" />;
       case 'PENDING':
       case 'WAITING_SMS':
@@ -195,8 +191,9 @@ export default function Orders() {
     setShowDetailsDialog(true);
   };
 
-  // Loading state
-  if (isLoading) {
+  // Loading state — only on first ever load. Subsequent refetches
+  // keep the UI mounted and show an inline indicator instead.
+  if (isInitialLoading) {
     return (
       <div className="flex min-h-[400px] items-center justify-center">
         <div className="text-center">
@@ -220,10 +217,10 @@ export default function Orders() {
           variant="outline"
           size="sm"
           onClick={() => fetchOrders(page)}
-          disabled={isLoadingMore}
+          disabled={isRefetching}
         >
           <RefreshCw
-            className={`mr-2 h-4 w-4 ${isLoadingMore ? 'animate-spin' : ''}`}
+            className={`mr-2 h-4 w-4 ${isRefetching ? 'animate-spin' : ''}`}
           />
           Refresh
         </Button>
@@ -261,7 +258,7 @@ export default function Orders() {
                 <SelectItem value="WAITING_SMS">Waiting SMS</SelectItem>
                 <SelectItem value="CANCELLED">Cancelled</SelectItem>
                 <SelectItem value="EXPIRED">Expired</SelectItem>
-                <SelectItem value="FAILED">Failed</SelectItem>
+                <SelectItem value="REFUNDED">Refunded</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -283,8 +280,13 @@ export default function Orders() {
         </Card>
       ) : (
         <>
-          <div className="text-muted-foreground mb-2 text-sm">
-            Showing {orders.length} of {totalOrders} orders
+          <div className="text-muted-foreground mb-2 flex items-center gap-2 text-sm">
+            <span>
+              Showing {orders.length} of {totalOrders} orders
+            </span>
+            {isRefetching && (
+              <Loader2 className="h-3.5 w-3.5 animate-spin opacity-70" />
+            )}
           </div>
 
           <div className="space-y-4">
@@ -390,7 +392,7 @@ export default function Orders() {
                 variant="outline"
                 size="sm"
                 onClick={() => fetchOrders(page - 1)}
-                disabled={page === 1 || isLoadingMore}
+                disabled={page === 1 || isRefetching}
               >
                 <ChevronLeft className="mr-1 h-4 w-4" />
                 Previous
@@ -402,7 +404,7 @@ export default function Orders() {
                 variant="outline"
                 size="sm"
                 onClick={() => fetchOrders(page + 1)}
-                disabled={page === totalPages || isLoadingMore}
+                disabled={page === totalPages || isRefetching}
               >
                 Next
                 <ChevronRight className="ml-1 h-4 w-4" />
