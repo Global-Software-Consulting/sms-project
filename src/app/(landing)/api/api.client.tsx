@@ -23,7 +23,11 @@ import {
 } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
-import { getProviders, type SmsProvider } from '@/lib/api/smsApi';
+import {
+  getProviders,
+  safeProviderLabel,
+  type SmsProvider,
+} from '@/lib/api/smsApi';
 import { getRateLimits, type RateLimits } from '@/lib/api/rateLimitsApi';
 
 export interface ApiContent {
@@ -482,7 +486,11 @@ print(response.json())`}</code>
               <Card>
                 <CardHeader>
                   <Badge className="mb-2 w-fit bg-blue-500">
-                    💰 {tierProvider.V1?.displayName ?? 'V1 Basic'}
+                    💰{' '}
+                    {safeProviderLabel(
+                      tierProvider.V1?.displayName,
+                      'V1 Basic',
+                    )}
                   </Badge>
                   <CardTitle className="text-lg">Basic Tier</CardTitle>
                   <CardDescription>
@@ -491,7 +499,7 @@ print(response.json())`}</code>
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="bg-muted overflow-x-auto rounded-lg p-3 font-mono text-xs">
+                  <div className="w-fit overflow-x-auto rounded-full border border-blue-500/30 px-4 py-2 font-mono text-xs">
                     <code className="text-blue-500">"provider": "v1"</code>
                   </div>
                   <ul className="mt-4 space-y-2">
@@ -523,7 +531,11 @@ print(response.json())`}</code>
               <Card className="border-primary border-2">
                 <CardHeader>
                   <Badge className="bg-primary mb-2 w-fit">
-                    💎 {tierProvider.V2?.displayName ?? 'V2 Standard'}
+                    💎{' '}
+                    {safeProviderLabel(
+                      tierProvider.V2?.displayName,
+                      'V2 Standard',
+                    )}
                   </Badge>
                   <CardTitle className="text-lg">Standard Tier</CardTitle>
                   <CardDescription>
@@ -532,7 +544,7 @@ print(response.json())`}</code>
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="bg-muted overflow-x-auto rounded-lg p-3 font-mono text-xs">
+                  <div className="border-primary/30 w-fit overflow-x-auto rounded-full border px-4 py-2 font-mono text-xs">
                     <code className="text-primary">"provider": "v2"</code>
                   </div>
                   <ul className="mt-4 space-y-2">
@@ -564,7 +576,11 @@ print(response.json())`}</code>
               <Card className="border-warning border-2">
                 <CardHeader>
                   <Badge className="bg-warning text-warning-foreground mb-2 w-fit">
-                    👑 {tierProvider.V3?.displayName ?? 'V3 Premium'}
+                    👑{' '}
+                    {safeProviderLabel(
+                      tierProvider.V3?.displayName,
+                      'V3 Premium',
+                    )}
                   </Badge>
                   <CardTitle className="text-lg">Premium Tier</CardTitle>
                   <CardDescription>
@@ -574,7 +590,7 @@ print(response.json())`}</code>
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="bg-muted overflow-x-auto rounded-lg p-3 font-mono text-xs">
+                  <div className="border-warning/30 w-fit overflow-x-auto rounded-full border px-4 py-2 font-mono text-xs">
                     <code className="text-warning">"provider": "v3"</code>
                   </div>
                   <ul className="mt-4 space-y-2">

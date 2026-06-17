@@ -1925,6 +1925,28 @@ const iso2ToFlag = (iso2: string): string => {
   return String.fromCodePoint(...codePoints);
 };
 
+/**
+ * Return a safe user-facing label for a provider.
+ *
+ * Per house rules, raw upstream brand names (5sim / sms-man / smsman /
+ * hero-sms / herosms) must never appear in user-facing strings. Most of
+ * the time the admin will have set a custom `displayName` like "abc" or
+ * left it as a generic — we surface that. When the API row still carries
+ * an unmasked upstream name (because admin hasn't overridden it yet), we
+ * fall back to the curated tier label passed in.
+ */
+const FORBIDDEN_PROVIDER_TOKENS = /5sim|sms-?man|hero-?sms/i;
+
+export const safeProviderLabel = (
+  displayName: string | undefined | null,
+  fallback: string,
+): string => {
+  const value = (displayName ?? '').trim();
+  if (!value) return fallback;
+  if (FORBIDDEN_PROVIDER_TOKENS.test(value)) return fallback;
+  return value;
+};
+
 export const getCountryFlag = (code: string, name?: string): string => {
   if (code && code.length === 2 && /^[a-zA-Z]{2}$/.test(code)) {
     return iso2ToFlag(code);
