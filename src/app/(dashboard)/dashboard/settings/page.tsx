@@ -37,6 +37,7 @@ import {
   isValidPhone,
 } from '@/lib/api/usersApi';
 import { useAuth } from '@/hooks/useAuth';
+import ApiKeysSection from './ApiKeysSection';
 
 export default function Settings() {
   // Auth
@@ -457,6 +458,9 @@ export default function Settings() {
           </div>
         </CardContent>
       </Card>
+
+      {/* API Keys — one per provider tier */}
+      <ApiKeysSection />
 
       {/* Danger Zone */}
       <Card className="border-destructive">

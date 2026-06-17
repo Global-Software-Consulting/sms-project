@@ -9,8 +9,8 @@ import { API_ENDPOINTS } from '@/config/server.config';
  * API Key Permissions (flat structure matching backend)
  */
 export interface ApiKeyPermissions {
-  canActivate: boolean;  // Can place SMS activation orders
-  canRent: boolean;      // Can rent numbers
+  canActivate: boolean; // Can place SMS activation orders
+  canRent: boolean; // Can rent numbers
   canViewBalance: boolean; // Can view wallet balance
   canViewHistory: boolean; // Can view order history
 }
@@ -37,6 +37,7 @@ export interface ApiKey {
   revokedAt?: string;
   revokedReason?: string;
   createdAt: string;
+  providerVersion?: string | null;
   // Computed permissions for UI
   permissions: ApiKeyPermissions;
   status: 'ACTIVE' | 'REVOKED' | 'EXPIRED';
@@ -134,7 +135,11 @@ const transformApiKey = (data: any): ApiKey => {
       canViewBalance: data.canWallet ?? true,
       canViewHistory: data.canRead ?? true,
     },
-    status: data.revokedAt ? 'REVOKED' : (data.expiresAt && new Date(data.expiresAt) < new Date() ? 'EXPIRED' : 'ACTIVE'),
+    status: data.revokedAt
+      ? 'REVOKED'
+      : data.expiresAt && new Date(data.expiresAt) < new Date()
+        ? 'EXPIRED'
+        : 'ACTIVE',
   };
 };
 
@@ -147,10 +152,7 @@ const transformApiKey = (data: any): ApiKey => {
 export const createApiKey = async (
   data: CreateApiKeyRequest,
 ): Promise<ApiKeyCreated> => {
-  const response = await apiClient.post<any>(
-    API_ENDPOINTS.API_KEYS.ROOT,
-    data,
-  );
+  const response = await apiClient.post<any>(API_ENDPOINTS.API_KEYS.ROOT, data);
   const apiKey = transformApiKey(response.data);
   return {
     ...response.data,
@@ -165,10 +167,9 @@ export const createApiKey = async (
 export const getApiKeys = async (
   params?: ApiKeyQueryParams,
 ): Promise<ApiKeysListResponse> => {
-  const response = await apiClient.get<any>(
-    API_ENDPOINTS.API_KEYS.ROOT,
-    { params },
-  );
+  const response = await apiClient.get<any>(API_ENDPOINTS.API_KEYS.ROOT, {
+    params,
+  });
   return {
     data: (response.data.data || []).map(transformApiKey),
     meta: response.data.meta || { total: 0, limit: 5 },
@@ -180,9 +181,7 @@ export const getApiKeys = async (
  * GET /api/v1/api-keys/:id
  */
 export const getApiKey = async (id: string): Promise<ApiKey> => {
-  const response = await apiClient.get<any>(
-    API_ENDPOINTS.API_KEYS.DETAIL(id),
-  );
+  const response = await apiClient.get<any>(API_ENDPOINTS.API_KEYS.DETAIL(id));
   return transformApiKey(response.data);
 };
 
@@ -225,6 +224,46 @@ export const revokeApiKey = async (
 export const getApiKeyUsage = async (id: string): Promise<ApiKeyUsage> => {
   const response = await apiClient.get<ApiKeyUsage>(
     API_ENDPOINTS.API_KEYS.USAGE(id),
+  );
+  return response.data;
+};
+
+// ============================================
+// Per-tier API keys (V1 Basic / V2 Standard / V3 Premium)
+// ============================================
+
+export type ProviderTier = 'V1' | 'V2' | 'V3';
+
+export interface TierApiKey extends ApiKey {
+  providerVersion: ProviderTier;
+}
+
+export interface TierSlot {
+  providerVersion: ProviderTier;
+  key: TierApiKey | null;
+}
+
+export const listTierApiKeys = async (): Promise<TierSlot[]> => {
+  const response = await apiClient.get<TierSlot[]>(
+    API_ENDPOINTS.API_KEYS.TIER_LIST,
+  );
+  return response.data;
+};
+
+export const createTierApiKey = async (
+  version: ProviderTier,
+): Promise<ApiKeyCreated> => {
+  const response = await apiClient.post<ApiKeyCreated>(
+    API_ENDPOINTS.API_KEYS.TIER_CREATE(version),
+  );
+  return response.data;
+};
+
+export const regenerateTierApiKey = async (
+  version: ProviderTier,
+): Promise<ApiKeyCreated> => {
+  const response = await apiClient.post<ApiKeyCreated>(
+    API_ENDPOINTS.API_KEYS.TIER_REGENERATE(version),
   );
   return response.data;
 };

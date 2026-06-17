@@ -109,6 +109,10 @@ export const API_ENDPOINTS = {
     ROOT: '/api-keys',
     DETAIL: (id: string) => `/api-keys/${id}`,
     USAGE: (id: string) => `/api-keys/${id}/usage`,
+    TIER_LIST: '/api-keys/tier',
+    TIER_CREATE: (version: 'V1' | 'V2' | 'V3') => `/api-keys/tier/${version}`,
+    TIER_REGENERATE: (version: 'V1' | 'V2' | 'V3') =>
+      `/api-keys/tier/${version}/regenerate`,
   },
 
   // ========================
