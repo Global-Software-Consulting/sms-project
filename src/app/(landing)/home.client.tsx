@@ -718,7 +718,11 @@ export default function HomeClient({
                     </div>
                     <Badge
                       variant={plan.isPopular ? 'default' : 'secondary'}
-                      className="mt-2 w-fit"
+                      className={`mt-2 w-fit rounded-full px-3 py-1 ${
+                        plan.isPopular
+                          ? ''
+                          : 'text-foreground bg-white/10 hover:bg-white/15'
+                      }`}
                     >
                       {plan.discount}% Discount
                     </Badge>
@@ -737,7 +741,8 @@ export default function HomeClient({
                     </ul>
                     <Button
                       asChild
-                      className="mt-6 w-full"
+                      size="lg"
+                      className="mt-6 h-12 w-full rounded-full text-base"
                       variant={plan.isPopular ? 'default' : 'outline'}
                     >
                       <Link prefetch={false} href="/dashboard/membership">
