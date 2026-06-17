@@ -173,9 +173,13 @@ export default function ReviewsClient() {
                         />
                       ))}
                     </div>
-                    <span className="text-muted-foreground text-xs">
+                    {/* Date hidden per Figma reference (June 2026 review
+                        page redesign). Backend still ships `createdAt`
+                        and the sort still uses it — uncomment to bring
+                        the timestamp back if the design changes. */}
+                    {/* <span className="text-muted-foreground text-xs">
                       {formatDate(review.createdAt)}
-                    </span>
+                    </span> */}
                   </div>
                   <CardTitle className="text-base">
                     {displayNameFor(review)}
