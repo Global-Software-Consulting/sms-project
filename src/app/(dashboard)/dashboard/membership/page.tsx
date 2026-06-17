@@ -51,7 +51,8 @@ export default function MembershipDashboard() {
   // Data state
   const [plans, setPlans] = useState<MembershipPlan[]>([]);
   const [ranks, setRanks] = useState<Rank[]>([]);
-  const [membership, setMembership] = useState<CurrentMembershipResponse | null>(null);
+  const [membership, setMembership] =
+    useState<CurrentMembershipResponse | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -110,37 +111,47 @@ export default function MembershipDashboard() {
   // FREE users have hasActiveSubscription=false, so they should use subscribeToPlan
   // Only users with an active PAID subscription should use upgradePlan
   const handleSubscribe = async (plan: MembershipPlan) => {
-    const hasActivePaidSubscription = membership?.hasActiveSubscription === true;
-    const isUpgrade = hasActivePaidSubscription && 
-      membership?.currentPlan && 
+    const hasActivePaidSubscription =
+      membership?.hasActiveSubscription === true;
+    const isUpgrade =
+      hasActivePaidSubscription &&
+      membership?.currentPlan &&
       isPlanUpgrade(membership.currentPlan.slug, plan.slug);
 
     try {
       setIsSubscribing(plan.id);
-      
+
       if (isUpgrade) {
         const response = await upgradePlan(plan.slug);
         const planData = response.subscription?.plan;
-        setMembership(prev => prev ? {
-          ...prev,
-          hasActiveSubscription: true,
-          currentPlan: planData || null,
-          subscription: response.subscription,
-          discount: planData?.discountPercent ?? planData?.discount ?? 0,
-        } : null);
+        setMembership((prev) =>
+          prev
+            ? {
+                ...prev,
+                hasActiveSubscription: true,
+                currentPlan: planData || null,
+                subscription: response.subscription,
+                discount: planData?.discountPercent ?? planData?.discount ?? 0,
+              }
+            : null,
+        );
         toast.success('Plan upgraded successfully!', {
           description: `You are now on the ${plan.name} plan.`,
         });
       } else {
         const response = await subscribeToPlan(plan.slug);
         const planData = response.subscription?.plan;
-        setMembership(prev => prev ? {
-          ...prev,
-          hasActiveSubscription: true,
-          currentPlan: planData || null,
-          subscription: response.subscription,
-          discount: planData?.discountPercent ?? planData?.discount ?? 0,
-        } : null);
+        setMembership((prev) =>
+          prev
+            ? {
+                ...prev,
+                hasActiveSubscription: true,
+                currentPlan: planData || null,
+                subscription: response.subscription,
+                discount: planData?.discountPercent ?? planData?.discount ?? 0,
+              }
+            : null,
+        );
         toast.success('Subscribed successfully!', {
           description: `You are now on the ${plan.name} plan.`,
         });
@@ -163,10 +174,14 @@ export default function MembershipDashboard() {
     try {
       setIsRenewing(true);
       const response = await renewSubscription();
-      setMembership(prev => prev ? {
-        ...prev,
-        subscription: response.subscription,
-      } : null);
+      setMembership((prev) =>
+        prev
+          ? {
+              ...prev,
+              subscription: response.subscription,
+            }
+          : null,
+      );
       toast.success('Subscription renewed!', {
         description: `Extended until ${new Date(response.subscription.endDate).toLocaleDateString()}`,
       });
@@ -184,7 +199,7 @@ export default function MembershipDashboard() {
   // Open confirm dialog
   const openConfirmDialog = (
     type: 'subscribe' | 'upgrade' | 'renew',
-    plan?: MembershipPlan
+    plan?: MembershipPlan,
   ) => {
     setConfirmAction({ type, plan });
     setShowConfirmDialog(true);
@@ -203,7 +218,10 @@ export default function MembershipDashboard() {
     }
     // Paid subscription: distinguish current / upgrade / lower
     if (membership?.currentPlan?.id === plan.id) return 'Current Plan';
-    if (membership?.currentPlan && isPlanUpgrade(membership.currentPlan.slug, plan.slug)) {
+    if (
+      membership?.currentPlan &&
+      isPlanUpgrade(membership.currentPlan.slug, plan.slug)
+    ) {
       return 'Upgrade';
     }
     return 'Lower Plan';
@@ -264,8 +282,8 @@ export default function MembershipDashboard() {
   const rank = apiRank || user?.rank || null;
   const rankName = apiRank?.name || user?.rank?.name || '';
   const rankColor = apiRank?.color || user?.rank?.color || '#3B82F6';
-  const discountPercent = apiRank?.discountPercent ?? user?.rank?.discountPercent ?? 0;
-  const rankDescription = apiRank?.description || '';
+  const discountPercent =
+    apiRank?.discountPercent ?? user?.rank?.discountPercent ?? 0;
   const hasRank = !!rank && discountPercent > 0;
 
   // Price summary based on current plan
@@ -289,71 +307,39 @@ export default function MembershipDashboard() {
         </p>
       </div>
 
-      {/* Rank Discount banner — only when user has a rank with discount */}
-      {hasRank && (
-        <Card className="border-2" style={{ borderColor: `${rankColor}55` }}>
-          <CardContent className="p-6 text-center">
-            <div className="mb-3 flex items-center justify-center gap-2">
-              <div
-                className="flex h-8 w-8 items-center justify-center rounded-full"
-                style={{ backgroundColor: `${rankColor}33`, color: rankColor }}
-              >
-                <Star className="h-4 w-4 fill-current" />
-              </div>
-              <h3 className="text-lg font-semibold">{rankName} Rank Discount</h3>
-            </div>
-            <p className="text-muted-foreground mb-4 text-sm">
-              {rankDescription ||
-                `Congratulations! You've earned a ${discountPercent}% discount on all purchases.`}
-            </p>
-            <div
-              className="rounded-lg py-3 text-center text-2xl font-bold"
-              style={{
-                background: `${rankColor}1a`,
-                color: rankColor,
-              }}
-            >
-              {discountPercent}% OFF
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Price Summary — only when user has a rank and an active plan */}
+      {/* Price Summary — only when user has a rank and an active plan.
+          Trimmed (June 2026 redesign): tighter padding + smaller type so
+          it sits as a quiet breakdown alongside the Current Plan card
+          instead of a hero block. */}
       {hasRank && membership?.currentPlan && basePrice > 0 && (
         <Card>
-          <CardContent className="p-6">
-            <h3 className="mb-5 text-center text-lg font-semibold">Price Summary</h3>
-            <div className="space-y-3 text-sm">
+          <CardContent className="p-4 sm:p-5">
+            <h3 className="text-muted-foreground mb-3 text-xs font-semibold tracking-wide uppercase">
+              Price Summary
+            </h3>
+            <div className="space-y-1.5 text-sm">
               <div className="flex items-center justify-between">
-                <span className="text-muted-foreground">Base Price:</span>
+                <span className="text-muted-foreground">Base Price</span>
                 <span>
                   {currencySymbol}
                   {basePrice.toFixed(2)}
                 </span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-muted-foreground">Plan:</span>
+                <span className="text-muted-foreground">Plan</span>
                 <span>{membership.currentPlan.name}</span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-muted-foreground">Subtotal:</span>
-                <span>
-                  {currencySymbol}
-                  {basePrice.toFixed(2)}
-                </span>
-              </div>
-              <div className="flex items-center justify-between">
                 <span className="text-success">
-                  Rank Discount ({rankName} - {discountPercent}% OFF):
+                  {rankName} Rank Discount ({discountPercent}% OFF)
                 </span>
                 <span className="text-success">
                   -{currencySymbol}
                   {discountAmount.toFixed(2)}
                 </span>
               </div>
-              <div className="border-border mt-4 flex items-center justify-between border-t pt-4 text-base">
-                <span className="text-success font-semibold">Final Total:</span>
+              <div className="border-border mt-2 flex items-center justify-between border-t pt-2 text-base">
+                <span className="text-success font-semibold">Final Total</span>
                 <span className="text-success font-bold">
                   {currencySymbol}
                   {finalTotal.toFixed(2)}
@@ -367,22 +353,31 @@ export default function MembershipDashboard() {
       {/* Current Plan */}
       {membership?.currentPlan && membership.subscription && (
         <Card className="border-primary">
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <div>
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between gap-3">
+              <div className="min-w-0">
                 <CardTitle>Current Plan</CardTitle>
                 <CardDescription>Your active membership</CardDescription>
               </div>
-              <Crown className="text-primary h-8 w-8" />
+              <Crown className="text-primary h-7 w-7 shrink-0" />
             </div>
           </CardHeader>
           <CardContent>
             <div className="flex flex-col justify-between gap-4 md:flex-row md:items-center">
               <div>
-                <h3 className="text-2xl font-bold">{membership.currentPlan.name}</h3>
+                <h3 className="text-2xl font-bold">
+                  {membership.currentPlan.name}
+                </h3>
                 <p className="text-muted-foreground">
-                  {formatPrice(membership.currentPlan.price, membership.currentPlan.currency || 'USD')}/month •{' '}
-                  {membership.currentPlan.discountPercent ?? membership.currentPlan.discount ?? 0}% discount
+                  {formatPrice(
+                    membership.currentPlan.price,
+                    membership.currentPlan.currency || 'USD',
+                  )}
+                  /month •{' '}
+                  {membership.currentPlan.discountPercent ??
+                    membership.currentPlan.discount ??
+                    0}
+                  % discount
                 </p>
                 <div className="mt-2 flex flex-wrap items-center gap-2">
                   <Badge
@@ -402,6 +397,22 @@ export default function MembershipDashboard() {
                       Auto-renew
                     </Badge>
                   )}
+                  {/* Inline rank pill — replaces the standalone Rank
+                      Discount banner that used to sit above this card. */}
+                  {hasRank && (
+                    <Badge
+                      variant="outline"
+                      className="gap-1"
+                      style={{
+                        borderColor: `${rankColor}66`,
+                        color: rankColor,
+                        backgroundColor: `${rankColor}1a`,
+                      }}
+                    >
+                      <Star className="h-3 w-3 fill-current" />
+                      {rankName} · {discountPercent}% OFF
+                    </Badge>
+                  )}
                 </div>
                 <p className="text-muted-foreground mt-2 text-sm">
                   <Calendar className="mr-1 inline h-4 w-4" />
@@ -416,14 +427,15 @@ export default function MembershipDashboard() {
                 </p>
               </div>
               <div className="space-y-2">
-                {membership.totalSaved !== undefined && membership.totalSaved > 0 && (
-                  <div className="bg-success/10 text-success rounded-lg px-4 py-2 text-center">
-                    <p className="text-2xl font-bold">
-                      {formatPrice(membership.totalSaved.toString(), 'USD')}
-                    </p>
-                    <p className="text-xs">Total saved</p>
-                  </div>
-                )}
+                {membership.totalSaved !== undefined &&
+                  membership.totalSaved > 0 && (
+                    <div className="bg-success/10 text-success rounded-lg px-4 py-2 text-center">
+                      <p className="text-2xl font-bold">
+                        {formatPrice(membership.totalSaved.toString(), 'USD')}
+                      </p>
+                      <p className="text-xs">Total saved</p>
+                    </div>
+                  )}
                 <div className="flex flex-col gap-2">
                   {membership.subscription.status === 'ACTIVE' && (
                     <Button
@@ -466,7 +478,8 @@ export default function MembershipDashboard() {
             const isVIP = plan.slug === 'vip';
             const isPopular = plan.isPopular && !isCurrent && !isVIP;
             // Mirror handleSubscribe: only call upgrade API when there's an active paid sub
-            const isUpgrade = hasActivePaidSubscription &&
+            const isUpgrade =
+              hasActivePaidSubscription &&
               membership?.currentPlan &&
               isPlanUpgrade(membership.currentPlan.slug, plan.slug);
 
@@ -475,8 +488,7 @@ export default function MembershipDashboard() {
                 key={plan.id}
                 className={`relative transition-all ${
                   isCurrent ? 'border-primary' : ''
-                } ${isVIP ? 'border-primary border-2 [box-shadow:var(--glow-accent-active)]' : ''}
-                ${isPopular ? 'border-success border-2' : ''}`}
+                } ${isVIP ? 'border-primary border-2 [box-shadow:var(--glow-accent-active)]' : ''} ${isPopular ? 'border-success border-2' : ''}`}
               >
                 {isCurrent && (
                   <div className="bg-primary text-primary-foreground absolute top-0 right-0 rounded-tr-lg rounded-bl-lg px-3 py-1 text-xs font-semibold">
@@ -519,7 +531,10 @@ export default function MembershipDashboard() {
                 <CardContent className="space-y-4">
                   <ul className="space-y-3">
                     {(plan.features || []).map((feature, i) => (
-                      <li key={i} className="flex items-start space-x-2 text-sm">
+                      <li
+                        key={i}
+                        className="flex items-start space-x-2 text-sm"
+                      >
                         <Check className="text-success mt-0.5 h-4 w-4 flex-shrink-0" />
                         <span>{feature}</span>
                       </li>
@@ -535,7 +550,10 @@ export default function MembershipDashboard() {
                       className="w-full"
                       variant={isVIP ? 'default' : 'outline'}
                       onClick={() =>
-                        openConfirmDialog(isUpgrade ? 'upgrade' : 'subscribe', plan)
+                        openConfirmDialog(
+                          isUpgrade ? 'upgrade' : 'subscribe',
+                          plan,
+                        )
                       }
                       disabled={isSubscribing === plan.id}
                     >
@@ -573,7 +591,8 @@ export default function MembershipDashboard() {
                 <h4 className="mb-2 font-semibold">Monthly Spend: ${spend}</h4>
                 <div className="space-y-1 text-sm">
                   {plans.map((plan) => {
-                    const discountValue = plan.discountPercent ?? plan.discount ?? 0;
+                    const discountValue =
+                      plan.discountPercent ?? plan.discount ?? 0;
                     const savings = (spend * discountValue) / 100;
                     const afterDiscount = spend - savings;
                     const isBest = plan.slug === 'vip';
@@ -619,7 +638,10 @@ export default function MembershipDashboard() {
                   <strong>{confirmAction.plan?.name}</strong> plan for{' '}
                   <strong>
                     {confirmAction.plan &&
-                      formatPrice(confirmAction.plan.price, confirmAction.plan.currency)}
+                      formatPrice(
+                        confirmAction.plan.price,
+                        confirmAction.plan.currency,
+                      )}
                     /month
                   </strong>
                   . The amount will be deducted from your wallet.
@@ -635,8 +657,9 @@ export default function MembershipDashboard() {
               {confirmAction?.type === 'renew' && (
                 <>
                   You are about to renew your{' '}
-                  <strong>{membership?.currentPlan?.name}</strong> subscription for
-                  another month. The amount will be deducted from your wallet.
+                  <strong>{membership?.currentPlan?.name}</strong> subscription
+                  for another month. The amount will be deducted from your
+                  wallet.
                 </>
               )}
             </DialogDescription>
@@ -652,7 +675,10 @@ export default function MembershipDashboard() {
               onClick={() => {
                 if (confirmAction?.type === 'subscribe' && confirmAction.plan) {
                   handleSubscribe(confirmAction.plan);
-                } else if (confirmAction?.type === 'upgrade' && confirmAction.plan) {
+                } else if (
+                  confirmAction?.type === 'upgrade' &&
+                  confirmAction.plan
+                ) {
                   handleSubscribe(confirmAction.plan);
                 } else if (confirmAction?.type === 'renew') {
                   handleRenew();
