@@ -11,6 +11,19 @@ import {
   Loader2,
   Save,
   X,
+  Smartphone,
+  Home,
+  Crown,
+  DollarSign,
+  MessageSquare,
+  Code,
+  AlertCircle,
+  Star,
+  Shield,
+  Zap,
+  Globe,
+  HelpCircle,
+  type LucideIcon,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import {
@@ -20,6 +33,7 @@ import {
   createFaqItem,
   updateFaqItem,
   deleteFaqItem,
+  updateFaqCategory,
   deleteFaqCategory,
   type FaqCategory,
   type FaqItem,
@@ -41,6 +55,31 @@ const categoryColors = [
   '#06B6D4',
 ];
 
+/**
+ * Curated icon set the admin can pick from when creating a category.
+ * Stored on the FaqCategory as the `icon` field (the string `key`), then
+ * mapped back to a Lucide component on the public /knowledge-base page.
+ * Add more options here as the catalog grows.
+ */
+const CATEGORY_ICON_CHOICES: ReadonlyArray<{
+  key: string;
+  Icon: LucideIcon;
+}> = [
+  { key: 'BookOpen', Icon: BookOpen },
+  { key: 'Smartphone', Icon: Smartphone },
+  { key: 'Home', Icon: Home },
+  { key: 'Crown', Icon: Crown },
+  { key: 'DollarSign', Icon: DollarSign },
+  { key: 'MessageSquare', Icon: MessageSquare },
+  { key: 'Code', Icon: Code },
+  { key: 'AlertCircle', Icon: AlertCircle },
+  { key: 'Star', Icon: Star },
+  { key: 'Shield', Icon: Shield },
+  { key: 'Zap', Icon: Zap },
+  { key: 'Globe', Icon: Globe },
+  { key: 'HelpCircle', Icon: HelpCircle },
+];
+
 function capitalize(str: string): string {
   return str.charAt(0).toUpperCase() + str.slice(1);
 }
@@ -57,6 +96,9 @@ export default function AdminFaqPage() {
   const [showCategoryModal, setShowCategoryModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [editingArticle, setEditingArticle] = useState<FaqItem | null>(null);
+  const [editingCategory, setEditingCategory] = useState<FaqCategory | null>(
+    null,
+  );
   const [deleteItem, setDeleteItem] = useState<{
     type: 'article' | 'category';
     item: FaqItem | FaqCategory;
@@ -73,6 +115,8 @@ export default function AdminFaqPage() {
   const [categoryForm, setCategoryForm] = useState({
     name: '',
     description: '',
+    icon: '' as string,
+    iconColor: 'amber' as 'amber' | 'green' | 'orange' | 'red',
   });
 
   const fetchData = useCallback(async () => {
@@ -150,14 +194,35 @@ export default function AdminFaqPage() {
 
     setIsSaving(true);
     try {
-      const created = await createFaqCategory({
-        name: categoryForm.name,
-        description: categoryForm.description,
-      });
-      setCategories([...categories, created]);
-      toast.success('Category created successfully!');
+      if (editingCategory) {
+        const updated = await updateFaqCategory(editingCategory.id, {
+          name: categoryForm.name,
+          description: categoryForm.description,
+          icon: categoryForm.icon || null,
+          iconColor: categoryForm.iconColor,
+        });
+        setCategories(
+          categories.map((c) => (c.id === updated.id ? updated : c)),
+        );
+        toast.success('Category updated');
+      } else {
+        const created = await createFaqCategory({
+          name: categoryForm.name,
+          description: categoryForm.description,
+          icon: categoryForm.icon || null,
+          iconColor: categoryForm.iconColor,
+        });
+        setCategories([...categories, created]);
+        toast.success('Category created');
+      }
       setShowCategoryModal(false);
-      setCategoryForm({ name: '', description: '' });
+      setEditingCategory(null);
+      setCategoryForm({
+        name: '',
+        description: '',
+        icon: '',
+        iconColor: 'amber',
+      });
     } catch (error) {
       console.error('Failed to create category:', error);
       toast.error('Failed to create category');
@@ -243,41 +308,87 @@ export default function AdminFaqPage() {
       </div>
 
       <div className="mb-8 grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-2 lg:grid-cols-4 lg:gap-6">
-        {categories.map((category, index) => (
-          <AdminGlassCard key={category.id}>
-            <div
-              className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl"
-              style={{
-                backgroundColor: `${categoryColors[index % categoryColors.length]}20`,
-              }}
-            >
-              <BookOpen
-                className="h-6 w-6"
-                style={{ color: categoryColors[index % categoryColors.length] }}
-              />
-            </div>
-            <h3 className="mb-2 font-semibold text-white">
-              {capitalize(category.name)}
-            </h3>
-            <p className="text-sm text-[#64748B]">
-              {category.faqCount || 0} articles
-            </p>
-            <button
-              onClick={() =>
-                setSelectedCategory(
-                  selectedCategory === category.name ? null : category.name,
-                )
-              }
-              className={`mt-3 rounded-lg px-3 py-1 text-xs transition-colors ${
-                selectedCategory === category.name
-                  ? 'bg-[#3B82F6] text-white'
-                  : 'bg-[rgba(255,255,255,0.08)] text-[#94A3B8] hover:bg-[rgba(255,255,255,0.12)]'
-              }`}
-            >
-              {selectedCategory === category.id ? 'Show All' : 'Filter'}
-            </button>
-          </AdminGlassCard>
-        ))}
+        {categories.map((category, index) => {
+          const PickedIcon =
+            CATEGORY_ICON_CHOICES.find((c) => c.key === category.icon)?.Icon ??
+            BookOpen;
+          const toneSwatch: Record<string, string> = {
+            amber: '#F59E0B',
+            green: '#22C55E',
+            orange: '#F97316',
+            red: '#EF4444',
+          };
+          const accent =
+            (category.iconColor && toneSwatch[category.iconColor]) ||
+            categoryColors[index % categoryColors.length];
+          return (
+            <AdminGlassCard key={category.id}>
+              <div className="group relative">
+                <div
+                  className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl"
+                  style={{ backgroundColor: `${accent}20` }}
+                >
+                  <PickedIcon className="h-6 w-6" style={{ color: accent }} />
+                </div>
+                <h3 className="mb-2 font-semibold text-white">
+                  {capitalize(category.name)}
+                </h3>
+                <p className="text-sm text-[#64748B]">
+                  {category.faqCount || 0} articles
+                </p>
+                <div className="mt-3 flex items-center gap-2">
+                  <button
+                    onClick={() =>
+                      setSelectedCategory(
+                        selectedCategory === category.name
+                          ? null
+                          : category.name,
+                      )
+                    }
+                    className={`rounded-lg px-3 py-1 text-xs transition-colors ${
+                      selectedCategory === category.name
+                        ? 'bg-[#3B82F6] text-white'
+                        : 'bg-[rgba(255,255,255,0.08)] text-[#94A3B8] hover:bg-[rgba(255,255,255,0.12)]'
+                    }`}
+                  >
+                    {selectedCategory === category.name ? 'Show All' : 'Filter'}
+                  </button>
+                  <button
+                    onClick={() => {
+                      setEditingCategory(category);
+                      setCategoryForm({
+                        name: category.name,
+                        description: category.description ?? '',
+                        icon: category.icon ?? '',
+                        iconColor:
+                          (category.iconColor as
+                            | 'amber'
+                            | 'green'
+                            | 'orange'
+                            | 'red') ?? 'amber',
+                      });
+                      setShowCategoryModal(true);
+                    }}
+                    title="Edit category"
+                    className="rounded-lg bg-[rgba(255,255,255,0.08)] p-1.5 text-[#94A3B8] transition-colors hover:bg-[rgba(255,255,255,0.12)] hover:text-white"
+                  >
+                    <Edit className="h-3.5 w-3.5" />
+                  </button>
+                  <button
+                    onClick={() => {
+                      setDeleteItem({ type: 'category', item: category });
+                      setShowDeleteModal(true);
+                    }}
+                    title="Delete category"
+                    className="rounded-lg bg-[rgba(239,68,68,0.1)] p-1.5 text-[#EF4444] transition-colors hover:bg-[rgba(239,68,68,0.2)]"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              </div>
+            </AdminGlassCard>
+          );
+        })}
         <AdminGlassCard>
           <button
             onClick={() => setShowCategoryModal(true)}
@@ -525,10 +636,19 @@ export default function AdminFaqPage() {
           <div className="w-full max-w-md rounded-xl border border-[rgba(255,255,255,0.1)] bg-[#0F172A] p-6">
             <div className="mb-6 flex items-center justify-between">
               <h2 className="text-xl font-semibold text-white">
-                Create Category
+                {editingCategory ? 'Edit Category' : 'Create Category'}
               </h2>
               <button
-                onClick={() => setShowCategoryModal(false)}
+                onClick={() => {
+                  setShowCategoryModal(false);
+                  setEditingCategory(null);
+                  setCategoryForm({
+                    name: '',
+                    description: '',
+                    icon: '',
+                    iconColor: 'amber',
+                  });
+                }}
                 className="text-[#64748B] hover:text-white"
               >
                 <X className="h-5 w-5" />
@@ -568,11 +688,90 @@ export default function AdminFaqPage() {
                   placeholder="Brief description"
                 />
               </div>
+
+              {/* Icon picker — admin picks one of a small Lucide set. The
+                  public /knowledge-base page renders exactly this on the
+                  category card. Empty = falls back to keyword auto-pick. */}
+              <div>
+                <label className="mb-2 block text-sm font-medium text-white">
+                  Icon
+                </label>
+                <div className="grid grid-cols-6 gap-2">
+                  {CATEGORY_ICON_CHOICES.map(({ key, Icon }) => {
+                    const isSelected = categoryForm.icon === key;
+                    return (
+                      <button
+                        key={key}
+                        type="button"
+                        onClick={() =>
+                          setCategoryForm({ ...categoryForm, icon: key })
+                        }
+                        title={key}
+                        className={`flex h-10 w-full items-center justify-center rounded-lg border transition-colors ${
+                          isSelected
+                            ? 'border-[#3B82F6] bg-[#3B82F6]/20 text-white'
+                            : 'border-[rgba(255,255,255,0.18)] bg-[rgba(0,0,0,0.4)] text-[#94A3B8] hover:text-white'
+                        }`}
+                      >
+                        <Icon className="h-4 w-4" />
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Colour swatches — drives the tinted circle behind the
+                  icon on the public cards. */}
+              <div>
+                <label className="mb-2 block text-sm font-medium text-white">
+                  Colour
+                </label>
+                <div className="flex gap-2">
+                  {(['amber', 'green', 'orange', 'red'] as const).map(
+                    (tone) => {
+                      const isSelected = categoryForm.iconColor === tone;
+                      const swatch: Record<typeof tone, string> = {
+                        amber: 'bg-amber-500',
+                        green: 'bg-emerald-500',
+                        orange: 'bg-orange-500',
+                        red: 'bg-rose-500',
+                      } as const;
+                      return (
+                        <button
+                          key={tone}
+                          type="button"
+                          onClick={() =>
+                            setCategoryForm({
+                              ...categoryForm,
+                              iconColor: tone,
+                            })
+                          }
+                          title={tone}
+                          className={`h-8 w-8 rounded-full border-2 transition-all ${swatch[tone]} ${
+                            isSelected
+                              ? 'scale-110 border-white'
+                              : 'border-transparent opacity-70 hover:opacity-100'
+                          }`}
+                        />
+                      );
+                    },
+                  )}
+                </div>
+              </div>
             </div>
 
             <div className="mt-6 flex items-center justify-end gap-3">
               <button
-                onClick={() => setShowCategoryModal(false)}
+                onClick={() => {
+                  setShowCategoryModal(false);
+                  setEditingCategory(null);
+                  setCategoryForm({
+                    name: '',
+                    description: '',
+                    icon: '',
+                    iconColor: 'amber',
+                  });
+                }}
                 className="rounded-lg bg-[rgba(255,255,255,0.08)] px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-[rgba(255,255,255,0.12)]"
               >
                 Cancel
@@ -584,10 +783,12 @@ export default function AdminFaqPage() {
               >
                 {isSaving ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
+                ) : editingCategory ? (
+                  <Save className="h-4 w-4" />
                 ) : (
                   <Plus className="h-4 w-4" />
                 )}
-                Create
+                {editingCategory ? 'Update' : 'Create'}
               </button>
             </div>
           </div>

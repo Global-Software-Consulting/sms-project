@@ -825,6 +825,10 @@ export interface FaqCategory {
   name: string;
   slug: string;
   description?: string;
+  /** Lucide icon key (e.g. "BookOpen", "Crown") admin picked in the modal. */
+  icon?: string | null;
+  /** Tone key — amber / green / orange / red. Falls back to amber on render. */
+  iconColor?: string | null;
   sortOrder: number;
   isActive: boolean;
   faqCount?: number;
@@ -845,6 +849,8 @@ export interface FaqItem {
 export interface CreateFaqCategoryRequest {
   name: string;
   description?: string;
+  icon?: string | null;
+  iconColor?: string | null;
 }
 
 export interface CreateFaqItemRequest {
