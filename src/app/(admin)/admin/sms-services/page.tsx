@@ -6,6 +6,7 @@ import {
   Edit2,
   Trash2,
   Plus,
+  ChevronDown,
   ChevronRight,
   Check,
   X,
@@ -391,6 +392,13 @@ export default function AdminSmsServicesPage() {
   const [isVipEnabled, setIsVipEnabled] = useState(true);
   const [isTogglingVip, setIsTogglingVip] = useState(false);
   const [isAutoPopulating, setIsAutoPopulating] = useState(false);
+
+  // VIP categories list — each service is collapsed by default. A
+  // 153-country fan-out would otherwise dominate the page. Slug is the
+  // unique key on UnifiedVipService, so it stays stable across reloads.
+  const [expandedVipSlugs, setExpandedVipSlugs] = useState<Set<string>>(
+    new Set(),
+  );
 
   // Bulk pricing selection
   const [selectedProductIds, setSelectedProductIds] = useState<string[]>([]);
@@ -2135,91 +2143,116 @@ export default function AdminSmsServicesPage() {
             </div>
           ) : (
             <div className="space-y-4">
-              {unifiedVipServices.map((service) => (
-                <div
-                  key={service.slug}
-                  className="rounded-xl border border-[rgba(255,255,255,0.1)] bg-[rgba(15,23,42,0.6)] p-6 backdrop-blur-xl"
-                >
-                  <div className="mb-4 flex items-center gap-4">
-                    {service.iconUrl ? (
-                      <img
-                        src={service.iconUrl}
-                        alt={service.name}
-                        className="h-10 w-10 rounded-lg object-cover"
-                      />
-                    ) : (
-                      <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[rgba(255,255,255,0.1)]">
-                        <Star className="h-5 w-5 text-[#F59E0B]" />
+              {unifiedVipServices.map((service) => {
+                const isExpanded = expandedVipSlugs.has(service.slug);
+                return (
+                  <div
+                    key={service.slug}
+                    className="rounded-xl border border-[rgba(255,255,255,0.1)] bg-[rgba(15,23,42,0.6)] p-6 backdrop-blur-xl"
+                  >
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setExpandedVipSlugs((prev) => {
+                          const next = new Set(prev);
+                          if (next.has(service.slug)) next.delete(service.slug);
+                          else next.add(service.slug);
+                          return next;
+                        })
+                      }
+                      className="flex w-full items-center gap-4 text-left transition-colors hover:opacity-80"
+                    >
+                      {service.iconUrl ? (
+                        <img
+                          src={service.iconUrl}
+                          alt={service.name}
+                          className="h-10 w-10 rounded-lg object-cover"
+                        />
+                      ) : (
+                        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[rgba(255,255,255,0.1)]">
+                          <Star className="h-5 w-5 text-[#F59E0B]" />
+                        </div>
+                      )}
+                      <div className="min-w-0 flex-1">
+                        <h4 className="text-lg font-semibold text-white">
+                          {service.name}
+                        </h4>
+                        <p className="text-sm text-[#94A3B8]">
+                          {service.category} • {service.countryCount} countries
+                        </p>
+                      </div>
+                      {isExpanded ? (
+                        <ChevronDown className="h-5 w-5 shrink-0 text-[#64748B]" />
+                      ) : (
+                        <ChevronRight className="h-5 w-5 shrink-0 text-[#64748B]" />
+                      )}
+                    </button>
+
+                    {/* Countries accordion — only mounted when expanded so
+                      a 153-country fan-out doesn't blow up the initial
+                      render for every service card on the page. */}
+                    {isExpanded && (
+                      <div className="mt-4 space-y-2">
+                        {service.countries.map((country) => (
+                          <div
+                            key={country.id}
+                            className="rounded-lg border border-[rgba(255,255,255,0.05)] bg-[rgba(0,0,0,0.2)] p-4"
+                          >
+                            <div className="mb-2 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                              <div className="flex min-w-0 flex-wrap items-center gap-2">
+                                {country.iconUrl && (
+                                  <img
+                                    src={country.iconUrl}
+                                    alt={country.name}
+                                    className="h-5 w-5 shrink-0 rounded"
+                                  />
+                                )}
+                                <span className="text-sm font-medium break-words text-white">
+                                  {country.name}
+                                </span>
+                                <span className="text-xs text-[#64748B]">
+                                  ({country.code})
+                                </span>
+                              </div>
+                              <span className="self-start rounded-full bg-[#F59E0B]/20 px-2 py-1 text-xs font-medium whitespace-nowrap text-[#F59E0B] sm:self-auto">
+                                Best Rating: {country.bestRating}/5
+                              </span>
+                            </div>
+                            {/* Providers for this country */}
+                            <div className="mt-2 flex flex-wrap gap-2">
+                              {country.providers.map((provider) => (
+                                <div
+                                  key={provider.vipId}
+                                  className="flex items-center gap-2 rounded-lg border border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.05)] px-3 py-1.5"
+                                >
+                                  <span className="text-xs text-[#94A3B8]">
+                                    {provider.providerName}
+                                  </span>
+                                  <span className="text-xs font-medium text-[#3B82F6]">
+                                    {provider.rating}/5
+                                  </span>
+                                  <span className="text-xs text-[#64748B]">
+                                    ({provider.orderCount} orders)
+                                  </span>
+                                  <button
+                                    onClick={() =>
+                                      handleRemoveVip(provider.vipId)
+                                    }
+                                    className="rounded p-1 text-[#EF4444] transition-colors hover:bg-[rgba(239,68,68,0.2)]"
+                                    title="Remove"
+                                  >
+                                    <X className="h-3 w-3" />
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        ))}
                       </div>
                     )}
-                    <div>
-                      <h4 className="text-lg font-semibold text-white">
-                        {service.name}
-                      </h4>
-                      <p className="text-sm text-[#94A3B8]">
-                        {service.category} • {service.countryCount} countries
-                      </p>
-                    </div>
                   </div>
-
-                  {/* Countries accordion */}
-                  <div className="space-y-2">
-                    {service.countries.map((country) => (
-                      <div
-                        key={country.id}
-                        className="rounded-lg border border-[rgba(255,255,255,0.05)] bg-[rgba(0,0,0,0.2)] p-4"
-                      >
-                        <div className="mb-2 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                          <div className="flex min-w-0 flex-wrap items-center gap-2">
-                            {country.iconUrl && (
-                              <img
-                                src={country.iconUrl}
-                                alt={country.name}
-                                className="h-5 w-5 shrink-0 rounded"
-                              />
-                            )}
-                            <span className="text-sm font-medium break-words text-white">
-                              {country.name}
-                            </span>
-                            <span className="text-xs text-[#64748B]">
-                              ({country.code})
-                            </span>
-                          </div>
-                          <span className="self-start rounded-full bg-[#F59E0B]/20 px-2 py-1 text-xs font-medium whitespace-nowrap text-[#F59E0B] sm:self-auto">
-                            Best Rating: {country.bestRating}/5
-                          </span>
-                        </div>
-                        {/* Providers for this country */}
-                        <div className="mt-2 flex flex-wrap gap-2">
-                          {country.providers.map((provider) => (
-                            <div
-                              key={provider.vipId}
-                              className="flex items-center gap-2 rounded-lg border border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.05)] px-3 py-1.5"
-                            >
-                              <span className="text-xs text-[#94A3B8]">
-                                {provider.providerName}
-                              </span>
-                              <span className="text-xs font-medium text-[#3B82F6]">
-                                {provider.rating}/5
-                              </span>
-                              <span className="text-xs text-[#64748B]">
-                                ({provider.orderCount} orders)
-                              </span>
-                              <button
-                                onClick={() => handleRemoveVip(provider.vipId)}
-                                className="rounded p-1 text-[#EF4444] transition-colors hover:bg-[rgba(239,68,68,0.2)]"
-                                title="Remove"
-                              >
-                                <X className="h-3 w-3" />
-                              </button>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>
