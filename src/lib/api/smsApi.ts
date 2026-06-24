@@ -904,6 +904,10 @@ export interface UnifiedVipService {
       rating: number;
       orderCount: number;
       successRate: number | null;
+      /** Our retail price (after global markup, before per-user discount). */
+      price: number | null;
+      /** Current upstream availability — 0 hides the row from buy UI. */
+      availableCount: number;
     }>;
   }>;
 }
@@ -1323,6 +1327,25 @@ export const adminBulkAddVipAllCountries = async (
     invalid: number;
     countryCount: number;
   }>(API_ENDPOINTS.ADMIN.SMS.VIP_BULK_ALL_COUNTRIES, {
+    serviceIds,
+    providerId,
+  });
+  return response.data;
+};
+
+/**
+ * Inverse of adminBulkAddVipAllCountries: removes every VIP entry for
+ * the selected services under the given provider, across all countries.
+ * POST /admin/sms/vip/bulk-remove-all-countries
+ */
+export const adminBulkRemoveVipAllCountries = async (
+  serviceIds: string[],
+  providerId: string,
+): Promise<{ removed: number; message: string }> => {
+  const response = await apiClient.post<{
+    removed: number;
+    message: string;
+  }>(API_ENDPOINTS.ADMIN.SMS.VIP_BULK_REMOVE_ALL_COUNTRIES, {
     serviceIds,
     providerId,
   });
