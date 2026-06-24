@@ -193,16 +193,32 @@ export function VipSection({
                       ) : (
                         <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
                           {countries.map((country) => {
-                            const winner = country.providers[0];
+                            // Pick best available provider (highest rating
+                            // among those with stock). Falls back to first
+                            // entry so we still show the row when stock
+                            // data hasn't synced yet — buy attempt then
+                            // surfaces a clean "no availability" toast.
+                            const winner =
+                              country.providers.find(
+                                (p) => p.availableCount > 0,
+                              ) ?? country.providers[0];
                             if (!winner) return null;
                             const pickKey = `${service.slug}:${country.id}`;
                             const isBusy = busyKey === pickKey;
+                            const isSoldOut =
+                              country.providers.every(
+                                (p) => p.availableCount === 0,
+                              ) && winner.availableCount === 0;
+                            const priceLabel =
+                              winner.price != null
+                                ? `$${winner.price.toFixed(2)}`
+                                : null;
                             return (
                               <Button
                                 key={country.id}
                                 variant="outline"
                                 size="sm"
-                                disabled={isBusy}
+                                disabled={isBusy || isSoldOut}
                                 onClick={() =>
                                   onPick({
                                     serviceId: winner.serviceId,
@@ -216,6 +232,7 @@ export function VipSection({
                                 }
                                 className={cn(
                                   'h-auto justify-start gap-2 px-3 py-2 text-left',
+                                  isSoldOut && 'opacity-50',
                                 )}
                               >
                                 {country.iconUrl ? (
@@ -233,6 +250,15 @@ export function VipSection({
                                 <span className="min-w-0 flex-1 truncate text-xs font-medium">
                                   {country.name}
                                 </span>
+                                {isSoldOut ? (
+                                  <span className="text-muted-foreground shrink-0 text-[10px] font-medium uppercase">
+                                    Sold out
+                                  </span>
+                                ) : priceLabel ? (
+                                  <span className="text-primary shrink-0 text-xs font-semibold">
+                                    {priceLabel}
+                                  </span>
+                                ) : null}
                                 {isBusy && (
                                   <Loader2 className="h-3 w-3 shrink-0 animate-spin" />
                                 )}

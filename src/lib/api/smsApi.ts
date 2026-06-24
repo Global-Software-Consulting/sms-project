@@ -904,6 +904,10 @@ export interface UnifiedVipService {
       rating: number;
       orderCount: number;
       successRate: number | null;
+      /** Our retail price (after global markup, before per-user discount). */
+      price: number | null;
+      /** Current upstream availability — 0 hides the row from buy UI. */
+      availableCount: number;
     }>;
   }>;
 }
