@@ -1334,6 +1334,25 @@ export const adminBulkAddVipAllCountries = async (
 };
 
 /**
+ * Inverse of adminBulkAddVipAllCountries: removes every VIP entry for
+ * the selected services under the given provider, across all countries.
+ * POST /admin/sms/vip/bulk-remove-all-countries
+ */
+export const adminBulkRemoveVipAllCountries = async (
+  serviceIds: string[],
+  providerId: string,
+): Promise<{ removed: number; message: string }> => {
+  const response = await apiClient.post<{
+    removed: number;
+    message: string;
+  }>(API_ENDPOINTS.ADMIN.SMS.VIP_BULK_REMOVE_ALL_COUNTRIES, {
+    serviceIds,
+    providerId,
+  });
+  return response.data;
+};
+
+/**
  * Reconcile VIP entries with provider countries — removes VIP rows whose
  * country has been deactivated.
  * POST /admin/sms/vip/sync-countries?providerId=xxx (providerId optional)
