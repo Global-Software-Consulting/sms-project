@@ -142,74 +142,10 @@ export default function RootLayout({
         </noscript>
         <JsonLd data={organizationSchema()} />
         <JsonLd data={websiteSchema()} />
-        {/*
-          Targeted removeChild guard.
-
-          Background: third-party scripts injected by AddonsLoader
-          (Tawk.to chat widget, Microsoft Clarity, Google Analytics,
-          Trustpilot, etc.) detach DOM nodes that React still tracks
-          in its fiber tree. When React next tries to commit a
-          re-render that involves removing one of those nodes,
-            parent.removeChild(child)
-          throws "Cannot read properties of null (reading
-          'removeChild')" because child.parentNode is already null —
-          the third party detached it. The commit aborts; the new
-          route's RSC payload arrives but never visually applies.
-          User sees: URL bar moves, sidebar/nav active state moves,
-          but main content stays on the previous page.
-
-          Prior history (read before changing this):
-          - We had a broader patch that also wrapped insertBefore and
-            no-op'd whenever `refNode.parentNode !== this`. That
-            version caused a "first click works, second click needs
-            two clicks" bug because it ALSO silently no-op'd
-            legitimate React reconciliations of nodes a third party
-            had reparented (insertBefore case) — see PR #43 commit
-            for the full trace.
-          - We then removed the patch entirely. That made the silent
-            no-op gone, but exposed the original removeChild race:
-            navigation now actually breaks instead of being a silent
-            corruption. Live console traces show the TypeError firing
-            inside the framework chunk on transitions like / -> /api
-            -> /pricing.
-
-          This narrower version:
-          - Only intercepts removeChild, NOT insertBefore (the
-            insertBefore case was the source of the 2-click bug).
-          - Only no-ops when child.parentNode === null (already fully
-            detached by a third party — React's intent was to remove
-            it, the third party beat us to it, no-op is correct).
-          - Calls the original removeChild in every other case,
-            including the dangerous "child reparented to a different
-            parent" case which SHOULD throw so we notice.
-
-          Trade-off accepted: if the underlying React-vs-third-party
-          conflict mutates to a different shape, this patch won't
-          cover it. The real fix is to identify which AddonsLoader
-          script is doing the detachment and either guard it or
-          remove it. Until then this prevents the commit abort.
-        */}
-        <script
-          // eslint-disable-next-line react/no-danger
-          dangerouslySetInnerHTML={{
-            __html: `(function(){if(typeof Node==='undefined')return;var o=Node.prototype.removeChild;Node.prototype.removeChild=function(c){if(c&&c.parentNode===null)return c;return o.apply(this,arguments);};})();`,
-          }}
-        />
       </head>
       <body suppressHydrationWarning>
         <FaroInit />
-        {/*
-          ForceFullNavigation converts every SPA click into a full page
-          reload. On Contabo it's needed to dodge the React 19 commit-
-          phase race that crashes navigation. On Vercel (and any fast-
-          origin deploy) the race window doesn't open, so the workaround
-          would only cost performance — full reloads lose Redux state,
-          scroll position, JS parse cache, etc.
 
-          Gate on NEXT_PUBLIC_FORCE_FULL_NAV. Set it to "true" only on
-          Contabo deploys. Other targets leave it unset and get normal
-          Next.js SPA navigation.
-        */}
         {/* {process.env.NEXT_PUBLIC_FORCE_FULL_NAV === 'true' && (
           <ForceFullNavigation />
         )} */}
