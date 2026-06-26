@@ -22,7 +22,7 @@ import {
   websiteSchema,
 } from '@/lib/seo/structured-data';
 import './globals.css';
-import { ForceFullNavigation } from '@/components/force-full-navigation';
+// import { ForceFullNavigation } from '@/components/force-full-navigation';
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
@@ -210,9 +210,9 @@ export default function RootLayout({
           Contabo deploys. Other targets leave it unset and get normal
           Next.js SPA navigation.
         */}
-        {process.env.NEXT_PUBLIC_FORCE_FULL_NAV === 'true' && (
+        {/* {process.env.NEXT_PUBLIC_FORCE_FULL_NAV === 'true' && (
           <ForceFullNavigation />
-        )}
+        )} */}
         <StoreProvider>
           <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
             <BrandingProvider>
