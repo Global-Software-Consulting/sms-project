@@ -498,6 +498,27 @@ export default function Activation() {
             toast.success('SMS Received!', {
               description: `Code: ${response.order.smsCode}`,
             });
+          } else if (
+            response.order.status === 'CANCELLED' ||
+            response.order.status === 'EXPIRED' ||
+            response.order.status === 'FAILED'
+          ) {
+            // Terminal failure — surface once, then auto-drop from the
+            // Active Numbers panel so users aren't staring at a dead
+            // row. The order still lives in history for reference.
+            toast.error(
+              response.order.status === 'EXPIRED'
+                ? 'Order expired'
+                : response.order.status === 'CANCELLED'
+                  ? 'Order cancelled'
+                  : 'Order failed',
+              {
+                description: 'Refunded to wallet if applicable. Try again.',
+              },
+            );
+            setActiveOrders((prev) =>
+              prev.filter((o) => o.id !== response.order.id),
+            );
           }
         } catch (err) {
           console.error('Failed to check order status:', err);
@@ -518,6 +539,36 @@ export default function Activation() {
   useEffect(() => {
     const iv = setInterval(() => setActiveOrders((p) => [...p]), 1000);
     return () => clearInterval(iv);
+  }, []);
+
+  // Listen for socket-pushed SMS_RECEIVED notifications and splice the
+  // code into the matching active order immediately. Without this,
+  // users saw the code in the notification dropdown but the Active
+  // Numbers card still said "Waiting for SMS" until the next 5s
+  // polling tick caught up. NotificationContext re-dispatches the
+  // socket event as a window CustomEvent so we don't need a direct
+  // hook dependency on the notifications context here.
+  useEffect(() => {
+    const handler = (event: Event) => {
+      const detail = (event as CustomEvent).detail as
+        | { orderId?: string; smsCode?: string; smsFullText?: string }
+        | undefined;
+      if (!detail?.orderId || !detail.smsCode) return;
+      setActiveOrders((prev) =>
+        prev.map((o) =>
+          o.id === detail.orderId
+            ? {
+                ...o,
+                status: 'COMPLETED',
+                smsCode: detail.smsCode!,
+                smsFullText: detail.smsFullText ?? o.smsFullText,
+              }
+            : o,
+        ),
+      );
+    };
+    window.addEventListener('sms:received', handler);
+    return () => window.removeEventListener('sms:received', handler);
   }, []);
 
   // Debounce search input so we don't spam the backend on every keystroke.
@@ -943,19 +994,31 @@ export default function Activation() {
         );
       })()}
 
-      {/* Active Orders */}
-      {activeOrders.length > 0 && (
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="flex items-center gap-2 text-base">
-              <div className="bg-success h-2 w-2 animate-pulse rounded-full" />
-              Active Numbers ({activeOrders.length})
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {activeOrders
-              .filter((order) => order && order.id)
-              .map((order) => {
+      {/* Active Orders — user-facing list only renders in-flight
+          (PENDING/WAITING_SMS) and freshly COMPLETED orders. Terminal
+          states (CANCELLED/EXPIRED/FAILED) drop out automatically so the
+          panel stays a "live work queue", not an order history.
+          History lives on a separate page. */}
+      {(() => {
+        const visibleActiveOrders = activeOrders.filter(
+          (order) =>
+            order &&
+            order.id &&
+            (order.status === 'PENDING' ||
+              order.status === 'WAITING_SMS' ||
+              order.status === 'COMPLETED'),
+        );
+        if (visibleActiveOrders.length === 0) return null;
+        return (
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-base">
+                <div className="bg-success h-2 w-2 animate-pulse rounded-full" />
+                Active Numbers ({visibleActiveOrders.length})
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {visibleActiveOrders.map((order) => {
                 const timeRemaining = order.expiresAt
                   ? getTimeRemaining(order.expiresAt)
                   : null;
@@ -1046,17 +1109,20 @@ export default function Activation() {
                             {order.phoneNumber || 'Waiting for number...'}
                           </code>
                           {order.smsCode && (
-                            <div className="mt-1 flex items-center gap-2">
-                              <code className="text-success font-mono text-sm font-bold">
+                            <div className="bg-success/10 border-success/30 mt-2 inline-flex items-center gap-2 rounded-md border px-2 py-1">
+                              <span className="text-success/80 text-[10px] font-medium tracking-wide uppercase">
+                                Code
+                              </span>
+                              <code className="text-success font-mono text-base font-bold tracking-wider">
                                 {order.smsCode}
                               </code>
                               <Button
                                 variant="ghost"
                                 size="icon"
-                                className="h-5 w-5 shrink-0"
+                                className="text-success hover:bg-success/20 h-6 w-6 shrink-0"
                                 onClick={() => copyToClipboard(order.smsCode!)}
                               >
-                                <Copy className="h-3 w-3" />
+                                <Copy className="h-3.5 w-3.5" />
                               </Button>
                             </div>
                           )}
@@ -1169,9 +1235,10 @@ export default function Activation() {
                   </div>
                 );
               })}
-          </CardContent>
-        </Card>
-      )}
+            </CardContent>
+          </Card>
+        );
+      })()}
 
       {/* VIP tab content — replaces the standard Step 1/2/3 flow when the
           user is on the VIP slot. Pick lands directly on a service+country
