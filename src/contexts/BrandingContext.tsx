@@ -1,6 +1,12 @@
 'use client';
 
-import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  ReactNode,
+} from 'react';
 import { apiClient } from '@/config/api-client.config';
 import { API_ENDPOINTS } from '@/config/server.config';
 
@@ -16,16 +22,18 @@ const BrandingContext = createContext<Branding>({
   refresh: async () => {},
 });
 
-function updateFaviconLink(faviconUrl: string) {
-  if (typeof document === 'undefined') return;
-  const head = document.head;
-  // Remove existing favicon links so the new one takes effect
-  const existing = head.querySelectorAll(
-    "link[rel='icon'], link[rel='shortcut icon'], link[rel='apple-touch-icon']",
-  );
-  existing.forEach((el) => el.parentNode?.removeChild(el));
-  // Detect mime type from extension
-  const ext = faviconUrl.split('.').pop()?.toLowerCase() || '';
+// Marker used to find/replace only the favicon links WE inject. Without
+// it, the prior implementation removed the Next.js metadata-rendered
+// <link> nodes directly from the DOM, which React still believed it
+// owned — first user interaction triggered reconciliation and the
+// reconciler hit `parentNode.removeChild` on a node that no longer had
+// a parent (TypeError: Cannot read properties of null (reading
+// 'removeChild')). Updating href in place avoids the whole class of
+// DOM-vs-virtual-DOM bugs.
+const DYNAMIC_MARKER = 'data-dynamic-favicon';
+
+function getMimeType(faviconUrl: string): string {
+  const ext = faviconUrl.split('.').pop()?.toLowerCase() ?? '';
   const mimeMap: Record<string, string> = {
     ico: 'image/x-icon',
     png: 'image/png',
@@ -34,17 +42,29 @@ function updateFaviconLink(faviconUrl: string) {
     webp: 'image/webp',
     svg: 'image/svg+xml',
   };
-  const type = mimeMap[ext] || 'image/x-icon';
-  const link = document.createElement('link');
-  link.rel = 'icon';
-  link.type = type;
+  return mimeMap[ext] ?? 'image/x-icon';
+}
+
+function upsertFaviconLink(rel: string, faviconUrl: string, type?: string) {
+  const head = document.head;
+  let link = head.querySelector<HTMLLinkElement>(
+    `link[${DYNAMIC_MARKER}][rel='${rel}']`,
+  );
+  if (!link) {
+    link = document.createElement('link');
+    link.rel = rel;
+    link.setAttribute(DYNAMIC_MARKER, 'true');
+    head.appendChild(link);
+  }
+  if (type) link.type = type;
   link.href = faviconUrl;
-  head.appendChild(link);
-  // Apple touch icon variant for iOS
-  const appleLink = document.createElement('link');
-  appleLink.rel = 'apple-touch-icon';
-  appleLink.href = faviconUrl;
-  head.appendChild(appleLink);
+}
+
+function updateFaviconLink(faviconUrl: string) {
+  if (typeof document === 'undefined') return;
+  const type = getMimeType(faviconUrl);
+  upsertFaviconLink('icon', faviconUrl, type);
+  upsertFaviconLink('apple-touch-icon', faviconUrl);
 }
 
 export function BrandingProvider({ children }: { children: ReactNode }) {
@@ -53,9 +73,10 @@ export function BrandingProvider({ children }: { children: ReactNode }) {
 
   const refresh = async () => {
     try {
-      const res = await apiClient.get<{ siteLogo: string; siteFavicon: string }>(
-        API_ENDPOINTS.PUBLIC.BRANDING,
-      );
+      const res = await apiClient.get<{
+        siteLogo: string;
+        siteFavicon: string;
+      }>(API_ENDPOINTS.PUBLIC.BRANDING);
       const logo = res.data.siteLogo || null;
       const favicon = res.data.siteFavicon || null;
       setSiteLogo(logo);

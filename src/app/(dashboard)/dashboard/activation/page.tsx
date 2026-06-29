@@ -59,6 +59,7 @@ import {
 } from '@/lib/api/smsApi';
 import { getWalletBalance, formatBalance } from '@/lib/api/walletApi';
 import { safeServiceIcon } from '@/lib/service-icon';
+import { VipSection } from './vip-section';
 
 type CountryFilterType = 'all' | 'favorites' | 'available';
 type PriceSortType = 'none' | 'low-high' | 'high-low';
@@ -113,11 +114,14 @@ export default function Activation() {
   const [countryFilter, setCountryFilter] = useState<CountryFilterType>('all');
   const [priceSort, setPriceSort] = useState<PriceSortType>('none');
 
-  // VIP state — user-facing VIP section is deferred per client. We still
-  // load the unified list (one shot) so we can decorate Step 1 service
-  // rows with a "VIP" badge for services flagged by admin.
+  // VIP state. Used both for badges on Step 1 service rows AND for the
+  // dedicated VIP tab (4th option in the provider toggle). Tab visibility
+  // is gated by `vipEnabled` (backend SystemSettings flag).
   const [vipServices, setVipServices] = useState<UnifiedVipService[]>([]);
   const [vipEnabled, setVipEnabled] = useState(true);
+  const [isLoadingVip, setIsLoadingVip] = useState(false);
+  const [vipBusyKey, setVipBusyKey] = useState<string | null>(null);
+  const [tabMode, setTabMode] = useState<'provider' | 'vip'>('provider');
 
   // Active orders state
   const [activeOrders, setActiveOrders] = useState<SmsOrder[]>([]);
@@ -169,16 +173,19 @@ export default function Activation() {
         }
       });
 
-      // Load unified VIP — only used to decorate Step 1 services with a
-      // "VIP" badge. The full VIP card is deferred per client direction.
-      // Request topCountriesPerService=1 to keep the payload tiny since we
-      // only need the service slugs.
-      getUnifiedVipCategories({ topCountriesPerService: 1 })
+      // Load unified VIP. Used for: (a) badging Step 1 services that admin
+      // marked VIP, (b) populating the dedicated VIP tab. Request 9
+      // countries per service so the VIP grid can render the initial
+      // collapsed list without a follow-up fetch; "Show all" still
+      // lazy-loads the remainder.
+      setIsLoadingVip(true);
+      getUnifiedVipCategories({ topCountriesPerService: 9 })
         .then((res) => {
           setVipEnabled(res.enabled !== false);
           setVipServices(res.enabled === false ? [] : res.services || []);
         })
-        .catch(() => {});
+        .catch(() => {})
+        .finally(() => setIsLoadingVip(false));
 
       // Repopulate active orders on mount/reload. Without this, the
       // "Active Numbers" card disappears on reload because state resets
@@ -491,6 +498,27 @@ export default function Activation() {
             toast.success('SMS Received!', {
               description: `Code: ${response.order.smsCode}`,
             });
+          } else if (
+            response.order.status === 'CANCELLED' ||
+            response.order.status === 'EXPIRED' ||
+            response.order.status === 'FAILED'
+          ) {
+            // Terminal failure — surface once, then auto-drop from the
+            // Active Numbers panel so users aren't staring at a dead
+            // row. The order still lives in history for reference.
+            toast.error(
+              response.order.status === 'EXPIRED'
+                ? 'Order expired'
+                : response.order.status === 'CANCELLED'
+                  ? 'Order cancelled'
+                  : 'Order failed',
+              {
+                description: 'Refunded to wallet if applicable. Try again.',
+              },
+            );
+            setActiveOrders((prev) =>
+              prev.filter((o) => o.id !== response.order.id),
+            );
           }
         } catch (err) {
           console.error('Failed to check order status:', err);
@@ -511,6 +539,36 @@ export default function Activation() {
   useEffect(() => {
     const iv = setInterval(() => setActiveOrders((p) => [...p]), 1000);
     return () => clearInterval(iv);
+  }, []);
+
+  // Listen for socket-pushed SMS_RECEIVED notifications and splice the
+  // code into the matching active order immediately. Without this,
+  // users saw the code in the notification dropdown but the Active
+  // Numbers card still said "Waiting for SMS" until the next 5s
+  // polling tick caught up. NotificationContext re-dispatches the
+  // socket event as a window CustomEvent so we don't need a direct
+  // hook dependency on the notifications context here.
+  useEffect(() => {
+    const handler = (event: Event) => {
+      const detail = (event as CustomEvent).detail as
+        | { orderId?: string; smsCode?: string; smsFullText?: string }
+        | undefined;
+      if (!detail?.orderId || !detail.smsCode) return;
+      setActiveOrders((prev) =>
+        prev.map((o) =>
+          o.id === detail.orderId
+            ? {
+                ...o,
+                status: 'COMPLETED',
+                smsCode: detail.smsCode!,
+                smsFullText: detail.smsFullText ?? o.smsFullText,
+              }
+            : o,
+        ),
+      );
+    };
+    window.addEventListener('sms:received', handler);
+    return () => window.removeEventListener('sms:received', handler);
   }, []);
 
   // Debounce search input so we don't spam the backend on every keystroke.
@@ -664,6 +722,73 @@ export default function Activation() {
     }
   };
 
+  // VIP tab: user picked a (service, country) — resolve the winning
+  // provider, fetch products in real-time, find the row matching the
+  // country, then route through the existing buy flow. Keeps order
+  // semantics identical to Step 3 — no duplicate activation logic.
+  const handleVipPick = useCallback(
+    async (args: {
+      serviceId: string;
+      serviceName: string;
+      serviceSlug: string;
+      countryId: string;
+      countryName: string;
+      countryCode: string;
+      providerId: string;
+    }) => {
+      if (vipBusyKey) return;
+      const provider = providers.find((p) => p.id === args.providerId);
+      if (!provider) {
+        toast.error('Provider unavailable', {
+          description:
+            'The VIP entry references a provider that is no longer active.',
+        });
+        return;
+      }
+      const pickKey = `${args.serviceSlug}:${args.countryId}`;
+      setVipBusyKey(pickKey);
+      try {
+        const response = await getProductsRealtime(provider.id, args.serviceId);
+        const product = (response.data || []).find(
+          (p) => p.country.id === args.countryId,
+        );
+        if (!product) {
+          toast.error('No availability', {
+            description: `${args.serviceName} / ${args.countryName} has no numbers right now.`,
+          });
+          return;
+        }
+        // Reflect selection in shared state so downstream UI (active
+        // orders banner, balance debits) shows the right labels.
+        setSelectedProvider(provider);
+        setSelectedService({
+          id: args.serviceId,
+          name: args.serviceName,
+          slug: args.serviceSlug,
+          iconUrl: product.service.iconUrl,
+          category: product.service.category,
+        });
+        setSelectedCountry({
+          id: args.countryId,
+          providerId: provider.id,
+          externalCountryId: '',
+          name: args.countryName,
+          code: args.countryCode,
+          iconUrl: product.country.iconUrl,
+          isActive: true,
+        });
+        await handleBuySMS(product);
+      } catch (err: any) {
+        toast.error('VIP activation failed', {
+          description: err?.response?.data?.message || 'Please try again.',
+        });
+      } finally {
+        setVipBusyKey(null);
+      }
+    },
+    [providers, vipBusyKey],
+  );
+
   // Handle cancel order
   const handleCancelOrder = async (orderId: string) => {
     try {
@@ -781,75 +906,119 @@ export default function Activation() {
         </div>
       </div>
 
-      {/* Provider Toggle */}
-      {providers.length > 1 && (
-        <div className="border-border bg-muted/50 relative flex max-w-xl items-center rounded-xl border p-1">
-          <div
-            className="bg-card border-border absolute h-[calc(100%-8px)] rounded-lg border shadow-md transition-all duration-300 ease-out"
-            style={{
-              width: `${100 / providers.length}%`,
-              left: `calc(${(providers.findIndex((p) => p.id === selectedProvider?.id) * 100) / providers.length}% + 0.25rem)`,
-            }}
-          />
-          {providers.map((provider, idx) => {
-            const v = (provider.version || '').toUpperCase().trim();
-            const slot = v.startsWith('V1')
-              ? 'V1'
-              : v.startsWith('V2')
-                ? 'V2'
-                : v.startsWith('V3')
-                  ? 'V3'
-                  : ((['V1', 'V2', 'V3'] as const)[idx] ?? 'V1');
-            const TierIcon =
-              slot === 'V1' ? Coins : slot === 'V2' ? Gem : Crown;
-            const tierFallback =
-              slot === 'V1'
-                ? 'Standard V1'
-                : slot === 'V2'
-                  ? 'Premium V2'
-                  : 'Elite V3';
-            const tabLabel = safeProviderLabel(
-              provider.displayName,
-              tierFallback,
-            );
-            const iconClass =
-              slot === 'V1'
-                ? 'text-warning'
-                : slot === 'V2'
-                  ? 'text-info'
-                  : 'text-primary';
-            return (
+      {/* Provider + VIP Toggle. The VIP slot is appended as the 4th tab
+          when the backend SystemSettings flag is on AND the unified VIP
+          list has at least one service. Hides itself otherwise to keep
+          the layout from showing an empty category. */}
+      {(() => {
+        const showVipTab = vipEnabled && vipServices.length > 0;
+        const totalTabs = providers.length + (showVipTab ? 1 : 0);
+        if (totalTabs < 2) return null;
+        const activeIndex =
+          tabMode === 'vip'
+            ? providers.length
+            : providers.findIndex((p) => p.id === selectedProvider?.id);
+        return (
+          <div className="border-border bg-muted/50 relative flex max-w-2xl items-center rounded-xl border p-1">
+            <div
+              className="bg-card border-border absolute h-[calc(100%-8px)] rounded-lg border shadow-md transition-all duration-300 ease-out"
+              style={{
+                width: `${100 / totalTabs}%`,
+                left: `calc(${(activeIndex * 100) / totalTabs}% + 0.25rem)`,
+              }}
+            />
+            {providers.map((provider, idx) => {
+              const v = (provider.version || '').toUpperCase().trim();
+              const slot = v.startsWith('V1')
+                ? 'V1'
+                : v.startsWith('V2')
+                  ? 'V2'
+                  : v.startsWith('V3')
+                    ? 'V3'
+                    : ((['V1', 'V2', 'V3'] as const)[idx] ?? 'V1');
+              const TierIcon =
+                slot === 'V1' ? Coins : slot === 'V2' ? Gem : Crown;
+              const tierFallback =
+                slot === 'V1'
+                  ? 'Standard V1'
+                  : slot === 'V2'
+                    ? 'Premium V2'
+                    : 'Elite V3';
+              const tabLabel = safeProviderLabel(
+                provider.displayName,
+                tierFallback,
+              );
+              const iconClass =
+                slot === 'V1'
+                  ? 'text-warning'
+                  : slot === 'V2'
+                    ? 'text-info'
+                    : 'text-primary';
+              const isActive =
+                tabMode === 'provider' && selectedProvider?.id === provider.id;
+              return (
+                <button
+                  key={provider.id}
+                  onClick={() => {
+                    setTabMode('provider');
+                    setSelectedProvider(provider);
+                  }}
+                  className={cn(
+                    'relative z-10 flex flex-1 items-center justify-center gap-1.5 rounded-lg px-2 py-2.5 text-xs font-medium transition-colors sm:px-4 sm:text-sm',
+                    isActive
+                      ? 'text-foreground'
+                      : 'text-muted-foreground hover:text-foreground',
+                  )}
+                >
+                  <TierIcon className={cn('h-3.5 w-3.5 shrink-0', iconClass)} />
+                  {tabLabel}
+                </button>
+              );
+            })}
+            {showVipTab && (
               <button
-                key={provider.id}
-                onClick={() => setSelectedProvider(provider)}
+                key="vip-tab"
+                onClick={() => setTabMode('vip')}
                 className={cn(
                   'relative z-10 flex flex-1 items-center justify-center gap-1.5 rounded-lg px-2 py-2.5 text-xs font-medium transition-colors sm:px-4 sm:text-sm',
-                  selectedProvider?.id === provider.id
+                  tabMode === 'vip'
                     ? 'text-foreground'
                     : 'text-muted-foreground hover:text-foreground',
                 )}
               >
-                <TierIcon className={cn('h-3.5 w-3.5 shrink-0', iconClass)} />
-                {tabLabel}
+                <Crown className="text-primary h-3.5 w-3.5 shrink-0" />
+                VIP
               </button>
-            );
-          })}
-        </div>
-      )}
+            )}
+          </div>
+        );
+      })()}
 
-      {/* Active Orders */}
-      {activeOrders.length > 0 && (
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="flex items-center gap-2 text-base">
-              <div className="bg-success h-2 w-2 animate-pulse rounded-full" />
-              Active Numbers ({activeOrders.length})
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {activeOrders
-              .filter((order) => order && order.id)
-              .map((order) => {
+      {/* Active Orders — user-facing list only renders in-flight
+          (PENDING/WAITING_SMS) and freshly COMPLETED orders. Terminal
+          states (CANCELLED/EXPIRED/FAILED) drop out automatically so the
+          panel stays a "live work queue", not an order history.
+          History lives on a separate page. */}
+      {(() => {
+        const visibleActiveOrders = activeOrders.filter(
+          (order) =>
+            order &&
+            order.id &&
+            (order.status === 'PENDING' ||
+              order.status === 'WAITING_SMS' ||
+              order.status === 'COMPLETED'),
+        );
+        if (visibleActiveOrders.length === 0) return null;
+        return (
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-base">
+                <div className="bg-success h-2 w-2 animate-pulse rounded-full" />
+                Active Numbers ({visibleActiveOrders.length})
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {visibleActiveOrders.map((order) => {
                 const timeRemaining = order.expiresAt
                   ? getTimeRemaining(order.expiresAt)
                   : null;
@@ -940,17 +1109,20 @@ export default function Activation() {
                             {order.phoneNumber || 'Waiting for number...'}
                           </code>
                           {order.smsCode && (
-                            <div className="mt-1 flex items-center gap-2">
-                              <code className="text-success font-mono text-sm font-bold">
+                            <div className="bg-success/10 border-success/30 mt-2 inline-flex items-center gap-2 rounded-md border px-2 py-1">
+                              <span className="text-success/80 text-[10px] font-medium tracking-wide uppercase">
+                                Code
+                              </span>
+                              <code className="text-success font-mono text-base font-bold tracking-wider">
                                 {order.smsCode}
                               </code>
                               <Button
                                 variant="ghost"
                                 size="icon"
-                                className="h-5 w-5 shrink-0"
+                                className="text-success hover:bg-success/20 h-6 w-6 shrink-0"
                                 onClick={() => copyToClipboard(order.smsCode!)}
                               >
-                                <Copy className="h-3 w-3" />
+                                <Copy className="h-3.5 w-3.5" />
                               </Button>
                             </div>
                           )}
@@ -1063,434 +1235,455 @@ export default function Activation() {
                   </div>
                 );
               })}
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        );
+      })()}
+
+      {/* VIP tab content — replaces the standard Step 1/2/3 flow when the
+          user is on the VIP slot. Pick lands directly on a service+country
+          and the existing activation path takes over from there. */}
+      {tabMode === 'vip' && (
+        <VipSection
+          services={vipServices}
+          isLoading={isLoadingVip}
+          onPick={handleVipPick}
+          busyKey={vipBusyKey}
+        />
       )}
 
       {/* Two-column layout: Step 1 + Step 2 */}
-      <div className="grid gap-5 md:grid-cols-2">
-        {/* STEP 1: Select a Service */}
-        <Card className="flex max-h-[560px] flex-col overflow-hidden">
-          <CardHeader className="shrink-0 pb-3">
-            <div className="flex items-center gap-3">
-              <div className="bg-primary text-primary-foreground flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-sm font-bold">
-                1
+      {tabMode === 'provider' && (
+        <div className="grid gap-5 md:grid-cols-2">
+          {/* STEP 1: Select a Service */}
+          <Card className="flex max-h-[560px] flex-col overflow-hidden">
+            <CardHeader className="shrink-0 pb-3">
+              <div className="flex items-center gap-3">
+                <div className="bg-primary text-primary-foreground flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-sm font-bold">
+                  1
+                </div>
+                <CardTitle className="text-base sm:text-lg">
+                  Select a service
+                </CardTitle>
               </div>
-              <CardTitle className="text-base sm:text-lg">
-                Select a service
-              </CardTitle>
-            </div>
-          </CardHeader>
+            </CardHeader>
 
-          <CardContent className="flex min-h-0 flex-1 flex-col gap-3 px-3 sm:px-6">
-            {/* Search */}
-            <div className="relative">
-              <Search className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
-              <Input
-                placeholder="Search by service"
-                value={serviceSearch}
-                onChange={(e) => setServiceSearch(e.target.value)}
-                className="bg-muted/40 pl-9"
-              />
-            </div>
+            <CardContent className="flex min-h-0 flex-1 flex-col gap-3 px-3 sm:px-6">
+              {/* Search */}
+              <div className="relative">
+                <Search className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
+                <Input
+                  placeholder="Search by service"
+                  value={serviceSearch}
+                  onChange={(e) => setServiceSearch(e.target.value)}
+                  className="bg-muted/40 pl-9"
+                />
+              </div>
 
-            {/* Service List - All services for selected provider.
+              {/* Service List - All services for selected provider.
                 Search is server-side (debounced), so `services` already
                 reflects the active query. Only dedupe locally to guard
                 against any duplicate rows from the API. */}
-            <div className="scrollbar-thin min-h-0 flex-1 space-y-1 overflow-y-auto pr-1">
-              {(() => {
-                const q = serviceSearch.toLowerCase();
-                const filtered = services.filter(
-                  (svc, idx, self) =>
-                    self.findIndex((s) => s.name === svc.name) === idx,
-                );
-
-                if (!selectedProvider) {
-                  return (
-                    <div className="text-muted-foreground py-10 text-center text-sm">
-                      Select a provider to see available services
-                    </div>
+              <div className="scrollbar-thin min-h-0 flex-1 space-y-1 overflow-y-auto pr-1">
+                {(() => {
+                  const q = serviceSearch.toLowerCase();
+                  const filtered = services.filter(
+                    (svc, idx, self) =>
+                      self.findIndex((s) => s.name === svc.name) === idx,
                   );
-                }
 
-                // Show skeleton placeholders while the first page is loading
-                // so the user doesn't see "No services available" flash.
-                if (isLoadingServices && services.length === 0) {
-                  return (
-                    <div className="space-y-1">
-                      {Array.from({ length: 8 }).map((_, i) => (
-                        <div
-                          key={i}
-                          className="flex items-center gap-3 rounded-xl px-3 py-2.5"
-                        >
-                          <div className="bg-muted/60 h-8 w-8 shrink-0 animate-pulse rounded-lg" />
-                          <div className="bg-muted/60 h-3 flex-1 animate-pulse rounded" />
+                  if (!selectedProvider) {
+                    return (
+                      <div className="text-muted-foreground py-10 text-center text-sm">
+                        Select a provider to see available services
+                      </div>
+                    );
+                  }
+
+                  // Show skeleton placeholders while the first page is loading
+                  // so the user doesn't see "No services available" flash.
+                  if (isLoadingServices && services.length === 0) {
+                    return (
+                      <div className="space-y-1">
+                        {Array.from({ length: 8 }).map((_, i) => (
+                          <div
+                            key={i}
+                            className="flex items-center gap-3 rounded-xl px-3 py-2.5"
+                          >
+                            <div className="bg-muted/60 h-8 w-8 shrink-0 animate-pulse rounded-lg" />
+                            <div className="bg-muted/60 h-3 flex-1 animate-pulse rounded" />
+                          </div>
+                        ))}
+                      </div>
+                    );
+                  }
+
+                  if (filtered.length === 0) {
+                    return (
+                      <div className="text-muted-foreground py-10 text-center text-sm">
+                        {q ? 'No services found' : 'No services available'}
+                      </div>
+                    );
+                  }
+
+                  return filtered.map((svc) => {
+                    const isSelected = selectedService?.id === svc.id;
+                    return (
+                      <button
+                        key={svc.id}
+                        onClick={() => handleSelectService(svc)}
+                        onMouseEnter={() => prefetchService(svc)}
+                        onMouseLeave={cancelPrefetch}
+                        onFocus={() => prefetchService(svc)}
+                        onBlur={cancelPrefetch}
+                        className={cn(
+                          'group flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-all',
+                          isSelected
+                            ? 'bg-primary/10 border-primary/30 border shadow-sm'
+                            : 'hover:bg-muted/60 border border-transparent',
+                        )}
+                      >
+                        <div className="bg-muted flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-sm">
+                          {(() => {
+                            const safe = safeServiceIcon(
+                              svc.iconUrl,
+                              svc.name || svc.slug,
+                            );
+                            return safe ? (
+                              <img
+                                src={safe}
+                                alt=""
+                                className="h-5 w-5"
+                                loading="lazy"
+                                referrerPolicy="no-referrer"
+                                onError={(e) => {
+                                  // Google's favicon CDN redirects to
+                                  // t[1-3].gstatic.com which 404s for
+                                  // niche brands. Hide the broken img;
+                                  // the parent's emoji shows through.
+                                  (e.target as HTMLImageElement).style.display =
+                                    'none';
+                                }}
+                              />
+                            ) : (
+                              '📱'
+                            );
+                          })()}
                         </div>
-                      ))}
-                    </div>
-                  );
-                }
 
-                if (filtered.length === 0) {
-                  return (
-                    <div className="text-muted-foreground py-10 text-center text-sm">
-                      {q ? 'No services found' : 'No services available'}
-                    </div>
-                  );
-                }
+                        <div className="min-w-0 flex-1">
+                          <span
+                            className={cn(
+                              'block truncate text-sm font-medium',
+                              isSelected ? 'text-primary' : 'text-foreground',
+                            )}
+                          >
+                            {svc.name}
+                          </span>
+                        </div>
 
-                return filtered.map((svc) => {
-                  const isSelected = selectedService?.id === svc.id;
-                  return (
-                    <button
-                      key={svc.id}
-                      onClick={() => handleSelectService(svc)}
-                      onMouseEnter={() => prefetchService(svc)}
-                      onMouseLeave={cancelPrefetch}
-                      onFocus={() => prefetchService(svc)}
-                      onBlur={cancelPrefetch}
-                      className={cn(
-                        'group flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-all',
-                        isSelected
-                          ? 'bg-primary/10 border-primary/30 border shadow-sm'
-                          : 'hover:bg-muted/60 border border-transparent',
-                      )}
-                    >
-                      <div className="bg-muted flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-sm">
-                        {(() => {
-                          const safe = safeServiceIcon(
-                            svc.iconUrl,
-                            svc.name || svc.slug,
-                          );
-                          return safe ? (
-                            <img
-                              src={safe}
-                              alt=""
-                              className="h-5 w-5"
-                              loading="lazy"
-                              referrerPolicy="no-referrer"
-                              onError={(e) => {
-                                // Google's favicon CDN redirects to
-                                // t[1-3].gstatic.com which 404s for
-                                // niche brands. Hide the broken img;
-                                // the parent's emoji shows through.
-                                (e.target as HTMLImageElement).style.display =
-                                  'none';
-                              }}
-                            />
-                          ) : (
-                            '📱'
-                          );
-                        })()}
-                      </div>
+                        {isSelected && (
+                          <ChevronRight className="text-primary h-4 w-4 shrink-0" />
+                        )}
+                      </button>
+                    );
+                  });
+                })()}
 
-                      <div className="min-w-0 flex-1">
-                        <span
-                          className={cn(
-                            'block truncate text-sm font-medium',
-                            isSelected ? 'text-primary' : 'text-foreground',
-                          )}
-                        >
-                          {svc.name}
-                        </span>
-                      </div>
-
-                      {isSelected && (
-                        <ChevronRight className="text-primary h-4 w-4 shrink-0" />
-                      )}
-                    </button>
-                  );
-                });
-              })()}
-
-              {/* Infinite-scroll sentinel + loading indicator. Works for
+                {/* Infinite-scroll sentinel + loading indicator. Works for
                   both unfiltered list and search results since search is
                   server-side and paginated. */}
-              {hasMoreServices && (
-                <div
-                  ref={loadMoreSentinelRef}
-                  className="text-muted-foreground py-3 text-center text-xs"
-                >
-                  {isLoadingMoreServices ? 'Loading more…' : ' '}
-                </div>
-              )}
-            </div>
+                {hasMoreServices && (
+                  <div
+                    ref={loadMoreSentinelRef}
+                    className="text-muted-foreground py-3 text-center text-xs"
+                  >
+                    {isLoadingMoreServices ? 'Loading more…' : ' '}
+                  </div>
+                )}
+              </div>
 
-            {/* Count footer — backend meta.total reflects full filtered
+              {/* Count footer — backend meta.total reflects full filtered
                 count (provider + active search), not just what's loaded. */}
-            <div className="border-border border-t pt-2">
-              <span className="text-muted-foreground text-sm">
-                {servicesTotal} {servicesTotal === 1 ? 'service' : 'services'}
-              </span>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* STEP 2: Select Country */}
-        <Card className="flex max-h-[560px] flex-col overflow-hidden">
-          <CardHeader className="shrink-0 pb-3">
-            <div className="flex items-center gap-3">
-              <div
-                className={cn(
-                  'flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-sm font-bold',
-                  selectedService
-                    ? 'bg-primary text-primary-foreground'
-                    : 'bg-muted text-muted-foreground',
-                )}
-              >
-                2
+              <div className="border-border border-t pt-2">
+                <span className="text-muted-foreground text-sm">
+                  {servicesTotal} {servicesTotal === 1 ? 'service' : 'services'}
+                </span>
               </div>
-              <CardTitle
-                className={cn(
-                  'text-base sm:text-lg',
-                  !selectedService && 'text-muted-foreground',
-                )}
-              >
-                Select your country
-              </CardTitle>
-              {isLoadingProducts && (
-                <Loader2 className="text-muted-foreground h-4 w-4 animate-spin" />
-              )}
-            </div>
-          </CardHeader>
+            </CardContent>
+          </Card>
 
-          <CardContent className="flex min-h-0 flex-1 flex-col gap-3 px-3 sm:px-6">
-            {!selectedService ? (
-              /* Empty state */
-              <div className="flex flex-1 flex-col items-center justify-center gap-3 py-12 text-center">
-                <div className="bg-muted flex h-14 w-14 items-center justify-center rounded-2xl text-2xl">
-                  📱
-                </div>
-                <div>
-                  <p className="text-sm font-medium">Pick a service first</p>
-                  <p className="text-muted-foreground mt-1 text-xs">
-                    Select a service from step 1 to see available countries
-                  </p>
-                </div>
-              </div>
-            ) : (
-              <>
-                {/* Search + Filters */}
-                <div className="flex gap-2">
-                  <div className="relative flex-1">
-                    <Search className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
-                    <Input
-                      placeholder="Search by country"
-                      value={countrySearch}
-                      onChange={(e) => setCountrySearch(e.target.value)}
-                      className="bg-muted/40 pl-9"
-                    />
-                  </div>
-                </div>
-
-                {/* Filter Chips */}
-                <div className="flex flex-wrap gap-2">
-                  <div className="flex gap-1.5">
-                    <Button
-                      variant={countryFilter === 'all' ? 'default' : 'outline'}
-                      size="sm"
-                      onClick={() => setCountryFilter('all')}
-                      className="h-8 text-xs"
-                    >
-                      <Globe className="mr-1.5 h-3 w-3" />
-                      All
-                    </Button>
-                    <Button
-                      variant={
-                        countryFilter === 'available' ? 'default' : 'outline'
-                      }
-                      size="sm"
-                      onClick={() => setCountryFilter('available')}
-                      className="h-8 text-xs"
-                    >
-                      <TrendingUp className="mr-1.5 h-3 w-3" />
-                      Available
-                    </Button>
-                    <Button
-                      variant={
-                        countryFilter === 'favorites' ? 'default' : 'outline'
-                      }
-                      size="sm"
-                      onClick={() => setCountryFilter('favorites')}
-                      className="h-8 text-xs"
-                    >
-                      <Star
-                        className={cn(
-                          'mr-1.5 h-3 w-3',
-                          countryFilter === 'favorites' && 'fill-current',
-                        )}
-                      />
-                      Favorites
-                    </Button>
-                  </div>
-
-                  {/* Price Sort */}
-                  <div className="flex gap-1.5">
-                    <Button
-                      variant={priceSort === 'low-high' ? 'default' : 'outline'}
-                      size="sm"
-                      onClick={() =>
-                        setPriceSort(
-                          priceSort === 'low-high' ? 'none' : 'low-high',
-                        )
-                      }
-                      className="h-8 text-xs"
-                    >
-                      <ArrowUpDown className="mr-1.5 h-3 w-3" />
-                      Low → High
-                    </Button>
-                    <Button
-                      variant={priceSort === 'high-low' ? 'default' : 'outline'}
-                      size="sm"
-                      onClick={() =>
-                        setPriceSort(
-                          priceSort === 'high-low' ? 'none' : 'high-low',
-                        )
-                      }
-                      className="h-8 text-xs"
-                    >
-                      <ArrowUpDown className="mr-1.5 h-3 w-3" />
-                      High → Low
-                    </Button>
-                  </div>
-                </div>
-
-                {/* Country list */}
-                <div className="scrollbar-thin min-h-0 flex-1 space-y-1.5 overflow-y-auto pr-1">
-                  {filteredCountries.length === 0 && (
-                    <div className="text-muted-foreground py-10 text-center text-sm">
-                      {isLoadingProducts
-                        ? 'Loading prices...'
-                        : countryFilter === 'favorites'
-                          ? 'No favorite countries yet'
-                          : 'No countries available for this service'}
-                    </div>
+          {/* STEP 2: Select Country */}
+          <Card className="flex max-h-[560px] flex-col overflow-hidden">
+            <CardHeader className="shrink-0 pb-3">
+              <div className="flex items-center gap-3">
+                <div
+                  className={cn(
+                    'flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-sm font-bold',
+                    selectedService
+                      ? 'bg-primary text-primary-foreground'
+                      : 'bg-muted text-muted-foreground',
                   )}
-                  {filteredCountries.map(
-                    ({
-                      country,
-                      products: countryProducts,
-                      minPrice,
-                      totalAvailable,
-                    }) => {
-                      const isOut = totalAvailable === 0;
-                      const isFav = isFavorite(country.id);
-                      const bestProduct = countryProducts.reduce((best, p) =>
-                        parseFloat(p.yourPrice) < parseFloat(best.yourPrice)
-                          ? p
-                          : best,
-                      );
+                >
+                  2
+                </div>
+                <CardTitle
+                  className={cn(
+                    'text-base sm:text-lg',
+                    !selectedService && 'text-muted-foreground',
+                  )}
+                >
+                  Select your country
+                </CardTitle>
+                {isLoadingProducts && (
+                  <Loader2 className="text-muted-foreground h-4 w-4 animate-spin" />
+                )}
+              </div>
+            </CardHeader>
 
-                      return (
-                        <div
-                          key={country.id}
+            <CardContent className="flex min-h-0 flex-1 flex-col gap-3 px-3 sm:px-6">
+              {!selectedService ? (
+                /* Empty state */
+                <div className="flex flex-1 flex-col items-center justify-center gap-3 py-12 text-center">
+                  <div className="bg-muted flex h-14 w-14 items-center justify-center rounded-2xl text-2xl">
+                    📱
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium">Pick a service first</p>
+                    <p className="text-muted-foreground mt-1 text-xs">
+                      Select a service from step 1 to see available countries
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  {/* Search + Filters */}
+                  <div className="flex gap-2">
+                    <div className="relative flex-1">
+                      <Search className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
+                      <Input
+                        placeholder="Search by country"
+                        value={countrySearch}
+                        onChange={(e) => setCountrySearch(e.target.value)}
+                        className="bg-muted/40 pl-9"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Filter Chips */}
+                  <div className="flex flex-wrap gap-2">
+                    <div className="flex gap-1.5">
+                      <Button
+                        variant={
+                          countryFilter === 'all' ? 'default' : 'outline'
+                        }
+                        size="sm"
+                        onClick={() => setCountryFilter('all')}
+                        className="h-8 text-xs"
+                      >
+                        <Globe className="mr-1.5 h-3 w-3" />
+                        All
+                      </Button>
+                      <Button
+                        variant={
+                          countryFilter === 'available' ? 'default' : 'outline'
+                        }
+                        size="sm"
+                        onClick={() => setCountryFilter('available')}
+                        className="h-8 text-xs"
+                      >
+                        <TrendingUp className="mr-1.5 h-3 w-3" />
+                        Available
+                      </Button>
+                      <Button
+                        variant={
+                          countryFilter === 'favorites' ? 'default' : 'outline'
+                        }
+                        size="sm"
+                        onClick={() => setCountryFilter('favorites')}
+                        className="h-8 text-xs"
+                      >
+                        <Star
                           className={cn(
-                            'overflow-hidden rounded-xl border transition-all',
-                            isOut
-                              ? 'border-border opacity-50'
-                              : 'border-border hover:border-primary/30',
+                            'mr-1.5 h-3 w-3',
+                            countryFilter === 'favorites' && 'fill-current',
                           )}
-                        >
-                          <div className="bg-card/50 flex items-center gap-3 px-3 py-2.5">
-                            {/* Favorite Star */}
-                            <button
-                              onClick={(e) =>
-                                handleToggleFavorite(
-                                  selectedService!.id,
-                                  country.id,
-                                  selectedProvider!.id,
-                                  e,
-                                )
-                              }
-                              className="shrink-0 p-0.5"
-                              title={
-                                isFav
-                                  ? 'Remove from favorites'
-                                  : 'Add to favorites'
-                              }
-                            >
-                              <Star
-                                className={cn(
-                                  'h-4 w-4 transition-colors',
+                        />
+                        Favorites
+                      </Button>
+                    </div>
+
+                    {/* Price Sort */}
+                    <div className="flex gap-1.5">
+                      <Button
+                        variant={
+                          priceSort === 'low-high' ? 'default' : 'outline'
+                        }
+                        size="sm"
+                        onClick={() =>
+                          setPriceSort(
+                            priceSort === 'low-high' ? 'none' : 'low-high',
+                          )
+                        }
+                        className="h-8 text-xs"
+                      >
+                        <ArrowUpDown className="mr-1.5 h-3 w-3" />
+                        Low → High
+                      </Button>
+                      <Button
+                        variant={
+                          priceSort === 'high-low' ? 'default' : 'outline'
+                        }
+                        size="sm"
+                        onClick={() =>
+                          setPriceSort(
+                            priceSort === 'high-low' ? 'none' : 'high-low',
+                          )
+                        }
+                        className="h-8 text-xs"
+                      >
+                        <ArrowUpDown className="mr-1.5 h-3 w-3" />
+                        High → Low
+                      </Button>
+                    </div>
+                  </div>
+
+                  {/* Country list */}
+                  <div className="scrollbar-thin min-h-0 flex-1 space-y-1.5 overflow-y-auto pr-1">
+                    {filteredCountries.length === 0 && (
+                      <div className="text-muted-foreground py-10 text-center text-sm">
+                        {isLoadingProducts
+                          ? 'Loading prices...'
+                          : countryFilter === 'favorites'
+                            ? 'No favorite countries yet'
+                            : 'No countries available for this service'}
+                      </div>
+                    )}
+                    {filteredCountries.map(
+                      ({
+                        country,
+                        products: countryProducts,
+                        minPrice,
+                        totalAvailable,
+                      }) => {
+                        const isOut = totalAvailable === 0;
+                        const isFav = isFavorite(country.id);
+                        const bestProduct = countryProducts.reduce((best, p) =>
+                          parseFloat(p.yourPrice) < parseFloat(best.yourPrice)
+                            ? p
+                            : best,
+                        );
+
+                        return (
+                          <div
+                            key={country.id}
+                            className={cn(
+                              'overflow-hidden rounded-xl border transition-all',
+                              isOut
+                                ? 'border-border opacity-50'
+                                : 'border-border hover:border-primary/30',
+                            )}
+                          >
+                            <div className="bg-card/50 flex items-center gap-3 px-3 py-2.5">
+                              {/* Favorite Star */}
+                              <button
+                                onClick={(e) =>
+                                  handleToggleFavorite(
+                                    selectedService!.id,
+                                    country.id,
+                                    selectedProvider!.id,
+                                    e,
+                                  )
+                                }
+                                className="shrink-0 p-0.5"
+                                title={
                                   isFav
-                                    ? 'fill-yellow-400 text-yellow-400'
-                                    : 'text-muted-foreground/40 hover:text-muted-foreground',
-                                )}
-                              />
-                            </button>
+                                    ? 'Remove from favorites'
+                                    : 'Add to favorites'
+                                }
+                              >
+                                <Star
+                                  className={cn(
+                                    'h-4 w-4 transition-colors',
+                                    isFav
+                                      ? 'fill-yellow-400 text-yellow-400'
+                                      : 'text-muted-foreground/40 hover:text-muted-foreground',
+                                  )}
+                                />
+                              </button>
 
-                            {/* Flag */}
-                            <span className="w-8 shrink-0 text-center text-xl">
-                              {getCountryFlag(country.code, country.name)}
-                            </span>
+                              {/* Flag */}
+                              <span className="w-8 shrink-0 text-center text-xl">
+                                {getCountryFlag(country.code, country.name)}
+                              </span>
 
-                            {/* Name + count */}
-                            <div className="min-w-0 flex-1">
-                              <div className="flex items-center gap-2">
-                                <span className="truncate text-sm font-medium capitalize">
-                                  {country.name}
+                              {/* Name + count */}
+                              <div className="min-w-0 flex-1">
+                                <div className="flex items-center gap-2">
+                                  <span className="truncate text-sm font-medium capitalize">
+                                    {country.name}
+                                  </span>
+                                </div>
+                                <span className="text-muted-foreground text-xs tabular-nums">
+                                  {totalAvailable.toLocaleString()} available
                                 </span>
                               </div>
-                              <span className="text-muted-foreground text-xs tabular-nums">
-                                {totalAvailable.toLocaleString()} available
-                              </span>
+
+                              <div className="flex shrink-0 flex-col items-end text-right">
+                                <span className="text-sm font-bold tabular-nums">
+                                  {formatPrice(bestProduct.yourPrice)}
+                                </span>
+                              </div>
                             </div>
 
-                            <div className="flex shrink-0 flex-col items-end text-right">
-                              <span className="text-sm font-bold tabular-nums">
-                                {formatPrice(bestProduct.yourPrice)}
-                              </span>
-                            </div>
+                            {/* Buy button */}
+                            <Button
+                              className="h-9 w-full rounded-none rounded-b-xl text-sm font-semibold"
+                              disabled={isOut || activatingProductId !== null}
+                              onClick={() => handleBuySMS(bestProduct)}
+                            >
+                              {activatingProductId === bestProduct.id ? (
+                                <>
+                                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                  Activating...
+                                </>
+                              ) : isOut ? (
+                                'Unavailable'
+                              ) : (
+                                'Buy SMS'
+                              )}
+                            </Button>
                           </div>
+                        );
+                      },
+                    )}
+                  </div>
 
-                          {/* Buy button */}
-                          <Button
-                            className="h-9 w-full rounded-none rounded-b-xl text-sm font-semibold"
-                            disabled={isOut || activatingProductId !== null}
-                            onClick={() => handleBuySMS(bestProduct)}
-                          >
-                            {activatingProductId === bestProduct.id ? (
-                              <>
-                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                Activating...
-                              </>
-                            ) : isOut ? (
-                              'Unavailable'
-                            ) : (
-                              'Buy SMS'
-                            )}
-                          </Button>
-                        </div>
-                      );
-                    },
-                  )}
-                </div>
-
-                {/* Count footer */}
-                <div className="border-border flex items-center justify-between border-t pt-2 text-xs">
-                  <span className="text-muted-foreground">
-                    {filteredCountries.length} countries available
-                  </span>
-                  {(countryFilter !== 'all' || priceSort !== 'none') && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="text-muted-foreground hover:text-foreground h-6 text-xs"
-                      onClick={() => {
-                        setCountryFilter('all');
-                        setPriceSort('none');
-                      }}
-                    >
-                      Clear filters
-                    </Button>
-                  )}
-                </div>
-              </>
-            )}
-          </CardContent>
-        </Card>
-      </div>
+                  {/* Count footer */}
+                  <div className="border-border flex items-center justify-between border-t pt-2 text-xs">
+                    <span className="text-muted-foreground">
+                      {filteredCountries.length} countries available
+                    </span>
+                    {(countryFilter !== 'all' || priceSort !== 'none') && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-muted-foreground hover:text-foreground h-6 text-xs"
+                        onClick={() => {
+                          setCountryFilter('all');
+                          setPriceSort('none');
+                        }}
+                      >
+                        Clear filters
+                      </Button>
+                    )}
+                  </div>
+                </>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      )}
     </div>
   );
 }

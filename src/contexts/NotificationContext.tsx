@@ -186,6 +186,22 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
       toast(notification.title, {
         description: notification.message,
       });
+
+      // SMS_RECEIVED arrives here as soon as the backend writes the
+      // code (cron or the user's own poll). Re-dispatch as a window
+      // event so /dashboard/activation can splice the code into its
+      // Active Numbers card without waiting for its next 5s poll —
+      // the visible delay was confusing users who saw the code in the
+      // notification dropdown but "Waiting for SMS" on the card.
+      if (
+        notification.type === 'SMS_RECEIVED' &&
+        typeof window !== 'undefined' &&
+        notification.data
+      ) {
+        window.dispatchEvent(
+          new CustomEvent('sms:received', { detail: notification.data }),
+        );
+      }
     });
 
     // Server can push updated unread count

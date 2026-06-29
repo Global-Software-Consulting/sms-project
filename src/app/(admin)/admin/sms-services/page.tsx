@@ -1,11 +1,12 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef, memo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef, memo } from 'react';
 import { toast } from 'sonner';
 import {
   Edit2,
   Trash2,
   Plus,
+  ChevronDown,
   ChevronRight,
   Check,
   X,
@@ -41,6 +42,7 @@ import {
   adminGetServices,
   adminUpdateService,
   adminBulkAddVipAllCountries,
+  adminBulkRemoveVipAllCountries,
   getServices,
   getUnifiedServices,
   getCountriesForUnifiedService,
@@ -390,6 +392,13 @@ export default function AdminSmsServicesPage() {
   const [isVipEnabled, setIsVipEnabled] = useState(true);
   const [isTogglingVip, setIsTogglingVip] = useState(false);
   const [isAutoPopulating, setIsAutoPopulating] = useState(false);
+
+  // VIP categories list — each service is collapsed by default. A
+  // 153-country fan-out would otherwise dominate the page. Slug is the
+  // unique key on UnifiedVipService, so it stays stable across reloads.
+  const [expandedVipSlugs, setExpandedVipSlugs] = useState<Set<string>>(
+    new Set(),
+  );
 
   // Bulk pricing selection
   const [selectedProductIds, setSelectedProductIds] = useState<string[]>([]);
@@ -1366,6 +1375,25 @@ export default function AdminSmsServicesPage() {
     setSelectedServices([]);
   };
 
+  // Service IDs already flagged as VIP under the selected provider.
+  // Drives the per-row "In VIP / Remove" affordance and the bulk-remove
+  // header button. Sourced from the unified VIP feed (each country entry
+  // exposes the provider-scoped serviceId in `providers[].serviceId`).
+  const vipServiceIdsForProvider = useMemo(() => {
+    if (!selectedProvider) return new Set<string>();
+    const set = new Set<string>();
+    for (const svc of unifiedVipServices) {
+      for (const country of svc.countries || []) {
+        for (const p of country.providers || []) {
+          if (p.providerId === selectedProvider.id && p.serviceId) {
+            set.add(p.serviceId);
+          }
+        }
+      }
+    }
+    return set;
+  }, [unifiedVipServices, selectedProvider]);
+
   const handleOpenAddToVIP = async () => {
     if (!selectedProvider || selectedServices.length === 0) return;
     setShowAddToVIPModal(true);
@@ -1437,6 +1465,7 @@ export default function AdminSmsServicesPage() {
       }
 
       fetchVipNumbers();
+      fetchUnifiedVip();
     } catch (error: any) {
       toast.error(
         error?.response?.data?.message || 'Failed to add VIP services',
@@ -1446,6 +1475,49 @@ export default function AdminSmsServicesPage() {
     setIsLoading(false);
     setShowAddToVIPModal(false);
     setSelectedServices([]);
+  };
+
+  // Mirror of handleAddToVIP for the inverse direction. Confirms first
+  // because dropping a service from VIP wipes every country fan-out
+  // entry under the current provider.
+  const handleRemoveFromVIP = async (serviceIds: string[]) => {
+    if (!selectedProvider) return;
+    if (serviceIds.length === 0) {
+      toast.error('Select at least one service');
+      return;
+    }
+    if (
+      !window.confirm(
+        `Remove ${serviceIds.length} service${
+          serviceIds.length === 1 ? '' : 's'
+        } from VIP? Every country entry for this provider will be deleted.`,
+      )
+    ) {
+      return;
+    }
+    setIsLoading(true);
+    try {
+      const result = await adminBulkRemoveVipAllCountries(
+        serviceIds,
+        selectedProvider.id,
+      );
+      if (result.removed > 0) {
+        toast.success(result.message);
+      } else {
+        toast.info('No VIP entries to remove');
+      }
+      fetchVipNumbers();
+      fetchUnifiedVip();
+      setSelectedServices((prev) =>
+        prev.filter((id) => !serviceIds.includes(id)),
+      );
+    } catch (error: any) {
+      toast.error(
+        error?.response?.data?.message || 'Failed to remove VIP services',
+      );
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   // Pricing Functions
@@ -2071,91 +2143,116 @@ export default function AdminSmsServicesPage() {
             </div>
           ) : (
             <div className="space-y-4">
-              {unifiedVipServices.map((service) => (
-                <div
-                  key={service.slug}
-                  className="rounded-xl border border-[rgba(255,255,255,0.1)] bg-[rgba(15,23,42,0.6)] p-6 backdrop-blur-xl"
-                >
-                  <div className="mb-4 flex items-center gap-4">
-                    {service.iconUrl ? (
-                      <img
-                        src={service.iconUrl}
-                        alt={service.name}
-                        className="h-10 w-10 rounded-lg object-cover"
-                      />
-                    ) : (
-                      <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[rgba(255,255,255,0.1)]">
-                        <Star className="h-5 w-5 text-[#F59E0B]" />
+              {unifiedVipServices.map((service) => {
+                const isExpanded = expandedVipSlugs.has(service.slug);
+                return (
+                  <div
+                    key={service.slug}
+                    className="rounded-xl border border-[rgba(255,255,255,0.1)] bg-[rgba(15,23,42,0.6)] p-6 backdrop-blur-xl"
+                  >
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setExpandedVipSlugs((prev) => {
+                          const next = new Set(prev);
+                          if (next.has(service.slug)) next.delete(service.slug);
+                          else next.add(service.slug);
+                          return next;
+                        })
+                      }
+                      className="flex w-full items-center gap-4 text-left transition-colors hover:opacity-80"
+                    >
+                      {service.iconUrl ? (
+                        <img
+                          src={service.iconUrl}
+                          alt={service.name}
+                          className="h-10 w-10 rounded-lg object-cover"
+                        />
+                      ) : (
+                        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[rgba(255,255,255,0.1)]">
+                          <Star className="h-5 w-5 text-[#F59E0B]" />
+                        </div>
+                      )}
+                      <div className="min-w-0 flex-1">
+                        <h4 className="text-lg font-semibold text-white">
+                          {service.name}
+                        </h4>
+                        <p className="text-sm text-[#94A3B8]">
+                          {service.category} • {service.countryCount} countries
+                        </p>
+                      </div>
+                      {isExpanded ? (
+                        <ChevronDown className="h-5 w-5 shrink-0 text-[#64748B]" />
+                      ) : (
+                        <ChevronRight className="h-5 w-5 shrink-0 text-[#64748B]" />
+                      )}
+                    </button>
+
+                    {/* Countries accordion — only mounted when expanded so
+                      a 153-country fan-out doesn't blow up the initial
+                      render for every service card on the page. */}
+                    {isExpanded && (
+                      <div className="mt-4 space-y-2">
+                        {service.countries.map((country) => (
+                          <div
+                            key={country.id}
+                            className="rounded-lg border border-[rgba(255,255,255,0.05)] bg-[rgba(0,0,0,0.2)] p-4"
+                          >
+                            <div className="mb-2 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                              <div className="flex min-w-0 flex-wrap items-center gap-2">
+                                {country.iconUrl && (
+                                  <img
+                                    src={country.iconUrl}
+                                    alt={country.name}
+                                    className="h-5 w-5 shrink-0 rounded"
+                                  />
+                                )}
+                                <span className="text-sm font-medium break-words text-white">
+                                  {country.name}
+                                </span>
+                                <span className="text-xs text-[#64748B]">
+                                  ({country.code})
+                                </span>
+                              </div>
+                              <span className="self-start rounded-full bg-[#F59E0B]/20 px-2 py-1 text-xs font-medium whitespace-nowrap text-[#F59E0B] sm:self-auto">
+                                Best Rating: {country.bestRating}/5
+                              </span>
+                            </div>
+                            {/* Providers for this country */}
+                            <div className="mt-2 flex flex-wrap gap-2">
+                              {country.providers.map((provider) => (
+                                <div
+                                  key={provider.vipId}
+                                  className="flex items-center gap-2 rounded-lg border border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.05)] px-3 py-1.5"
+                                >
+                                  <span className="text-xs text-[#94A3B8]">
+                                    {provider.providerName}
+                                  </span>
+                                  <span className="text-xs font-medium text-[#3B82F6]">
+                                    {provider.rating}/5
+                                  </span>
+                                  <span className="text-xs text-[#64748B]">
+                                    ({provider.orderCount} orders)
+                                  </span>
+                                  <button
+                                    onClick={() =>
+                                      handleRemoveVip(provider.vipId)
+                                    }
+                                    className="rounded p-1 text-[#EF4444] transition-colors hover:bg-[rgba(239,68,68,0.2)]"
+                                    title="Remove"
+                                  >
+                                    <X className="h-3 w-3" />
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        ))}
                       </div>
                     )}
-                    <div>
-                      <h4 className="text-lg font-semibold text-white">
-                        {service.name}
-                      </h4>
-                      <p className="text-sm text-[#94A3B8]">
-                        {service.category} • {service.countryCount} countries
-                      </p>
-                    </div>
                   </div>
-
-                  {/* Countries accordion */}
-                  <div className="space-y-2">
-                    {service.countries.map((country) => (
-                      <div
-                        key={country.id}
-                        className="rounded-lg border border-[rgba(255,255,255,0.05)] bg-[rgba(0,0,0,0.2)] p-4"
-                      >
-                        <div className="mb-2 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                          <div className="flex min-w-0 flex-wrap items-center gap-2">
-                            {country.iconUrl && (
-                              <img
-                                src={country.iconUrl}
-                                alt={country.name}
-                                className="h-5 w-5 shrink-0 rounded"
-                              />
-                            )}
-                            <span className="text-sm font-medium break-words text-white">
-                              {country.name}
-                            </span>
-                            <span className="text-xs text-[#64748B]">
-                              ({country.code})
-                            </span>
-                          </div>
-                          <span className="self-start rounded-full bg-[#F59E0B]/20 px-2 py-1 text-xs font-medium whitespace-nowrap text-[#F59E0B] sm:self-auto">
-                            Best Rating: {country.bestRating}/5
-                          </span>
-                        </div>
-                        {/* Providers for this country */}
-                        <div className="mt-2 flex flex-wrap gap-2">
-                          {country.providers.map((provider) => (
-                            <div
-                              key={provider.vipId}
-                              className="flex items-center gap-2 rounded-lg border border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.05)] px-3 py-1.5"
-                            >
-                              <span className="text-xs text-[#94A3B8]">
-                                {provider.providerName}
-                              </span>
-                              <span className="text-xs font-medium text-[#3B82F6]">
-                                {provider.rating}/5
-                              </span>
-                              <span className="text-xs text-[#64748B]">
-                                ({provider.orderCount} orders)
-                              </span>
-                              <button
-                                onClick={() => handleRemoveVip(provider.vipId)}
-                                className="rounded p-1 text-[#EF4444] transition-colors hover:bg-[rgba(239,68,68,0.2)]"
-                                title="Remove"
-                              >
-                                <X className="h-3 w-3" />
-                              </button>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>
@@ -2779,14 +2876,41 @@ export default function AdminSmsServicesPage() {
                         >
                           Deselect All
                         </button>
-                        <button
-                          onClick={() => handleOpenAddToVIP()}
-                          disabled={selectedServices.length === 0}
-                          className="flex items-center gap-2 rounded-lg bg-[#F59E0B] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[#D97706] disabled:cursor-not-allowed disabled:opacity-50"
-                        >
-                          <Star className="h-4 w-4" />
-                          Add to VIP ({selectedServices.length})
-                        </button>
+                        {(() => {
+                          // Split the current selection into "would be
+                          // ADDED to VIP" vs "currently IN VIP" so the
+                          // header can show one button per direction.
+                          // Mixed selections show both, each scoped to
+                          // its own subset — fewer surprises than a
+                          // single ambiguous "toggle" button.
+                          const inVip = selectedServices.filter((id) =>
+                            vipServiceIdsForProvider.has(id),
+                          );
+                          const notInVip = selectedServices.filter(
+                            (id) => !vipServiceIdsForProvider.has(id),
+                          );
+                          return (
+                            <>
+                              <button
+                                onClick={() => handleOpenAddToVIP()}
+                                disabled={notInVip.length === 0}
+                                className="flex items-center gap-2 rounded-lg bg-[#F59E0B] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[#D97706] disabled:cursor-not-allowed disabled:opacity-50"
+                              >
+                                <Star className="h-4 w-4" />
+                                Add to VIP ({notInVip.length})
+                              </button>
+                              {inVip.length > 0 && (
+                                <button
+                                  onClick={() => handleRemoveFromVIP(inVip)}
+                                  className="flex items-center gap-2 rounded-lg bg-[rgba(239,68,68,0.15)] px-4 py-2 text-sm font-medium text-[#EF4444] transition-colors hover:bg-[rgba(239,68,68,0.25)]"
+                                >
+                                  <Star className="h-4 w-4 fill-current" />
+                                  Remove from VIP ({inVip.length})
+                                </button>
+                              )}
+                            </>
+                          );
+                        })()}
                       </>
                     )}
                   </div>
@@ -3014,7 +3138,18 @@ export default function AdminSmsServicesPage() {
                                 </div>
                               </td>
                               <td className="px-4 py-3 text-sm text-[#94A3B8] capitalize">
-                                {service.category || '—'}
+                                <div className="flex items-center gap-2">
+                                  {service.category || '—'}
+                                  {vipServiceIdsForProvider.has(service.id) && (
+                                    <span
+                                      title="This service is currently in VIP for this provider"
+                                      className="inline-flex items-center gap-1 rounded-full bg-[rgba(245,158,11,0.15)] px-2 py-0.5 text-[10px] font-medium text-[#F59E0B]"
+                                    >
+                                      <Star className="h-2.5 w-2.5 fill-current" />
+                                      VIP
+                                    </span>
+                                  )}
+                                </div>
                               </td>
                               <td className="px-4 py-3">
                                 <button
@@ -3047,6 +3182,19 @@ export default function AdminSmsServicesPage() {
                                     <Globe className="h-3 w-3" />
                                     View Countries
                                   </button>
+                                  {vipServiceIdsForProvider.has(service.id) && (
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleRemoveFromVIP([service.id]);
+                                      }}
+                                      title="Remove this service from VIP for the current provider"
+                                      className="flex items-center gap-1 rounded-lg bg-[rgba(239,68,68,0.15)] px-3 py-1.5 text-xs font-medium text-[#EF4444] transition-colors hover:bg-[rgba(239,68,68,0.25)]"
+                                    >
+                                      <Star className="h-3 w-3 fill-current" />
+                                      Remove from VIP
+                                    </button>
+                                  )}
                                   <button
                                     onClick={(e) => {
                                       e.stopPropagation();

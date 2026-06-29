@@ -243,6 +243,7 @@ export default function RentNumbersPage() {
     setIsServicesLoading(true);
     getServices({
       limit: 100,
+      rentalCapable: true,
       ...(debouncedServiceSearch ? { search: debouncedServiceSearch } : {}),
     })
       .then((res) => {
