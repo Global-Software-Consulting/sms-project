@@ -339,6 +339,7 @@ export interface ServiceQueryParams {
   providerId?: string;
   category?: string;
   search?: string;
+  rentalCapable?: boolean;
   page?: number;
   limit?: number;
 }
